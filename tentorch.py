@@ -118,7 +118,7 @@ class AbstractNode(ABC):
                  override: bool = False) -> None:
         axis_num = self.get_axis_number(axis)
         if axis_num < 0 or axis_num >= len(self.shape):
-            raise VaueError('Error')
+            raise ValueError('Error')
         if not self.edges[axis_num].is_dangling() and not override:
             raise ValueError('Error')
         self.edges[axis_num] = edge

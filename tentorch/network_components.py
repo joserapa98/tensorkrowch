@@ -1,22 +1,25 @@
 """
-Classes for Nodes and Edges:
-    +AbstractNode:
-        -Node
-        -ParamNode
-        -StackNode
-    +AbstractEdge:
-        -Edge
-        -ParamEdge
-        -StackEdge
+This script contains:
 
-Operations:
-    +contract
-    +contract_between
-    +batched_contract_between
+    Classes for Nodes and Edges:
+        +Axis
+        +AbstractNode:
+            -Node
+            -ParamNode
+            -StackNode
+        +AbstractEdge:
+            -Edge
+            -ParamEdge
+            -StackEdge
+
+    Operations:
+        +contract
+        +contract_between
+        +batched_contract_between
 """
 
-from typing import (overload, Union, Tuple,
-                    Optional, Text, List)
+from typing import (overload, Union, Optional,
+                    Sequence, Text, List)
 from abc import ABC, abstractmethod
 import warnings
 
@@ -26,120 +29,199 @@ import torch.nn as nn
 from tentorch.network import TensorNetwork
 
 
-class AbstractNode(ABC):
+class Axis:
     """
-    Abstract class for nodes. Should be subclassed.
+    Class for axis. An axis can be denoted by a number or a name.
     """
 
     def __init__(self,
-                 shape: Optional[Tuple[int, ...]] = None,
-                 tensor: Optional[torch.Tensor] = None,
-                 name: Optional[Text] = None,
-                 axis_names: Optional[List[Text]] = None,
-                 network: Optional['TensorNetwork'] = None,) -> None:
+                 num: int,
+                 name: Text) -> None:
         """
+        Create an axis for a node.
 
         Parameters
         ----------
-        shape
-        tensor
-        name
-        axis_names
-        network
+        num: index in the node axis list
+        name: axis name
+
+        Raises
+        ------
+        TypeError
         """
+
+        if not isinstance(num, int):
+            raise TypeError('`num` should be int type')
+        if not isinstance(name, str):
+            raise TypeError('`name` should be str type')
+
+        self._num = num
+        self._name = name
+
+    # properties
+    @property
+    def num(self) -> int:
+        return self._num
+
+    @property
+    def name(self) -> Text:
+        return self._name
+
+    # methods
+    def __int__(self) -> int:
+        return self.num
+
+    def __str__(self) -> Text:
+        return self.name
+
+    def __repr__(self) -> Text:
+        return f'{self.__class__.__name__}( {self.name} ({self.num}) )'
+
+
+class AbstractNode(ABC):
+    """
+    Abstract class for nodes. Should be subclassed.
+
+    A node is the minimum element in a tensor network. It is
+    made up of a tensor and edges that can be connected to
+    other nodes.
+    """
+
+    def __init__(self,
+                 shape: Optional[Union[int, Sequence[int, ...], torch.Size]] = None,
+                 axis_names: Optional[Sequence[Text]] = None,
+                 network: Optional[TensorNetwork] = None,
+                 name: Optional[Text] = None,
+                 tensor: Optional[torch.Tensor] = None) -> None:
+        """
+        Create a node. Should be subclassed before usage and
+        a limited number of abstract methods overridden.
+
+        Parameters
+        ----------
+        shape: node shape (the shape of its tensor)
+        axis_names: list of axis names
+        network: tensor network to which the node belongs
+        name: node name
+        tensor: tensor "contained" in the node
+
+        Raises
+        ------
+        TypeError
+        ValueError
+        """
+
         super().__init__()
 
+        # TODO: maybe there is no need to provide a tensor in
+        #  any case, it might be enough with self.set_tensor(tensor)
         # shape and tensor
-        if shape is None:
-            if tensor is None:
-                raise ValueError('At least one of shape or tensor must be provided')
+        if (shape is None) == (tensor is None):
+            if shape is None:
+                raise ValueError('One of `shape` or `tensor` should be provided')
             else:
-                shape = tensor.shape
-        elif tensor is not None:
-            if tensor.shape != shape:
-                raise ValueError('The tensor\'s shape must match the shape parameter')
-        # TODO: do we admit None as tensor??
-        # else:
-        #    if tensor is None:
-        #         tensor = torch.empty(shape)
-        #     else:
-        #         if tensor.shape != shape:
-        #             raise ValueError('The tensor\'s shape must match the shape parameter')
+                raise ValueError('Only one of `shape` or `tensor` should be provided')
+        elif shape is not None:
+            if not isinstance(shape, (int, tuple, list, torch.Size)):
+                raise TypeError('`shape` should be int, tuple[int, ...], list[int, ...] or torch.Size type')
+            if isinstance(shape, (tuple, list)):
+                for i in shape:
+                    if not isinstance(i, int):
+                        raise TypeError('`shape` elements should be int type')
+            if not isinstance(shape, torch.Size):
+                empty_tensor = torch.empty(shape)
+                shape = empty_tensor.shape
+        else:
+            if not isinstance(tensor, torch.Tensor):
+                raise TypeError('`tensor` should be of torch.Tensor type')
+            shape = tensor.shape
 
         # name
         if name is None:
-            warnings.warn('A name should be given to node to better tracking'
-                          'its edges and derived nodes')
+            warnings.warn('`name` should be given to better tracking node edges and derived nodes')
             name = '__unnamed_node__'
+        elif not isinstance(name, str):
+            raise TypeError('`name` should be str type')
 
         # axis_names
+        axis = list()
         if axis_names is None:
-            warnings.warn('Names should be given to axis to better tracking edges')
-            axis_names = list()
+            warnings.warn('`axis_names` should be given to better tracking node edges and derived nodes')
             for i, _ in enumerate(shape):
-                axis_names.append(f'__unnamed_axis__{i}')
-        elif len(axis_names) != len(shape):
-            raise ValueError('Length of axis_names should match the number of axis')
+                axis.append(Axis(num=i, name=f'__unnamed_axis__{i}'))
         else:
-            repeated = False
-            for i1, axis_name1 in enumerate(axis_names):
-                for i2, axis_name2 in enumerate(axis_names[:i1]):
-                    if axis_name1 == axis_name2:
-                        repeated = True
+            if not isinstance(axis_names, (tuple, list)):
+                raise TypeError('`axis_names` should be tuple[str, ...] or list[str, ...] type')
+            if len(axis_names) != len(shape):
+                raise ValueError('`axis_names` length should match `shape` length')
+            else:
+                repeated = False
+                for i1, axis_name1 in enumerate(axis_names):
+                    for i2, axis_name2 in enumerate(axis_names[:i1]):
+                        if axis_name1 == axis_name2:
+                            repeated = True
+                            break
+                    if repeated:
                         break
+                    axis.append(Axis(num=i1, name=axis_name1))
                 if repeated:
-                    break
-            if repeated:
-                raise ValueError('Axis names must be unique in a node')
+                    raise ValueError('Axis names should be unique in a node')
 
         # network
         if network is not None:
+            if not isinstance(network, TensorNetwork):
+                raise TypeError('`network` should be tentorch.TensorNetwork type')
             network.add_node(self)
 
         self._shape = shape
-        self._tensor = self.set_tensor_format(tensor)
-        self._edges = [self.create_edge(axis=i, name=f'{name}[{axis_name}] -> None')
-                       for i, axis_name in enumerate(axis_names)]
-        self._name = name
-        self._axis_names = axis_names
+        self._axis = axis
         self._network = network
+        self._name = name
+        self._tensor = self.set_tensor_format(tensor)
+        self._edges = [self.create_edge(axis=ax)
+                       for ax in axis]
 
     # properties
     # TODO: define methods to set new properties
     #  (changing the edges, names, etc. accordingly)
     @property
-    def shape(self):
+    def shape(self) -> torch.Size:
         return self._shape
 
     @property
-    def rank(self):
+    def rank(self) -> int:
         return len(self.shape)
 
     @property
+    def axis(self) -> List[Axis]:
+        return self._axis
+
+    @property
+    def network(self) -> Optional[TensorNetwork]:
+        return self._network
+
+    @property
+    def name(self) -> Text:
+        return self._name
+
+    @property
     def tensor(self) -> Optional[Union[torch.Tensor, nn.Parameter]]:
+        if self._tensor is None:
+            warnings.warn('Trying to access a tensor that has not been set yet')
         return self._tensor
 
     @tensor.setter
     def tensor(self, tensor: Optional[torch.Tensor]) -> None:
-        if (tensor is not None) and (tensor.shape != self.shape):
-            raise ValueError('The tensor\'s shape must match the node\'s shape')
+        if tensor is not None:
+            if not isinstance(tensor, torch.Tensor):
+                raise ValueError('`tensor` should be torch.Tensor type')
+            if tensor.shape != self.shape:
+                raise ValueError('New tensor shape should match node shape')
         self._tensor = self.set_tensor_format(tensor)
 
     @property
-    def edges(self):
+    def edges(self) -> List['AbstractEdge']:
         return self._edges
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def axis_names(self):
-        return self._axis_names
-
-    @property
-    def network(self):
-        return self._network
 
     # abstract methods
     @staticmethod
@@ -148,52 +230,67 @@ class AbstractNode(ABC):
         pass
 
     @abstractmethod
-    def create_edge(self, axis: int = None, name: Text = None) -> 'AbstractEdge':
+    def create_edge(self, axis: Axis) -> 'AbstractEdge':
         pass
 
     # methods
-    def size(self, dim: Optional[int] = None) -> torch.Size:
-        return self.tensor.size(dim)
+    def size(self, dim: Optional[int] = None) -> Union[torch.Size, int]:
+        if dim is None:
+            return self.shape
+        return self.shape[dim]
 
+    # TODO: check output type hints
     def dims(self, dim: Optional[int] = None) -> Union[torch.Tensor, torch.Size, int]:
         if dim is None:
-            dims = torch.tensor(list(map(lambda edge: edge.dim(), self.edges)))
+            return torch.tensor(list(map(lambda edge: edge.dim(), self.edges)))
+        return self.edges[dim].dim()
+
+    def get_axis_number(self, axis_id: Union[int, Text]) -> int:
+        if isinstance(axis_id, int):
+            for ax in self.axis:
+                if axis_id == ax.num:
+                    return ax.num
+            ValueError(f'Node {self} has no axis with index {axis_id}')
+        elif isinstance(axis_id, str):
+            for ax in self.axis:
+                if axis_id == ax.name:
+                    return ax.num
+            ValueError(f'Node {self} has no axis with name {axis_id}')
         else:
-            dims = self.edges[dim].dim()
-        return dims
+            TypeError('`axis_id` should be int or str type')
 
-    def get_axis_number(self, axis: Union[Text, int]) -> int:
-        if isinstance(axis, int):
-            if (axis < 0) or (axis >= self.rank):
-                raise ValueError('Axis must be positive and less than rank of the tensor')
-            return axis
-        try:
-            return self.axis_names.index(axis)
-        except ValueError as err:
-            raise ValueError(f'Axis name {axis} not found for node {self}') from err
-
-    def get_edge(self, axis: Union[Text, int]) -> 'AbstractEdge':
-        axis_num = self.get_axis_number(axis)
+    def get_edge(self, axis_id: Union[int, Text]) -> 'AbstractEdge':
+        axis_num = self.get_axis_number(axis_id)
         return self.edges[axis_num]
 
     def add_edge(self,
                  edge: 'AbstractEdge',
-                 axis: Union[Text, int],
+                 axis_id: Union[int, Text],
                  override: bool = False) -> None:
-        axis_num = self.get_axis_number(axis)
+        axis_num = self.get_axis_number(axis_id)
         if not self.edges[axis_num].is_dangling() and not override:
-            raise ValueError(f'Node {self} already has a non-dangling edge for axis {axis}')
+            raise ValueError(f'Node {self} already has a non-dangling edge for axis {axis_id}')
         self.edges[axis_num] = edge
 
     # TODO: implement initialization methods for each node in the network
-    def initialize(self, init_method: Optional[int] = None) -> None:
+    def set_tensor(self,
+                   init_method: Optional[Text] = None,
+                   tensor: Optional[torch.Tensor] = None) -> None:
+        # can't set tensor None
+        # if init_method is None:
+        #     if tensor is None:
+        #         raise ValueError('tensor should be provided')
+        #     self.tensor = tensor
         # if init_method == 'copy':
         #    tensor = self._copy_tensor()
         # else:
         # tensor = torch.randn(self.shape) * std
         # self.tensor = tensor
+        # Error: if self.tensor is not None: Node already has a valid tensor. Initialize Node without
+        # tensor or override current tensor
         pass
 
+    # TODO: manage this
     @staticmethod
     def _make_copy_tensor(rank, dimension):
         shape = (dimension,) * rank
@@ -207,11 +304,10 @@ class AbstractNode(ABC):
         pass
 
     @overload
-    def __getitem__(self, key: Union[Text, int]) -> 'AbstractEdge':
+    def __getitem__(self, key: Union[int, Text]) -> 'AbstractEdge':
         pass
 
-    def __getitem__(self, key: Union[slice, Text,
-                                     int]) -> Union[List['AbstractEdge'], 'AbstractEdge']:
+    def __getitem__(self, key: Union[slice, int, Text]) -> Union[List['AbstractEdge'], 'AbstractEdge']:
         if isinstance(key, slice):
             return self.edges[key]
         return self.get_edge(key)
@@ -221,32 +317,37 @@ class AbstractNode(ABC):
         pass
 
     def __repr__(self) -> Text:
-        return (f'\n{self.__class__.__name__}(\n'
-                f'name : {self.name}\n'
-                f'tensor :\n{self.tensor.data!r}\n'
-                f'edges : \n{self.edges!r})')
+        return f'{self.__class__.__name__}(\n ' \
+               f'\tname: {self.name}\n' \
+               f'\ttensor:\n\t\t{self.tensor.data!r}\n' \
+               f'\tedges: \n\t\t{self.edges!r})'
 
 
 class Node(AbstractNode):
+    """
+    Base class for non-trainable nodes.
+
+    Used for fixed nodes of the network or intermediate,
+    derived nodes resulting from operations between other nodes.
+    """
+
     # TODO: is it okay to return None tensor??
     @staticmethod
     def set_tensor_format(tensor: Optional[torch.Tensor]) -> Optional[torch.Tensor]:
         return tensor
 
-    def create_edge(self, axis: int = None, name: Text = None) -> 'Edge':
-        return Edge(node1=self, axis1=axis, name=name)
+    def create_edge(self, axis: Axis) -> 'Edge':
+        return Edge(node1=self, axis1=axis)
 
 
-class CopyNode(AbstractNode):
+class CopyNode(Node):
     """
-    Like Node but optimized einsum for Kronecker delta copy tensor
+    Subclass of Node for copy nodes and its optimized operations.
     """
-    @staticmethod
-    def set_tensor_format(tensor: Optional[torch.Tensor]) -> Optional[torch.Tensor]:
-        return tensor
 
-    def create_edge(self, axis: int = None, name: Text = None) -> 'Edge':
-        return Edge(node1=self, axis1=axis, name=name)
+    # TODO: implement optimized @
+    def __matmul__(self, other: 'AbstractNode') -> 'Node':
+        pass
 
 
 class ParamNode(AbstractNode, nn.Module):
@@ -257,7 +358,7 @@ class ParamNode(AbstractNode, nn.Module):
                  axis_names: Optional[List[Text]] = None,
                  network: Optional['TensorNetwork'] = None,) -> None:
         nn.Module.__init__(self)
-        AbstractNode.__init__(self, shape, tensor, name, axis_names, network)
+        AbstractNode.__init__(self, shape, tensor, axis_names, name, network)
 
     # TODO: what happens if tensor is None
     @staticmethod

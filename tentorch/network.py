@@ -1,5 +1,10 @@
 #TODO: import
+import torch
+import torch.nn as nn
+import warnings
 
+
+# TODO: names of (at least) ParamNodes and ParamEdges must be unique in a tensor network
 class TensorNetwork(nn.Module):
     """
     Al contraer una red se crea una Network auxiliar formada por Nodes en lugar
@@ -37,12 +42,18 @@ class TensorNetwork(nn.Module):
         return edges_list
 
     def _add_param_edge(self, edge: 'ParamEdge') -> None:
-        self.add_module(edge.name, edge)
+        if not hasattr(self, edge.name):
+            self.add_module(edge.name, edge)
+        else:
+            raise ValueError(f'Network already has attribute named {edge.name}')
 
     def _remove_param_edge(self, edge: 'ParamEdge') -> None:
-        delattr(self, edge.name)
+        if hasattr(self, edge.name):
+            delattr(self, edge.name)
+        else:
+            warnings.warn('Cannot remove a parameter that is not in the network')
 
-    def add_node(self, node: Node) -> None:
+    def add_node(self, node: 'Node') -> None:
         """
 
         :rtype: object
@@ -50,10 +61,10 @@ class TensorNetwork(nn.Module):
         # TODO:
         # if node.network != self:
         #    node.change_network(self)
-        if isinstance(node, ParamNode):
+        if isinstance(node, 'ParamNode'):
             self.add_module(node.name, node)
             for edge in node.edges:
-                assert isinstance(edge, ParamEdge)  ###...
+                assert isinstance(edge, 'ParamEdge')  ###...
                 self.add_module(edge.name, edge)
         self._nodes.append(node)
 
@@ -69,7 +80,7 @@ class TensorNetwork(nn.Module):
 
     def initialize(self, *args):
         for child in self.children():
-            if isinstance(child, AbstractNode):
+            if isinstance(child, 'AbstractNode'):
                 child.initialize(*args)
             # Los Edges se inicializan solos
 

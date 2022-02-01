@@ -1,3 +1,1 @@
-# TeNTorch
-
-Tensor Networks with PyTorch
+# TeNTorch: Tensor Networks with PyTorch

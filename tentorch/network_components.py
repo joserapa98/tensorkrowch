@@ -2,20 +2,21 @@
 This script contains:
 
     Classes for Nodes and Edges:
-        +Axis
-        +AbstractNode:
-            -Node
-            -ParamNode
-            -StackNode
-        +AbstractEdge:
-            -Edge
-            -ParamEdge
-            -StackEdge
+        *Axis
+        *AbstractNode:
+            +Node:
+                -CopyNode
+                -StackNode
+            +ParamNode
+        *AbstractEdge:
+            +Edge:
+                -StackEdge
+            +ParamEdge
 
     Operations:
-        +contract
-        +contract_between
-        +batched_contract_between
+        *contract
+        *contract_between
+        *batched_contract_between
 """
 
 from typing import (overload, Union, Optional,
@@ -107,6 +108,8 @@ class AbstractNode(ABC):
         shape: node shape (the shape of its tensor)
         axis_names: list of axis names
         network: tensor network to which the node belongs
+        init_method: method to use to initialize the
+                     node tensor when it is not provided
         name: node name
         tensor: tensor "contained" in the node
         param_edges: boolean indicating whether node edges
@@ -226,7 +229,7 @@ class AbstractNode(ABC):
             if not isinstance(tensor, torch.Tensor):
                 raise ValueError('`tensor` should be torch.Tensor type')
             if tensor.shape != self.shape:
-                raise ValueError('New tensor shape should match node shape')
+                raise ValueError('`tensor` shape should match node shape')
         self._tensor = self.set_tensor_format(tensor)
 
     @property
@@ -246,18 +249,16 @@ class AbstractNode(ABC):
     # methods
     # TODO: comment
     def size(self, dim: Optional[Union[int, Text, Axis]] = None) -> Union[torch.Size, int]:
-        # Input can be given as axis_id
         if dim is None:
             return self.shape
         axis_num = self.get_axis_number(dim)
         return self.shape[axis_num]
 
-    # TODO: check output type hints
-    def dims(self, dim: Optional[int] = None) -> Union[torch.Tensor, torch.Size, int]:
+    def dimension(self, dim: Optional[Union[int, Text, Axis]] = None) -> Union[torch.Tensor, int]:
         if dim is None:
-            return torch.tensor(list(map(lambda edge: edge.dim(), self.edges)))
+            return torch.tensor(list(map(lambda edge: edge.dimension(), self.edges)))
         axis_num = self.get_axis_number(dim)
-        return self.edges[axis_num].dim()
+        return self.edges[axis_num].dimension()
 
     def get_axis_number(self, axis: Union[int, Text, Axis]) -> int:
         if isinstance(axis, int):
@@ -282,7 +283,6 @@ class AbstractNode(ABC):
         axis_num = self.get_axis_number(axis)
         return self.edges[axis_num]
 
-    # TODO: manage here what happens if the added edge is Param or not
     def add_edge(self,
                  edge: 'AbstractEdge',
                  axis: Union[int, Text, Axis],
@@ -292,36 +292,62 @@ class AbstractNode(ABC):
             raise ValueError(f'Node {self!s} already has a non-dangling edge for axis {axis!r}')
         self.edges[axis_num] = edge
 
+    def _make_copy_tensor(self) -> torch.Tensor:
+        for i in self.shape[1:]:
+            if i != self.shape[0]:
+                raise ValueError(f'Edges {self.edges[i]} and {self.edges[0]} have unequal '
+                                 f'dimensions. Copy tensors have the same dimension in all '
+                                 f'their axes.')
+        copy_tensor = torch.zeros(self.shape)
+        i = torch.arange(self.shape[0])
+        copy_tensor[(i,) * self.rank] = 1.
+        return copy_tensor
+
+    def _make_rand_tensor(self, low: float, high: float) -> torch.Tensor:
+        if not isinstance(low, float):
+            raise TypeError('`low` should be float type')
+        if not isinstance(high, float):
+            raise TypeError('`high` should be float type')
+        if low >= high:
+            raise ValueError('`low` should be strictly smaller than `high`')
+        return torch.rand(self.shape)*(high - low) + low
+
+    def _make_randn_tensor(self, mean: float, std: float) -> torch.Tensor:
+        if not isinstance(mean, float):
+            raise TypeError('`mean` should be float type')
+        if not isinstance(std, float):
+            raise TypeError('`std` should be float type')
+        if std <= 0:
+            raise ValueError('`std` should be positive')
+        return torch.randn(self.shape)*std + mean
+
     # TODO: implement initialization methods for each node in the network
-    def set_tensor(self,
-                   init_method: Optional[Text] = None,
-                   tensor: Optional[torch.Tensor] = None) -> None:
-        # can't set tensor None
-        # if init_method is None:
-        #     if tensor is None:
-        #         raise ValueError('tensor should be provided')
-        #     self.tensor = tensor
-        # if init_method == 'copy':
-        #    tensor = self._copy_tensor()
-        # else:
-        # tensor = torch.randn(self.shape) * std
-        # self.tensor = tensor
-        # Error: if self.tensor is not None: Node already has a valid tensor. Initialize Node without
-        # tensor or override current tensor
+    def set_tensor(self, init_method: Optional[Text] = None, *args: float) -> Optional[torch.Tensor]:
+        if init_method is None:
+            return None
+        elif init_method == 'copy':
+            return self._make_copy_tensor()
+        elif init_method == 'rand':
+            return self._make_rand_tensor(*args)
+        elif init_method == 'randn':
+            return self._make_randn_tensor(*args)
+        elif init_method == 'neurips':
+            pass
         pass
 
-    # TODO: do this correctly, we don't need tensor.setter any more
-    def unset_tensor(self):
+    # TODO: do we need this? do this correctly, we don't need tensor.setter any more
+    def unset_tensor(self) -> None:
         self._tensor = None
 
-    # TODO: manage this
-    @staticmethod
-    def _make_copy_tensor(rank, dimension):
-        shape = (dimension,) * rank
-        copy_tensor = torch.zeros(shape)
-        i = torch.arange(dimension)
-        copy_tensor[(i,) * rank] = 1.
-        return copy_tensor
+    def param_edges(self, set_param: Optional[bool] = None) -> Optional[bool]:
+        if set_param is None:
+            return self._param_edges
+        if set_param:
+            for edge in self.edges:
+                edge.parameterize()
+        else:
+            for edge in self.edges:
+                edge.deparameterize()
 
     @overload
     def __getitem__(self, key: slice) -> List['AbstractEdge']:
@@ -336,7 +362,7 @@ class AbstractNode(ABC):
             return self.edges[key]
         return self.get_edge(key)
 
-    # TODO: implement @
+    # TODO: implement @ (not in-place contract_between, returns new node, not affecting the network)
     def __matmul__(self, other: 'AbstractNode') -> 'AbstractNode':
         pass
 
@@ -365,7 +391,20 @@ class Node(AbstractNode):
                  network: Optional[TensorNetwork] = None,
                  name: Optional[Text] = None,
                  tensor: Optional[torch.Tensor] = None) -> None:
+        """
+
+        Parameters
+        ----------
+        shape
+        axis_names
+        network
+        init_method: method to use to initialize the
+                     node tensor when it is not provided
+        name
+        tensor
+        """
         # TODO: hay que poner el tensor en super, o si no hacer que AbstarctNode nunca tenga tensor como input
+        # pasamos tensor a super() y luego hacemos set_tensor con el init_method que queramos
         super().__init__(shape, axis_names, network, name)
         if tensor is not None:
             # self.set_tensor(tensor=tensor)
@@ -377,7 +416,9 @@ class Node(AbstractNode):
     def set_tensor_format(tensor: Optional[torch.Tensor]) -> Optional[torch.Tensor]:
         return tensor
 
-    def create_edge(self, axis: Axis) -> 'Edge':
+    def create_edge(self, axis: Axis) -> Union['Edge', 'ParamEdge']:
+        if self.param_edges():
+            return ParamEdge(node1=self, axis1=axis)
         return Edge(node1=self, axis1=axis)
 
 
@@ -565,6 +606,14 @@ class AbstractEdge(ABC):
     # abstract methods
     @abstractmethod
     def dim(self) -> int:
+        pass
+
+    @abstractmethod
+    def parameterize(self):
+        pass
+
+    @abstractmethod
+    def deparameterize(self):
         pass
 
     @abstractmethod

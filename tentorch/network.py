@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 import warnings
 
+# TODO: parameterize and deparameterize network, return a different network so that
+#  we can retrieve the original parameterized nodes/edges with their initial sizes
 
 # TODO: names of (at least) ParamNodes and ParamEdges must be unique in a tensor network
 class TensorNetwork(nn.Module):

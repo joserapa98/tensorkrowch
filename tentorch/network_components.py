@@ -28,6 +28,7 @@ import torch
 import torch.nn as nn
 
 from tentorch.network import TensorNetwork
+from tentorch.utils import tab_string
 
 _VALID_SUBSCRIPTS = list('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
 _DEFAULT_SHIFT = -1.
@@ -36,7 +37,7 @@ _DEFAULT_SLOPE = 10.
 
 class Axis:
     """
-    Class for axis. An axis can be denoted by a number or a name.
+    Class for axes. An axis can be denoted by a number or a name.
     """
 
     def __init__(self,
@@ -47,7 +48,7 @@ class Axis:
 
         Parameters
         ----------
-        num: index in the node axis list
+        num: index in the node's axes list
         name: axis name
 
         Raises
@@ -61,16 +62,16 @@ class Axis:
             raise TypeError('`name` should be str type')
 
         self._num = num
-        self._name = name
+        self.name = name
 
     # properties
     @property
     def num(self) -> int:
         return self._num
 
-    @property
-    def name(self) -> Text:
-        return self._name
+    # @property
+    # def name(self) -> Text:
+    #     return self._name
 
     # methods
     def __int__(self) -> int:
@@ -94,7 +95,7 @@ class AbstractNode(ABC):
 
     def __init__(self,
                  shape: Optional[Union[int, Sequence[int], torch.Size]] = None,
-                 axis_names: Optional[Sequence[Text]] = None,
+                 axes_names: Optional[Sequence[Text]] = None,
                  network: Optional[TensorNetwork] = None,
                  name: Optional[Text] = None,
                  tensor: Optional[torch.Tensor] = None,
@@ -106,13 +107,11 @@ class AbstractNode(ABC):
         Parameters
         ----------
         shape: node shape (the shape of its tensor)
-        axis_names: list of axis names
+        axes_names: list of names for each of the node's axes
         network: tensor network to which the node belongs
-        init_method: method to use to initialize the
-                     node tensor when it is not provided
         name: node name
         tensor: tensor "contained" in the node
-        param_edges: boolean indicating whether node edges
+        param_edges: boolean indicating whether node's edges
                      are parameterized (trainable) or not
 
         Raises
@@ -123,8 +122,6 @@ class AbstractNode(ABC):
 
         super().__init__()
 
-        # TODO: maybe there is no need to provide a tensor in
-        #  any case, it might be enough with self.set_tensor(tensor)
         # shape and tensor
         if (shape is None) == (tensor is None):
             if shape is None:
@@ -146,29 +143,29 @@ class AbstractNode(ABC):
                 raise TypeError('`tensor` should be of torch.Tensor type')
             shape = tensor.shape
 
-        # axis_names
-        axis = list()
-        if axis_names is None:
+        # axes_names
+        axes = list()
+        if axes_names is None:
             warnings.warn('`axis_names` should be given to better tracking node edges and derived nodes')
             for i, _ in enumerate(shape):
-                axis.append(Axis(num=i, name=f'__unnamed_axis__{i}'))
+                axes.append(Axis(num=i, name=f'__unnamed_axis__{i}'))
         else:
-            if not isinstance(axis_names, (tuple, list)):
+            if not isinstance(axes_names, (tuple, list)):
                 raise TypeError('`axis_names` should be tuple[str, ...] or list[str, ...] type')
-            if len(axis_names) != len(shape):
+            if len(axes_names) != len(shape):
                 raise ValueError('`axis_names` length should match `shape` length')
             else:
                 repeated = False
-                for i1, axis_name1 in enumerate(axis_names):
-                    for i2, axis_name2 in enumerate(axis_names[:i1]):
+                for i1, axis_name1 in enumerate(axes_names):
+                    for i2, axis_name2 in enumerate(axes_names[:i1]):
                         if axis_name1 == axis_name2:
                             repeated = True
                             break
                     if repeated:
                         break
-                    axis.append(Axis(num=i1, name=axis_name1))
+                    axes.append(Axis(num=i1, name=axis_name1))
                 if repeated:
-                    raise ValueError('Axis names should be unique in a node')
+                    raise ValueError('Axes names should be unique in a node')
 
         # network
         if network is not None:
@@ -183,13 +180,14 @@ class AbstractNode(ABC):
         elif not isinstance(name, str):
             raise TypeError('`name` should be str type')
 
+        self.name = name
+
         self._shape = shape
-        self._axis = axis
+        self._axes = axes
         self._network = network
-        self._name = name
         self._tensor = self.set_tensor_format(tensor)
         self._edges = [self.create_edge(axis=ax)
-                       for ax in axis]
+                       for ax in axes]
         self._param_edges = param_edges
 
     # properties
@@ -204,16 +202,16 @@ class AbstractNode(ABC):
         return len(self.shape)
 
     @property
-    def axis(self) -> List[Axis]:
-        return self._axis
+    def axes(self) -> List[Axis]:
+        return self._axes
 
     @property
     def network(self) -> Optional[TensorNetwork]:
         return self._network
 
-    @property
-    def name(self) -> Text:
-        return self._name
+    # @property
+    # def name(self) -> Text:
+    #     return self._name
 
     @property
     def tensor(self) -> Optional[Union[torch.Tensor, nn.Parameter]]:
@@ -230,7 +228,9 @@ class AbstractNode(ABC):
                 raise ValueError('`tensor` should be torch.Tensor type')
             if tensor.shape != self.shape:
                 raise ValueError('`tensor` shape should match node shape')
-        self._tensor = self.set_tensor_format(tensor)
+            self._tensor = self.set_tensor_format(tensor)
+        else:
+            raise ValueError('Cannot assign a NoneType object to the node\'s tensor')
 
     @property
     def edges(self) -> List['AbstractEdge']:
@@ -243,8 +243,17 @@ class AbstractNode(ABC):
         pass
 
     @abstractmethod
-    def create_edge(self, axis: Axis) -> 'AbstractEdge':
+    def create_edge(self, axis: Axis) -> Union['Edge', 'ParamEdge']:
         pass
+
+    # TODO: implement parameterize and deparameterize
+    # @abstractmethod
+    # def parameterize(self) -> 'ParamNode':
+    #     pass
+
+    # @abstractmethod
+    # def deparameterize(self) -> 'Node':
+    #     pass
 
     # methods
     # TODO: comment
@@ -254,25 +263,25 @@ class AbstractNode(ABC):
         axis_num = self.get_axis_number(dim)
         return self.shape[axis_num]
 
-    def dimension(self, dim: Optional[Union[int, Text, Axis]] = None) -> Union[torch.Tensor, int]:
+    def dimension(self, dim: Optional[Union[int, Text, Axis]] = None) -> Union[torch.Size, int]:
         if dim is None:
-            return torch.tensor(list(map(lambda edge: edge.dimension(), self.edges)))
+            return torch.Size(list(map(lambda edge: edge.dimension(), self.edges)))
         axis_num = self.get_axis_number(dim)
         return self.edges[axis_num].dimension()
 
     def get_axis_number(self, axis: Union[int, Text, Axis]) -> int:
         if isinstance(axis, int):
-            for ax in self.axis:
+            for ax in self.axes:
                 if axis == ax.num:
                     return ax.num
             ValueError(f'Node {self!s} has no axis with index {axis!r}')
         elif isinstance(axis, str):
-            for ax in self.axis:
+            for ax in self.axes:
                 if axis == ax.name:
                     return ax.num
             ValueError(f'Node {self!s} has no axis with name {axis!r}')
         elif isinstance(axis, Axis):
-            for ax in self.axis:
+            for ax in self.axes:
                 if axis == ax:
                     return ax.num
             ValueError(f'Node {self!s} has no axis with name {axis!r}')
@@ -289,55 +298,106 @@ class AbstractNode(ABC):
                  override: bool = False) -> None:
         axis_num = self.get_axis_number(axis)
         if not self.edges[axis_num].is_dangling() and not override:
-            raise ValueError(f'Node {self!s} already has a non-dangling edge for axis {axis!r}')
+            raise ValueError(f'Node {self.name} already has a non-dangling edge for axis {axis!r}')
         self.edges[axis_num] = edge
 
-    def _make_copy_tensor(self) -> torch.Tensor:
-        for i in self.shape[1:]:
-            if i != self.shape[0]:
-                raise ValueError(f'Edges {self.edges[i]} and {self.edges[0]} have unequal '
-                                 f'dimensions. Copy tensors have the same dimension in all '
-                                 f'their axes.')
-        copy_tensor = torch.zeros(self.shape)
-        i = torch.arange(self.shape[0])
-        copy_tensor[(i,) * self.rank] = 1.
+    @staticmethod
+    def _make_copy_tensor(shape: Union[int, Sequence[int], torch.Size]) -> torch.Tensor:
+        for i in shape[1:]:
+            if i != shape[0]:
+                raise ValueError(f'`shape` has unequal dimensions. Copy tensors '
+                                 f'have the same dimension in all their axes.')
+        copy_tensor = torch.zeros(shape)
+        rank = len(shape)
+        i = torch.arange(shape[0])
+        copy_tensor[(i,) * rank] = 1.
         return copy_tensor
 
-    def _make_rand_tensor(self, low: float, high: float) -> torch.Tensor:
+    @staticmethod
+    def _make_rand_tensor(shape: Union[int, Sequence[int], torch.Size],
+                          low: float,
+                          high: float) -> torch.Tensor:
         if not isinstance(low, float):
             raise TypeError('`low` should be float type')
         if not isinstance(high, float):
             raise TypeError('`high` should be float type')
         if low >= high:
             raise ValueError('`low` should be strictly smaller than `high`')
-        return torch.rand(self.shape)*(high - low) + low
+        return torch.rand(shape) * (high - low) + low
 
-    def _make_randn_tensor(self, mean: float, std: float) -> torch.Tensor:
+    @staticmethod
+    def _make_randn_tensor(shape: Union[int, Sequence[int], torch.Size],
+                           mean: float,
+                           std: float) -> torch.Tensor:
         if not isinstance(mean, float):
             raise TypeError('`mean` should be float type')
         if not isinstance(std, float):
             raise TypeError('`std` should be float type')
         if std <= 0:
             raise ValueError('`std` should be positive')
-        return torch.randn(self.shape)*std + mean
+        return torch.randn(shape) * std + mean
 
     # TODO: implement initialization methods for each node in the network
-    def set_tensor(self, init_method: Optional[Text] = None, *args: float) -> Optional[torch.Tensor]:
-        if init_method is None:
-            return None
+    def _make_tensor(self,
+                     shape: Optional[Union[int, Sequence[int], torch.Size]] = None,
+                     init_method: Text = 'zeros',
+                     *args: float) -> torch.Tensor:
+        if shape is None:
+            shape = self.shape
+        if init_method == 'zeros':
+            return torch.zeros(shape)
+        elif init_method == 'ones':
+            return torch.ones(shape)
         elif init_method == 'copy':
-            return self._make_copy_tensor()
+            return self._make_copy_tensor(shape)
         elif init_method == 'rand':
-            return self._make_rand_tensor(*args)
+            return self._make_rand_tensor(shape, *args)
         elif init_method == 'randn':
-            return self._make_randn_tensor(*args)
+            return self._make_randn_tensor(shape, *args)
         elif init_method == 'neurips':
             pass
-        pass
+        else:
+            raise ValueError('Choose a valid `init_method`: "zeros", '
+                             '"ones", "copy", "rand", "randn", "neurips"')
+        # TODO: implement functions like tn.ones, tn.zeros that use this functions
+        #  to create a node and set its tensor
+
+    def set_tensor(self, init_method: Text = 'zeros', *args: float) -> torch.Tensor:
+        new_tensor = self._make_tensor()
 
     # TODO: do we need this? do this correctly, we don't need tensor.setter any more
     def unset_tensor(self) -> None:
         self._tensor = None
+
+    def change_axis_size(self,
+                         axis: Union[int, Text, Axis],
+                         size: int,
+                         init_method: Text = 'zeros',
+                         *args: float) -> None:
+        axis_num = self.get_axis_number(axis)
+        old_shape = self.shape
+        old_tensor = self.tensor
+
+        index = list()
+        for i, dim in enumerate(old_shape):
+            if i == axis_num:
+                index.append(slice(dim - size, dim))
+            else:
+                index.append(slice(0, dim))
+
+        if size < self.shape[axis_num]:
+            self.tensor = old_tensor[index]
+        elif size > self.shape[axis_num]:
+            new_shape = list(self.shape)
+            new_shape[axis_num] = size
+
+            old_tensor = self.tensor
+
+            self.tensor = torch.empty(new_shape)
+            self.set_tensor(init_method, *args)
+            self.tensor[index] = old_tensor
+
+
 
     def param_edges(self, set_param: Optional[bool] = None) -> Optional[bool]:
         if set_param is None:
@@ -369,17 +429,18 @@ class AbstractNode(ABC):
     def __str__(self) -> Text:
         return self.name
 
-    # TODO: el tensor se queda movido
+    # TODO: error when tensor is none
     def __repr__(self) -> Text:
         return f'{self.__class__.__name__}(\n ' \
-               f'\tname: {self!s}\n' \
-               f'\ttensor:\n\t\t{self.tensor.data!r}\n' \
-               f'\tedges: \n\t\t{self.edges!r})'
+               f'\tname: {self.name}\n' \
+               f'\ttensor:\n{tab_string(repr(self.tensor.data), 2)}\n' \
+               f'\tedges:\n{tab_string(repr(self.edges), 2)})'
 
 
 class Node(AbstractNode):
     """
-    Base class for non-trainable nodes.
+    Base class for non-trainable nodes. Should be subclassed by
+    any new class of non-trainable nodes.
 
     Used for fixed nodes of the network or intermediate,
     derived nodes resulting from operations between other nodes.
@@ -387,28 +448,26 @@ class Node(AbstractNode):
 
     def __init__(self,
                  shape: Optional[Union[int, Sequence[int], torch.Size]] = None,
-                 axis_names: Optional[Sequence[Text]] = None,
+                 axes_names: Optional[Sequence[Text]] = None,
                  network: Optional[TensorNetwork] = None,
                  name: Optional[Text] = None,
-                 tensor: Optional[torch.Tensor] = None) -> None:
+                 tensor: Optional[torch.Tensor] = None,
+                 param_edges: bool = False,
+                 init_method: Optional[Text] = None,
+                 *args: float) -> None:
         """
 
         Parameters
         ----------
-        shape
-        axis_names
-        network
         init_method: method to use to initialize the
                      node tensor when it is not provided
-        name
-        tensor
+        args: arguments for the init_method
         """
-        # TODO: hay que poner el tensor en super, o si no hacer que AbstarctNode nunca tenga tensor como input
-        # pasamos tensor a super() y luego hacemos set_tensor con el init_method que queramos
-        super().__init__(shape, axis_names, network, name)
-        if tensor is not None:
-            # self.set_tensor(tensor=tensor)
-            self.tensor = tensor
+
+        super().__init__(shape, axes_names, network, name, tensor, param_edges)
+
+        if init_method is not None:
+            self.set_tensor(init_method, *args)
 
     # methods
     # TODO: is it okay to return None tensor (and input None tensor)??
@@ -422,18 +481,25 @@ class Node(AbstractNode):
         return Edge(node1=self, axis1=axis)
 
 
+# TODO: ignore this at the moment
 class CopyNode(Node):
     """
     Subclass of Node for copy nodes and its optimized operations.
     """
 
+    # TODO: shared parameters among its edges? They have the same dimension
+    #  in all edges. Or do we admit CopyNodes with different dimensions in each edge??
+    # TODO: Si creamos un Node con init_method = 'copy' se convierte en CopyNode??
+
     def __init__(self,
                  shape: Optional[Union[int, Sequence[int], torch.Size]] = None,
-                 axis_names: Optional[Sequence[Text]] = None,
+                 axes_names: Optional[Sequence[Text]] = None,
                  network: Optional[TensorNetwork] = None,
-                 name: Optional[Text] = None) -> None:
-        super().__init__(shape, axis_names, network, name)
-        self.set_tensor('copy')
+                 name: Optional[Text] = None,
+                 tensor: Optional[torch.Tensor] = None,
+                 param_edges: bool = False,
+                 *args: float) -> None:
+        super().__init__(shape, axes_names, network, name, tensor, param_edges, 'copy', *args)
 
     # methods
     # TODO: implement optimized @
@@ -441,49 +507,8 @@ class CopyNode(Node):
         pass
 
 
-class ParamNode(AbstractNode, nn.Module):
-    """
-    Class for trainable nodes. Subclass of PyTorch nn.Module.
-    """
-
-    def __init__(self,
-                 shape: Optional[Union[int, Sequence[int], torch.Size]] = None,
-                 axis_names: Optional[Sequence[Text]] = None,
-                 network: Optional[TensorNetwork] = None,
-                 name: Optional[Text] = None,
-                 tensor: Optional[torch.Tensor] = None,
-                 param_edges: bool = True) -> None:
-
-        self._param_edges = param_edges
-
-        nn.Module.__init__(self)
-        AbstractNode.__init__(self, shape, axis_names, network, name)
-        if tensor is not None:
-            self.tensor = tensor
-            # self.set_tensor(tensor=tensor)
-
-    # properties
-    @property
-    def grad(self) -> Optional[torch.Tensor]:
-        return self.tensor.grad
-
-    # methods
-    # TODO: what happens if tensor is None
-    @staticmethod
-    def set_tensor_format(tensor: Optional[torch.Tensor]) -> Optional[nn.Parameter]:
-        return nn.Parameter(tensor)
-
-    def create_edge(self, axis: Axis) -> Union['ParamEdge', 'Edge']:
-        if self._param_edges:
-            return ParamEdge(node1=self, axis1=axis)
-        return Edge(node1=self, axis1=axis)
-
-    def deparameterize_edges(self):
-        pass
-
-
-# TODO: implement this, ignorar de momento
-class StackNode(AbstractNode):
+# TODO: implement this, ignore this at the moment
+class StackNode(Node):
     def __init__(self,
                  nodes_list: List[AbstractNode],
                  dim: int,
@@ -524,6 +549,49 @@ class StackNode(AbstractNode):
         return StackEdge(self.edges_dict[axis], node1=self, axis1=axis, name=name)
 
 
+class ParamNode(AbstractNode, nn.Module):
+    """
+    Class for trainable nodes. Subclass of PyTorch nn.Module.
+    Should be subclassed by any new class of trainable nodes.
+
+    Used as initial nodes of a tensor network that is to be trained.
+    """
+
+    def __init__(self,
+                 shape: Optional[Union[int, Sequence[int], torch.Size]] = None,
+                 axes_names: Optional[Sequence[Text]] = None,
+                 network: Optional[TensorNetwork] = None,
+                 name: Optional[Text] = None,
+                 tensor: Optional[torch.Tensor] = None,
+                 param_edges: bool = True,
+                 init_method: Optional[Text] = None,
+                 *args: float) -> None:
+
+        nn.Module.__init__(self)
+        AbstractNode.__init__(self, shape, axes_names, network, name, tensor, param_edges)
+
+        if init_method is not None:
+            self.set_tensor(init_method, *args)
+
+    # properties
+    @property
+    def grad(self) -> Optional[torch.Tensor]:
+        return self.tensor.grad
+
+    # methods
+    # TODO: what happens if tensor is None
+    @staticmethod
+    def set_tensor_format(tensor: Optional[torch.Tensor]) -> Optional[nn.Parameter]:
+        if tensor is None:
+            return None
+        return nn.Parameter(tensor)
+
+    def create_edge(self, axis: Axis) -> Union['ParamEdge', 'Edge']:
+        if self.param_edges():
+            return ParamEdge(node1=self, axis1=axis)
+        return Edge(node1=self, axis1=axis)
+
+
 class AbstractEdge(ABC):
     """
     Abstract class for edges. Should be subclassed.
@@ -557,9 +625,9 @@ class AbstractEdge(ABC):
 
         # node1 and axis1
         if not isinstance(node1, AbstractNode):
-            raise TypeError('`node1` should be of AbstractNode type')
+            raise TypeError('`node1` should be AbstractNode type')
         if not isinstance(axis1, Axis):
-            raise TypeError('`axis1` should be of Axis type')
+            raise TypeError('`axis1` should be Axis type')
 
         # node2 and axis2
         if (node2 is None) != (axis2 is None):
@@ -568,19 +636,8 @@ class AbstractEdge(ABC):
             if node1.shape[axis1.num] != node2.shape[axis2.num]:
                 raise ValueError('Shapes of `axis1` and `axis2` should match')
 
-        # name
-        if node2 is None:
-            name = f'{node1.name}[{axis1.name}] <-> None'
-        else:
-            name = f'{node1.name}[{axis1.name}] <-> {node2.name}[{axis2.name}]'
-
         self._nodes = [node1, node2]
         self._axis = [axis1, axis2]
-        self._name = name
-
-        self._is_dangling = node2 is None
-        self._size = node1.shape[axis1.num]
-        # self._matrix = None
 
     # properties
     @property
@@ -601,64 +658,78 @@ class AbstractEdge(ABC):
 
     @property
     def name(self) -> Text:
-        return self._name
+        if self.is_dangling():
+            return f'{self.node1.name}[{self.axis1.name}] <-> None'
+        return f'{self.node1.name}[{self.axis1.name}] <-> ' \
+               f'{self.node2.name}[{self.axis2.name}]'
 
     # abstract methods
     @abstractmethod
-    def dim(self) -> int:
+    def dimension(self) -> int:
         pass
 
     @abstractmethod
-    def parameterize(self):
+    def parameterize(self) -> 'ParamEdge':
         pass
 
     @abstractmethod
-    def deparameterize(self):
+    def deparameterize(self) -> 'Edge':
         pass
 
     @abstractmethod
     def __xor__(self, other: 'AbstractEdge') -> 'AbstractEdge':
         pass
 
+    # TODO: implement this, like disconnect, check types
+    @abstractmethod
+    def __or__(self) -> List['AbstractEdge']:
+        pass
+
     # methods
     def is_dangling(self) -> bool:
-        return self._is_dangling
+        return self.node2 is None
 
     def size(self) -> int:
-        return self._size
+        return self.node1.size(self.axis1)
 
-    # TODO: implement this (disconnect)
-    def split_edge(self):
-        pass
+    # TODO: crop -> crops connected nodes to given size / dimension
+    def change_size(self, size: int, init_method: Text = 'zeros') -> None:
+        if not isinstance(size, int):
+            TypeError('`size` should be int type')
+        if not self.is_dangling():
+            self.node2.change_axis_size(self.axis2, size, init_method)
+        self.node1.change_axis_size(self.axis1, size, init_method)
 
     def __str__(self) -> Text:
         return self.name
 
     def __repr__(self) -> Text:
-        if self.node2 is None:
+        if self.is_dangling():
             return f'{self.__class__.__name__}( {self.name} )  (Dangling Edge)'
         return f'{self.__class__.__name__}( {self.name} )'
 
 
 class Edge(AbstractEdge):
     """
-    Base class for non-trainable edges.
+    Base class for non-trainable edges. Should be subclassed
+    by any new class of non-trainable edges.
 
-    Used for creating a non-trainable node, although it can be
-    substituted by a ParamEdge if the node is connected
-    to a ParamNode.
+    Used by default for creating a non-trainable node.
     """
 
     # TODO: batch indicator
 
     # methods
+    def dimension(self) -> int:
+        return self.size()
+
     # TODO: convert to ParamEdge
-    def parameterize(self, shift, slope, size): # size >= current dim
+    def parameterize(self, shift, slope, size) -> 'ParamEdge':  # size >= current dim
         # return ParamEdge
         pass
 
-    def dim(self) -> int:
-        return self.size()
+    def deparameterize(self) -> 'Edge':
+        return self
 
     @overload
     def __xor__(self, other: 'Edge') -> 'Edge':
@@ -672,10 +743,58 @@ class Edge(AbstractEdge):
     def __xor__(self, other: Union['Edge', 'ParamEdge']) -> Union['Edge', 'ParamEdge']:
         return connect(self, other)
 
+    def __or__(self):
+        pass
+
+
+# TODO: ignore this at the moment
+class StackEdge(Edge):
+    """
+    Edge que es lista de varios Edges. Se usa para un StackNode
+
+    No hacer cambios de tipos, simplemente que este Edge lleve
+    parámetros adicionales de los Edges que está aglutinando
+    y su vecinos y tal. Pero que no sea en sí mismo una lista
+    de Edges, que eso lo lía todo.
+    """
+
+    def __init__(self,
+                 edges_list: List['AbstractEdge'],
+                 node1: 'AbstractNode',
+                 axis1: int,
+                 name: Optional[str] = None,
+                 node2: Optional['AbstractNode'] = None,
+                 axis2: Optional[int] = None,
+                 shift: Optional[int] = None,
+                 slope: Optional[int] = None) -> None:
+        # TODO: edges in list must have same size and dimension
+        self.edges_list = edges_list
+        super().__init__(node1, axis1, name, node2, axis2, shift, slope)
+
+    def create_parameters(self, shift, slope):
+        return None, None, None
+
+    def dim(self):
+        """
+        Si es ParamEdge se mide en función de sus parámetros la dimensión
+        """
+        return None
+
+    def create_matrix(self, dim):
+        """
+        Eye for Edge, Parameter for ParamEdge
+        """
+        return None
+
+    def __xor__(self, other: 'AbstractEdge') -> 'AbstractEdge':
+        return None
+
 
 class ParamEdge(AbstractEdge, nn.Module):
     """
-    Class for trainable edges. Subclass of PyTorch nn.Module
+    Class for trainable edges. Subclass of PyTorch nn.Module.
+    Should be subclassed by any new class of trainable edges.
+
         -batch (bool)
         -grad -> devuelve tupla de grad de shift y slope
     """
@@ -698,7 +817,7 @@ class ParamEdge(AbstractEdge, nn.Module):
             if isinstance(shift, int):
                 shift = float(shift)
             elif not isinstance(shift, float):
-                raise TypeError('`shift` should be of int or float type')
+                raise TypeError('`shift` should be int or float type')
 
         # slope
         if slope is None:
@@ -707,7 +826,7 @@ class ParamEdge(AbstractEdge, nn.Module):
             if isinstance(slope, int):
                 slope = float(slope)
             elif not isinstance(slope, float):
-                raise TypeError('`slope` should be of int or float type')
+                raise TypeError('`slope` should be int or float type')
 
         self._shift = nn.Parameter(torch.tensor(shift))
         self._slope = nn.Parameter(torch.tensor(slope))
@@ -719,9 +838,27 @@ class ParamEdge(AbstractEdge, nn.Module):
     def shift(self) -> nn.Parameter:
         return self._shift
 
+    @shift.setter
+    def shift(self, shift: Union[int, float]) -> None:
+        if isinstance(shift, int):
+            shift = float(shift)
+        elif not isinstance(shift, float):
+            raise TypeError('`shift` should be int or float type')
+        self._shift = nn.Parameter(torch.tensor(shift))
+        self._matrix = self.set_matrix()
+
     @property
     def slope(self) -> nn.Parameter:
         return self._slope
+
+    @slope.setter
+    def slope(self, slope: Union[int, float]) -> None:
+        if isinstance(slope, int):
+            slope = float(slope)
+        elif not isinstance(slope, float):
+            raise TypeError('`shift` should be int or float type')
+        self._slope = nn.Parameter(torch.tensor(slope))
+        self._matrix = self.set_matrix()
 
     @property
     def matrix(self) -> torch.Tensor:
@@ -732,7 +869,7 @@ class ParamEdge(AbstractEdge, nn.Module):
         return [self.shift.grad, self.slope.grad]
 
     # methods
-    def sigmoid(self, x: Union[float, torch.Tensor]) -> Union[float, torch.Tensor]:
+    def sigmoid(self, x: torch.Tensor) -> torch.Tensor:
         return self._sigmoid(x)
 
     def set_matrix(self) -> torch.Tensor:
@@ -741,61 +878,28 @@ class ParamEdge(AbstractEdge, nn.Module):
         matrix[(i, i)] = self.sigmoid(self.slope * (i - self.shift))
         return matrix
 
-    # TODO: convert to Edge
-    def deparameterize(self):
-        # return Edge()
-        pass
-
-    def dim(self) -> int:
+    # methods
+    def dimension(self) -> int:
         i = torch.arange(self.size())
         signs = torch.sign(self.sigmoid(self.slope * (i - self.shift)) - 0.5)
         dim = torch.where(signs == 1, signs, torch.zeros(signs.shape)).sum()
         return int(dim)
 
+    def parameterize(self) -> 'ParamEdge':
+        return self
+
+    # TODO: convert to Edge
+    def deparameterize(self) -> Edge:
+        # we have to crop the node's tensors to the given dimension
+        # return Edge()
+        pass
+
     # TODO: check types, may be overload
     def __xor__(self, other: AbstractEdge) -> 'ParamEdge':
         return connect(self, other)
 
-# TODO: ignorar esto de momento
-class StackEdge(AbstractEdge):
-    """
-    Edge que es lista de varios Edges. Se usa para un StackNode
-
-    No hacer cambios de tipos, simplemente que este Edge lleve
-    parámetros adicionales de los Edges que está aglutinando
-    y su vecinos y tal. Pero que no sea en sí mismo una lista
-    de Edges, que eso lo lía todo.
-    """
-
-    def __init__(self,
-                 edges_list: List['AbstractEdge'],
-                 node1: 'AbstractNode',
-                 axis1: int,
-                 name: Optional[str] = None,
-                 node2: Optional['AbstractNode'] = None,
-                 axis2: Optional[int] = None,
-                 shift: Optional[int] = None,
-                 slope: Optional[int] = None) -> None:
-        self.edges_list = edges_list
-        super().__init__(node1, axis1, name, node2, axis2, shift, slope)
-
-    def create_parameters(self, shift, slope):
-        return None, None, None
-
-    def dim(self):
-        """
-        Si es ParamEdge se mide en función de sus parámetros la dimensión
-        """
-        return None
-
-    def create_matrix(self, dim):
-        """
-        Eye for Edge, Parameter for ParamEdge
-        """
-        return None
-
-    def __xor__(self, other: 'AbstractEdge') -> 'AbstractEdge':
-        return None
+    def __or__(self):
+        pass
 
 
 # TODO: change output type -> Union[Edge, ParamEdge]. Do we return StackEdge or any other type?

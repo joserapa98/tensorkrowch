@@ -43,13 +43,13 @@ class TensorNetwork(nn.Module):
                 edges_list.append(edge)
         return edges_list
 
-    def _add_param_edge(self, edge: 'ParamEdge') -> None:
+    def _add_param(self, edge: 'ParamEdge') -> None:
         if not hasattr(self, edge.name):
             self.add_module(edge.name, edge)
         else:
             raise ValueError(f'Network already has attribute named {edge.name}')
 
-    def _remove_param_edge(self, edge: 'ParamEdge') -> None:
+    def _remove_param(self, edge: 'ParamEdge') -> None:
         if hasattr(self, edge.name):
             delattr(self, edge.name)
         else:

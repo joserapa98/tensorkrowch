@@ -20,7 +20,7 @@ This script contains:
 """
 
 from typing import (overload, Union, Optional,
-                    Sequence, Text, List)
+                    Sequence, Text, List, Tuple)
 from abc import ABC, abstractmethod
 import warnings
 
@@ -31,8 +31,8 @@ from tentorch.network import TensorNetwork
 from tentorch.utils import tab_string
 
 _VALID_SUBSCRIPTS = list('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
-_DEFAULT_SHIFT = -1.
-_DEFAULT_SLOPE = 10.
+_DEFAULT_SHIFT = -0.5
+_DEFAULT_SLOPE = 15.
 
 
 class Axis:
@@ -226,6 +226,10 @@ class AbstractNode(ABC):
     def make_edge(self, axis: Axis) -> Union['Edge', 'ParamEdge']:
         pass
 
+    @abstractmethod
+    def param_edges(self, set_param: Optional[bool] = None) -> Optional[bool]:
+        pass
+
     # TODO: implement parameterize and deparameterize
     # @abstractmethod
     # def parameterize(self) -> 'ParamNode':
@@ -243,28 +247,28 @@ class AbstractNode(ABC):
         axis_num = self.get_axis_number(dim)
         return self.shape[axis_num]
 
-    def dimensions(self, dim: Optional[Union[int, Text, Axis]] = None) -> Union[torch.Size, int]:
+    def dims(self, dim: Optional[Union[int, Text, Axis]] = None) -> Union[torch.Size, int]:
         if dim is None:
-            return torch.Size(list(map(lambda edge: edge.dimension(), self.edges)))
+            return torch.Size(list(map(lambda edge: edge.dim(), self.edges)))
         axis_num = self.get_axis_number(dim)
-        return self.edges[axis_num].dimension()
+        return self.edges[axis_num].dim()
 
     def get_axis_number(self, axis: Union[int, Text, Axis]) -> int:
         if isinstance(axis, int):
             for ax in self.axes:
                 if axis == ax.num:
                     return ax.num
-            ValueError(f'Node {self!s} has no axis with index {axis!r}')
+            IndexError(f'Node {self!s} has no axis with index {axis!r}')
         elif isinstance(axis, str):
             for ax in self.axes:
                 if axis == ax.name:
                     return ax.num
-            ValueError(f'Node {self!s} has no axis with name {axis!r}')
+            IndexError(f'Node {self!s} has no axis with name {axis!r}')
         elif isinstance(axis, Axis):
             for ax in self.axes:
                 if axis == ax:
                     return ax.num
-            ValueError(f'Node {self!s} has no axis with name {axis!r}')
+            IndexError(f'Node {self!s} has no axis with name {axis!r}')
         else:
             TypeError('`axis` should be int, str or Axis type')
 
@@ -362,10 +366,12 @@ class AbstractNode(ABC):
         self._tensor = None
 
     # TODO: set predefined init_method and **kwargs regarding to the values of `self` (the node)
+    # TODO: manage case size = 0, or dim = 0. We have to make dimension 1 in that axis,
+    #  not 0, in that case the tensor disappears
     def _change_axis_size(self,
                           axis: Union[int, Text, Axis],
                           size: int,
-                          init_method: Text = 'zeros',
+                          padding_method: Text = 'zeros',
                           **kwargs: float) -> None:
         axis_num = self.get_axis_number(axis)
         index = list()
@@ -380,19 +386,9 @@ class AbstractNode(ABC):
         elif size > self.shape[axis_num]:
             new_shape = list(self.shape)
             new_shape[axis_num] = size
-            new_tensor = self.make_tensor(new_shape, init_method, **kwargs)
+            new_tensor = self.make_tensor(new_shape, padding_method, **kwargs)
             new_tensor[index] = self.tensor
             self.set_tensor(new_tensor)
-
-    def param_edges(self, set_param: Optional[bool] = None) -> Optional[bool]:
-        if set_param is None:
-            return self._param_edges
-        if set_param:
-            for edge in self.edges:
-                edge.parameterize()
-        else:
-            for edge in self.edges:
-                edge.deparameterize()
 
     @overload
     def __getitem__(self, key: slice) -> List['AbstractEdge']:
@@ -476,6 +472,22 @@ class Node(AbstractNode):
         if self.param_edges():
             return ParamEdge(node1=self, axis1=axis)
         return Edge(node1=self, axis1=axis)
+
+    def param_edges(self,
+                    set_param: Optional[bool] = None,
+                    sizes: Optional[Sequence[int]] = None) -> Optional[bool]:
+        if set_param is None:
+            return self._param_edges
+        else:
+            if set_param:
+                if len(sizes) != len(self.edges):
+                    raise ValueError('`sizes` length should match the number of node\'s axes')
+                for i, edge in enumerate(self.edges):
+                    edge.parameterize(True, size=sizes[i])
+            else:
+                for param_edge in self.edges:
+                    param_edge.parameterize(False)
+            self._param_edges = set_param
 
 
 # TODO: ignore this at the moment
@@ -672,15 +684,15 @@ class AbstractEdge(ABC):
 
     # abstract methods
     @abstractmethod
-    def dimension(self) -> int:
+    def dim(self) -> int:
         pass
 
     @abstractmethod
-    def parameterize(self) -> 'ParamEdge':
+    def change_size(self, size: int, padding_method: Text = 'zeros', **kwargs) -> None:
         pass
 
     @abstractmethod
-    def deparameterize(self) -> 'Edge':
+    def parameterize(self, set_param: bool) -> 'AbstractEdge':
         pass
 
     @abstractmethod
@@ -699,14 +711,6 @@ class AbstractEdge(ABC):
     def size(self) -> int:
         return self.node1.size(self.axis1)
 
-    # TODO: crop -> crops connected nodes to given size / dimension
-    def change_size(self, size: int, init_method: Text = 'zeros', **kwargs) -> None:
-        if not isinstance(size, int):
-            TypeError('`size` should be int type')
-        if not self.is_dangling():
-            self.node2._change_axis_size(self.axis2, size, init_method, **kwargs)
-        self.node1._change_axis_size(self.axis1, size, init_method, **kwargs)
-
     def __str__(self) -> Text:
         return self.name
 
@@ -721,24 +725,41 @@ class Edge(AbstractEdge):
     Base class for non-trainable edges. Should be subclassed
     by any new class of non-trainable edges.
 
-    Used by default for creating a non-trainable node.
+    Used by default to create a non-trainable node.
     """
 
     # TODO: batch indicator
 
     # methods
-    def dimension(self) -> int:
+    def dim(self) -> int:
         return self.size()
 
-    # TODO: convert to ParamEdge
-    def parameterize(self, size) -> 'ParamEdge':  # size >= current dim
-        # return ParamEdge
-        # dim viene dado por la actual size, pero si damos un size mayor se aumenta el
-        # tamaño del edge y los nodos y se calcula shift y slope para que dim encaje
-        pass
+    def change_size(self, size: int, padding_method: Text = 'zeros', **kwargs) -> None:
+        if not isinstance(size, int):
+            TypeError('`size` should be int type')
+        if not self.is_dangling():
+            self.node2._change_axis_size(self.axis2, size, padding_method, **kwargs)
+        self.node1._change_axis_size(self.axis1, size, padding_method, **kwargs)
 
-    def deparameterize(self) -> 'Edge':
-        return self
+    def parameterize(self,
+                     set_param: bool = True,
+                     size: Optional[int] = None) -> Union['Edge', 'ParamEdge']:
+        if set_param:
+            dim = self.dim()
+            if size is not None:
+                if size > dim:
+                    self.change_size(size)
+                elif size < dim:
+                    raise ValueError(f'`size` should be greater than current '
+                                     f'dimension: {dim}, or NoneType')
+            new_edge = ParamEdge(node1=self.node1, axis1=self.axis1, dim=dim,
+                                 node2=self.node2, axis2=self.axis2)
+            if not self.is_dangling():
+                self.node2.add_edge(new_edge, self.axis2, override=True)
+            self.node1.add_edge(new_edge, self.axis1, override=True)
+            return new_edge
+        else:
+            return self
 
     @overload
     def __xor__(self, other: 'Edge') -> 'Edge':
@@ -752,6 +773,7 @@ class Edge(AbstractEdge):
     def __xor__(self, other: Union['Edge', 'ParamEdge']) -> Union['Edge', 'ParamEdge']:
         return connect(self, other)
 
+    # TODO: implement this
     def __or__(self):
         pass
 
@@ -811,6 +833,7 @@ class ParamEdge(AbstractEdge, nn.Module):
     def __init__(self,
                  node1: AbstractNode,
                  axis1: Axis,
+                 dim: Optional[int] = None,
                  shift: Optional[Union[int, float]] = None,
                  slope: Optional[Union[int, float]] = None,
                  node2: Optional[AbstractNode] = None,
@@ -819,28 +842,35 @@ class ParamEdge(AbstractEdge, nn.Module):
         nn.Module.__init__(self)
         AbstractEdge.__init__(self, node1, axis1, node2, axis2)
 
-        # shift
-        if shift is None:
-            shift = _DEFAULT_SHIFT
+        # shift and slope
+        if dim is not None:
+            if (shift is not None) or (slope is not None):
+                warnings.warn('`shift` and/or `slope` might have been ignored '
+                              'when initializing the edge')
+            shift, slope = self.compute_parameters(node1.size(axis1), dim)
         else:
-            if isinstance(shift, int):
-                shift = float(shift)
-            elif not isinstance(shift, float):
-                raise TypeError('`shift` should be int or float type')
+            if shift is None:
+                shift = _DEFAULT_SHIFT
+            else:
+                if isinstance(shift, int):
+                    shift = float(shift)
+                elif not isinstance(shift, float):
+                    raise TypeError('`shift` should be int or float type')
 
-        # slope
-        if slope is None:
-            slope = _DEFAULT_SLOPE
-        else:
-            if isinstance(slope, int):
-                slope = float(slope)
-            elif not isinstance(slope, float):
-                raise TypeError('`slope` should be int or float type')
+            if slope is None:
+                slope = _DEFAULT_SLOPE
+            else:
+                if isinstance(slope, int):
+                    slope = float(slope)
+                elif not isinstance(slope, float):
+                    raise TypeError('`slope` should be int or float type')
 
         self._shift = nn.Parameter(torch.tensor(shift))
         self._slope = nn.Parameter(torch.tensor(slope))
         self._sigmoid = nn.Sigmoid()
-        self._matrix = self.set_matrix()
+        self._matrix = None
+        self._dim = None
+        self.set_matrix()
 
     # properties
     @property
@@ -854,7 +884,7 @@ class ParamEdge(AbstractEdge, nn.Module):
         elif not isinstance(shift, float):
             raise TypeError('`shift` should be int or float type')
         self._shift = nn.Parameter(torch.tensor(shift))
-        self._matrix = self.set_matrix()
+        self.set_matrix()
 
     @property
     def slope(self) -> nn.Parameter:
@@ -867,7 +897,7 @@ class ParamEdge(AbstractEdge, nn.Module):
         elif not isinstance(slope, float):
             raise TypeError('`shift` should be int or float type')
         self._slope = nn.Parameter(torch.tensor(slope))
-        self._matrix = self.set_matrix()
+        self.set_matrix()
 
     @property
     def matrix(self) -> torch.Tensor:
@@ -878,30 +908,62 @@ class ParamEdge(AbstractEdge, nn.Module):
         return [self.shift.grad, self.slope.grad]
 
     # methods
+    @staticmethod
+    def compute_parameters(size: int, dim: int) -> Tuple[float, float]:
+        if not isinstance(size, int):
+            raise TypeError('`size` should be int type')
+        if not isinstance(dim, int):
+            raise TypeError('`dim` should be int type')
+        if dim > size:
+            raise ValueError('`dim` should be smaller or equal than `size`')
+        shift = (size - dim) - 0.5
+        slope = _DEFAULT_SLOPE
+        return shift, slope
+
     def sigmoid(self, x: torch.Tensor) -> torch.Tensor:
         return self._sigmoid(x)
 
-    def set_matrix(self) -> torch.Tensor:
+    def make_matrix(self) -> torch.Tensor:
         matrix = torch.zeros((self.size(), self.size()))
         i = torch.arange(self.size())
         matrix[(i, i)] = self.sigmoid(self.slope * (i - self.shift))
         return matrix
 
-    # methods
-    def dimension(self) -> int:
-        i = torch.arange(self.size())
-        signs = torch.sign(self.sigmoid(self.slope * (i - self.shift)) - 0.5)
-        dim = torch.where(signs == 1, signs, torch.zeros(signs.shape)).sum()
-        return int(dim)
+    # TODO: use set_matrix every time we update parameters, so that the
+    #  matrix and dimension get updated as well. Maybe add some attribute
+    #  like 'is_updated': bool
+    # TODO: if dim = 0 at some point, we might disconnect nodes and reduce their rank
+    def set_matrix(self) -> None:
+        self._matrix = self.make_matrix()
+        signs = torch.sign(self._matrix.diagonal() - 0.5)
+        dim = int(torch.where(signs == 1,
+                              signs, torch.zeros_like(signs)).sum())
+        self._dim = dim
 
-    def parameterize(self) -> 'ParamEdge':
-        return self
+    def dim(self) -> int:
+        return self._dim
 
-    # TODO: convert to Edge
-    def deparameterize(self) -> Edge:
-        # we have to crop the node's tensors to the given dimension
-        # return Edge()
-        pass
+    def change_size(self, size: int, padding_method: Text = 'zeros', **kwargs) -> None:
+        if not isinstance(size, int):
+            TypeError('`size` should be int type')
+        if not self.is_dangling():
+            self.node2._change_axis_size(self.axis2, size, padding_method, **kwargs)
+        self.node1._change_axis_size(self.axis1, size, padding_method, **kwargs)
+
+        self.shift, self.slope = self.compute_parameters(size, self.dim())
+        self.set_matrix()
+
+    def parameterize(self, set_param: bool = True) -> Union['Edge', 'ParamEdge']:
+        if not set_param:
+            self.change_size(self.dim())
+            new_edge = Edge(node1=self.node1, axis1=self.axis1,
+                            node2=self.node2, axis2=self.axis2)
+            if not self.is_dangling():
+                self.node2.add_edge(new_edge, self.axis2, override=True)
+            self.node1.add_edge(new_edge, self.axis1, override=True)
+            return new_edge
+        else:
+            return self
 
     # TODO: check types, may be overload
     def __xor__(self, other: AbstractEdge) -> 'ParamEdge':

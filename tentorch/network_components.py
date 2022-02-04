@@ -30,7 +30,9 @@ import torch.nn as nn
 from tentorch.network import TensorNetwork
 from tentorch.utils import tab_string
 
-_VALID_SUBSCRIPTS = list('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+_VALID_SUBSCRIPTS = list('abcdefghijklmnopqrstuvwxyz'
+                         'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+                         '0123456789')
 _DEFAULT_SHIFT = -0.5
 _DEFAULT_SLOPE = 15.
 
@@ -62,6 +64,8 @@ class Axis:
             raise TypeError('`name` should be str type')
 
         self._num = num
+        # TODO: sure? can we change name as we want? -> Nope, it can change module name in network
+        # TODO: name cannot contain blank spaces
         self.name = name
 
     # properties
@@ -69,8 +73,6 @@ class Axis:
     def num(self) -> int:
         return self._num
 
-    # TODO: sure? can we change name as we want?
-    # TODO: name cannot contain blank spaces
     # @property
     # def name(self) -> Text:
     #     return self._name
@@ -398,6 +400,14 @@ class AbstractNode(ABC, nn.Module):
             new_tensor = self.make_tensor(new_shape, padding_method, **kwargs)
             new_tensor[index] = self.tensor
             self.set_tensor(new_tensor)
+
+    def move_to_network(self, network: TensorNetwork) -> None:
+        if network != self.network:
+            network_nodes = self.network.nodes
+            self.network._nodes = list()
+            network.add_nodes_from(network_nodes)
+            for node in network_nodes:
+                node._network = network
 
     @overload
     def __getitem__(self, key: slice) -> List['AbstractEdge']:
@@ -921,6 +931,7 @@ class ParamEdge(AbstractEdge, nn.Module):
         self._slope = nn.Parameter(torch.tensor(slope))
         self.set_matrix()
 
+    # TODO: set_matrix every time??
     @property
     def matrix(self) -> torch.Tensor:
         return self._matrix
@@ -1086,112 +1097,161 @@ def einsum(string: Text,
     return new_node
 
 
-def contract(edge: 'AbstractEdge'):
-    # TODO: Podemos hacer aquí lo de añadir al string de einsum las matrices
+def contract(edge: AbstractEdge) -> AbstractNode:
     nodes = [edge.node1, edge.node2]
-    axis = [edge.axis1, edge.axis2]
-    assert edge.node1 != edge.node2
+    axes = [edge.axis1, edge.axis2]
 
-    next_subscript = 1
+    index = 1
     input_strings = list()
-    output_string = list()
+    output_string = ''
+    matrix_string = ''
     for i, node in enumerate(nodes):
-        string = list()
+        if (i == 1) and (nodes[1] == nodes[0]):
+            break
+        string = ''
         for j, _ in enumerate(node.shape):
-            if j == axis[i]:
-                string.append(_VALID_SUBSCRIPTS[0])
+            if j == axes[i]:
+                string += _VALID_SUBSCRIPTS[0]
                 if isinstance(edge, ParamEdge):
-                    matrix_string = _VALID_SUBSCRIPTS[0] + _VALID_SUBSCRIPTS[0]
+                    matrix_string = 2 * _VALID_SUBSCRIPTS[0]
             else:
-                string.append(_VALID_SUBSCRIPTS[next_subscript])
-                output_string.append(_VALID_SUBSCRIPTS[next_subscript])
-                next_subscript += 1
+                string += _VALID_SUBSCRIPTS[index]
+                output_string += _VALID_SUBSCRIPTS[index]
+                index += 1
         input_strings.append(string)
 
-    string1 = ''.join(input_strings[0])
-    string2 = ''.join(input_strings[1])
-    out_string = ''.join(output_string)
-
-    if isinstance(edge, ParamEdge):
-        einsum_string = string1 + ',' + matrix_string + ',' + string2 + '->' + out_string
-        new_node = einsum(einsum_string, nodes[0], edge.matrix, nodes[1])
+    if len(input_strings) == 1:
+        input_string = ''.join(input_strings[0])
+        if isinstance(edge, ParamEdge):
+            einsum_string = input_string + ',' + matrix_string + '->' + output_string
+            new_tensor = torch.einsum(einsum_string, nodes[0].tensor, edge.matrix)
+        else:
+            einsum_string = input_string + '->' + output_string
+            new_tensor = torch.einsum(einsum_string, nodes[0].tensor)
+        name = f'{nodes[0].name}![{edge.axis[0].name}]'
     else:
-        einsum_string = string1 + ',' + string2 + '->' + out_string
-        new_node = einsum(einsum_string, nodes[0], nodes[1])
+        input_string_0 = ''.join(input_strings[0])
+        input_string_1 = ''.join(input_strings[1])
+        if isinstance(edge, ParamEdge):
+            einsum_string = input_string_0 + ',' + matrix_string + ',' \
+                            + input_string_1 + '->' + output_string
+            new_tensor = torch.einsum(einsum_string, nodes[0].tensor, edge.matrix, nodes[1].tensor)
+        else:
+            einsum_string = input_string_0 + ',' + input_string_0 + '->' + output_string
+            new_tensor = torch.einsum(einsum_string, nodes[0].tensor, nodes[1].tensor)
+        name = f'{nodes[0].name},{nodes[1].name}![{edge.axes[0]},{edge.axes[1]}]'
 
+    axes_names = list()
+    edges = list()
+    i = 0
+    for j, string in enumerate(input_strings):
+        for k, char in enumerate(string):
+            if i < len(output_string):
+                if output_string[i] == char:
+                    axes_names.append(nodes[j].axes[k].name)
+                    edges.append(nodes[j][k])
+                    i += 1
+            else:
+                break
+        if i >= len(output_string):
+            break
+
+    # TODO: eliminate previous nodes from network??
+    new_node = Node(axes_names=axes_names, name=name, network=nodes[0].network,
+                    param_edges=False, tensor=new_tensor)
+    new_node._edges = edges
     return new_node
 
 
-def get_shared_edges(node1, node2):
-    list_edges = list()
+def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
+    edges = list()
     for edge in node1.edges:
-        if edge.node1 == node1 and edge.node2 == node2:
-            list_edges.append(edge)
-        elif edge.node1 == node2 and edge.node2 == node1:
-            list_edges.append(edge)
+        if (edge.node1 == node1) and (edge.node2 == node2):
+            edges.append(edge)
+        elif (edge.node1 == node2) and (edge.node2 == node1):
+            edges.append(edge)
+    return edges
 
-    return list_edges
 
-
-def contract_between(node1: 'AbstractNode', node2: 'AbstractNode'):
-    # TODO:
-    # En lugar de hacer un bucle de contract, hacer un solo string y un solo
-    # einsum para qeu esté más optimizado
-
-    # Stop computing if both nodes are the same
-    if node1 is node2:
-        raise ValueError(f'Cannot perform batched contraction between '
-                         f'node {node1} and itself')
-
-    # Computing shared edges
+def contract_between(node1: AbstractNode, node2: AbstractNode) -> AbstractNode:
     shared_edges = get_shared_edges(node1, node2)
-    # Stop computing if there are no shared edges
-    if not shared_edges:  # shared_edges set is True if it has some element
-        raise ValueError(f'No edges found between ndoes '
-                         f'{node1} and {node2}')
+    if not shared_edges:
+        raise ValueError(f'No edges found between nodes {node1} and {node2}')
 
     n_shared = len(shared_edges)
-    # Create dictionary where each edge is a key, and each value is a letter
     shared_subscripts = dict(zip(shared_edges, _VALID_SUBSCRIPTS[:n_shared]))
 
-    matrices_strings = []
-    matrices = []
-    res_string, string = [], []
-    index = n_shared + 1
-    # Loop in both (node1, batch_edge1) and (node2, batch_edge2)
+    index = n_shared
+    input_strings = list()
+    output_string = ''
+    matrices = list()
+    matrices_strings = list()
     for node in [node1, node2]:
-        # Append empty element for each loop, that is, string = [[],[]]
-        string.append([])
+        if (node is node1) and (node1 is node2):
+            break
+        string = ''
+        matrix_string = ''
         for edge in node.edges:
-            # If edge is shared, add its letter to string
             if edge in shared_edges:
-                string[-1].append(shared_subscripts[edge])
+                string += shared_subscripts[edge]
                 if isinstance(edge, ParamEdge):
-                    matrices_strings.append(shared_subscripts[edge] + shared_subscripts[edge])
                     matrices.append(edge.matrix)
-            # If edge is neither shared or batch, add second next available new letter
+                    matrix_string = 2 * shared_subscripts[edge]
             else:
-                string[-1].append(_VALID_SUBSCRIPTS[index])
-                res_string.append(_VALID_SUBSCRIPTS[index])
+                string += _VALID_SUBSCRIPTS[index]
+                output_string += _VALID_SUBSCRIPTS[index]
                 index += 1
+        input_strings.append(string)
+        matrices_strings.append(matrix_string)
 
-    string1 = ''.join(string[0])
-    string2 = ''.join(string[1])
-    mat_string = ','.join(matrices_strings)
-    res_string = ''.join(res_string)
-
-    # einsum_string = ''.join([string1, ',', string2, '->', res_string])
-    if isinstance(edge, ParamEdge):
-        einsum_string = string1 + ',' + mat_string + ',' + string2 + '->' + res_string
+    matrices_string = ','.join(matrices_strings)
+    if len(input_strings) == 1:
+        input_string = ''.join(input_strings[0])
+        if len(matrices) > 0:
+            einsum_string = input_string + ',' + matrices_string + '->' + output_string
+            new_tensor = torch.einsum(einsum_string, node1.tensor, *matrices)
+        else:
+            einsum_string = input_string + '->' + output_string
+            new_tensor = torch.einsum(einsum_string, node1.tensor)
+        name = f'{node1.name}'
     else:
-        einsum_string = string1 + ',' + string2 + '->' + res_string
+        input_string_0 = ''.join(input_strings[0])
+        input_string_1 = ''.join(input_strings[1])
+        if len(matrices) > 0:
+            einsum_string = input_string_0 + ',' + matrices_string + ',' \
+                            + input_string_1 + '->' + output_string
+            new_tensor = torch.einsum(einsum_string, node1.tensor, *matrices, node2.tensor)
+        else:
+            einsum_string = input_string_0 + ',' + input_string_0 + '->' + output_string
+            new_tensor = torch.einsum(einsum_string, node1.tensor, node2.tensor)
+        name = f'{node1.name}@{node2.name}'
 
-    new_node = einsum(einsum_string, [node1] + matrices + [node2])
+    axes_names = list()
+    edges = list()
+    nodes = [node1, node2]
+    i = 0
+    for j, string in enumerate(input_strings):
+        for k, char in enumerate(string):
+            if i < len(output_string):
+                if output_string[i] == char:
+                    axes_names.append(nodes[j].axes[k].name)
+                    edges.append(nodes[j][k])
+                    i += 1
+            else:
+                break
+        if i >= len(output_string):
+            break
 
+    # TODO: eliminate previous nodes from network??
+    new_node = Node(axes_names=axes_names, name=name, network=nodes[0].network,
+                    param_edges=False, tensor=new_tensor)
+    new_node._edges = edges
     return new_node
 
 
-def batched_contract_between(node1: AbstractNode, node2: AbstractNode, batch_edge1: AbstractEdge,
+def batched_contract_between(node1: AbstractNode,
+                             node2: AbstractNode,
+                             batch_edge1: AbstractEdge,
                              batch_edge2: AbstractEdge) -> AbstractNode:
     """
     Contract between that supports one batch edge in each node.
@@ -1209,67 +1269,90 @@ def batched_contract_between(node1: AbstractNode, node2: AbstractNode, batch_edg
         as its batch edge. Its edges are in order of the dangling edges of
         node1 followed by the dangling edges of node2.
     """
-
     # Stop computing if both nodes are the same
     if node1 is node2:
         raise ValueError(f'Cannot perform batched contraction between '
                          f'node {node1} and itself')
 
-    # Computing shared edges
     shared_edges = get_shared_edges(node1, node2)
-    # Stop computing if there are no shared edges
-    if not shared_edges:  # shared_edges set is True if it has some element
-        raise ValueError(f'No edges found between nodes '
-                         f'{node1!s} and {node2!s}')
+    if not shared_edges:
+        raise ValueError(f'No edges found between nodes {node1} and {node2}')
 
-    # Stop computing if batch edges are in shared edges
     if batch_edge1 in shared_edges:
         raise ValueError(f'Batch edge {batch_edge1} is shared between the nodes')
     if batch_edge2 in shared_edges:
         raise ValueError(f'Batch edge {batch_edge2} is shared between the nodes')
 
     n_shared = len(shared_edges)
-    # Create dictionary where each edge is a key, and each value is a letter
     shared_subscripts = dict(zip(shared_edges, _VALID_SUBSCRIPTS[:n_shared]))
 
-    matrices_strings = []
-    matrices = []
-    res_string, string = [], []
     index = n_shared + 1
-    # Loop in both (node1, batch_edge1) and (node2, batch_edge2)
+    input_strings = list()
+    output_string = ''
+    matrices = list()
+    matrices_strings = list()
     for node, batch_edge in zip([node1, node2], [batch_edge1, batch_edge2]):
-        # Append empty element for each loop, that is, string = [[],[]]
-        string.append([])
+        string = ''
+        matrix_string = ''
         for edge in node.edges:
-            # If edge is shared, add its letter to string
             if edge in shared_edges:
-                string[-1].append(shared_subscripts[edge])
+                string += shared_subscripts[edge]
                 if isinstance(edge, ParamEdge):
-                    matrices_strings.append(shared_subscripts[edge] + shared_subscripts[edge])
                     matrices.append(edge.matrix)
-            # If edge is batch_edge, add next available letter
+                    matrix_string = 2 * shared_subscripts[edge]
             elif edge is batch_edge:
-                string[-1].append(_VALID_SUBSCRIPTS[n_shared])
+                string += _VALID_SUBSCRIPTS[n_shared]
                 if node is node1:
-                    res_string.append(_VALID_SUBSCRIPTS[n_shared])
-            # If edge is neither shared or batch, add second next available new letter
+                    output_string += _VALID_SUBSCRIPTS[n_shared]
             else:
-                string[-1].append(_VALID_SUBSCRIPTS[index])
-                res_string.append(_VALID_SUBSCRIPTS[index])
+                string += _VALID_SUBSCRIPTS[index]
+                output_string += _VALID_SUBSCRIPTS[index]
                 index += 1
+        input_strings.append(string)
+        matrices_strings.append(matrix_string)
 
-    string1 = ''.join(string[0])
-    string2 = ''.join(string[1])
-    mat_string = ','.join(matrices_strings)
-    res_string = ''.join(res_string)
-
-    if isinstance(edge, ParamEdge):
-        einsum_string = string1 + ',' + mat_string + ',' + string2 + '->' + res_string
+    matrices_string = ','.join(matrices_strings)
+    if len(input_strings) == 1:
+        input_string = ''.join(input_strings[0])
+        if len(matrices) > 0:
+            einsum_string = input_string + ',' + matrices_string + '->' + output_string
+            new_tensor = torch.einsum(einsum_string, node1.tensor, *matrices)
+        else:
+            einsum_string = input_string + '->' + output_string
+            new_tensor = torch.einsum(einsum_string, node1.tensor)
+        name = f'{node1.name}'
     else:
-        einsum_string = string1 + ',' + string2 + '->' + res_string
+        input_string_0 = ''.join(input_strings[0])
+        input_string_1 = ''.join(input_strings[1])
+        if len(matrices) > 0:
+            einsum_string = input_string_0 + ',' + matrices_string + ',' \
+                            + input_string_1 + '->' + output_string
+            new_tensor = torch.einsum(einsum_string, node1.tensor, *matrices, node2.tensor)
+        else:
+            einsum_string = input_string_0 + ',' + input_string_0 + '->' + output_string
+            new_tensor = torch.einsum(einsum_string, node1.tensor, node2.tensor)
+        name = f'{node1.name}@{node2.name}'
 
-    new_node = einsum(einsum_string, [node1] + matrices + [node2])
+    axes_names = list()
+    edges = list()
+    nodes = [node1, node2]
+    i = 0
+    for j, string in enumerate(input_strings):
+        for k, char in enumerate(string):
+            if i < len(output_string):
+                if output_string[i] == char:
+                    axes_names.append(nodes[j].axes[k].name)
+                    edges.append(nodes[j][k])
+                    i += 1
+            else:
+                break
+        if i >= len(output_string):
+            break
 
+    # TODO: eliminate previous nodes from network??
+    new_node = Node(axes_names=axes_names, name=name, network=nodes[0].network,
+                    param_edges=False, tensor=new_tensor)
+    new_node._edges = edges
     return new_node
 
 

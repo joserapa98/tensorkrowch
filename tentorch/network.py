@@ -29,7 +29,7 @@ class TensorNetwork(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self._nodes = []
+        self._nodes = list()
 
     @property
     def nodes(self):
@@ -56,10 +56,6 @@ class TensorNetwork(nn.Module):
             warnings.warn('Cannot remove a parameter that is not in the network')
 
     def add_node(self, node: 'Node') -> None:
-        """
-
-        :rtype: object
-        """
         # TODO:
         # if node.network != self:
         #    node.change_network(self)

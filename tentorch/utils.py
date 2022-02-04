@@ -1,4 +1,4 @@
-# TODO: functions to transform between tensornetwork and tentorch
+# TODO: functions to transform between tensornetwork, tntorch and tentorch
 # TODO: functions to find contraction paths using tensornetwork
 from typing import Text
 

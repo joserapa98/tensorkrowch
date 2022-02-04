@@ -86,7 +86,7 @@ class Axis:
         return f'{self.__class__.__name__}( {self.name} ({self.num}) )'
 
 
-class AbstractNode(ABC):
+class AbstractNode(ABC, nn.Module):
     """
     Abstract class for nodes. Should be subclassed.
 
@@ -120,7 +120,7 @@ class AbstractNode(ABC):
         ValueError
         """
 
-        super().__init__()
+        ABC.__init__(self)
 
         # shape
         if shape is not None:
@@ -228,13 +228,9 @@ class AbstractNode(ABC):
         pass
 
     # TODO: implement parameterize and deparameterize
-    # @abstractmethod
-    # def parameterize(self) -> 'ParamNode':
-    #     pass
-
-    # @abstractmethod
-    # def deparameterize(self) -> 'Node':
-    #     pass
+    @abstractmethod
+    def parameterize(self, set_param: bool) -> 'AbstractNode':
+        pass
 
     # methods
     # TODO: comment
@@ -486,6 +482,19 @@ class Node(AbstractNode):
             return ParamEdge(node1=self, axis1=axis)
         return Edge(node1=self, axis1=axis)
 
+    def parameterize(self, set_param: bool) -> Union['Node', 'ParamNode']:
+        if set_param:
+            # TODO: can we set new tensor with the same name as other?
+            #  We have to override the old one
+            new_node = ParamNode(self.shape,
+                                 list(map(lambda axis: axis.name, self.axes)),
+                                 self.name, self.netwok, self.tensor,
+                                 param_edges=False)
+            new_node._edges = self.edges
+            self.network._add_param(new_node)
+        else:
+            return self
+
 
 # TODO: ignore this at the moment
 class CopyNode(Node):
@@ -606,6 +615,19 @@ class ParamNode(AbstractNode, nn.Module):
         if self.param_edges():
             return ParamEdge(node1=self, axis1=axis)
         return Edge(node1=self, axis1=axis)
+
+    def parameterize(self, set_param: bool) -> Union['Node', 'ParamNode']:
+        if not set_param:
+            # TODO: can we set new tensor with the same name as other?
+            #  We have to override the old one
+            new_node = Node(self.shape,
+                            list(map(lambda axis: axis.name, self.axes)),
+                            self.name, self.netwok, self.tensor.data,
+                            param_edges=False)
+            new_node._edges = self.edges
+            self.network._remove_param(self)
+        else:
+            return self
 
 
 class AbstractEdge(ABC):
@@ -979,7 +1001,7 @@ class ParamEdge(AbstractEdge, nn.Module):
 # TODO: change output type -> Union[Edge, ParamEdge]. Do we return StackEdge or any other type?
 def connect(edge1: AbstractEdge,
             edge2: AbstractEdge,
-            override_network: bool = False) -> AbstractEdge:
+            override_network: bool = False) -> Union['Edge', 'ParamEdge']:
     for edge in [edge1, edge2]:
         if not edge.is_dangling():
             raise ValueError(f'Edge {edge} is not a dangling edge. '

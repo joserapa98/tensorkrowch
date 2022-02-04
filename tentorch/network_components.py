@@ -229,7 +229,6 @@ class AbstractNode(ABC, nn.Module):
     def make_edge(self, axis: Axis) -> Union['Edge', 'ParamEdge']:
         pass
 
-    # TODO: implement parameterize and deparameterize
     @abstractmethod
     def parameterize(self, set_param: bool) -> 'AbstractNode':
         pass
@@ -436,7 +435,7 @@ class AbstractNode(ABC, nn.Module):
                f'\tedges:\n{tab_string(repr(self.edges), 2)})'
 
 
-# TODO: create new classmethods like Node.randn() to init objects directly with those methods
+# TODO: create new class methods like Node.randn() to init objects directly with those methods
 class Node(AbstractNode):
     """
     Base class for non-trainable nodes. Should be subclassed by
@@ -857,9 +856,6 @@ class ParamEdge(AbstractEdge, nn.Module):
     """
     Class for trainable edges. Subclass of PyTorch nn.Module.
     Should be subclassed by any new class of trainable edges.
-
-        -batch (bool)
-        -grad -> devuelve tupla de grad de shift y slope
     """
 
     def __init__(self,
@@ -937,8 +933,8 @@ class ParamEdge(AbstractEdge, nn.Module):
         return self._matrix
 
     @property
-    def grad(self) -> List[Optional[torch.Tensor]]:
-        return [self.shift.grad, self.slope.grad]
+    def grad(self) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+        return self.shift.grad, self.slope.grad
 
     # methods
     @staticmethod
@@ -1261,8 +1257,8 @@ def batched_contract_between(node1: AbstractNode,
     Args:
         node1: First node to contract.
         node2: Second node to contract.
-        batch_edge1: The edge of node1 that correpond to its batch index.
-        batch_edge2: The edge of node2 that correpond to its batch index.
+        batch_edge1: The edge of node1 that corresponds to its batch index.
+        batch_edge2: The edge of node2 that corresponds to its batch index.
 
     Returns:
         new_node: Result of the contraction. This node has by default batch_edge1

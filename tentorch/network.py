@@ -1,10 +1,20 @@
-#TODO: import
+"""
+Tensor Networks Class
+"""
+
+import warnings
+from typing import (overload, Union, Optional,
+                    Sequence, Text, List, Tuple)
+
 import torch
 import torch.nn as nn
-import warnings
+
+from tentorch.network_components import (AbstractNode, Node, ParamNode,
+                                         AbstractEdge, Edge, ParamEdge)
 
 # TODO: parameterize and deparameterize network, return a different network so that
 #  we can retrieve the original parameterized nodes/edges with their initial sizes
+
 
 # TODO: names of (at least) ParamNodes and ParamEdges must be unique in a tensor network
 class TensorNetwork(nn.Module):
@@ -28,7 +38,6 @@ class TensorNetwork(nn.Module):
 
     def __init__(self):
         super().__init__()
-
         self._nodes = list()
 
     @property
@@ -43,33 +52,34 @@ class TensorNetwork(nn.Module):
                 edges_list.append(edge)
         return edges_list
 
-    def _add_param(self, param: Union['ParamNode', 'ParamEdge']) -> None:
+    def _add_param(self, param: Union[ParamNode, ParamEdge]) -> None:
         if not hasattr(self, param.name):
             self.add_module(param.name, param)
         else:
             raise ValueError(f'Network already has attribute named {param.name}')
 
-    def _remove_param(self, edge: 'ParamEdge') -> None:
-        if hasattr(self, edge.name):
-            delattr(self, edge.name)
+    def _remove_param(self, param: Union[ParamNode, ParamEdge]) -> None:
+        if hasattr(self, param.name):
+            delattr(self, param.name)
         else:
             warnings.warn('Cannot remove a parameter that is not in the network')
 
-    def add_node(self, node: 'Node') -> None:
-        # TODO:
-        # if node.network != self:
-        #    node.change_network(self)
-        if isinstance(node, 'ParamNode'):
+    def add_node(self, node: AbstractNode) -> None:
+        # TODO: check this
+        if node.network != self:
+            node._network = self
+        if isinstance(node, ParamNode):
             self.add_module(node.name, node)
             for edge in node.edges:
-                assert isinstance(edge, 'ParamEdge')  ###...
-                self.add_module(edge.name, edge)
+                if isinstance(edge, ParamEdge):
+                    self.add_module(edge.name, edge)
         self._nodes.append(node)
 
-    def add_nodes_from(self, nodes_list):
+    def add_nodes_from(self, nodes_list: Sequence[AbstractNode]):
         for name, node in nodes_list:
-            self.add_node(name, node)
+            self.add_node(node)
 
+    """
     def connect_nodes(nodes_list, axis_list):
         if len(nodes_list) == 2 and len(axis_list) == 2:
             nodes_list[0][axis_list[0]] ^ nodes_list[1][axis_list[1]]
@@ -98,6 +108,7 @@ class TensorNetwork(nn.Module):
     #    result = aux_net.contract_network()
     #    self.clear_op_network()
     #    return result
+    """
 
 
 class MPS(TensorNetwork):

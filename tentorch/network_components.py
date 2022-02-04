@@ -88,7 +88,7 @@ class Axis:
         return f'{self.__class__.__name__}( {self.name} ({self.num}) )'
 
 
-class AbstractNode(ABC, nn.Module):
+class AbstractNode(ABC):
     """
     Abstract class for nodes. Should be subclassed.
 
@@ -172,11 +172,11 @@ class AbstractNode(ABC, nn.Module):
 
         self._tensor = torch.empty(shape)
         self._axes = axes
-        self._edges = [self.make_edge(axis=ax)
-                       for ax in axes]
         self._name = name
         self._network = network
         self._param_edges = param_edges
+        self._edges = [self.make_edge(axis=ax)
+                       for ax in axes]
 
     # properties
     # TODO: define methods to set new properties
@@ -372,8 +372,9 @@ class AbstractNode(ABC, nn.Module):
         else:
             raise ValueError('One of `tensor` or `init_method` must be provided')
 
+    # no hace falta
     def unset_tensor(self) -> None:
-        self._tensor = None
+        self._tensor = torch.empty(self.shape)
 
     # TODO: set predefined init_method and **kwargs regarding to the values of `self` (the node)
     # TODO: manage case size = 0, or dim = 0. We have to make dimension 1 in that axis,

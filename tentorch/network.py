@@ -17,6 +17,7 @@ from tentorch.network_components import (AbstractNode, Node, ParamNode,
 
 
 # TODO: names of (at least) ParamNodes and ParamEdges must be unique in a tensor network
+# TODO: llevar una network auxiliar para hacer los cálculos, después hacer .clear()
 class TensorNetwork(nn.Module):
     """
     Al contraer una red se crea una Network auxiliar formada por Nodes en lugar
@@ -132,3 +133,6 @@ class Tree(TensorNetwork):
     """
     # Lo mismo que en MPS
     pass
+
+# TODO: poder acceder a los edges libres de la network
+# nombrar los moduels de nodos y edges por orden: node0, node1, ..., edge0, edge1, ...

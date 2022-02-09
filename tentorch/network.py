@@ -11,6 +11,7 @@ import torch.nn as nn
 
 from tentorch.network_components import (AbstractNode, Node, ParamNode,
                                          AbstractEdge, Edge, ParamEdge)
+from tentorch.network_components import TensorNetwork
 
 
 class MPS(TensorNetwork):
@@ -23,6 +24,7 @@ class MPS(TensorNetwork):
 
         # node = Node(net=self)
         # ...
+        # Aquí creamos los nodos y los añadimos a la red
 
     # En cada función restringir el tipo de Nodos que se pueden usar,
     # para ser siempre MPS

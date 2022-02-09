@@ -64,7 +64,8 @@ class Axis:
 
         self._num = num
         # TODO: sure? can we change name as we want? -> Nope, it can change module name in network
-        # TODO: name cannot contain blank spaces
+        if len(name.split()) > 1:
+            raise ValueError('`name` cannot contain blank spaces')
         self.name = name
 
     # properties
@@ -121,7 +122,10 @@ class AbstractNode(ABC):
         ValueError
         """
 
-        ABC.__init__(self)
+        ABC.__init__(self) # super().__init__()
+
+        # TODO: llevar parámetro _copied, en el que llevar una referencia a la copia del nodo,
+        #  la que se usa en _ops_tn para realizar las operaciones
 
         # shape
         if shape is not None:
@@ -132,10 +136,11 @@ class AbstractNode(ABC):
                     if not isinstance(i, int):
                         raise TypeError('`shape` elements should be int type')
 
+        # TODO: change __unnamd_thing__ to just __thing__ for better readability
         # axes_names
         axes = list()
         if axes_names is None:
-            warnings.warn('`axis_names` should be given to better tracking node edges and derived nodes')
+            #warnings.warn('`axis_names` should be given to better tracking node edges and derived nodes')
             for i, _ in enumerate(shape):
                 axes.append(Axis(num=i, name=f'__unnamed_axis__{i}'))
         else:
@@ -158,7 +163,7 @@ class AbstractNode(ABC):
 
         # name
         if name is None:
-            warnings.warn('`name` should be given to better tracking node edges and derived nodes')
+            #warnings.warn('`name` should be given to better tracking node edges and derived nodes')
             name = '__unnamed_node__'
         elif not isinstance(name, str):
             raise TypeError('`name` should be str type')
@@ -171,7 +176,7 @@ class AbstractNode(ABC):
 
         self._tensor = torch.empty(shape)
         self._axes = axes
-        self._name = name
+        self.name = name
         self._network = network
         self._param_edges = param_edges
         self._edges = [self.make_edge(axis=ax)
@@ -208,6 +213,13 @@ class AbstractNode(ABC):
     def edges(self) -> List['AbstractEdge']:
         return self._edges
 
+    @edges.setter
+    def edges(self, edges: List['AbstractEdge']) -> None:
+        for i, edge in enumerate(edges):
+            self.add_edge(edge, i, override=True)
+        self._edges = edges
+
+    """
     @property
     def name(self) -> Text:
         return self._name
@@ -217,6 +229,7 @@ class AbstractNode(ABC):
     @name.setter
     def name(self, name: Text) -> None:
         pass
+    """
 
     @property
     def network(self) -> Optional['TensorNetwork']:
@@ -234,6 +247,10 @@ class AbstractNode(ABC):
 
     @abstractmethod
     def parameterize(self, set_param: bool) -> 'AbstractNode':
+        pass
+
+    @abstractmethod
+    def copy(self) -> 'AbstractNode':
         pass
 
     # methods
@@ -273,6 +290,9 @@ class AbstractNode(ABC):
         axis_num = self.get_axis_number(axis)
         return self.edges[axis_num]
 
+    # TODO: llamar aquí al método de TensorNetwork que añada o elimine los parámetros del edge cambiado
+    # TODO: cuidado! Solo podemos añadir el edge si alguno de los nodos a los que hace referecia
+    #  es el nodo al que lo estamos añadiendo
     def add_edge(self,
                  edge: 'AbstractEdge',
                  axis: Union[int, Text, Axis],
@@ -389,6 +409,8 @@ class AbstractNode(ABC):
                           size: int,
                           padding_method: Text = 'zeros',
                           **kwargs: float) -> None:
+        if size <= 0:
+            raise ValueError('new `size` should be greater than zero')
         axis_num = self.get_axis_number(axis)
         index = list()
         for i, dim in enumerate(self.shape):
@@ -412,7 +434,7 @@ class AbstractNode(ABC):
     def move_to_network(self, network: 'TensorNetwork') -> None:
         if network != self.network:
             network_nodes = self.network.nodes
-            self.network._nodes = list()
+            self.network._nodes = dict()
             network.add_nodes_from(network_nodes)
             for node in network_nodes:
                 node._network = network
@@ -500,6 +522,7 @@ class Node(AbstractNode):
             return ParamEdge(node1=self, axis1=axis)
         return Edge(node1=self, axis1=axis)
 
+    # TODO: llamar a método de TensorNetwork que cambie un nodo de la red por otro
     def parameterize(self, set_param: bool) -> Union['Node', 'ParamNode']:
         if set_param:
             # TODO: can we set new tensor with the same name as other?
@@ -516,6 +539,18 @@ class Node(AbstractNode):
             return new_node
         else:
             return self
+
+    def copy(self) -> 'Node':
+        new_node = Node(axes_names=self.axes_names,
+                        name=self.name,
+                        network=self.network,
+                        param_edges=False,
+                        tensor=self.tensor)
+        for i, edge in enumerate(self.edges):
+            new_edge = edge.copy()
+            # TODO: What happens when edge is attached to two axis of the same node
+            new_node.add_edge(new_edge, i)
+        return new_node
 
 
 # TODO: ignore this at the moment
@@ -655,6 +690,18 @@ class ParamNode(AbstractNode, nn.Module):
         else:
             return self
 
+    def copy(self) -> 'ParamNode':
+        new_node = ParamNode(axes_names=self.axes_names,
+                             name=self.name,
+                             network=self.network,
+                             param_edges=False,
+                             tensor=self.tensor)
+        for i, edge in enumerate(self.edges):
+            new_edge = edge.copy()
+            # TODO: What happens when edge is attached to two axis of the same node
+            new_node.add_edge(new_edge, i)
+        return new_node
+
 
 class AbstractEdge(ABC):
     """
@@ -743,6 +790,10 @@ class AbstractEdge(ABC):
         pass
 
     @abstractmethod
+    def copy(self) -> 'AbstractEdge':
+        pass
+
+    @abstractmethod
     def __xor__(self, other: 'AbstractEdge') -> 'AbstractEdge':
         pass
 
@@ -809,6 +860,13 @@ class Edge(AbstractEdge):
             return new_edge
         else:
             return self
+
+    def copy(self) -> 'Edge':
+        new_edge = Edge(node1=self.node1,
+                        axis1=self.axis1,
+                        node2=self.node2,
+                        axis2=self.axis2)
+        return new_edge
 
     @overload
     def __xor__(self, other: 'Edge') -> 'Edge':
@@ -1016,6 +1074,15 @@ class ParamEdge(AbstractEdge, nn.Module):
         else:
             return self
 
+    def copy(self) -> 'ParamEdge':
+        new_edge = ParamEdge(node1=self.node1,
+                             axis1=self.axis1,
+                             shift=self.shift.item(),
+                             slope=self.slope.item(),
+                             node2=self.node2,
+                             axis2=self.axis2)
+        return new_edge
+
     # TODO: check types, may be overload
     def __xor__(self, other: AbstractEdge) -> 'ParamEdge':
         return connect(self, other)
@@ -1143,7 +1210,7 @@ def contract(edge: AbstractEdge) -> AbstractNode:
         else:
             einsum_string = input_string + '->' + output_string
             new_tensor = torch.einsum(einsum_string, nodes[0].tensor)
-        name = f'{nodes[0].name}![{edge.axis[0].name}]'
+        name = f'{nodes[0].name}![{axes[0].name}]'
     else:
         input_string_0 = ''.join(input_strings[0])
         input_string_1 = ''.join(input_strings[1])
@@ -1180,7 +1247,7 @@ def contract(edge: AbstractEdge) -> AbstractNode:
                     param_edges=False, tensor=new_tensor)
     # TODO: estamos poniendo los antiguos edges, no se sobreescriben las
     #  referencias a los nuevos Axis ni na :(
-    new_node._edges = edges
+    new_node.edges = edges
     return new_node
 
 
@@ -1270,10 +1337,14 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> AbstractNode:
     # TODO: eliminate previous nodes from network??
     new_node = Node(axes_names=axes_names, name=name, network=nodes[0].network,
                     param_edges=False, tensor=new_tensor)
-    new_node._edges = edges
+    new_node.edges = edges
     return new_node
 
 
+# TODO: deberíamos permitir contraer varios nodos a la vez, como un einsum,
+#  para que vaya más optimizado. En un tree tendremos nodos iguales que apilaremos,
+#  y cada nodo va conectado a otros 3, 4 nodos (los que sean). Así que hay que
+#  contraer esas 3, 4 pilas de input con la pila de los tensores.
 def batched_contract_between(node1: AbstractNode,
                              node2: AbstractNode,
                              batch_edge1: AbstractEdge,
@@ -1381,7 +1452,7 @@ def batched_contract_between(node1: AbstractNode,
     # TODO: eliminate previous nodes from network??
     new_node = Node(axes_names=axes_names, name=name, network=nodes[0].network,
                     param_edges=False, tensor=new_tensor)
-    new_node._edges = edges
+    new_node.edges = edges
     return new_node
 
 
@@ -1393,6 +1464,26 @@ def unbind():
     pass
 
 
+# TODO: puede que no nos haga mucha falta esta BaseTN, y baste con que pueda haber edges (de los
+#  nodos resultado de contracciones) que apunten a otro nodo, aunque ese nodo ("original") ya
+#  tenga sus propios edges
+class BaseTN:
+    def __init__(self):
+        self._nodes = dict()
+
+    @property
+    def nodes(self):
+        return self._nodes
+
+    @property
+    def edges(self):
+        edges_list = list()
+        for node in self.nodes:
+            for edge in node.edges:
+                edges_list.append(edge)
+        return edges_list
+
+
 # TODO: parameterize and deparameterize network, return a different network so that
 #  we can retrieve the original parameterized nodes/edges with their initial sizes
 
@@ -1401,7 +1492,7 @@ def unbind():
 # TODO: llevar una network auxiliar para hacer los cálculos, después hacer .clear()
 # TODO: gestionar nombres de nodes y edges que se crean en la network
 # TODO: add __repr__, __str__
-class TensorNetwork(nn.Module):
+class TensorNetwork(BaseTN, nn.Module):
     """
     Al contraer una red se crea una Network auxiliar formada por Nodes en lugar
     de ParamNodes y Edges en lugar de ParamEdges. Ahí se van guardando todos los
@@ -1421,20 +1512,12 @@ class TensorNetwork(nn.Module):
     """
 
     def __init__(self):
-        super().__init__()
-        self._nodes = list()
-
-    @property
-    def nodes(self):
-        return self._nodes
-
-    @property
-    def edges(self):
-        edges_list = list()
-        for node in self.nodes:
-            for edge in node.edges:
-                edges_list.append(edge)
-        return edges_list
+        BaseTN.__init__(self)
+        nn.Module.__init__(self)
+        # TODO: Contractions of the network happen in the _ops_tn, and they are in-place,
+        #  so that we can keep track of the connections even after some contractions have
+        #  already been computed
+        self._ops_tn = BaseTN()
 
     def _add_param(self, param: Union[ParamNode, ParamEdge]) -> None:
         if not hasattr(self, param.name):
@@ -1455,14 +1538,43 @@ class TensorNetwork(nn.Module):
                 node._network = self
         if isinstance(node, ParamNode):
             self.add_module(node.name, node)
-            for edge in node.edges:
-                if isinstance(edge, ParamEdge):
-                    self.add_module(edge.name, edge)
-        self._nodes.append(node)
+        for edge in node.edges:
+            if isinstance(edge, ParamEdge):
+                self.add_module(edge.name, edge)
+        if node.name in self.nodes:
+            i = 0
+            for node_name in self.nodes:
+                # TODO: sure? is it the first element? [0]
+                node_name = node_name.split('__')[0]
+                if node.name == node_name:
+                    i += 1
+            node.name = f'{node.name}__{i}'
+        self.nodes[node.name] = node
+        # TODO: if we copy the node, the copied edges still make reference to the other
+        #  "original" node, we have to copy nodes and change the reference of the copied
+        #  edges to the other copied nodes (neighbours)
+        self._ops_tn.nodes[node.name] = node.copy()
 
     def add_nodes_from(self, nodes_list: Sequence[AbstractNode]):
         for name, node in nodes_list:
             self.add_node(node)
+
+    def clone(self):
+        """Clone TN to the _ops_tn"""
+        copy_nodes = dict()
+        for node in self.nodes:
+            copy_nodes[node] = node.copy()
+        for node in self.nodes:
+            for edge in copy_nodes[node].edges:
+                # TODO: setter edge.node1/2
+                if edge.node1 in copy_nodes:
+                    edge.node1 = copy_nodes[edge.node1]
+                if edge.node2 in copy_nodes:
+                    edge.node2 = copy_nodes[edge.node2]
+
+    def clear(self):
+        """Clear _ops_tn"""
+        self._ops_tn = BaseTN()
 
     """
     def connect_nodes(nodes_list, axis_list):

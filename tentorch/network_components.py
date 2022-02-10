@@ -12,6 +12,7 @@ This script contains:
             +Edge:
                 -StackEdge
             +ParamEdge
+        *TensorNetwork
 
     Operations:
         *contract

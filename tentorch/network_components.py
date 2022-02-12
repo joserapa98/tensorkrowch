@@ -95,7 +95,9 @@ class Axis:
 # TODO: bueno, lo de contraer resultados con los nodos con los que
 #  estaban conectados los nodos originales ahora funciona, pero es algo que solo
 #  deberíamos permitir en nuestro caso, o tal vez en modo .train() o algo así,
-#  o en un contexto
+#  o en un contexto. Puede que baste con que los Edges admitan una lista de
+#  nodos adyacentes, sería como que con cada opción habría una TN creada,
+#  pero no nos hace falta estar copiando los nodos.
 class AbstractNode(ABC):
     """
     Abstract class for nodes. Should be subclassed.

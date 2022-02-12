@@ -89,6 +89,13 @@ class Axis:
         return f'{self.__class__.__name__}( {self.name} ({self.num}) )'
 
 
+# TODO: implement * as tensor product of 2 tensors
+# TODO: implement einsum for Nodes, so that edge links are automatically
+#  made and we can compute contractions between several nodes at the same time
+# TODO: bueno, lo de contraer resultados con los nodos con los que
+#  estaban conectados los nodos originales ahora funciona, pero es algo que solo
+#  deberíamos permitir en nuestro caso, o tal vez en modo .train() o algo así,
+#  o en un contexto
 class AbstractNode(ABC):
     """
     Abstract class for nodes. Should be subclassed.

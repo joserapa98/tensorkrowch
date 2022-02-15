@@ -15,7 +15,9 @@ def enum_repeated_names(names_list: List[Text]) -> List[Text]:
     a enumerations for the names that appear more than once in the list
     """
     counts = dict()
+    aux_list = []
     for name in names_list:
+        aux_list.append(name)
         if name in counts:
             counts[name] += 1
         else:
@@ -25,10 +27,10 @@ def enum_repeated_names(names_list: List[Text]) -> List[Text]:
         if counts[name] == 0:
             counts[name] = -1
 
-    names_list.reverse()
-    for i, name in enumerate(names_list):
+    aux_list.reverse()
+    for i, name in enumerate(aux_list):
         if counts[name] >= 0:
-            names_list[i] = f'{name}_{counts[name]}'
+            aux_list[i] = f'{name}_{counts[name]}'
             counts[name] -= 1
-    names_list.reverse()
-    return names_list
+    aux_list.reverse()
+    return aux_list

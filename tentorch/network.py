@@ -9,9 +9,9 @@ from typing import (overload, Union, Optional,
 import torch
 import torch.nn as nn
 
-from tentorch.tensor_network import (AbstractNode, Node, ParamNode,
-                                     AbstractEdge, Edge, ParamEdge)
-from tentorch.tensor_network import TensorNetwork
+from tentorch.network_components import (AbstractNode, Node, ParamNode,
+                                         AbstractEdge, Edge, ParamEdge)
+from tentorch.network_components import TensorNetwork
 
 
 class MPS(TensorNetwork):

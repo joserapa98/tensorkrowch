@@ -47,7 +47,8 @@ class Axis:
 
     def __init__(self,
                  num: int,
-                 name: Text) -> None:
+                 name: Text,
+                 node1: bool = True) -> None:
         """
         Create an axis for a node.
 
@@ -55,6 +56,9 @@ class Axis:
         ----------
         num: index in the node's axes list
         name: axis name
+        node1: boolean indicating whether `node1` of the edge
+               attached to this axis is the node that contains
+               the axis. If False, node is `node2` of the edge
 
         Raises
         ------
@@ -65,11 +69,14 @@ class Axis:
             raise TypeError('`num` should be int type')
         if not isinstance(name, str):
             raise TypeError('`name` should be str type')
+        if not isinstance(node1, bool):
+            raise TypeError('`node1` should be bool type')
 
         self._num = num
         if ' ' in name:
             raise ValueError('`name` cannot contain blank spaces')
         self._name = name
+        self._node1 = node1
 
     # properties
     @property
@@ -89,6 +96,10 @@ class Axis:
         if ' ' in name:
             raise ValueError('`name` cannot contain blank spaces')
         self._name = name
+
+    @property
+    def node1(self) -> bool:
+        return self._node1
 
     # methods
     def __int__(self) -> int:
@@ -189,7 +200,7 @@ class AbstractNode(ABC):
 
         self._tensor = torch.empty(shape)
         self._param_edges = param_edges
-        self._edges = [None for ax in axes]
+        self._edges = []
 
     # properties
     @property
@@ -202,7 +213,7 @@ class AbstractNode(ABC):
 
     @property
     def shape(self) -> torch.Size:
-        return self.tensor.shape
+        return self._tensor.shape
 
     @property
     def rank(self) -> int:
@@ -217,19 +228,12 @@ class AbstractNode(ABC):
         return list(map(lambda axis: axis.name, self.axes))
 
     @property
-    def edges(self) -> List['AbstractEdge']:
-        return list(map(lambda l: l[0], self._edges))
+    def node1_list(self) -> List[bool]:
+        return list(map(lambda axis: axis.node1, self.axes))
 
-    # TODO: pff check this
-    @edges.setter
-    def edges(self, edges: List[Dict[int,
-                                     Union['AbstractEdge',
-                                           List['AbstractEdge']]]]) -> None:
-        for i, edge_dict in enumerate(edges):
-            self.add_edge(edge_dict[0], i, override=True)
-            self._edges[i][1] = []
-            for edge in edge_dict[1]:
-                self.add_edge(edge, i, override=False)
+    @property
+    def edges(self) -> List['AbstractEdge']:
+        return self._edges
 
     @property
     def name(self) -> Text:
@@ -252,18 +256,12 @@ class AbstractNode(ABC):
         pass
 
     @abstractmethod
-    def make_edge(self, axis: Axis) -> 'AbstractEdge':
-        pass
-
-    @abstractmethod
     def parameterize(self, set_param: bool) -> 'AbstractNode':
         pass
 
-    """
     @abstractmethod
     def copy(self) -> 'AbstractNode':
         pass
-    """
 
     # methods
     # TODO: comment
@@ -273,7 +271,7 @@ class AbstractNode(ABC):
         axis_num = self.get_axis_number(dim)
         return self.shape[axis_num]
 
-    def dims(self, dim: Optional[Union[int, Text, Axis]] = None) -> Union[torch.Size, int]:
+    def dim(self, dim: Optional[Union[int, Text, Axis]] = None) -> Union[torch.Size, int]:
         if dim is None:
             return torch.Size(list(map(lambda edge: edge.dim(), self.edges)))
         axis_num = self.get_axis_number(dim)
@@ -299,32 +297,42 @@ class AbstractNode(ABC):
             TypeError('`axis` should be int, str or Axis type')
 
     def get_edge(self, axis: Union[int, Text, Axis]) -> 'AbstractEdge':
-        """
-        First edge in the `edges` list is the original edge of that dimension.
-        All other edges added to the list are used for auxiliary operations.
-        """
         axis_num = self.get_axis_number(axis)
         return self.edges[axis_num]
 
-    # TODO: llamar aquí al método de TensorNetwork que añada o elimine los parámetros del edge cambiado
-    # TODO: cuidado! Solo podemos añadir el edge si alguno de los nodos a los que hace referencia
-    #  es el nodo al que lo estamos añadiendo
-    # TODO: solo podemos añadir edge si su size y dim cuadran con la size del nodo
     def add_edge(self,
                  edge: 'AbstractEdge',
                  axis: Union[int, Text, Axis],
-                 override: bool = False) -> None:
+                 override: bool = False,
+                 node1: Optional[bool] = None) -> None:
         """
-        If edge already exists, override it. Else, add new edge to
-        the list of edges in that axis.
+        Add an edge to a given axis of the node.
+
+        Parameters
+        ----------
+        edge: edge that is to be attached
+        axis: axis to which the edge will be attached
+        override: boolean indicating whether `edge` should override
+                  an existing non-dangling edge at `axis`
+        node1: boolean indicating if `self` is the node1 or node2 of `edge`
         """
-        if (edge.node1 != self) and (edge.node2 != self):
-            raise ValueError(f'`edge` should be attached to node {self!s}')
+        if edge.size() != self.size(axis):
+            raise ValueError(f'Edge size should match node size at axis {axis!r}')
+        if edge.dim() != self.dim(axis):
+            raise ValueError(f'Edge dimension should match node dimension at axis {axis!r}')
+        if node1 is None:
+            if (edge.node1 == self) and (edge.node2 != self):
+                node1 = True
+            elif (edge.node1 != self) and (edge.node2 == self):
+                node1 = False
+            else:
+                raise ValueError(f'If neither node1 nor node2 of `edge` is equal to {self!s},'
+                                 f'`node1` should be provided. Otherwise `edge` cannot be attached')
         axis_num = self.get_axis_number(axis)
-        if not override:
-            self._edges[axis_num][1].append(edge)
-        else:
-            self._edges[axis_num][0] = edge
+        if (not self.edges[axis_num].is_dangling()) and (not override):
+            raise ValueError(f'Node {self!s} already has a non-dangling edge for axis {axis!r}')
+        self._axes[axis_num]._node1 = node1
+        self._edges[axis_num] = edge
 
     def param_edges(self,
                     set_param: Optional[bool] = None,
@@ -343,6 +351,60 @@ class AbstractNode(ABC):
                 for param_edge in self.edges:
                     param_edge.parameterize(False)
             self._param_edges = set_param
+
+    def reassign_edges(self,
+                       axis: Optional[Union[int, Text, Axis]] = None,
+                       override: bool = False) -> None:
+        """
+        When a node has edges that reference other, previously created edges,
+        those edges might make no reference to this node. With `reassign_edges`,
+        node1 or node2 of all/one of the edges is redirected to the node, according
+        to each axis node1 attribute.
+
+        Parameters
+        ----------
+        axis: which edge is to be reassigned
+        override: if True, node1/node2 is changed in the original edge,
+                  otherwise the edge will be copied and reassigned
+        """
+        if axis is None:
+            if not override:
+                for i, edge in enumerate(self.edges):
+                    new_edge = edge.copy()
+                    self._edges[i] = new_edge
+                    if self.axes[i].node1:
+                        new_edge._nodes[0] = self
+                        new_edge._axes[0] = self.axes[i]
+                    else:
+                        new_edge._nodes[1] = self
+                        new_edge._axes[1] = self.axes[i]
+            else:
+                for i, edge in enumerate(self.edges):
+                    if self.axes[i].node1:
+                        edge._nodes[0] = self
+                        edge._axes[0] = self.axes[i]
+                    else:
+                        edge._nodes[1] = self
+                        edge._axes[1] = self.axes[i]
+        else:
+            axis_num = self.get_axis_number(axis)
+            if not override:
+                new_edge = self.edges[axis_num].copy()
+                self._edges[axis_num] = new_edge
+                if self.axes[axis_num].node1:
+                    new_edge._nodes[0] = self
+                    new_edge._axes[0] = self.axes[axis_num]
+                else:
+                    new_edge._nodes[1] = self
+                    new_edge._axes[1] = self.axes[axis_num]
+            else:
+                edge = self.edges[axis_num]
+                if self.axes[axis_num].node1:
+                    edge._nodes[0] = self
+                    edge._axes[0] = self.axes[axis_num]
+                else:
+                    edge._nodes[1] = self
+                    edge._axes[1] = self.axes[axis_num]
 
     @staticmethod
     def _make_copy_tensor(shape: Union[int, Sequence[int], torch.Size]) -> torch.Tensor:
@@ -520,20 +582,19 @@ class Node(AbstractNode):
                  network: Optional['TensorNetwork'] = None,
                  param_edges: bool = False,
                  tensor: Optional[torch.Tensor] = None,
-                 edges: Optional[List[Dict[int,
-                                           Union['AbstractEdge',
-                                                 List['AbstractEdge']]]]] = None,
+                 edges: Optional[List['AbstractEdge']] = None,
+                 node1_list: Optional[List[bool]] = None,
                  init_method: Optional[Text] = None,
                  **kwargs: float) -> None:
         """
-
         Parameters
         ----------
         tensor: tensor "contained" in the node
         edges: list of edges to attach to the node
+        node1_list: list of node1 boolean values to attach to each axis
         init_method: method to use to initialize the
                      node's tensor when it is not provided
-        args: arguments for the init_method
+        kwargs: keyword arguments for the init_method
         """
 
         # shape and tensor
@@ -552,19 +613,19 @@ class Node(AbstractNode):
 
         # edges
         if edges is None:
-            edges = [{0: self.make_edge(axis=ax), 1: []}
+            edges = [self.make_edge(ax)
                      for ax in self.axes]
-        self.edges = edges
+        else:
+            for i, axis in enumerate(self.axes):
+                if not isinstance(node1_list[i], bool):
+                    raise TypeError('`node1_list` should be List[bool] type')
+                axis._node1 = node1_list[i]
+        self._edges = edges
 
     # methods
     @staticmethod
     def set_tensor_format(tensor: torch.Tensor) -> torch.Tensor:
         return tensor
-
-    def make_edge(self, axis: Axis) -> Union['Edge', 'ParamEdge']:
-        if self.param_edges():
-            return ParamEdge(node1=self, axis1=axis)
-        return Edge(node1=self, axis1=axis)
 
     # TODO: llamar a método de TensorNetwork que cambie un nodo de la red por otro
     def parameterize(self, set_param: bool) -> Union['Node', 'ParamNode']:
@@ -575,28 +636,33 @@ class Node(AbstractNode):
                                  axes_names=self.axes_names,
                                  name=self.name,
                                  network=self.network,
+                                 param_edges=self.param_edges(),
                                  tensor=self.tensor,
-                                 param_edges=False)
-            new_node._edges = self.edges
+                                 edges=self.edges,
+                                 node1_list=self.node1_list)
+            new_node.reassign_edges(override=True)
             if self.network is not None:
+                # TODO: cambiar al anterior nodo por este en la TN
                 self.network._add_param(new_node)
             return new_node
         else:
             return self
 
-    """
     def copy(self) -> 'Node':
         new_node = Node(axes_names=self.axes_names,
                         name=self.name,
                         network=self.network,
-                        param_edges=False,
-                        tensor=self.tensor)
-        for i, edge in enumerate(self.edges):
-            new_edge = edge.copy()
-            # TODO: What happens when edge is attached to two axis of the same node
-            new_node.add_edge(new_edge, i)
+                        param_edges=self.param_edges(),
+                        tensor=self.tensor,
+                        edges=self.edges,
+                        node1_list=self.node1_list)
+        new_node.reassign_edges(override=False)
         return new_node
-    """
+
+    def make_edge(self, axis: Axis) -> Union['Edge', 'ParamEdge']:
+        if self.param_edges():
+            return ParamEdge(node1=self, axis1=axis)
+        return Edge(node1=self, axis1=axis)
 
 
 # TODO: ignore this at the moment
@@ -681,20 +747,19 @@ class ParamNode(AbstractNode, nn.Module):
                  network: Optional['TensorNetwork'] = None,
                  param_edges: bool = False,
                  tensor: Optional[torch.Tensor] = None,
-                 edges: Optional[List[Dict[int,
-                                           Union['AbstractEdge',
-                                                 List['AbstractEdge']]]]] = None,
+                 edges: Optional[List['AbstractEdge']] = None,
+                 node1_list: Optional[List[bool]] = None,
                  init_method: Optional[Text] = None,
                  **kwargs: float) -> None:
         """
-
         Parameters
         ----------
         tensor: tensor "contained" in the node
         edges: list of edges to attach to the node
+        node1_list: list of node1 boolean values to attach to each axis
         init_method: method to use to initialize the
                      node's tensor when it is not provided
-        args: arguments for the init_method
+        kwargs: keyword arguments for the init_method
         """
 
         nn.Module.__init__(self)
@@ -715,9 +780,14 @@ class ParamNode(AbstractNode, nn.Module):
 
         # edges
         if edges is None:
-            edges = [{0: self.make_edge(axis=ax), 1: []}
+            edges = [self.make_edge(ax)
                      for ax in self.axes]
-        self.edges = edges
+        else:
+            for i, axis in enumerate(self.axes):
+                if not isinstance(node1_list[i], bool):
+                    raise TypeError('`node1_list` should be List[bool] type')
+                axis._node1 = node1_list[i]
+        self._edges = edges
 
     # properties
     @property
@@ -730,47 +800,45 @@ class ParamNode(AbstractNode, nn.Module):
     def set_tensor_format(tensor: torch.Tensor) -> nn.Parameter:
         """
         If we provide a nn.Parameter, the ParamNode will use such parameter
-        instead of creating a new nn.Parameter object.
+        instead of creating a new nn.Parameter object
         """
         if isinstance(tensor, nn.Parameter):
             return tensor
         return nn.Parameter(tensor)
 
-    def make_edge(self, axis: Axis) -> Union['ParamEdge', 'Edge']:
-        if self.param_edges():
-            return ParamEdge(node1=self, axis1=axis)
-        return Edge(node1=self, axis1=axis)
-
     def parameterize(self, set_param: bool) -> Union['Node', 'ParamNode']:
         if not set_param:
-            # TODO: can we set new tensor with the same name as other?
-            #  We have to override the old one
             new_node = Node(shape=self.shape if self.tensor is None else None,
                             axes_names=self.axes_names,
                             name=self.name,
                             network=self.network,
+                            param_edges=self.param_edges(),
                             tensor=self.tensor,
-                            param_edges=False)
-            new_node._edges = self.edges
+                            edges=self.edges,
+                            node1_list=self.node1_list)
+            new_node.reassign_edges(override=True)
             if self.network is not None:
+                # TODO: cambiar en la TN antiguo nodo por este
                 self.network._remove_param(self)
             return new_node
         else:
             return self
 
-    """
     def copy(self) -> 'ParamNode':
         new_node = ParamNode(axes_names=self.axes_names,
                              name=self.name,
                              network=self.network,
-                             param_edges=False,
-                             tensor=self.tensor)
-        for i, edge in enumerate(self.edges):
-            new_edge = edge.copy()
-            # TODO: What happens when edge is attached to two axis of the same node
-            new_node.add_edge(new_edge, i)
+                             param_edges=self.param_edges(),
+                             tensor=self.tensor,
+                             edges=self.edges,
+                             node1_list=self.node1_list)
+        new_node.reassign_edges(override=False)
         return new_node
-    """
+
+    def make_edge(self, axis: Axis) -> Union['ParamEdge', 'Edge']:
+        if self.param_edges():
+            return ParamEdge(node1=self, axis1=axis)
+        return Edge(node1=self, axis1=axis)
 
 
 class AbstractEdge(ABC):
@@ -818,7 +886,7 @@ class AbstractEdge(ABC):
                 raise ValueError('Shapes of `axis1` and `axis2` should match')
 
         self._nodes = [node1, node2]
-        self._axis = [axis1, axis2]
+        self._axes = [axis1, axis2]
 
     # properties
     @property
@@ -831,11 +899,11 @@ class AbstractEdge(ABC):
 
     @property
     def axis1(self) -> Axis:
-        return self._axis[0]
+        return self._axes[0]
 
     @property
     def axis2(self) -> Axis:
-        return self._axis[1]
+        return self._axes[1]
 
     @property
     def name(self) -> Text:
@@ -859,11 +927,9 @@ class AbstractEdge(ABC):
                      size: Optional[int] = None) -> 'AbstractEdge':
         pass
 
-    """
     @abstractmethod
     def copy(self) -> 'AbstractEdge':
         pass
-    """
 
     @abstractmethod
     def __xor__(self, other: 'AbstractEdge') -> 'AbstractEdge':
@@ -898,8 +964,6 @@ class Edge(AbstractEdge):
     Used by default to create a non-trainable node.
     """
 
-    # TODO: batch indicator
-
     # methods
     def dim(self) -> int:
         return self.size()
@@ -933,14 +997,10 @@ class Edge(AbstractEdge):
         else:
             return self
 
-    """
     def copy(self) -> 'Edge':
-        new_edge = Edge(node1=self.node1,
-                        axis1=self.axis1,
-                        node2=self.node2,
-                        axis2=self.axis2)
+        new_edge = Edge(node1=self.node1, axis1=self.axis1,
+                        node2=self.node2, axis2=self.axis2)
         return new_edge
-    """
 
     @overload
     def __xor__(self, other: 'Edge') -> 'Edge':
@@ -1169,16 +1229,11 @@ class ParamEdge(AbstractEdge, nn.Module):
         else:
             return self
 
-    """
     def copy(self) -> 'ParamEdge':
-        new_edge = ParamEdge(node1=self.node1,
-                             axis1=self.axis1,
-                             shift=self.shift.item(),
-                             slope=self.slope.item(),
-                             node2=self.node2,
-                             axis2=self.axis2)
+        new_edge = ParamEdge(node1=self.node1, axis1=self.axis1,
+                             shift=self.shift.item(), slope=self.slope.item(),
+                             node2=self.node2, axis2=self.axis2)
         return new_edge
-    """
 
     # TODO: check types, may be overload
     def __xor__(self, other: AbstractEdge) -> 'ParamEdge':
@@ -1257,313 +1312,6 @@ def connect(edge1: AbstractEdge,
     node1.add_edge(new_edge, axis1, override=True)
     node2.add_edge(new_edge, axis2, override=True)
     return new_edge
-
-
-# TODO: no se usa
-def einsum(string: Text,
-           *nodes: Sequence[Union[torch.Tensor, AbstractNode]]) -> AbstractNode:
-    new_tensor = torch.einsum(string,
-                              *tuple(map(lambda x: x.tensor if isinstance(x, AbstractNode) else x, nodes)))
-    new_node = Node(tensor=new_tensor)
-
-    out_string = string.split('->')[1]
-    strings = string.split('->')[0].split(',')
-
-    i = 0
-    for j, string in enumerate(strings):
-        if isinstance(nodes[j], AbstractNode):
-            for k, char in enumerate(string):
-                if i < len(out_string) and out_string[i] == char:
-                    new_node.add_edge(nodes[j][k], i, override=True)
-                    i += 1
-    return new_node
-
-
-def contract(edge: AbstractEdge) -> AbstractNode:
-    nodes = [edge.node1, edge.node2]
-    axes = [edge.axis1, edge.axis2]
-
-    index = 1
-    input_strings = []
-    output_string = ''
-    matrix_string = ''
-    for i, node in enumerate(nodes):
-        if (i == 1) and (nodes[1] == nodes[0]):
-            break
-        string = ''
-        for j, _ in enumerate(node.shape):
-            if j == axes[i].num:
-                string += _VALID_SUBSCRIPTS[0]
-                if isinstance(edge, ParamEdge):
-                    matrix_string = 2 * _VALID_SUBSCRIPTS[0]
-            else:
-                string += _VALID_SUBSCRIPTS[index]
-                output_string += _VALID_SUBSCRIPTS[index]
-                index += 1
-        input_strings.append(string)
-
-    if len(input_strings) == 1:
-        input_string = ''.join(input_strings[0])
-        if isinstance(edge, ParamEdge):
-            einsum_string = input_string + ',' + matrix_string + '->' + output_string
-            new_tensor = torch.einsum(einsum_string, nodes[0].tensor, edge.matrix)
-        else:
-            einsum_string = input_string + '->' + output_string
-            new_tensor = torch.einsum(einsum_string, nodes[0].tensor)
-        # TODO: check names -> method in network for repeated names
-        name = f'{nodes[0].name}![{axes[0].name}]'
-    else:
-        input_string_0 = ''.join(input_strings[0])
-        input_string_1 = ''.join(input_strings[1])
-        if isinstance(edge, ParamEdge):
-            einsum_string = input_string_0 + ',' + matrix_string + ',' \
-                            + input_string_1 + '->' + output_string
-            new_tensor = torch.einsum(einsum_string, nodes[0].tensor, edge.matrix, nodes[1].tensor)
-        else:
-            einsum_string = input_string_0 + ',' + input_string_1 + '->' + output_string
-            new_tensor = torch.einsum(einsum_string, nodes[0].tensor, nodes[1].tensor)
-        name = f'{nodes[0].name},{nodes[1].name}![{axes[0].name},{axes[1].name}]'
-
-    axes_names = []
-    edges = []
-    i = 0
-    for j, string in enumerate(input_strings):
-        for k, char in enumerate(string):
-            if i < len(output_string):
-                if output_string[i] == char:
-                    axis_name = nodes[j].axes[k].name
-                    # TODO: arreglar mejor el tema de los nombres
-                    if axis_name in axes_names:
-                        axis_name += '_' + str(i)
-                    axes_names.append(axis_name)
-                    edges.append(nodes[j][k])
-                    i += 1
-            else:
-                break
-        if i >= len(output_string):
-            break
-
-    # TODO: eliminate previous nodes from network??
-    # TODO: Node init should manage repeated axes names
-    new_node = Node(axes_names=axes_names, name=name, network=nodes[0].network,
-                    param_edges=False, tensor=new_tensor)
-    # TODO: estamos poniendo los antiguos edges, no se sobreescriben las
-    #  referencias a los nuevos Axis ni na :(
-    new_node.edges = edges
-    return new_node
-
-
-def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
-    edges = list()
-    for edge in node1.edges:
-        if (edge.node1 == node1) and (edge.node2 == node2):
-            edges.append(edge)
-        elif (edge.node1 == node2) and (edge.node2 == node1):
-            edges.append(edge)
-    return edges
-
-
-def contract_between(node1: AbstractNode, node2: AbstractNode) -> AbstractNode:
-    shared_edges = get_shared_edges(node1, node2)
-    if not shared_edges:
-        raise ValueError(f'No edges found between nodes {node1} and {node2}')
-
-    n_shared = len(shared_edges)
-    shared_subscripts = dict(zip(shared_edges, _VALID_SUBSCRIPTS[:n_shared]))
-
-    index = n_shared
-    input_strings = list()
-    output_string = ''
-    matrices = list()
-    matrices_strings = list()
-    for node in [node1, node2]:
-        if (node is node1) and (node1 is node2):
-            break
-        string = ''
-        matrix_string = ''
-        for edge in node.edges:
-            if edge in shared_edges:
-                string += shared_subscripts[edge]
-                if isinstance(edge, ParamEdge):
-                    matrices.append(edge.matrix)
-                    matrix_string = 2 * shared_subscripts[edge]
-            else:
-                string += _VALID_SUBSCRIPTS[index]
-                output_string += _VALID_SUBSCRIPTS[index]
-                index += 1
-        input_strings.append(string)
-        matrices_strings.append(matrix_string)
-
-    matrices_string = ','.join(matrices_strings)
-    if len(input_strings) == 1:
-        input_string = ''.join(input_strings[0])
-        if len(matrices) > 0:
-            einsum_string = input_string + ',' + matrices_string + '->' + output_string
-            new_tensor = torch.einsum(einsum_string, node1.tensor, *matrices)
-        else:
-            einsum_string = input_string + '->' + output_string
-            new_tensor = torch.einsum(einsum_string, node1.tensor)
-        name = f'{node1.name}'
-    else:
-        input_string_0 = ''.join(input_strings[0])
-        input_string_1 = ''.join(input_strings[1])
-        if len(matrices) > 0:
-            einsum_string = input_string_0 + ',' + matrices_string + ',' \
-                            + input_string_1 + '->' + output_string
-            new_tensor = torch.einsum(einsum_string, node1.tensor, *matrices, node2.tensor)
-        else:
-            einsum_string = input_string_0 + ',' + input_string_1 + '->' + output_string
-            new_tensor = torch.einsum(einsum_string, node1.tensor, node2.tensor)
-        name = f'{node1.name}@{node2.name}'
-
-    axes_names = list()
-    edges = list()
-    nodes = [node1, node2]
-    i = 0
-    for j, string in enumerate(input_strings):
-        for k, char in enumerate(string):
-            if i < len(output_string):
-                if output_string[i] == char:
-                    axis_name = nodes[j].axes[k].name
-                    # TODO: arreglar mejor el tema de los nombres
-                    if axis_name in axes_names:
-                        axis_name += '_' + str(i)
-                    axes_names.append(axis_name)
-                    edges.append(nodes[j][k])
-                    i += 1
-            else:
-                break
-        if i >= len(output_string):
-            break
-
-    # TODO: eliminate previous nodes from network??
-    new_node = Node(axes_names=axes_names, name=name, network=nodes[0].network,
-                    param_edges=False, tensor=new_tensor)
-    new_node.edges = edges
-    return new_node
-
-
-# TODO: deberíamos permitir contraer varios nodos a la vez, como un einsum,
-#  para que vaya más optimizado. En un tree tendremos nodos iguales que apilaremos,
-#  y cada nodo va conectado a otros 3, 4 nodos (los que sean). Así que hay que
-#  contraer esas 3, 4 pilas de input con la pila de los tensores.
-def batched_contract_between(node1: AbstractNode,
-                             node2: AbstractNode,
-                             batch_edge1: AbstractEdge,
-                             batch_edge2: AbstractEdge) -> AbstractNode:
-    """
-    Contract between that supports one batch edge in each node.
-
-    Uses einsum property: 'bij,bjk->bik'.
-
-    Args:
-        node1: First node to contract.
-        node2: Second node to contract.
-        batch_edge1: The edge of node1 that corresponds to its batch index.
-        batch_edge2: The edge of node2 that corresponds to its batch index.
-
-    Returns:
-        new_node: Result of the contraction. This node has by default batch_edge1
-        as its batch edge. Its edges are in order of the dangling edges of
-        node1 followed by the dangling edges of node2.
-    """
-    # Stop computing if both nodes are the same
-    if node1 is node2:
-        raise ValueError(f'Cannot perform batched contraction between '
-                         f'node {node1} and itself')
-
-    shared_edges = get_shared_edges(node1, node2)
-    if not shared_edges:
-        raise ValueError(f'No edges found between nodes {node1} and {node2}')
-
-    if batch_edge1 in shared_edges:
-        raise ValueError(f'Batch edge {batch_edge1} is shared between the nodes')
-    if batch_edge2 in shared_edges:
-        raise ValueError(f'Batch edge {batch_edge2} is shared between the nodes')
-
-    n_shared = len(shared_edges)
-    shared_subscripts = dict(zip(shared_edges, _VALID_SUBSCRIPTS[:n_shared]))
-
-    index = n_shared + 1
-    input_strings = list()
-    output_string = ''
-    matrices = list()
-    matrices_strings = list()
-    for node, batch_edge in zip([node1, node2], [batch_edge1, batch_edge2]):
-        string = ''
-        matrix_string = ''
-        for edge in node.edges:
-            if edge in shared_edges:
-                string += shared_subscripts[edge]
-                if isinstance(edge, ParamEdge):
-                    matrices.append(edge.matrix)
-                    matrix_string = 2 * shared_subscripts[edge]
-            elif edge is batch_edge:
-                string += _VALID_SUBSCRIPTS[n_shared]
-                if node is node1:
-                    output_string += _VALID_SUBSCRIPTS[n_shared]
-            else:
-                string += _VALID_SUBSCRIPTS[index]
-                output_string += _VALID_SUBSCRIPTS[index]
-                index += 1
-        input_strings.append(string)
-        matrices_strings.append(matrix_string)
-
-    matrices_string = ','.join(matrices_strings)
-    if len(input_strings) == 1:
-        input_string = ''.join(input_strings[0])
-        if len(matrices) > 0:
-            einsum_string = input_string + ',' + matrices_string + '->' + output_string
-            new_tensor = torch.einsum(einsum_string, node1.tensor, *matrices)
-        else:
-            einsum_string = input_string + '->' + output_string
-            new_tensor = torch.einsum(einsum_string, node1.tensor)
-        name = f'{node1.name}'
-    else:
-        input_string_0 = ''.join(input_strings[0])
-        input_string_1 = ''.join(input_strings[1])
-        if len(matrices) > 0:
-            einsum_string = input_string_0 + ',' + matrices_string + ',' \
-                            + input_string_1 + '->' + output_string
-            new_tensor = torch.einsum(einsum_string, node1.tensor, *matrices, node2.tensor)
-        else:
-            einsum_string = input_string_0 + ',' + input_string_1 + '->' + output_string
-            new_tensor = torch.einsum(einsum_string, node1.tensor, node2.tensor)
-        name = f'{node1.name}@{node2.name}'
-
-    axes_names = list()
-    edges = list()
-    nodes = [node1, node2]
-    i = 0
-    for j, string in enumerate(input_strings):
-        for k, char in enumerate(string):
-            if i < len(output_string):
-                if output_string[i] == char:
-                    axis_name = nodes[j].axes[k].name
-                    # TODO: arreglar mejor el tema de los nombres
-                    if axis_name in axes_names:
-                        axis_name += '_' + str(i)
-                    axes_names.append(axis_name)
-                    edges.append(nodes[j][k])
-                    i += 1
-            else:
-                break
-        if i >= len(output_string):
-            break
-
-    # TODO: eliminate previous nodes from network??
-    new_node = Node(axes_names=axes_names, name=name, network=nodes[0].network,
-                    param_edges=False, tensor=new_tensor)
-    new_node.edges = edges
-    return new_node
-
-
-def stack():
-    pass
-
-
-def unbind():
-    pass
 
 
 # TODO: puede que no nos haga mucha falta esta BaseTN, y baste con que pueda haber edges (de los

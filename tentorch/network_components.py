@@ -1314,26 +1314,6 @@ def connect(edge1: AbstractEdge,
     return new_edge
 
 
-# TODO: puede que no nos haga mucha falta esta BaseTN, y baste con que pueda haber edges (de los
-#  nodos resultado de contracciones) que apunten a otro nodo, aunque ese nodo ("original") ya
-#  tenga sus propios edges
-class BaseTN:
-    def __init__(self):
-        self._nodes = dict()
-
-    @property
-    def nodes(self):
-        return self._nodes
-
-    @property
-    def edges(self):
-        edges_list = list()
-        for node in self.nodes:
-            for edge in node.edges:
-                edges_list.append(edge)
-        return edges_list
-
-
 # TODO: parameterize and deparameterize network, return a different network so that
 #  we can retrieve the original parameterized nodes/edges with their initial sizes
 
@@ -1342,7 +1322,7 @@ class BaseTN:
 # TODO: llevar una network auxiliar para hacer los cálculos, después hacer .clear()
 # TODO: gestionar nombres de nodes y edges que se crean en la network
 # TODO: add __repr__, __str__
-class TensorNetwork(BaseTN, nn.Module):
+class TensorNetwork(nn.Module):
     """
     Al contraer una red se crea una Network auxiliar formada por Nodes en lugar
     de ParamNodes y Edges en lugar de ParamEdges. Ahí se van guardando todos los
@@ -1362,12 +1342,10 @@ class TensorNetwork(BaseTN, nn.Module):
     """
 
     def __init__(self):
-        BaseTN.__init__(self)
         nn.Module.__init__(self)
         # TODO: Contractions of the network happen in the _ops_tn, and they are in-place,
         #  so that we can keep track of the connections even after some contractions have
         #  already been computed
-        self._ops_tn = BaseTN()
 
     def _add_param(self, param: Union[ParamNode, ParamEdge]) -> None:
         if not hasattr(self, param.name):
@@ -1408,23 +1386,6 @@ class TensorNetwork(BaseTN, nn.Module):
     def add_nodes_from(self, nodes_list: Sequence[AbstractNode]):
         for name, node in nodes_list:
             self.add_node(node)
-
-    def clone(self):
-        """Clone TN to the _ops_tn"""
-        copy_nodes = dict()
-        for node in self.nodes:
-            copy_nodes[node] = node.copy()
-        for node in self.nodes:
-            for edge in copy_nodes[node].edges:
-                # TODO: setter edge.node1/2
-                if edge.node1 in copy_nodes:
-                    edge.node1 = copy_nodes[edge.node1]
-                if edge.node2 in copy_nodes:
-                    edge.node2 = copy_nodes[edge.node2]
-
-    def clear(self):
-        """Clear _ops_tn"""
-        self._ops_tn = BaseTN()
 
     """
     def connect_nodes(nodes_list, axis_list):

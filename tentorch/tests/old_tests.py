@@ -31,6 +31,7 @@ print(node3.axes_names)
 print(node3.edges)
 """
 
+"""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -368,3 +369,15 @@ start3 = timeit.default_timer()
 out = conv(image)
 stop3 = timeit.default_timer()
 print('Time: ', stop1 - start1 + stop3 - start3)
+"""
+
+import torch
+import timeit
+
+a = torch.rand(1, 1, 16, 2, 16, 2, 16, 2, 2, 2, 2)
+b = torch.rand(729, 1, 1, 2, 1, 2, 1, 2, 2, 2, 2)
+
+start = timeit.default_timer()
+
+stop = timeit.default_timer()
+print('Time: ', stop - start)

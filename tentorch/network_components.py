@@ -917,7 +917,7 @@ class AbstractEdge(ABC):
         pass
 
     @abstractmethod
-    def __or__(self) -> List['AbstractEdge']:
+    def __or__(self, other: 'AbstractEdge') -> List['AbstractEdge']:
         pass
 
     # methods
@@ -993,8 +993,12 @@ class Edge(AbstractEdge):
     def __xor__(self, other: Union['Edge', 'ParamEdge']) -> Union['Edge', 'ParamEdge']:
         return connect(self, other)
 
-    def __or__(self) -> Tuple['Edge', 'Edge']:
-        return disconnect(self)
+    def __or__(self, other: 'Edge') -> Tuple['Edge', 'Edge']:
+        if other == self:
+            return disconnect(self)
+        else:
+            raise ValueError('Cannot disconnect one edge from another, different one. '
+                             'Edge should be disconnected from itself')
 
 
 class ParamEdge(AbstractEdge, nn.Module):
@@ -1113,7 +1117,7 @@ class ParamEdge(AbstractEdge, nn.Module):
         return shift, slope
 
     def is_updated(self) -> bool:
-        if (self._prev_shift == self._shift.item()) and\
+        if (self._prev_shift == self._shift.item()) and \
                 (self._prev_slope == self._slope.item()):
             return True
         return False
@@ -1182,16 +1186,17 @@ class ParamEdge(AbstractEdge, nn.Module):
     def __xor__(self, other: Union['Edge', 'ParamEdge']) -> 'ParamEdge':
         return connect(self, other)
 
-    def __or__(self) -> Tuple['ParamEdge', 'ParamEdge']:
-        return disconnect(self)
+    def __or__(self, other: 'ParamEdge') -> Tuple['ParamEdge', 'ParamEdge']:
+        if other == self:
+            return disconnect(self)
+        else:
+            raise ValueError('Cannot disconnect one edge from another, different one. '
+                             'Edge should be disconnected from itself')
 
 
 ################################################
 #                TENSOR NETWORK                #
 ################################################
-# TODO: parameterize and deparameterize network, return a different network so that
-#  we can retrieve the original parameterized nodes/edges with their initial sizes
-# TODO: add __repr__, __str__
 class TensorNetwork(nn.Module):
     """
     Al contraer una red se crea una Network auxiliar formada por Nodes en lugar
@@ -1203,7 +1208,7 @@ class TensorNetwork(nn.Module):
 
         -nodes (add modules, del modules)
         -edges
-        -forward (create nodes for input data and generate the final
+        -forward (create nodes for input data_nodes and generate the final
             network to be contracted)
         -contraction of network (identify similar nodes to stack them
             and optimize)
@@ -1211,9 +1216,14 @@ class TensorNetwork(nn.Module):
             with edges connected as the original network)
     """
 
-    def __init__(self):
+    def __init__(self, name: Optional[Text] = None):
         super().__init__()
+        if name is None:
+            name = self.__class__.__name__.lower()
+        self.name = name
         self._nodes = dict()
+        self._data_nodes = dict()
+        self._edges = []
 
     @property
     def nodes(self) -> Dict[Text, AbstractNode]:
@@ -1224,13 +1234,20 @@ class TensorNetwork(nn.Module):
         return list(self._nodes.keys())
 
     @property
+    def data_nodes(self) -> Dict[Text, AbstractNode]:
+        return self._data_nodes
+
+    @property
     def edges(self) -> List[AbstractEdge]:
+        return self._edges
+
+    def _update_edges(self) -> None:
         edges = []
         for node in self.nodes.values():
             for edge in node.edges:
                 if edge.is_dangling():
                     edges.append(edge)
-        return edges
+        self._edges = edges
 
     def add_node(self, node: AbstractNode, override: bool = False) -> None:
         if node.network == self:
@@ -1260,14 +1277,31 @@ class TensorNetwork(nn.Module):
                     if isinstance(edge, ParamEdge):
                         self._add_param(edge)
             node._network = self
+            self._update_edges()
 
     def remove_node(self, node: AbstractNode) -> None:
+        """
+        This function only removes the reference to the node, and the reference
+        to the TN that is kept by the node. To completely get rid of the node,
+        it should be disconnected from any other node of the TN, removed from the
+        TN and, finally, deleted
+        """
         del self.nodes[node.name]
         node._network = None
         if erase_enum(node.name) != node.name:
             nodes_names = self.nodes_names
             new_nodes_names = enum_repeated_names(nodes_names)
             self._rename_nodes(nodes_names, new_nodes_names)
+        self._update_edges()
+
+    def delete_node(self, node: AbstractNode) -> None:
+        """
+        This function gets completely rid of the node
+        """
+        for edge in node.edges:
+            edge | edge
+        self.remove_node(node)
+        del node
 
     def add_nodes_from(self, nodes_list: Sequence[AbstractNode]):
         for name, node in nodes_list:
@@ -1317,26 +1351,102 @@ class TensorNetwork(nn.Module):
             new_nodes_names = enum_repeated_names(nodes_names)
             self._rename_nodes(nodes_names, new_nodes_names)
 
-    """
-    def initialize(self, *args):
-        for child in self.children():
-            if isinstance(child, 'AbstractNode'):
-                child.initialize(*args)
-            # Los Edges se inicializan solos
+    # TODO: return copy of network
+    def parameterize(self, set_param: bool = True) -> None:
+        if set_param:
+            for node in self.nodes.values():
+                node.parameterize(True)
+                node.param_edges(True)
+        else:
+            for node in self.nodes.values():
+                node.parameterize(False)
+                node.param_edges(False)
 
-    # def add_data(self, data):
-    #    pass
+    def initialize(self) -> None:
+        # Initialization methods depends on the topology of the network. Number of nodes,
+        # edges and its dimensions might be relevant when specifying the initial distribution
+        # (mean, std) of each node.
+        raise NotImplementedError('Initialization methods not implemented for generic TensorNetwork class')
 
-    # @abstractmethod
-    def contract_network(self):
-        pass
+    def set_data_nodes(self,
+                       input_edges: Union[List[int], List[AbstractEdge]],
+                       batch_size: int,
+                       feature_size: int) -> None:
+        """
+        Create data nodes and connect them to the list of specified edges of the TN.
+        `set_data_nodes` should be executed after instantiating a TN, before
+        computing forward.
 
-    # def forward(self, data):
-    #    aux_net = self.add_data(data)
-    #    result = aux_net.contract_network()
-    #    self.clear_op_network()
-    #    return result
-    """
+        Parameters
+        ----------
+        input_edges: list of edges in the same order as they are expected to be
+                     contracted with each feature node of the input data_nodes
+        batch_size: int, size of data_nodes tensor dimension associated to the batch
+        feature_size: int, size of data_nodes tensor dimension associated to the features
+        """
+        if not self.data_nodes:
+            for node in self.data_nodes.values():
+                self.delete_node(node)
+            self._data_nodes = dict()
+        for i, edge in enumerate(input_edges):
+            if isinstance(edge, int):
+                edge = self[edge]
+            elif isinstance(edge, AbstractEdge):
+                if edge not in self.edges:
+                    raise ValueError(f'Edge {edge!r} should be a dangling edge of the Tensor Network')
+            else:
+                raise TypeError('`input_edges` should be List[int] or List[AbstractEdge] type')
+            node = Node(shape=(batch_size, feature_size),
+                        axes_names=('batch', 'feature'),
+                        name=f'input_{i}',
+                        network=self)
+            node['feature'] ^ edge
+            self._data_nodes[node.name] = node
+
+    def _add_data(self, data: torch.Tensor) -> None:
+        """
+        Add data to data nodes, that is, change its tensor by a new one given a new data set.
+        Input data should have shape batch x n_features x feature.
+        """
+        i = 0
+        for node in self.data_nodes:
+            node.tensor = data[:, i, :]
+            i += 1
+        if i != data.shape[1]:
+            raise IndexError(f'Number of data nodes does not match number of features '
+                             f'for input data with {data.shape[1]} features')
+
+    def contract(self) -> AbstractNode:
+        # Custom, optimized contraction methods should be defined for each new subclass of TensorNetwork
+        raise NotImplementedError('Contraction methods not implemented for generic TensorNetwork class')
+
+    def forward(self, data: torch.Tensor) -> torch.Tensor:
+        """
+        Contract Tensor Network with input data with shape batch x n_features x feature.
+        """
+        if not self.data_nodes:
+            raise ValueError('Data nodes must be created before calling forward')
+        self._add_data(data)
+        return self.contract().tensor
+
+    def __getitem__(self, key: Union[int, Text]) -> Union[AbstractEdge, AbstractNode]:
+        if isinstance(key, int):
+            return self._edges[key]
+        elif isinstance(key, Text):
+            try:
+                return self.nodes[key]
+            except Exception:
+                raise KeyError(f'Tensor network {self!s} does not have any node with name {key}')
+        else:
+            raise TypeError('`key` should be int or str type')
+
+    def __str__(self) -> Text:
+        return self.name
+
+    def __repr__(self) -> Text:
+        return f'{self.__class__.__name__}(\n ' \
+               f'\tnodes: \n{tab_string(repr(self.nodes.keys()), 2)}\n' \
+               f'\tedges:\n{tab_string(repr(self.edges), 2)})'
 
 
 ################################################

@@ -1410,11 +1410,9 @@ def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
 
 
 def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
-    edges = list()
+    edges = []
     for edge in node1.edges:
-        if (edge.node1 == node1) and (edge.node2 == node2):
-            edges.append(edge)
-        elif (edge.node1 == node2) and (edge.node2 == node1):
+        if edge in node2.edges:
             edges.append(edge)
     return edges
 

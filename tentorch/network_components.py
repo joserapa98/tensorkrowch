@@ -19,7 +19,6 @@ This script contains:
         *disconnect
         *contract_between
 """
-# TODO: gestionar bien tipos y errores viendo desde qué funciones llamo a cuáles
 
 from typing import (overload, Union, Optional, Dict,
                     Sequence, Text, List, Tuple)
@@ -520,23 +519,57 @@ class AbstractNode(ABC):
             return self.edges[key]
         return self.get_edge(key)
 
-    # TODO: implement @ (not in-place contract_between, returns new node, not affecting the network)
-    def __matmul__(self, other: 'AbstractNode') -> 'AbstractNode':
-        pass
+    """
+    All operations return a Node, since the nodes resulting from
+    tensor network operations should not be parameterized
+    """
+    # Contraction of all edges connecting two nodes
+    def __matmul__(self, other: 'AbstractNode') -> 'Node':
+        return contract_between(self, other)
 
-    # TODO: element-wise operations
-    def __mul__(self, other: 'AbstractNode') -> 'AbstractNode':
-        pass
+    # Tensor product of two nodes
+    def __mod__(self, other: 'AbstractNode') -> 'Node':
+        i = 0
+        self_string = ''
+        for _ in self.axes:
+            self_string += opt_einsum.get_symbol(i)
+            i += 1
+        other_string = ''
+        for _ in other.axes:
+            other_string += opt_einsum.get_symbol(i)
+            i += 1
+        einsum_string = self_string + ',' + other_string + '->' + self_string + other_string
+        new_tensor = opt_einsum.contract(einsum_string, self.tensor, other.tensor)
+        new_node = Node(axes_names=self.axes_names + other.axes_names,
+                        name=f'product_{self.name}_{other.name}',
+                        network=self.network,
+                        tensor=new_tensor,
+                        edges=self.edges + other.edges,
+                        node1_list=self.node1_list + other.node1_list)
+        return new_node
 
-    def __add__(self, other: 'AbstractNode') -> 'AbstractNode':
-        pass
+    # For element-wise operations (not tensor-network-like operations),
+    # a new Node with new edges is created
+    def __mul__(self, other: 'AbstractNode') -> 'Node':
+        new_node = Node(axes_names=self.axes_names,
+                        name=f'mul_{self.name}_{other.name}',
+                        network=self.network,
+                        tensor=self.tensor * other.tensor)
+        return new_node
 
-    def __sub__(self, other: 'AbstractNode') -> 'AbstractNode':
-        pass
+    def __add__(self, other: 'AbstractNode') -> 'Node':
+        new_node = Node(axes_names=self.axes_names,
+                        name=f'add_{self.name}_{other.name}',
+                        network=self.network,
+                        tensor=self.tensor + other.tensor)
+        return new_node
 
-    # TODO: tensor product of two nodes
-    def __mod__(self, other: 'AbstractNode') -> 'AbstractNode':
-        pass
+    def __sub__(self, other: 'AbstractNode') -> 'Node':
+        new_node = Node(axes_names=self.axes_names,
+                        name=f'sub_{self.name}_{other.name}',
+                        network=self.network,
+                        tensor=self.tensor - other.tensor)
+        return new_node
 
     def __str__(self) -> Text:
         return self.name
@@ -1417,7 +1450,7 @@ def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractE
     return edges
 
 
-def contract_between(node1: AbstractNode, node2: AbstractNode) -> AbstractNode:
+def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
     shared_edges = get_shared_edges(node1, node2)
     if not shared_edges:
         raise ValueError(f'No edges found between nodes {node1!s} and {node2!s}')

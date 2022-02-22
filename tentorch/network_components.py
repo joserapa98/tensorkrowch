@@ -24,6 +24,7 @@ from typing import (overload, Union, Optional, Dict,
                     Sequence, Text, List, Tuple)
 from abc import ABC, abstractmethod
 import warnings
+import copy
 
 import torch
 import torch.nn as nn
@@ -119,10 +120,7 @@ class AbstractNode(ABC):
     def __init__(self,
                  shape: Union[int, Sequence[int], torch.Size],
                  axes_names: Optional[Sequence[Text]] = None,
-                 name: Optional[Text] = None,
-                 network: Optional['TensorNetwork'] = None,
-                 override_node: bool = False,
-                 param_edges: bool = False) -> None:
+                 name: Optional[Text] = None) -> None:
         """
         Create a node. Should be subclassed before usage and
         a limited number of abstract methods overridden.
@@ -132,13 +130,6 @@ class AbstractNode(ABC):
         shape: node shape (the shape of its tensor)
         axes_names: list of names for each of the node's axes
         name: node name
-        network: tensor network to which the node belongs
-        override_node: boolean used if network is not None. If node name
-                       overrides an existing node name in the network, and
-                       override_node is set to True, the existing node is
-                       substituted by the new one
-        param_edges: boolean indicating whether node's edges
-                     are parameterized (trainable) or not
 
         Raises
         ------
@@ -171,6 +162,9 @@ class AbstractNode(ABC):
                 axes = [Axis(num=i, name=name)
                         for i, name in enumerate(axes_names)]
         self._axes = axes
+        self._tensor = torch.empty(shape)
+        self._param_edges = False
+        self._edges = []
 
         # name
         if name is None:
@@ -181,14 +175,6 @@ class AbstractNode(ABC):
 
         # network
         self._network = None
-        if network is not None:
-            if not isinstance(network, TensorNetwork):
-                raise TypeError('`network` should be TensorNetwork type')
-            network.add_node(self, override=override_node)
-
-        self._tensor = torch.empty(shape)
-        self._param_edges = param_edges
-        self._edges = []
 
     # properties
     @property
@@ -237,6 +223,10 @@ class AbstractNode(ABC):
     @property
     def network(self) -> Optional['TensorNetwork']:
         return self._network
+
+    @network.setter
+    def network(self, network: 'TensorNetwork') -> None:
+        self.move_to_network(network)
 
     @property
     def neighbours(self) -> List['AbstractNode']:
@@ -371,9 +361,10 @@ class AbstractNode(ABC):
             axis_num = self.get_axis_number(axis)
             edges = [(axis_num, self.edges[axis_num])]
         if not override:
+            self._edges = []
             for i, edge in edges:
                 new_edge = edge.copy()
-                self._edges[i] = new_edge
+                self._edges.append(new_edge)
                 if self.axes[i].node1:
                     new_edge._nodes[0] = self
                     new_edge._axes[0] = self.axes[i]
@@ -388,6 +379,11 @@ class AbstractNode(ABC):
                 else:
                     edge._nodes[1] = self
                     edge._axes[1] = self.axes[i]
+
+    def disconnect_edges(self) -> None:
+        for edge in self.edges:
+            if not edge.is_dangling():
+                edge | edge
 
     @staticmethod
     def _make_copy_tensor(shape: Union[int, Sequence[int], torch.Size]) -> torch.Tensor:
@@ -500,8 +496,9 @@ class AbstractNode(ABC):
             if visited is None:
                 visited = []
             if self not in visited:
-                self.network.remove_node(self)
-                network.add_node(self)
+                if self.network is not None:
+                    self.network.remove_node(self)
+                network._add_node(self)
                 visited.append(self)
                 for neighbour in self.neighbours:
                     neighbour.move_to_network(network=network, visited=visited)
@@ -606,6 +603,14 @@ class Node(AbstractNode):
         """
         Parameters
         ----------
+
+        network: tensor network to which the node belongs
+        override_node: boolean used if network is not None. If node name
+                       overrides an existing node name in the network, and
+                       override_node is set to True, the existing node is
+                       substituted by the new one
+        param_edges: boolean indicating whether node's edges
+                     are parameterized (trainable) or not
         tensor: tensor "contained" in the node
         edges: list of edges to attach to the node
         node1_list: list of node1 boolean values to attach to each axis
@@ -621,14 +626,15 @@ class Node(AbstractNode):
             else:
                 raise ValueError('Only one of `shape` or `tensor` should be provided')
         elif shape is not None:
-            super().__init__(shape, axes_names, name, network, override_node, param_edges)
+            super().__init__(shape, axes_names, name)
             if init_method is not None:
                 self.set_tensor(init_method=init_method, **kwargs)
         else:
-            super().__init__(tensor.shape, axes_names, name, network, override_node, param_edges)
+            super().__init__(tensor.shape, axes_names, name)
             self.set_tensor(tensor)
 
         # edges
+        self._param_edges = param_edges
         if edges is None:
             edges = [self.make_edge(ax)
                      for ax in self.axes]
@@ -641,6 +647,12 @@ class Node(AbstractNode):
                 axis._node1 = node1_list[i]
         self._edges = edges
 
+        # network
+        if network is not None:
+            if not isinstance(network, TensorNetwork):
+                raise TypeError('`network` should be TensorNetwork type')
+            network._add_node(self, override=override_node)
+
     # methods
     @staticmethod
     def set_tensor_format(tensor: torch.Tensor) -> torch.Tensor:
@@ -648,10 +660,9 @@ class Node(AbstractNode):
             return tensor.data
         return tensor
 
-    def parameterize(self, set_param: bool) -> Union['Node', 'ParamNode']:
+    def parameterize(self, set_param: bool = True) -> Union['Node', 'ParamNode']:
         if set_param:
-            new_node = ParamNode(shape=self.shape if self.tensor is None else None,
-                                 axes_names=self.axes_names,
+            new_node = ParamNode(axes_names=self.axes_names,
                                  name=self.name,
                                  network=self.network,
                                  override_node=True,
@@ -666,7 +677,7 @@ class Node(AbstractNode):
 
     def copy(self) -> 'Node':
         new_node = Node(axes_names=self.axes_names,
-                        name=self.name,
+                        name=self.name + '_copy',
                         network=self.network,
                         param_edges=self.param_edges(),
                         tensor=self.tensor,
@@ -729,6 +740,14 @@ class ParamNode(AbstractNode, nn.Module):
         """
         Parameters
         ----------
+
+        network: tensor network to which the node belongs
+        override_node: boolean used if network is not None. If node name
+                       overrides an existing node name in the network, and
+                       override_node is set to True, the existing node is
+                       substituted by the new one
+        param_edges: boolean indicating whether node's edges
+                     are parameterized (trainable) or not
         tensor: tensor "contained" in the node
         edges: list of edges to attach to the node
         node1_list: list of node1 boolean values to attach to each axis
@@ -746,23 +765,32 @@ class ParamNode(AbstractNode, nn.Module):
             else:
                 raise ValueError('Only one of `shape` or `tensor` should be provided')
         elif shape is not None:
-            AbstractNode.__init__(self, shape, axes_names, name, network, override_node, param_edges)
+            AbstractNode.__init__(self, shape, axes_names, name)
             if init_method is not None:
                 self.set_tensor(init_method=init_method, **kwargs)
         else:
-            AbstractNode.__init__(self, tensor.shape, axes_names, name, network, override_node, param_edges)
+            AbstractNode.__init__(self, tensor.shape, axes_names, name)
             self.set_tensor(tensor)
 
         # edges
+        self._param_edges = param_edges
         if edges is None:
             edges = [self.make_edge(ax)
                      for ax in self.axes]
         else:
+            if node1_list is None:
+                raise ValueError('If `edges` are provided, `node1_list` should also be provided')
             for i, axis in enumerate(self.axes):
                 if not isinstance(node1_list[i], bool):
                     raise TypeError('`node1_list` should be List[bool] type')
                 axis._node1 = node1_list[i]
         self._edges = edges
+
+        # network
+        if network is not None:
+            if not isinstance(network, TensorNetwork):
+                raise TypeError('`network` should be TensorNetwork type')
+            network._add_node(self, override=override_node)
 
     # properties
     @property
@@ -780,10 +808,9 @@ class ParamNode(AbstractNode, nn.Module):
             return tensor
         return nn.Parameter(tensor)
 
-    def parameterize(self, set_param: bool) -> Union['Node', 'ParamNode']:
+    def parameterize(self, set_param: bool = True) -> Union['Node', 'ParamNode']:
         if not set_param:
-            new_node = Node(shape=self.shape if self.tensor is None else None,
-                            axes_names=self.axes_names,
+            new_node = Node(axes_names=self.axes_names,
                             name=self.name,
                             network=self.network,
                             override_node=True,
@@ -798,7 +825,7 @@ class ParamNode(AbstractNode, nn.Module):
 
     def copy(self) -> 'ParamNode':
         new_node = ParamNode(axes_names=self.axes_names,
-                             name=self.name,
+                             name=self.name + '_copy',
                              network=self.network,
                              param_edges=self.param_edges(),
                              tensor=self.tensor,
@@ -1140,7 +1167,10 @@ class ParamEdge(AbstractEdge, nn.Module):
             warnings.warn(f'Dimension of edge {self!r} is not greater than zero')
         self._dim = dim
 
-    def dim(self) -> int:
+    def dim(self, dim: Optional[int] = None) -> int:
+        if dim is not None:
+            self.shift, self.slope = self.compute_parameters(self.size(), dim)
+            self.set_matrix()
         return self._dim
 
     def change_size(self, size: int, padding_method: Text = 'zeros', **kwargs) -> None:
@@ -1150,7 +1180,7 @@ class ParamEdge(AbstractEdge, nn.Module):
             self.node2._change_axis_size(self.axis2, size, padding_method, **kwargs)
         self.node1._change_axis_size(self.axis1, size, padding_method, **kwargs)
 
-        self.shift, self.slope = self.compute_parameters(size, self.dim())
+        self.shift, self.slope = self.compute_parameters(size, min(size, self.dim()))
         self.set_matrix()
 
     def parameterize(self,
@@ -1249,7 +1279,7 @@ class TensorNetwork(nn.Module):
                     edges.append(edge)
         self._edges = edges
 
-    def add_node(self, node: AbstractNode, override: bool = False) -> None:
+    def _add_node(self, node: AbstractNode, override: bool = False) -> None:
         if node.network == self:
             warnings.warn('`node` is already in the network')
         else:
@@ -1277,14 +1307,15 @@ class TensorNetwork(nn.Module):
                     if isinstance(edge, ParamEdge):
                         self._add_param(edge)
             node._network = self
-            self._update_edges()
+            self._edges += [edge for edge in node.edges if edge.is_dangling()]
+            #self._update_edges()
 
     def remove_node(self, node: AbstractNode) -> None:
         """
         This function only removes the reference to the node, and the reference
         to the TN that is kept by the node. To completely get rid of the node,
-        it should be disconnected from any other node of the TN, removed from the
-        TN and, finally, deleted
+        it should be disconnected from any other node of the TN and removed from
+        the TN.
         """
         del self.nodes[node.name]
         node._network = None
@@ -1292,20 +1323,22 @@ class TensorNetwork(nn.Module):
             nodes_names = self.nodes_names
             new_nodes_names = enum_repeated_names(nodes_names)
             self._rename_nodes(nodes_names, new_nodes_names)
-        self._update_edges()
+        #self._update_edges()
+        for edge in node.edges:
+            if edge.is_dangling():
+                self._edges.remove(edge)
 
     def delete_node(self, node: AbstractNode) -> None:
         """
-        This function gets completely rid of the node
+        This function disconnects the node from its neighbours and is
+        removed from the TN.
         """
-        for edge in node.edges:
-            edge | edge
+        node.disconnect_edges()
         self.remove_node(node)
-        del node
 
     def add_nodes_from(self, nodes_list: Sequence[AbstractNode]):
         for name, node in nodes_list:
-            self.add_node(node)
+            self._add_node(node)
 
     def _add_param(self, param: Union[ParamNode, ParamEdge]) -> None:
         if not hasattr(self, param.name):
@@ -1344,23 +1377,28 @@ class TensorNetwork(nn.Module):
             raise ValueError('Cannot change the name of a node that does '
                              'not belong to the network')
         if name != node.name:
-            nodes_names = self.nodes_names.copy()
+            nodes_names = self.nodes_names[:]
             for i, node_name in enumerate(nodes_names):
                 if node_name == node.name:
                     nodes_names[i] = name
+                    break
             new_nodes_names = enum_repeated_names(nodes_names)
-            self._rename_nodes(nodes_names, new_nodes_names)
+            self._rename_nodes(self.nodes_names, new_nodes_names)
 
-    # TODO: return copy of network
-    def parameterize(self, set_param: bool = True) -> None:
-        if set_param:
-            for node in self.nodes.values():
-                node.parameterize(True)
-                node.param_edges(True)
+    def parameterize(self,
+                     set_param: bool = True,
+                     override: bool = False) -> 'TensorNetwork':
+        if override:
+            new_net = copy.deepcopy(self)
+            for node in new_net.nodes.values():
+                node.parameterize(set_param)
+                node.param_edges(set_param)
+            return new_net
         else:
             for node in self.nodes.values():
-                node.parameterize(False)
-                node.param_edges(False)
+                node.parameterize(set_param)
+                node.param_edges(set_param)
+            return self
 
     def initialize(self) -> None:
         # Initialization methods depends on the topology of the network. Number of nodes,
@@ -1402,19 +1440,20 @@ class TensorNetwork(nn.Module):
                         network=self)
             node['feature'] ^ edge
             self._data_nodes[node.name] = node
+            # TODO: should we connect all batch edges to a copy node and have only one batch edge?
 
     def _add_data(self, data: torch.Tensor) -> None:
         """
         Add data to data nodes, that is, change its tensor by a new one given a new data set.
-        Input data should have shape batch x n_features x feature.
+        Input data should have shape batch_size x feature_size x n_features.
         """
         i = 0
         for node in self.data_nodes:
-            node.tensor = data[:, i, :]
+            node.tensor = data[:, :, i]
             i += 1
-        if i != data.shape[1]:
+        if i != data.shape[2]:
             raise IndexError(f'Number of data nodes does not match number of features '
-                             f'for input data with {data.shape[1]} features')
+                             f'for input data with {data.shape[2]} features')
 
     def contract(self) -> AbstractNode:
         # Custom, optimized contraction methods should be defined for each new subclass of TensorNetwork
@@ -1445,7 +1484,7 @@ class TensorNetwork(nn.Module):
 
     def __repr__(self) -> Text:
         return f'{self.__class__.__name__}(\n ' \
-               f'\tnodes: \n{tab_string(repr(self.nodes.keys()), 2)}\n' \
+               f'\tnodes: \n{tab_string(repr(list(self.nodes.keys())), 2)}\n' \
                f'\tedges:\n{tab_string(repr(self.edges), 2)})'
 
 
@@ -1461,14 +1500,16 @@ def connect(edge1: AbstractEdge,
                              f'This edge points to nodes: {edge.node1!s} and {edge.node2!s}')
     if edge1 == edge2:
         raise ValueError(f'Cannot connect edge {edge1!s} to itself')
-    if edge1.size() != edge2.size():
-        raise ValueError(f'Cannot connect edges of unequal size. '
-                         f'Size of edge {edge1!s}: {edge1.size()}. '
-                         f'Size of edge {edge2!s}: {edge2.size()}')
     if edge1.dim() != edge2.dim():
         raise ValueError(f'Cannot connect edges of unequal dimension. '
                          f'Dimension of edge {edge1!s}: {edge1.dim()}. '
                          f'Dimension of edge {edge2!s}: {edge2.dim()}')
+    if edge1.size() != edge2.size():
+        # Keep the minimum size
+        if edge1.size() < edge2.size():
+            edge2.change_size(edge1.size())
+        elif edge1.size() > edge2.size():
+            edge1.change_size(edge2.size())
 
     node1, axis1 = edge1.node1, edge1.axis1
     node2, axis2 = edge2.node1, edge2.axis1
@@ -1481,10 +1522,14 @@ def connect(edge1: AbstractEdge,
                                  f'Set `override` to True if you want to override {net2!s} '
                                  f'with {net1!s} in {node1!s} and its neighbours.')
             node2.move_to_network(net1)
+        net1._edges.remove(edge1)
+        net1._edges.remove(edge2)
         net = net1
     else:
         if net2 is not None:
             node1.move_to_network(net2)
+            net2._edges.remove(edge1)
+            net2._edges.remove(edge2)
         net = net2
 
     if isinstance(edge1, ParamEdge) == isinstance(edge2, ParamEdge):
@@ -1533,6 +1578,9 @@ def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
     if isinstance(edge, Edge):
         new_edge1 = Edge(node1=node1, axis1=axis1)
         new_edge2 = Edge(node1=node2, axis1=axis2)
+        net = edge.node1.network
+        if net is not None:
+            net._edges += [new_edge1, new_edge2]
     else:
         assert isinstance(edge, ParamEdge)
         shift = edge.shift.item()
@@ -1546,9 +1594,10 @@ def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
             net._remove_param(edge)
             net._add_param(new_edge1)
             net._add_param(new_edge2)
+            net._edges += [new_edge1, new_edge2]
 
-        node1.add_edge(new_edge1, axis1, override=True)
-        node2.add_edge(new_edge2, axis2, override=True)
+    node1.add_edge(new_edge1, axis1, override=True)
+    node2.add_edge(new_edge2, axis2, override=True)
     return new_edge1, new_edge2
 
 
@@ -1603,15 +1652,16 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
     node1_list = []
     i, j, k = 0, 0, 0
     while (i < len(output_string)) and \
-            (j < len(input_strings)) and \
-            (k < len(input_strings[j])):
+            (j < len(input_strings)):
         if output_string[i] == input_strings[j][k]:
             axes_names.append(used_nodes[j].axes[k].name)
             edges.append(used_nodes[j][k])
             node1_list.append(used_nodes[j].axes[k].node1)
             i += 1
-        j += 1
         k += 1
+        if k == len(input_strings[j]):
+            k = 0
+            j += 1
 
     new_node = Node(axes_names=axes_names,
                     name=new_name,

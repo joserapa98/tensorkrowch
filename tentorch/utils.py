@@ -8,6 +8,17 @@ def tab_string(string: Text, num_tabs: int = 1) -> Text:
     return '\n'.join(string_lst)
 
 
+def check_name_style(name: Text) -> bool:
+    """
+    Names can only contain letters, numbers and underscores.
+    """
+    aux_name = ''.join(name.split('_'))
+    for char in aux_name:
+        if not (char.isalpha() or char.isnumeric()):
+            return False
+    return True
+
+
 def erase_enum(name: Text) -> Text:
     """
     Given a name, returns the same name without any

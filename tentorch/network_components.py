@@ -38,7 +38,7 @@ from tentorch.utils import (tab_string, check_name_style,
 
 
 ################################################
-#                   NODES                      #
+#                    AXIS                      #
 ################################################
 class Axis:
     """
@@ -112,6 +112,13 @@ class Axis:
         return f'{self.__class__.__name__}( {self.name} ({self.num}) )'
 
 
+################################################
+#                   NODES                      #
+################################################
+Ax = Union[int, Text, Axis]
+Shape = Union[int, Sequence[int], torch.Size]
+
+
 # TODO: implement all operations of tensors to nodes (sum, mean, std, etc.)
 class AbstractNode(ABC):
     """
@@ -123,7 +130,7 @@ class AbstractNode(ABC):
     """
 
     def __init__(self,
-                 shape: Union[int, Sequence[int], torch.Size],
+                 shape: Shape,
                  axes_names: Optional[Sequence[Text]] = None,
                  name: Optional[Text] = None) -> None:
         """
@@ -262,19 +269,19 @@ class AbstractNode(ABC):
         pass
 
     # methods
-    def size(self, dim: Optional[Union[int, Text, Axis]] = None) -> Union[torch.Size, int]:
+    def size(self, dim: Optional[Ax] = None) -> Union[torch.Size, int]:
         if dim is None:
             return self.shape
         axis_num = self.get_axis_number(dim)
         return self.shape[axis_num]
 
-    def dim(self, dim: Optional[Union[int, Text, Axis]] = None) -> Union[torch.Size, int]:
+    def dim(self, dim: Optional[Ax] = None) -> Union[torch.Size, int]:
         if dim is None:
             return torch.Size(list(map(lambda edge: edge.dim(), self.edges)))
         axis_num = self.get_axis_number(dim)
         return self.edges[axis_num].dim()
 
-    def get_axis_number(self, axis: Union[int, Text, Axis]) -> int:
+    def get_axis_number(self, axis: Ax) -> int:
         if isinstance(axis, int):
             for ax in self.axes:
                 if axis == ax.num:
@@ -293,13 +300,13 @@ class AbstractNode(ABC):
         else:
             TypeError('`axis` should be int, str or Axis type')
 
-    def get_edge(self, axis: Union[int, Text, Axis]) -> 'AbstractEdge':
+    def get_edge(self, axis: Ax) -> 'AbstractEdge':
         axis_num = self.get_axis_number(axis)
         return self.edges[axis_num]
 
     def add_edge(self,
                  edge: 'AbstractEdge',
-                 axis: Union[int, Text, Axis],
+                 axis: Ax,
                  override: bool = False,
                  node1: Optional[bool] = None) -> None:
         """
@@ -350,7 +357,7 @@ class AbstractNode(ABC):
             self._param_edges = set_param
 
     def reassign_edges(self,
-                       axis: Optional[Union[int, Text, Axis]] = None,
+                       axis: Optional[Ax] = None,
                        override: bool = False) -> None:
         """
         When a node has edges that are a reference to other previously created edges,
@@ -395,7 +402,7 @@ class AbstractNode(ABC):
                 edge | edge
 
     @staticmethod
-    def _make_copy_tensor(shape: Union[int, Sequence[int], torch.Size]) -> torch.Tensor:
+    def _make_copy_tensor(shape: Shape) -> torch.Tensor:
         for i in shape[1:]:
             if i != shape[0]:
                 raise ValueError(f'`shape` has unequal dimensions. Copy tensors '
@@ -407,7 +414,7 @@ class AbstractNode(ABC):
         return copy_tensor
 
     @staticmethod
-    def _make_rand_tensor(shape: Union[int, Sequence[int], torch.Size],
+    def _make_rand_tensor(shape: Shape,
                           low: float = 0.,
                           high: float = 1.) -> torch.Tensor:
         if not isinstance(low, float):
@@ -419,7 +426,7 @@ class AbstractNode(ABC):
         return torch.rand(shape) * (high - low) + low
 
     @staticmethod
-    def _make_randn_tensor(shape: Union[int, Sequence[int], torch.Size],
+    def _make_randn_tensor(shape: Shape,
                            mean: float = 0.,
                            std: float = 1.) -> torch.Tensor:
         if not isinstance(mean, float):
@@ -431,7 +438,7 @@ class AbstractNode(ABC):
         return torch.randn(shape) * std + mean
 
     def make_tensor(self,
-                    shape: Optional[Union[int, Sequence[int], torch.Size]] = None,
+                    shape: Optional[Shape] = None,
                     init_method: Text = 'zeros',
                     **kwargs: float) -> torch.Tensor:
         if shape is None:
@@ -472,7 +479,7 @@ class AbstractNode(ABC):
         self._tensor = torch.empty(self.shape)
 
     def _change_axis_size(self,
-                          axis: Union[int, Text, Axis],
+                          axis: Ax,
                           size: int,
                           padding_method: Text = 'zeros',
                           **kwargs: float) -> None:
@@ -517,10 +524,10 @@ class AbstractNode(ABC):
         pass
 
     @overload
-    def __getitem__(self, key: Union[int, Text, Axis]) -> 'AbstractEdge':
+    def __getitem__(self, key: Ax) -> 'AbstractEdge':
         pass
 
-    def __getitem__(self, key: Union[slice, int, Text, Axis]) -> Union[List['AbstractEdge'], 'AbstractEdge']:
+    def __getitem__(self, key: Union[slice, Ax]) -> Union[List['AbstractEdge'], 'AbstractEdge']:
         if isinstance(key, slice):
             return self.edges[key]
         return self.get_edge(key)
@@ -598,7 +605,7 @@ class Node(AbstractNode):
     """
 
     def __init__(self,
-                 shape: Optional[Union[int, Sequence[int], torch.Size]] = None,
+                 shape: Optional[Shape] = None,
                  axes_names: Optional[Sequence[Text]] = None,
                  name: Optional[Text] = None,
                  network: Optional['TensorNetwork'] = None,
@@ -735,7 +742,7 @@ class ParamNode(AbstractNode, nn.Module):
     """
 
     def __init__(self,
-                 shape: Optional[Union[int, Sequence[int], torch.Size]] = None,
+                 shape: Optional[Shape] = None,
                  axes_names: Optional[Sequence[Text]] = None,
                  name: Optional[Text] = None,
                  network: Optional['TensorNetwork'] = None,

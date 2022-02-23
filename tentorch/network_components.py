@@ -30,7 +30,8 @@ import torch
 import torch.nn as nn
 import opt_einsum
 
-from tentorch.utils import tab_string, erase_enum, enum_repeated_names
+from tentorch.utils import (tab_string, check_name_style,
+                            erase_enum, enum_repeated_names)
 
 
 ################################################
@@ -69,8 +70,8 @@ class Axis:
             raise TypeError('`node1` should be bool type')
 
         self._num = num
-        if ' ' in name:
-            raise ValueError('`name` cannot contain blank spaces')
+        if not check_name_style(name):
+            raise ValueError('Names can only contain letters, numbers and underscores')
         self._name = name
         self._node1 = node1
 
@@ -89,8 +90,8 @@ class Axis:
         Set axis name. Should not contain blank spaces
         if we intend to use it as index of submodules.
         """
-        if ' ' in name:
-            raise ValueError('`name` cannot contain blank spaces')
+        if not check_name_style(name):
+            raise ValueError('Names can only contain letters, numbers and underscores')
         self._name = name
 
     @property
@@ -108,6 +109,7 @@ class Axis:
         return f'{self.__class__.__name__}( {self.name} ({self.num}) )'
 
 
+# TODO: implement all operations of tensors to nodes (sum, mean, std, etc.)
 class AbstractNode(ABC):
     """
     Abstract class for nodes. Should be subclassed.
@@ -171,6 +173,8 @@ class AbstractNode(ABC):
             name = self.__class__.__name__.lower()
         elif not isinstance(name, str):
             raise TypeError('`name` should be str type')
+        elif not check_name_style(name):
+            raise ValueError('Names can only contain letters, numbers and underscores')
         self._name = name
 
         # network
@@ -215,7 +219,9 @@ class AbstractNode(ABC):
 
     @name.setter
     def name(self, name: Text) -> None:
-        if self.network is not None:
+        if not check_name_style(name):
+            raise ValueError('Names can only contain letters, numbers and underscores')
+        elif self.network is not None:
             self.network._change_node_name(self, name)
         else:
             self._name = name
@@ -1130,6 +1136,13 @@ class ParamEdge(AbstractEdge, nn.Module):
     def grad(self) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
         return self.shift.grad, self.slope.grad
 
+    @property
+    def module_name(self) -> Text:
+        if self.is_dangling():
+            return f'edge_{self.node1.name}_{self.axis1.name}'
+        return f'edge_{self.node1.name}_{self.axis1.name}_' \
+               f'{self.node2.name}_{self.axis2.name}'
+
     # methods
     @staticmethod
     def compute_parameters(size: int, dim: int) -> Tuple[float, float]:
@@ -1229,21 +1242,14 @@ class ParamEdge(AbstractEdge, nn.Module):
 ################################################
 class TensorNetwork(nn.Module):
     """
-    Al contraer una red se crea una Network auxiliar formada por Nodes en lugar
-    de ParamNodes y Edges en lugar de ParamEdges. Ahí se van guardando todos los
-    nodos auxiliares, resultados de operaciones intermedias, se termina de contraer
-    la red y se devuelve el resultado
+    General class for Tensor Networks. Subclass of PyTorch nn.Module.
+    Should be subclassed to implement custom initialization and contraction
+    methods that suit the particular topology for each type of Tensor
+    Network.
 
-    Formado opr AbstractNodes y AbstractEdges
-
-        -nodes (add modules, del modules)
-        -edges
-        -forward (create nodes for input data_nodes and generate the final
-            network to be contracted)
-        -contraction of network (identify similar nodes to stack them
-            and optimize)
-        -to_tensornetwork (returns a dict or list with all the nodes
-            with edges connected as the original network)
+    TensorNetwork can be instantiated to build network structures of nodes,
+    and perform site-wise contractions, even though network contraction
+    methods are not implemented. Useful for experimentation.
     """
 
     def __init__(self, name: Optional[Text] = None):
@@ -1331,16 +1337,29 @@ class TensorNetwork(nn.Module):
             self._add_node(node)
 
     def _add_param(self, param: Union[ParamNode, ParamEdge]) -> None:
-        if not hasattr(self, param.name):
-            self.add_module(param.name, param)
-        else:
-            raise ValueError(f'Network already has attribute named {param.name}')
+        if isinstance(param, ParamNode):
+            if not hasattr(self, param.name):
+                self.add_module(param.name, param)
+            else:
+                # Nodes names are never repeated, so it is likely that this case will never occur
+                raise ValueError(f'Network already has attribute named {param.name}')
+        elif isinstance(param, ParamEdge):
+            if not hasattr(self, param.module_name):
+                self.add_module(param.module_name, param)
+            # If ParamEdge is already a module, it is the case in which we are
+            # adding a node that "inherits" edges from previous nodes
 
     def _remove_param(self, param: Union[ParamNode, ParamEdge]) -> None:
-        if hasattr(self, param.name):
-            delattr(self, param.name)
-        else:
-            warnings.warn('Cannot remove a parameter that is not in the network')
+        if isinstance(param, ParamNode):
+            if hasattr(self, param.name):
+                delattr(self, param.name)
+            else:
+                warnings.warn('Cannot remove a parameter that is not in the network')
+        elif isinstance(param, ParamEdge):
+            if hasattr(self, param.module_name):
+                delattr(self, param.module_name)
+            else:
+                warnings.warn('Cannot remove a parameter that is not in the network')
 
     def _rename_nodes(self, prev_names: List[Text], new_names: List[Text]) -> None:
         """
@@ -1351,12 +1370,18 @@ class TensorNetwork(nn.Module):
         for prev_name, new_name in zip(prev_names, new_names):
             if prev_name != new_name:
                 prev_node = self.nodes[prev_name]
-                if isinstance(prev_node, ParamEdge):
+                if isinstance(prev_node, ParamNode):
                     self._remove_param(prev_node)
+                for edge in prev_node.edges:
+                    if isinstance(edge, ParamEdge):
+                        self._remove_param(edge)
                 self._nodes[new_name] = self._nodes.pop(prev_name)
                 prev_node._name = new_name
-                if isinstance(prev_node, ParamEdge):
+                if isinstance(prev_node, ParamNode):
                     self._add_param(prev_node)
+                for edge in prev_node.edges:
+                    if isinstance(edge, ParamEdge):
+                        self._add_param(edge)
 
     def _change_node_name(self, node: AbstractNode, name: Text) -> None:
         """
@@ -1378,7 +1403,7 @@ class TensorNetwork(nn.Module):
     def parameterize(self,
                      set_param: bool = True,
                      override: bool = False) -> 'TensorNetwork':
-        if override:
+        if not override:
             new_net = copy.deepcopy(self)
             for node in new_net.nodes.values():
                 node.parameterize(set_param)
@@ -1398,8 +1423,7 @@ class TensorNetwork(nn.Module):
 
     def set_data_nodes(self,
                        input_edges: Union[List[int], List[AbstractEdge]],
-                       batch_size: int,
-                       feature_size: int) -> None:
+                       batch_size: int) -> None:
         """
         Create data nodes and connect them to the list of specified edges of the TN.
         `set_data_nodes` should be executed after instantiating a TN, before
@@ -1410,12 +1434,9 @@ class TensorNetwork(nn.Module):
         input_edges: list of edges in the same order as they are expected to be
                      contracted with each feature node of the input data_nodes
         batch_size: int, size of data_nodes tensor dimension associated to the batch
-        feature_size: int, size of data_nodes tensor dimension associated to the features
         """
-        if not self.data_nodes:
-            for node in self.data_nodes.values():
-                self.delete_node(node)
-            self._data_nodes = dict()
+        if self.data_nodes:
+            raise ValueError('Tensor network data nodes should be unset in order to set new ones')
         for i, edge in enumerate(input_edges):
             if isinstance(edge, int):
                 edge = self[edge]
@@ -1424,7 +1445,7 @@ class TensorNetwork(nn.Module):
                     raise ValueError(f'Edge {edge!r} should be a dangling edge of the Tensor Network')
             else:
                 raise TypeError('`input_edges` should be List[int] or List[AbstractEdge] type')
-            node = Node(shape=(batch_size, feature_size),
+            node = Node(shape=(batch_size, edge.size()),
                         axes_names=('batch', 'feature'),
                         name=f'input_{i}',
                         network=self)
@@ -1432,13 +1453,19 @@ class TensorNetwork(nn.Module):
             self._data_nodes[node.name] = node
             # TODO: should we connect all batch edges to a copy node and have only one batch edge?
 
+    def unset_data_nodes(self) -> None:
+        if self.data_nodes:
+            for node in self.data_nodes.values():
+                self.delete_node(node)
+            self._data_nodes = dict()
+
     def _add_data(self, data: torch.Tensor) -> None:
         """
         Add data to data nodes, that is, change its tensor by a new one given a new data set.
         Input data should have shape batch_size x feature_size x n_features.
         """
         i = 0
-        for node in self.data_nodes:
+        for node in self.data_nodes.values():
             node.tensor = data[:, :, i]
             i += 1
         if i != data.shape[2]:

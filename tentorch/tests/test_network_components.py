@@ -201,14 +201,90 @@ def test_contract_between():
     node2 = tn.Node(shape=(2, 5, 2),
                     axes_names=('left', 'input', 'right'),
                     name='node2')
-    node1[2] ^ node2[0]
+    node1['left'] ^ node2['left']
+    node1['right'] ^ node2['right']
     node3 = node1 @ node2
+    assert node3.shape == (5, 5)
+    assert node3.axes_names == ['input_0', 'input_1']
+
+    node1 = tn.Node(shape=(2, 5, 5, 2),
+                    axes_names=('left', 'input', 'input', 'right'),
+                    name='node1')
+    node1['left'] ^ node1['right']
+    node1['input_0'] ^ node1['input_1']
+    node2 = node1 @ node1
+    assert node2.shape == ()
+    assert len(node2.edges) == 0
+
+    node1 = tn.ParamNode(shape=(2, 5, 2),
+                         axes_names=('left', 'input', 'right'),
+                         name='node1',
+                         param_edges=True)
+    node2 = tn.ParamNode(shape=(2, 5, 2),
+                         axes_names=('left', 'input', 'right'),
+                         name='node2',
+                         param_edges=True)
+    node1['left'] ^ node2['left']
+    node1['right'] ^ node2['right']
+    node3 = node1 @ node2
+    assert node3.shape == (5, 5)
+    assert node3.axes_names == ['input_0', 'input_1']
+
+    node1 = tn.ParamNode(shape=(2, 5, 5, 2),
+                         axes_names=('left', 'input', 'input', 'right'),
+                         name='node1',
+                         param_edges=True)
+    node1['left'] ^ node1['right']
+    node1['input_0'] ^ node1['input_1']
+    node2 = node1 @ node1
+    assert node2.shape == ()
+    assert len(node2.edges) == 0
+
+
+def test_contract_edge():
+    node1 = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node1')
+    node2 = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node2')
+    edge = node1[2] ^ node2[0]
+    node3 = edge.contract()
     assert node3['left'] == node1['left']
     assert node3['right'] == node2['right']
-    if node1.network is not None:
-        assert node3.network == node1.network
-    elif node2.network is not None:
-        assert node3.network == node1.network
+
+    with pytest.raises(ValueError):
+        tn.contract_edges([node1[0]], node1, node2)
+
+    node1 = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node1')
+    edge = node1[2] ^ node1[0]
+    node2 = edge.contract()
+    assert len(node2.edges) == 1
+    assert node2[0].axis1.name == 'input'
+
+    node1 = tn.ParamNode(shape=(2, 5, 2),
+                         axes_names=('left', 'input', 'right'),
+                         name='node1',
+                         param_edges=True)
+    node2 = tn.ParamNode(shape=(2, 5, 2),
+                         axes_names=('left', 'input', 'right'),
+                         name='node2',
+                         param_edges=True)
+    edge = node1[2] ^ node2[0]
+    node3 = edge.contract()
+    assert node3['left'] == node1['left']
+    assert node3['right'] == node2['right']
+
+    node1 = tn.ParamNode(shape=(2, 5, 2),
+                         axes_names=('left', 'input', 'right'),
+                         name='node1',
+                         param_edges=True)
+    edge = node1[2] ^ node1[0]
+    node2 = edge.contract()
+    assert len(node2.edges) == 1
+    assert node2[0].axis1.name == 'input'
 
 
 def test_connect_different_sizes():

@@ -1718,3 +1718,51 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
     if not shared_edges:
         raise ValueError(f'No edges found between nodes {node1!s} and {node2!s}')
     return contract_edges(shared_edges, node1, node2)
+
+
+def einsum(string: Text, *nodes: AbstractNode) -> Node:
+    input_strings = string.split('->')[0].split(',')
+    output_string = string.split('->')[1]
+
+    matrices = []
+    matrices_strings = []
+    axes_names = []
+    edges = []
+    node1_list = []
+    i, j, k = 0, 0, 0
+    while (i < len(output_string)) and \
+            (j < len(input_strings)):
+        if input_strings[j][k] != output_string[i]:
+            edge = nodes[j][k]
+            if isinstance(edge, ParamEdge):
+                in_matrices = False
+                for mat in matrices:
+                    if torch.equal(edge.matrix, mat):
+                        in_matrices = True
+                        break
+                if not in_matrices:
+                    matrices_strings.append(2 * input_strings[j][k])
+                    matrices.append(edge.matrix)
+        else:
+            axes_names.append(nodes[j].axes[k].name)
+            edges.append(nodes[j][k])
+            node1_list.append(nodes[j].axes[k].node1)
+            i += 1
+        k += 1
+        if k == len(input_strings[j]):
+            k = 0
+            j += 1
+
+    input_string = ','.join(input_strings + matrices_strings)
+    einsum_string = input_string + '->' + output_string
+    tensors = list(map(lambda n: n.tensor, nodes))
+    new_tensor = opt_einsum.contract(einsum_string, *(tensors + matrices))
+
+    new_node = Node(axes_names=axes_names,
+                    name='einsum_node',
+                    network=nodes[0].network,
+                    param_edges=False,
+                    tensor=new_tensor,
+                    edges=edges,
+                    node1_list=node1_list)
+    return new_node

@@ -1271,14 +1271,6 @@ class TensorNetwork(nn.Module):
     def edges(self) -> List[AbstractEdge]:
         return self._edges
 
-    def _update_edges(self) -> None:
-        edges = []
-        for node in self.nodes.values():
-            for edge in node.edges:
-                if edge.is_dangling():
-                    edges.append(edge)
-        self._edges = edges
-
     def _add_node(self, node: AbstractNode, override: bool = False) -> None:
         if node.network == self:
             warnings.warn('`node` is already in the network')
@@ -1308,7 +1300,6 @@ class TensorNetwork(nn.Module):
                         self._add_param(edge)
             node._network = self
             self._edges += [edge for edge in node.edges if edge.is_dangling()]
-            #self._update_edges()
 
     def remove_node(self, node: AbstractNode) -> None:
         """
@@ -1323,7 +1314,6 @@ class TensorNetwork(nn.Module):
             nodes_names = self.nodes_names
             new_nodes_names = enum_repeated_names(nodes_names)
             self._rename_nodes(nodes_names, new_nodes_names)
-        #self._update_edges()
         for edge in node.edges:
             if edge.is_dangling():
                 self._edges.remove(edge)

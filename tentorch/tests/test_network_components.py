@@ -614,3 +614,19 @@ def test_tn_data_nodes():
     data = torch.randn(10, 5, 3)
     with pytest.raises(IndexError):
         net._add_data(data)
+
+
+def test_einsum():
+    net = tn.TensorNetwork(name='net')
+    node = tn.Node(shape=(5, 5, 5, 5, 2),
+                   axes_names=('input', 'input', 'input', 'input', 'output'),
+                   network=net,
+                   init_method='randn')
+    net.set_data_nodes(node.edges[:-1], 10)
+    data = torch.randn(10, 5, 4)
+    net._add_data(data)
+
+    out_node = tn.einsum('ijklm,bi,bj,bk,bl->m', *([node] + list(net.data_nodes.values())))
+    out_node
+
+

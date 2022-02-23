@@ -101,7 +101,7 @@ def test_param_edges():
     assert node[0].dim() == node.shape[0]
 
 
-def test_copy():
+def test_copy_node():
     node = tn.Node(shape=(2, 5, 2),
                    axes_names=('left', 'input', 'right'),
                    name='node',
@@ -117,6 +117,34 @@ def test_copy():
             assert copy.edges[i].node2 == copy
             assert node.edges[i].node2 == node
             assert copy.edges[i].node1 == node.edges[i].node1
+
+
+def test_param_edge():
+    node = tn.Node(shape=(2, 5, 2),
+                   axes_names=('left', 'input', 'right'),
+                   name='node',
+                   param_edges=True,
+                   init_method='randn')
+    param_edge = node[0]
+    assert isinstance(param_edge, tn.ParamEdge)
+
+    param_edge.change_size(size=4)
+    assert param_edge.size() == 4
+    assert param_edge.node1.size() == (4, 5, 2)
+    assert param_edge.dim() == 2
+    assert param_edge.node1.dim() == (2, 5, 2)
+
+    param_edge.dim(dim=3)
+    assert param_edge.size() == 4
+    assert param_edge.node1.size() == (4, 5, 2)
+    assert param_edge.dim() == 3
+    assert param_edge.node1.dim() == (3, 5, 2)
+
+    param_edge.change_size(size=2)
+    assert param_edge.size() == 2
+    assert param_edge.node1.size() == (2, 5, 2)
+    assert param_edge.dim() == 2
+    assert param_edge.node1.dim() == (2, 5, 2)
 
 
 def test_connect():
@@ -220,6 +248,7 @@ def test_connect_reassign():
     node2 = tn.Node(shape=(2, 5, 2),
                     axes_names=('left', 'input', 'right'),
                     name='node2')
+
     node1[2] ^ node2[0]
     node3 = node1 @ node2
 
@@ -238,6 +267,120 @@ def test_connect_reassign():
     assert node3[3] != edge
 
 
+def test_tensor_product():
+    node1 = tn.Node(shape=(2, 3),
+                    axes_names=('left', 'right'),
+                    name='node1',
+                    init_method='randn')
+    node2 = tn.Node(shape=(4, 5),
+                    axes_names=('left', 'right'),
+                    name='node2',
+                    init_method='randn')
+
+    node3 = node1 % node2
+    assert node3.shape == (2, 3, 4, 5)
+    assert node3.edges == node1.edges + node2.edges
+
+    node1 = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node1',
+                    init_method='randn')
+    node2 = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node2',
+                    init_method='randn')
+    node1[2] ^ node2[0]
+    node3 = node1 % node2
+    assert node3.shape == (2, 5, 2, 2, 5, 2)
+    assert node3.edges == node1.edges + node2.edges
+
+
+def test_mul_add_sub():
+    node1 = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node1',
+                    init_method='randn')
+    node2 = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node2',
+                    init_method='randn')
+
+    node_mul = node1 * node2
+    assert node_mul.shape == (2, 5, 2)
+    assert torch.equal(node_mul.tensor, node1.tensor * node2.tensor)
+
+    node_add = node1 + node2
+    assert node_add.shape == (2, 5, 2)
+    assert torch.equal(node_add.tensor, node1.tensor + node2.tensor)
+
+    node_sub = node1 - node2
+    assert node_sub.shape == (2, 5, 2)
+    assert torch.equal(node_sub.tensor, node1.tensor - node2.tensor)
+
+
+def test_compute_grad():
+    net = tn.TensorNetwork(name='net')
+    node1 = tn.ParamNode(shape=(2, 5, 2),
+                         axes_names=('left', 'input', 'right'),
+                         name='node1',
+                         network=net,
+                         param_edges=True,
+                         init_method='randn')
+    node2 = tn.ParamNode(shape=(2, 5, 2),
+                         axes_names=('left', 'input', 'right'),
+                         name='node2',
+                         network=net,
+                         param_edges=True,
+                         init_method='randn')
+
+    node_tprod = node1 % node2
+    node_tprod.tensor.sum().backward()
+    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
+    net.zero_grad()
+    assert torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert torch.equal(node2.grad, torch.zeros(node2.shape))
+
+    node_mul = node1 * node2
+    node_mul.tensor.sum().backward()
+    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
+    net.zero_grad()
+    assert torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert torch.equal(node2.grad, torch.zeros(node2.shape))
+
+    node_add = node1 + node2
+    node_add.tensor.sum().backward()
+    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
+    net.zero_grad()
+    assert torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert torch.equal(node2.grad, torch.zeros(node2.shape))
+
+    node_sub = node1 - node2
+    node_sub.tensor.sum().backward()
+    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
+    net.zero_grad()
+    assert torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert torch.equal(node2.grad, torch.zeros(node2.shape))
+
+    node1[2] ^ node2[0]
+    node3 = node1 @ node2
+    node3.tensor.sum().backward()
+    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert node1[2].grad != (None, None)
+    assert node1[2].grad != (torch.zeros(1), torch.zeros(1))
+    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
+    assert node2[0].grad != (None, None)
+    assert node2[0].grad != (torch.zeros(1), torch.zeros(1))
+    net.zero_grad()
+    assert torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert node1[2].grad == (torch.zeros(1), torch.zeros(1))
+    assert torch.equal(node2.grad, torch.zeros(node2.shape))
+    assert node2[0].grad == (torch.zeros(1), torch.zeros(1))
+
+
 def test_tensor_network():
     net = tn.TensorNetwork(name='net')
     for i in range(4):
@@ -253,6 +396,7 @@ def test_tensor_network():
     new_node.network = net
     assert new_node.name == 'node_4'
 
+    assert len(net.edges) == 15
     for i in range(4):
         net[f'node_{i}']['right'] ^ net[f'node_{i+1}']['left']
     assert len(net.edges) == 7
@@ -273,8 +417,124 @@ def test_tensor_network():
     assert node.name == 'node_0'
 
 
-# TODO: test matrix param edge
-# TODO: test submodules tn
-# TODO: test tn edges, set_data_nodes
-# TODO: test operations node
-# TODO: test grad
+def test_tn_consecutive_contractions():
+    net = tn.TensorNetwork(name='net')
+    for i in range(4):
+        _ = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node',
+                    network=net)
+
+    for i in range(3):
+        net[f'node_{i}']['right'] ^ net[f'node_{i+1}']['left']
+    assert len(net.edges) == 6
+
+    node = net['node_0']
+    for i in range(1, 4):
+        node @= net[f'node_{i}']
+    assert len(node.edges) == 6
+    assert node.shape == (2, 5, 5, 5, 5, 2)
+
+    new_node = tn.Node(shape=(2, 5, 2),
+                       axes_names=('left', 'input', 'right'),
+                       name='node')
+    new_node.network = net
+    assert new_node.name == 'node_4'
+    net['node_3'][2] ^ new_node[0]
+    with pytest.raises(ValueError):
+        node @= new_node
+
+
+def test_tn_submodules():
+    net = tn.TensorNetwork(name='net')
+    for i in range(2):
+        _ = tn.ParamNode(shape=(2, 5, 2),
+                         axes_names=('left', 'input', 'right'),
+                         network=net,
+                         param_edges=True)
+    for i in range(2):
+        _ = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    network=net,
+                    param_edges=True)
+
+    submodules = [None for _ in net.children()]
+    assert len(submodules) == 14
+
+    net['paramnode_0']['right'] ^ net['paramnode_1']['left']
+    net['paramnode_1']['right'] ^ net['node_0']['left']
+    net['node_0']['right'] ^ net['node_1']['left']
+    submodules = [None for _ in net.children()]
+    assert len(submodules) == 11
+
+
+def test_tn_parameterize():
+    net = tn.TensorNetwork(name='net')
+    for i in range(2):
+        _ = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    network=net)
+
+    submodules = [None for _ in net.children()]
+    assert len(submodules) == 0
+
+    param_net = net.parameterize()
+    submodules = [None for _ in net.children()]
+    assert len(submodules) == 0
+    submodules = [None for _ in param_net.children()]
+    assert len(submodules) == 8
+
+    param_net = net.parameterize(override=True)
+    assert param_net == net
+    submodules = [None for _ in net.children()]
+    assert len(submodules) == 8
+
+    net.parameterize(set_param=False, override=True)
+    submodules = [None for _ in net.children()]
+    assert len(submodules) == 0
+
+
+def test_tn_data_nodes():
+    net = tn.TensorNetwork(name='net')
+    for i in range(4):
+        _ = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node',
+                    network=net,
+                    init_method='ones')
+    for i in range(3):
+        net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
+
+    assert len(net.data_nodes) == 0
+    input_edges = []
+    for i in range(4):
+        input_edges.append(net[f'node_{i}']['input'])
+    net.set_data_nodes(input_edges, 10)
+    assert len(net.nodes) == 8
+    assert len(net.data_nodes) == 4
+
+    input_edges = []
+    for i in range(3):
+        input_edges.append(net[f'node_{i}']['input'])
+    with pytest.raises(ValueError):
+        net.set_data_nodes(input_edges, 10)
+
+    net.unset_data_nodes()
+    assert len(net.nodes) == 4
+    assert len(net.data_nodes) == 0
+
+    input_edges = []
+    for i in range(2):
+        input_edges.append(net[f'node_{i}']['input'])
+    net.set_data_nodes(input_edges, 10)
+    assert len(net.nodes) == 6
+    assert len(net.data_nodes) == 2
+
+    data = torch.randn(10, 5, 2)
+    net._add_data(data)
+    assert torch.equal(net.data_nodes['input_0'].tensor, data[:, :, 0])
+    assert torch.equal(net.data_nodes['input_1'].tensor, data[:, :, 1])
+
+    data = torch.randn(10, 5, 3)
+    with pytest.raises(IndexError):
+        net._add_data(data)

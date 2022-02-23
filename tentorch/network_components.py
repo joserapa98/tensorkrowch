@@ -17,6 +17,9 @@ This script contains:
     Operations:
         *connect
         *disconnect
+        *contract_edges
+        *contract
+        *get_shared_edges
         *contract_between
 """
 
@@ -315,12 +318,12 @@ class AbstractNode(ABC):
         if edge.dim() != self.dim(axis):
             raise ValueError(f'Edge dimension should match node dimension at axis {axis!r}')
         if node1 is None:
-            if (edge.node1 == self) and (edge.node2 != self):
+            if edge.node1 == self:
                 node1 = True
             elif (edge.node1 != self) and (edge.node2 == self):
                 node1 = False
             else:
-                raise ValueError(f'If neither node1 nor node2 of `edge` is equal to {self!s},'
+                raise ValueError(f'If neither node1 nor node2 of `edge` is equal to {self!s}, '
                                  f'`node1` should be provided. Otherwise `edge` cannot be attached')
         axis_num = self.get_axis_number(axis)
         if (not self.edges[axis_num].is_dangling()) and (not override):
@@ -959,6 +962,9 @@ class AbstractEdge(ABC):
 
     def size(self) -> int:
         return self.node1.size(self.axis1)
+
+    def contract(self) -> Node:
+        return contract(self)
 
     def __str__(self) -> Text:
         return self.name
@@ -1618,19 +1624,12 @@ def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
     return new_edge1, new_edge2
 
 
-def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
-    edges = []
-    for edge in node1.edges:
-        if edge in node2.edges:
-            edges.append(edge)
-    return edges
-
-
-def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
-    shared_edges = get_shared_edges(node1, node2)
-    if not shared_edges:
-        raise ValueError(f'No edges found between nodes {node1!s} and {node2!s}')
-
+def contract_edges(shared_edges: List[AbstractEdge],
+                   node1: AbstractNode,
+                   node2: AbstractNode) -> Node:
+    if any([edge not in get_shared_edges(node1, node2) for edge in shared_edges]):
+        raise ValueError('All edges in `shared_edges` should be non-dangling, '
+                         'shared edges between `node1` and `node2`')
     n_shared = len(shared_edges)
     shared_subscripts = dict(zip(shared_edges, [opt_einsum.get_symbol(i) for i in range(n_shared)]))
 
@@ -1640,16 +1639,22 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
     output_string = ''
     matrices = []
     matrices_strings = []
-    for node in [node1, node2]:
-        if (node == node1) and (node1 == node2):
+    for i, node in enumerate([node1, node2]):
+        if (i == 1) and (node1 == node2):
             break
         string = ''
         for edge in node.edges:
             if edge in shared_edges:
                 string += shared_subscripts[edge]
                 if isinstance(edge, ParamEdge):
-                    matrices_strings.append(2 * shared_subscripts[edge])
-                    matrices.append(edge.matrix)
+                    in_matrices = False
+                    for mat in matrices:
+                        if torch.equal(edge.matrix, mat):
+                            in_matrices = True
+                            break
+                    if not in_matrices:
+                        matrices_strings.append(2 * shared_subscripts[edge])
+                        matrices.append(edge.matrix)
             else:
                 string += opt_einsum.get_symbol(index)
                 output_string += opt_einsum.get_symbol(index)
@@ -1688,3 +1693,22 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
                     edges=edges,
                     node1_list=node1_list)
     return new_node
+
+
+def contract(edge: AbstractEdge) -> Node:
+    return contract_edges([edge], edge.node1, edge.node2)
+
+
+def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
+    edges = []
+    for edge in node1.edges:
+        if (edge in node2.edges) and (not edge.is_dangling()):
+            edges.append(edge)
+    return edges
+
+
+def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
+    shared_edges = get_shared_edges(node1, node2)
+    if not shared_edges:
+        raise ValueError(f'No edges found between nodes {node1!s} and {node2!s}')
+    return contract_edges(shared_edges, node1, node2)

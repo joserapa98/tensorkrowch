@@ -453,11 +453,9 @@ class AbstractNode(ABC):
             return self._make_rand_tensor(shape, **kwargs)
         elif init_method == 'randn':
             return self._make_randn_tensor(shape, **kwargs)
-        elif init_method == 'neurips':
-            pass
         else:
             raise ValueError('Choose a valid `init_method`: "zeros", '
-                             '"ones", "copy", "rand", "randn", "neurips"')
+                             '"ones", "copy", "rand", "randn"')
 
     def set_tensor(self,
                    tensor: Optional[torch.Tensor] = None,
@@ -1637,6 +1635,7 @@ def contract_edges(shared_edges: List[AbstractEdge],
     if any([edge not in get_shared_edges(node1, node2) for edge in shared_edges]):
         raise ValueError('All edges in `shared_edges` should be non-dangling, '
                          'shared edges between `node1` and `node2`')
+
     n_shared = len(shared_edges)
     shared_subscripts = dict(zip(shared_edges, [opt_einsum.get_symbol(i) for i in range(n_shared)]))
 

@@ -4,3 +4,5 @@ from tentorch.network_components import TensorNetwork
 
 from tentorch.network_components import (connect, disconnect, contract_edges,
                                          contract, get_shared_edges, contract_between)
+
+from tentorch.initializers import zeros, ones, copy, rand, randn

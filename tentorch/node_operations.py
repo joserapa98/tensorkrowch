@@ -1,3 +1,11 @@
+"""
+This script contains:
+
+    Node operations:
+        *einsum
+        *batched_contract_between
+
+"""
 # split, svd, qr, rq, etc.
 # contract, contract_between, batched_contract_between, einsum, etc.
 

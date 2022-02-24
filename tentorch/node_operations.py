@@ -25,43 +25,54 @@ def einsum(string: Text, *nodes: AbstractNode) -> Node:
     input_strings = string.split('->')[0].split(',')
     if len(input_strings) != len(nodes):
         raise ValueError('Number of einsum subscripts must be equal to the number of operands')
-    try:
+    if len(string.split('->')) >= 2:
         output_string = string.split('->')[1]
-    except Exception as e:
-        raise ValueError('Output subscripts must be specified') from e
+    else:
+        output_string = ''
 
     matrices = []
     matrices_strings = []
-    output_list = list(output_string)
+    output_dict = dict(zip(output_string, [0] * len(output_string)))
+    contracted_edges = dict()
     axes_names = []
     edges = []
     node1_list = []
-    j, k = 0, 0
-    while (len(output_list) > 0) and (j < len(input_strings)):
-        if input_strings[j][k] not in output_list:
-            edge = nodes[j][k]
-            if isinstance(edge, ParamEdge):
-                in_matrices = False
-                for mat in matrices:
-                    if torch.equal(edge.matrix, mat):
-                        in_matrices = True
-                        break
-                if not in_matrices:
-                    matrices_strings.append(2 * input_strings[j][k])
-                    matrices.append(edge.matrix)
-        else:
-            axes_names.append(nodes[j].axes[k].name)
-            edges.append(nodes[j][k])
-            node1_list.append(nodes[j].axes[k].node1)
-            output_list.remove(input_strings[j][k])
-        k += 1
-        if k == len(input_strings[j]):
-            k = 0
-            j += 1
+    for j, input_string in enumerate(input_strings):
+        for k, char in enumerate(input_string):
+            if char not in output_dict:
+                if char not in contracted_edges:
+                    contracted_edges[char] = 1
+                else:
+                    contracted_edges[char] += 1
+                edge = nodes[j][k]
+                if isinstance(edge, ParamEdge):
+                    in_matrices = False
+                    for mat in matrices:
+                        if torch.equal(edge.matrix, mat):
+                            in_matrices = True
+                            break
+                    if not in_matrices:
+                        matrices_strings.append(2 * char)
+                        matrices.append(edge.matrix)
+            else:
+                if output_dict[char] == 0:
+                    axes_names.append(nodes[j].axes[k].name)
+                    edges.append(nodes[j][k])
+                    node1_list.append(nodes[j].axes[k].node1)
+                output_dict[char] += 1
 
-    if len(output_list) > 0:
-        raise ValueError('Input and output subscripts should match on all the edges '
-                         'that are not going to be contracted')
+    for char in output_dict:
+        if output_dict[char] == 0:
+            raise ValueError(f'Output subscript {char} must appear among '
+                             f'the input subscripts')
+    for char in contracted_edges:
+        if contracted_edges[char] == 1:
+            raise ValueError(f'Subscript {char} appears only once in the input '
+                             f'but it not among the output subscripts')
+        elif contracted_edges[char] > 2:
+            raise ValueError(f'Subscript {char} appearing more than once in the '
+                             f'input should be a batch index, but it does not '
+                             f'appear among the output subscripts')
 
     input_string = ','.join(input_strings + matrices_strings)
     einsum_string = input_string + '->' + output_string

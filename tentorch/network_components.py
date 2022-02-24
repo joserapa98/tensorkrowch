@@ -1432,6 +1432,12 @@ class TensorNetwork(nn.Module):
         # (mean, std) of each node.
         raise NotImplementedError('Initialization methods not implemented for generic TensorNetwork class')
 
+    # TODO: should we connect all batch edges to a copy node and have only one batch edge?
+    # TODO: permit varios batch indices with different sizes (e.g. for conv. layers with trees
+    #  we could perform contraction by using two batch indices, the real batch of data and a
+    #  "batch" of number of features. For each collection of features, maybe a set of pixels
+    #  we contract them with the same tree node)
+    # TODO: permit different feature sizes for each data node?
     def set_data_nodes(self,
                        input_edges: Union[List[int], List[AbstractEdge]],
                        batch_size: int) -> None:
@@ -1462,7 +1468,6 @@ class TensorNetwork(nn.Module):
                         network=self)
             node['feature'] ^ edge
             self._data_nodes[node.name] = node
-            # TODO: should we connect all batch edges to a copy node and have only one batch edge?
 
     def unset_data_nodes(self) -> None:
         if self.data_nodes:
@@ -1470,6 +1475,7 @@ class TensorNetwork(nn.Module):
                 self.delete_node(node)
             self._data_nodes = dict()
 
+    # TODO: take care of situations with data nodes with different feature sizes
     def _add_data(self, data: torch.Tensor) -> None:
         """
         Add data to data nodes, that is, change its tensor by a new one given a new data set.

@@ -1571,8 +1571,8 @@ def connect(edge1: AbstractEdge,
 
     if isinstance(edge1, ParamEdge) == isinstance(edge2, ParamEdge):
         if isinstance(edge1, ParamEdge):
-            shift = edge1.shift.item()
-            slope = edge1.slope.item()
+            shift = edge1.shift
+            slope = edge1.slope
             new_edge = ParamEdge(node1=node1, axis1=axis1,
                                  shift=shift, slope=slope,
                                  node2=node2, axis2=axis2)
@@ -1585,13 +1585,13 @@ def connect(edge1: AbstractEdge,
                             node2=node2, axis2=axis2)
     else:
         if isinstance(edge1, ParamEdge):
-            shift = edge1.shift.item()
-            slope = edge1.slope.item()
+            shift = edge1.shift
+            slope = edge1.slope
             if net is not None:
                 net._remove_param(edge1)
         else:
-            shift = edge2.shift.item()
-            slope = edge2.slope.item()
+            shift = edge2.shift
+            slope = edge2.slope
             if net is not None:
                 net._remove_param(edge2)
         new_edge = ParamEdge(node1=node1, axis1=axis1,
@@ -1620,8 +1620,8 @@ def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
             net._edges += [new_edge1, new_edge2]
     else:
         assert isinstance(edge, ParamEdge)
-        shift = edge.shift.item()
-        slope = edge.slope.item()
+        shift = edge.shift
+        slope = edge.slope
         new_edge1 = ParamEdge(node1=node1, axis1=axis1,
                               shift=shift, slope=slope)
         new_edge2 = ParamEdge(node1=node2, axis1=axis2,

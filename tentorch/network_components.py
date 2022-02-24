@@ -965,6 +965,13 @@ class AbstractEdge(ABC):
     def is_dangling(self) -> bool:
         return self.node2 is None
 
+    def is_shared(self, node1: AbstractNode, node2: AbstractNode) -> bool:
+        if (node1 == self.node1) and (node2 == self.node2):
+            return True
+        if (node1 == self.node2) and (node2 == self.node1):
+            return True
+        return False
+
     def size(self) -> int:
         return self.node1.size(self.axis1)
 

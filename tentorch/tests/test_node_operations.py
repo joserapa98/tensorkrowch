@@ -21,6 +21,12 @@ def test_einsum():
 
     out_node = tn.einsum('ijklm,bi,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
     assert out_node.shape == (10, 2)
+    with pytest.raises(ValueError):
+        out_node = tn.einsum('ijklm,bi,bj,bk,bl->bm', *(list(net.data_nodes.values())))
+    with pytest.raises(ValueError):
+        out_node = tn.einsum('ijklm,bi,bj,bk,bl->b', *([node] + list(net.data_nodes.values())))
+    with pytest.raises(ValueError):
+        out_node = tn.einsum('ijklm,b,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
 
     net = tn.TensorNetwork(name='net')
     node = tn.ParamNode(shape=(5, 5, 5, 5, 2),
@@ -34,6 +40,12 @@ def test_einsum():
 
     out_node = tn.einsum('ijklm,bi,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
     assert out_node.shape == (10, 2)
+    with pytest.raises(ValueError):
+        out_node = tn.einsum('ijklm,bi,bj,bk,bl->bm', *(list(net.data_nodes.values())))
+    with pytest.raises(ValueError):
+        out_node = tn.einsum('ijklm,bi,bj,bk,bl->b', *([node] + list(net.data_nodes.values())))
+    with pytest.raises(ValueError):
+        out_node = tn.einsum('ijklm,b,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
 
 
 def test_batched_contract_between():

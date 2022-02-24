@@ -10,6 +10,7 @@ This script contains:
 # contract, contract_between, batched_contract_between, einsum, etc.
 
 from typing import (Union, Optional, Sequence, Text, List)
+from tentorch.network_components import Ax, Shape
 from abc import ABC, abstractmethod
 import warnings
 import copy
@@ -205,14 +206,36 @@ def batched_contract_between(node1: AbstractNode,
 # TODO: implement this, ignore this at the moment
 class StackNode(Node):
     def __init__(self,
-                 nodes_list: List[AbstractNode],
-                 dim: int,
-                 shape: Optional[Union[int, Sequence[int], torch.Size]] = None,
-                 axis_names: Optional[Sequence[Text]] = None,
-                 network: Optional['TensorNetwork'] = None,
-                 name: Optional[Text] = None,
-                 tensor: Optional[torch.Tensor] = None,
-                 param_edges: bool = True) -> None:
+                 nodes: List[AbstractNode],
+                 dim: Ax) -> None:
+        same_type = True
+        same_shape = True
+        same_edge_type = True
+        for i in range(len(nodes[:-1])):
+            same_type &= isinstance(nodes[i], type(nodes[i + 1]))
+            same_shape &= nodes[i].shape == nodes[i + 1].shape
+            for edge1, edge2 in zip(nodes[i].edges, nodes[i + 1].edges):
+                same_edge_type &= isinstance(edge1, type(edge2))
+        if not same_type:
+            raise TypeError('Cannot stack nodes of different types. Nodes '
+                            'must be either all Node or all ParamNode type')
+        if not same_shape:
+            raise ValueError('Cannot stack nodes with different shapes')
+        if not same_edge_type:
+            raise TypeError('Cannot stack nodes with edges of different types. '
+                            'The edges that are attached to the same axis in '
+                            'each node must be either all Edge or all ParamEdge type')
+        pass
+
+    def init(self,
+             nodes_list: List[AbstractNode],
+             dim: int,
+             shape: Optional[Union[int, Sequence[int], torch.Size]] = None,
+             axis_names: Optional[Sequence[Text]] = None,
+             network: Optional['TensorNetwork'] = None,
+             name: Optional[Text] = None,
+             tensor: Optional[torch.Tensor] = None,
+             param_edges: bool = True) -> None:
 
         tensors_list = list(map(lambda x: x.tensor, nodes_list))
         tensor = torch.stack(tensors_list, dim=dim)

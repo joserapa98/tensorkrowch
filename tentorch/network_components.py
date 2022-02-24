@@ -857,6 +857,7 @@ class ParamNode(AbstractNode, nn.Module):
 ################################################
 #                   EDGES                      #
 ################################################
+EdgeParameter = Union[int, float, nn.Parameter]
 _DEFAULT_SHIFT = -0.5
 _DEFAULT_SLOPE = 20.
 
@@ -1062,8 +1063,8 @@ class ParamEdge(AbstractEdge, nn.Module):
                  node1: AbstractNode,
                  axis1: Axis,
                  dim: Optional[int] = None,
-                 shift: Optional[Union[int, float]] = None,
-                 slope: Optional[Union[int, float]] = None,
+                 shift: Optional[EdgeParameter] = None,
+                 slope: Optional[EdgeParameter] = None,
                  node2: Optional[AbstractNode] = None,
                  axis2: Optional[Axis] = None) -> None:
 
@@ -1079,28 +1080,16 @@ class ParamEdge(AbstractEdge, nn.Module):
         else:
             if shift is None:
                 shift = _DEFAULT_SHIFT
-            else:
-                if isinstance(shift, int):
-                    shift = float(shift)
-                elif not isinstance(shift, float):
-                    raise TypeError('`shift` should be int or float type')
-
             if slope is None:
                 slope = _DEFAULT_SLOPE
-            else:
-                if isinstance(slope, int):
-                    slope = float(slope)
-                elif not isinstance(slope, float):
-                    raise TypeError('`slope` should be int or float type')
 
-        self._shift = nn.Parameter(torch.tensor(shift))
-        self._prev_shift = shift
-        self._slope = nn.Parameter(torch.tensor(slope))
-        self._prev_slope = slope
         self._sigmoid = nn.Sigmoid()
         self._matrix = None
         self._dim = None
-        self.set_matrix()
+
+        self._shift = None
+        self._slope = None
+        self.set_parameters(shift, slope)
 
     # properties
     @property
@@ -1108,40 +1097,16 @@ class ParamEdge(AbstractEdge, nn.Module):
         return self._shift
 
     @shift.setter
-    def shift(self, shift: Union[int, float, nn.Parameter]) -> None:
-        if isinstance(shift, int):
-            shift = float(shift)
-            self._shift = nn.Parameter(torch.tensor(shift))
-            self._prev_shift = shift
-        elif isinstance(shift, float):
-            self._shift = nn.Parameter(torch.tensor(shift))
-            self._prev_shift = shift
-        elif isinstance(shift, nn.Parameter):
-            self._shift = shift
-            self._prev_shift = shift.item()
-        else:
-            raise TypeError('`shift` should be int, float or nn.Parameter type')
-        self.set_matrix()
+    def shift(self, shift: EdgeParameter) -> None:
+        self.set_parameters(shift=shift)
 
     @property
     def slope(self) -> nn.Parameter:
         return self._slope
 
     @slope.setter
-    def slope(self, slope: Union[int, float]) -> None:
-        if isinstance(slope, int):
-            slope = float(slope)
-            self._slope = nn.Parameter(torch.tensor(slope))
-            self._prev_slope = slope
-        elif isinstance(slope, float):
-            self._slope = nn.Parameter(torch.tensor(slope))
-            self._prev_slope = slope
-        elif isinstance(slope, nn.Parameter):
-            self._slope = slope
-            self._prev_slope = slope.item()
-        else:
-            raise TypeError('`slope` should be int, float or nn.Parameter type')
-        self.set_matrix()
+    def slope(self, slope: EdgeParameter) -> None:
+        self.set_parameters(slope=slope)
 
     @property
     def matrix(self) -> torch.Tensor:
@@ -1174,6 +1139,37 @@ class ParamEdge(AbstractEdge, nn.Module):
         slope = _DEFAULT_SLOPE
         return shift, slope
 
+    def set_parameters(self,
+                       shift: Optional[EdgeParameter] = None,
+                       slope: Optional[EdgeParameter] = None):
+        if shift is not None:
+            if isinstance(shift, int):
+                shift = float(shift)
+                self._shift = nn.Parameter(torch.tensor(shift))
+                self._prev_shift = shift
+            elif isinstance(shift, float):
+                self._shift = nn.Parameter(torch.tensor(shift))
+                self._prev_shift = shift
+            elif isinstance(shift, nn.Parameter):
+                self._shift = shift
+                self._prev_shift = shift.item()
+            else:
+                raise TypeError('`shift` should be int, float or nn.Parameter type')
+        if slope is not None:
+            if isinstance(slope, int):
+                slope = float(slope)
+                self._slope = nn.Parameter(torch.tensor(slope))
+                self._prev_slope = slope
+            elif isinstance(slope, float):
+                self._slope = nn.Parameter(torch.tensor(slope))
+                self._prev_slope = slope
+            elif isinstance(slope, nn.Parameter):
+                self._slope = slope
+                self._prev_slope = slope.item()
+            else:
+                raise TypeError('`slope` should be int, float or nn.Parameter type')
+        self.set_matrix()
+
     def is_updated(self) -> bool:
         if (self._prev_shift == self._shift.item()) and \
                 (self._prev_slope == self._slope.item()):
@@ -1200,8 +1196,8 @@ class ParamEdge(AbstractEdge, nn.Module):
 
     def dim(self, dim: Optional[int] = None) -> int:
         if dim is not None:
-            self.shift, self.slope = self.compute_parameters(self.size(), dim)
-            self.set_matrix()
+            shift, slope = self.compute_parameters(self.size(), dim)
+            self.set_parameters(shift, slope)
         return self._dim
 
     def change_size(self, size: int, padding_method: Text = 'zeros', **kwargs) -> None:
@@ -1211,8 +1207,8 @@ class ParamEdge(AbstractEdge, nn.Module):
             self.node2._change_axis_size(self.axis2, size, padding_method, **kwargs)
         self.node1._change_axis_size(self.axis1, size, padding_method, **kwargs)
 
-        self.shift, self.slope = self.compute_parameters(size, min(size, self.dim()))
-        self.set_matrix()
+        shift, slope = self.compute_parameters(size, min(size, self.dim()))
+        self.set_parameters(shift, slope)
 
     def parameterize(self,
                      set_param: bool = True,

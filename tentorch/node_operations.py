@@ -27,6 +27,7 @@ from tentorch.network_components import (connect, disconnect, get_shared_edges,
                                          contract_between)
 
 
+# TODO: comprobar si los edges que se contraen eran de nodos realmente conectados
 def einsum(string: Text, *nodes: AbstractNode) -> Node:
     if '->' not in string:
         raise ValueError('Einsum `string` should have an arrow `->` separating '
@@ -205,9 +206,7 @@ def batched_contract_between(node1: AbstractNode,
 # stack, unbind, stacknode, stackedge, stacked_contraction
 # TODO: implement this, ignore this at the moment
 class StackNode(Node):
-    def __init__(self,
-                 nodes: List[AbstractNode],
-                 dim: Ax) -> None:
+    def __init__(self, nodes: List[AbstractNode]) -> None:
         same_type = True
         same_shape = True
         same_edge_type = True
@@ -225,89 +224,51 @@ class StackNode(Node):
             raise TypeError('Cannot stack nodes with edges of different types. '
                             'The edges that are attached to the same axis in '
                             'each node must be either all Edge or all ParamEdge type')
-        pass
 
-    def init(self,
-             nodes_list: List[AbstractNode],
-             dim: int,
-             shape: Optional[Union[int, Sequence[int], torch.Size]] = None,
-             axis_names: Optional[Sequence[Text]] = None,
-             network: Optional['TensorNetwork'] = None,
-             name: Optional[Text] = None,
-             tensor: Optional[torch.Tensor] = None,
-             param_edges: bool = True) -> None:
-
-        tensors_list = list(map(lambda x: x.tensor, nodes_list))
-        tensor = torch.stack(tensors_list, dim=dim)
-
-        self.nodes_list = nodes_list
-        self.tensor = tensor
-        self.stacked_dim = dim
-
-        self.edges_dict = dict()
-        j = 0
-        for node in nodes_list:
-            for i, edge in enumerate(node.edges):
-                if i >= self.stacked_dim:
-                    j = 1
-                if (i + j) in self.edges_dict:
-                    self.edges_dict[(i + j)].append(edge)
+        edges_dict = dict()
+        for node in nodes:
+            for axis in node.axes:
+                if axis in edges_dict:
+                    edges_dict[axis] = [node[axis]]
                 else:
-                    self.edges_dict[(i + j)] = [edge]
+                    edges_dict[axis] += [node[axis]]
+        self._edges_dict = edges_dict
 
-        super().__init__(tensor=self.tensor)
-
-    @staticmethod
-    def set_tensor_format(tensor):
-        return tensor
+        stacked_tensor = torch.stack([node.tensor for node in nodes])
+        super().__init__(axes_names=['stack'] + nodes[0].axes_names,
+                         network=nodes[0].network,
+                         tensor=stacked_tensor)
 
     def make_edge(self, axis: Axis):
-        if axis == self.stacked_dim:
+        if axis.num == 0:
             return Edge(node1=self, axis1=axis)
-        return StackEdge(self.edges_dict[axis], node1=self, axis1=axis)
+        if isinstance(self._edges_dict[axis][0], Edge):
+            return StackEdge(self._edges_dict[axis], node1=self, axis1=axis)
+        elif isinstance(self._edges_dict[axis][0], ParamEdge):
+            return ParamStackEdge(self._edges_dict[axis], node1=self, axis1=axis)
 
 
-# TODO: ignore this at the moment
 class StackEdge(Edge):
-    """
-    Edge que es lista de varios Edges. Se usa para un StackNode
-
-    No hacer cambios de tipos, simplemente que este Edge lleve
-    parámetros adicionales de los Edges que está aglutinando
-    y su vecinos y tal. Pero que no sea en sí mismo una lista
-    de Edges, que eso lo lía todo.
-    """
-
     def __init__(self,
-                 edges_list: List['AbstractEdge'],
-                 node1: 'AbstractNode',
-                 axis1: int,
-                 name: Optional[str] = None,
-                 node2: Optional['AbstractNode'] = None,
-                 axis2: Optional[int] = None,
-                 shift: Optional[int] = None,
-                 slope: Optional[int] = None) -> None:
-        # TODO: edges in list must have same size and dimension
-        self.edges_list = edges_list
-        super().__init__(node1, axis1, name, node2, axis2, shift, slope)
+                 edges: List[Edge],
+                 node1: AbstractNode,
+                 axis1: Axis,
+                 node2: Optional[AbstractNode] = None,
+                 axis2: Optional[Axis] = None) -> None:
+        self._edges = edges
+        super().__init__(node1=node1, axis1=axis1,
+                         node2=node2, axis2=axis2)
 
-    def create_parameters(self, shift, slope):
-        return None, None, None
 
-    def dim(self):
-        """
-        Si es ParamEdge se mide en función de sus parámetros la dimensión
-        """
-        return None
-
-    def create_matrix(self, dim):
-        """
-        Eye for Edge, Parameter for ParamEdge
-        """
-        return None
-
-    def __xor__(self, other: 'AbstractEdge') -> 'AbstractEdge':
-        return None
+class ParamStackEdge(ParamEdge):
+    def __init__(self,
+                 edges: List[ParamEdge],
+                 node1: AbstractNode,
+                 axis1: Axis) -> None:
+        self._edges = edges
+        super().__init__(node1=node1, axis1=axis1,
+                         shift=self._edges[0].shift,
+                         slope=self._edges[0].slope)
 
 
 def stack():
@@ -315,8 +276,12 @@ def stack():
 
 
 def unbind():
+    # if node.axes[0].name == 'stack':
+    #   unstack
     pass
 
 
 def stacked_contract():
+    # pasar expresión del tipo einsum y pasando una lista
+    # de las secuencias de nodos que irían en einsum
     pass

@@ -317,16 +317,33 @@ def connect_stack(edge1: Union[StackEdge, ParamStackEdge],
 
 
 def stack(nodes: List[AbstractNode], name: Optional[Text] = None):
+    """
+    The stack dimension will be the first one in the resultant node
+    """
     return StackNode(nodes, name=name)
 
 
-def unbind():
-    # if node.axes[0].name == 'stack':
-    #   unstack
-    pass
+def unbind(node: StackNode) -> List[Node]:
+    """
+    It is assumed that the stacked dimension is the first one
+    """
+    tensors_list = torch.unbind(node.tensor)
+    nodes = []
+    for i, tensor in enumerate(tensors_list):
+        new_node = Node(axes_names=node.axes_names[1:],
+                        network=node.network,
+                        tensor=tensor,
+                        edges=[stack_edge.edges[i] for stack_edge in node.edges[1:]],
+                        node1_list=node.node1_list[1:])
+        nodes.append(new_node)
+    return nodes
 
 
 def stacked_contract():
     # pasar expresión del tipo einsum y pasando una lista
     # de las secuencias de nodos que irían en einsum
     pass
+
+# TODO: MPS -> contraemos resultados y luego hacemos delete_node(node) y
+#  del node para eliminar los nodos intermedios de la red y borrar las
+#  referencias a ellos para poder liberar memoria

@@ -244,16 +244,6 @@ class AbstractNode(ABC):
     def network(self, network: 'TensorNetwork') -> None:
         self.move_to_network(network)
 
-    @property
-    def neighbours(self) -> List['AbstractNode']:
-        node1_list = self.node1_list
-        neighbours = set()
-        for i, edge in enumerate(self.edges):
-            node2 = edge._nodes[node1_list[i]]
-            if node2 is not None:
-                neighbours.add(node2)
-        return list(neighbours)
-
     # abstract methods
     @staticmethod
     @abstractmethod
@@ -280,6 +270,19 @@ class AbstractNode(ABC):
             return torch.Size(list(map(lambda edge: edge.dim(), self.edges)))
         axis_num = self.get_axis_number(dim)
         return self.edges[axis_num].dim()
+
+    def neighbours(self, axis: Optional[Ax] = None) -> Union[Optional['AbstractNode'],
+                                                             List['AbstractNode']]:
+        node1_list = self.node1_list
+        if axis is not None:
+            node2 = self[axis]._nodes[node1_list[axis.num]]
+            return node2
+        neighbours = set()
+        for i, edge in enumerate(self.edges):
+            node2 = edge._nodes[node1_list[i]]
+            if node2 is not None:
+                neighbours.add(node2)
+        return list(neighbours)
 
     def get_axis_number(self, axis: Ax) -> int:
         if isinstance(axis, int):
@@ -514,7 +517,7 @@ class AbstractNode(ABC):
                     self.network.remove_node(self)
                 network._add_node(self)
                 visited.append(self)
-                for neighbour in self.neighbours:
+                for neighbour in self.neighbours():
                     neighbour.move_to_network(network=network, visited=visited)
 
     @overload

@@ -608,8 +608,8 @@ def test_tn_data_nodes():
 
     data = torch.randn(10, 5, 2)
     net._add_data(data)
-    assert torch.equal(net.data_nodes['input_0'].tensor, data[:, :, 0])
-    assert torch.equal(net.data_nodes['input_1'].tensor, data[:, :, 1])
+    assert torch.equal(net.data_nodes['data_0'].tensor, data[:, :, 0])
+    assert torch.equal(net.data_nodes['data_1'].tensor, data[:, :, 1])
 
     data = torch.randn(10, 5, 3)
     with pytest.raises(IndexError):

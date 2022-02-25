@@ -80,3 +80,25 @@ def test_batched_contract_between():
                                         node1['batch'],
                                         node2['batch'])
     assert node3.shape == (10,)
+
+"""
+def test_stack():
+    net = tn.TensorNetwork()
+    nodes = []
+    input_edges = []
+    for i in range(5):
+        node = tn.Node(shape=(3, 3, 2),
+                       axes_names=('input', 'input', 'output'),
+                       name='node',
+                       network=net,
+                       init_method='randn')
+        nodes.append(node)
+        input_edges += [node['input_0'], node['input_1']]
+    net.set_data_nodes(input_edges=input_edges,
+                       batch_size=10)
+    data = torch.randn(10, 3, 2*5)
+    net._add_data(data)
+    
+    stack_node = tn.stack(nodes)
+    stack_input_0 = tn.stack([node.neighbours('input_0') for node in nodes])
+"""

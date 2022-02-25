@@ -18,7 +18,7 @@ def _initializer(init_method,
                  param_node: bool = False,
                  param_edges: bool = False,
                  **kwargs: float) -> AbstractNode:
-    if param_node:
+    if not param_node:
         return Node(shape=shape,
                     axes_names=axes_names,
                     name=name,

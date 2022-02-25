@@ -110,6 +110,39 @@ def test_stack():
     stack_result = tn.einsum('sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
     assert stack_result.shape == (5, 10, 2)
 
+    nodes = tn.unbind(stack_result)
+    assert len(nodes) == 5
+    assert nodes[0].shape == (10, 2)
+
+    # Param
+    net = tn.TensorNetwork()
+    nodes = []
+    input_edges = []
+    for i in range(5):
+        node = tn.ParamNode(shape=(3, 3, 2),
+                            axes_names=('input', 'input', 'output'),
+                            name='node',
+                            network=net,
+                            param_edges=True,
+                            init_method='randn')
+        nodes.append(node)
+        input_edges += [node['input_0'], node['input_1']]
+    net.set_data_nodes(input_edges=input_edges,
+                       batch_size=10)
+    data = torch.randn(10, 3, 2 * 5)
+    net._add_data(data)
+
+    stack_node = tn.stack(nodes, name='stack_node')
+    stack_input_0 = tn.stack([node.neighbours('input_0') for node in nodes],
+                             name='stack_input_0')
+    stack_input_1 = tn.stack([node.neighbours('input_1') for node in nodes],
+                             name='stack_input_1')
+    stack_node['input_0'] ^ stack_input_0['feature']
+    stack_node['input_1'] ^ stack_input_1['feature']
+
+    stack_result = tn.einsum('sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
+    assert stack_result.shape == (5, 10, 2)
+
     # Error 1
     net = tn.TensorNetwork()
     nodes = []
@@ -134,7 +167,7 @@ def test_stack():
                              name='stack_input_1')
 
     with pytest.raises(ValueError):
-        stack_result = tn.einsum('sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
+        tn.einsum('sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
 
     # Error 2
     net = tn.TensorNetwork()

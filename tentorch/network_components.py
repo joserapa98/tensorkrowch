@@ -1470,7 +1470,7 @@ class TensorNetwork(nn.Module):
                 raise TypeError('`input_edges` should be List[int] or List[AbstractEdge] type')
             node = Node(shape=(batch_size, edge.size()),
                         axes_names=('batch', 'feature'),
-                        name=f'input_{i}',
+                        name=f'data_{i}',
                         network=self)
             node['feature'] ^ edge
             self._data_nodes[node.name] = node

@@ -403,12 +403,14 @@ class AbstractNode(ABC):
         if axes_list is not None:
             for axis in axes_list:
                 edge = self[axis]
-                if not edge.is_dangling():
-                    edge | edge
+                if (edge.node1 == self) or (edge.node2 == self):
+                    if not edge.is_dangling():
+                        edge | edge
         else:
             for edge in self.edges:
-                if not edge.is_dangling():
-                    edge | edge
+                if (edge.node1 == self) or (edge.node2 == self):
+                    if not edge.is_dangling():
+                        edge | edge
 
     @staticmethod
     def _make_copy_tensor(shape: Shape) -> torch.Tensor:

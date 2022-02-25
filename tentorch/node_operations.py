@@ -271,8 +271,8 @@ class ParamStackEdge(ParamEdge):
                          slope=self._edges[0].slope)
 
 
-def stack():
-    pass
+def stack(nodes: List[AbstractNode]):
+    return StackNode(nodes)
 
 
 def unbind():

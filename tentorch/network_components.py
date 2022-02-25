@@ -275,7 +275,7 @@ class AbstractNode(ABC):
                                                              List['AbstractNode']]:
         node1_list = self.node1_list
         if axis is not None:
-            node2 = self[axis]._nodes[node1_list[axis.num]]
+            node2 = self[axis]._nodes[node1_list[self.get_axis_number(axis)]]
             return node2
         neighbours = set()
         for i, edge in enumerate(self.edges):
@@ -399,10 +399,16 @@ class AbstractNode(ABC):
                     edge._nodes[1] = self
                     edge._axes[1] = self.axes[i]
 
-    def disconnect_edges(self) -> None:
-        for edge in self.edges:
-            if not edge.is_dangling():
-                edge | edge
+    def disconnect_edges(self, axes_list: Optional[List[Ax]] = None) -> None:
+        if axes_list is not None:
+            for axis in axes_list:
+                edge = self[axis]
+                if not edge.is_dangling():
+                    edge | edge
+        else:
+            for edge in self.edges:
+                if not edge.is_dangling():
+                    edge | edge
 
     @staticmethod
     def _make_copy_tensor(shape: Shape) -> torch.Tensor:
@@ -1272,7 +1278,7 @@ class TensorNetwork(nn.Module):
     def __init__(self, name: Optional[Text] = None):
         super().__init__()
         if name is None:
-            name = self.__class__.__name__.lower()
+            name = 'net'
         self.name = name
         self._nodes = dict()
         self._data_nodes = dict()

@@ -120,6 +120,7 @@ Shape = Union[int, Sequence[int], torch.Size]
 
 
 # TODO: implement all operations of tensors to nodes (sum, mean, std, etc.)
+# TODO: permute, transpose
 class AbstractNode(ABC):
     """
     Abstract class for nodes. Should be subclassed.
@@ -1440,14 +1441,9 @@ class TensorNetwork(nn.Module):
         raise NotImplementedError('Initialization methods not implemented for generic TensorNetwork class')
 
     # TODO: should we connect all batch edges to a copy node and have only one batch edge?
-    # TODO: permit varios batch indices with different sizes (e.g. for conv. layers with trees
-    #  we could perform contraction by using two batch indices, the real batch of data and a
-    #  "batch" of number of features. For each collection of features, maybe a set of pixels
-    #  we contract them with the same tree node)
-    # TODO: permit different feature sizes for each data node?
     def set_data_nodes(self,
                        input_edges: Union[List[int], List[AbstractEdge]],
-                       batch_size: int) -> None:
+                       batch_sizes: Sequence[int]) -> None:
         """
         Create data nodes and connect them to the list of specified edges of the TN.
         `set_data_nodes` should be executed after instantiating a TN, before
@@ -1457,7 +1453,8 @@ class TensorNetwork(nn.Module):
         ----------
         input_edges: list of edges in the same order as they are expected to be
                      contracted with each feature node of the input data_nodes
-        batch_size: int, size of data_nodes tensor dimension associated to the batch
+        batch_sizes: Sequence[int], list of sizes of data_nodes tensor dimensions
+                    associated to batch indices
         """
         if self.data_nodes:
             raise ValueError('Tensor network data nodes should be unset in order to set new ones')
@@ -1469,8 +1466,9 @@ class TensorNetwork(nn.Module):
                     raise ValueError(f'Edge {edge!r} should be a dangling edge of the Tensor Network')
             else:
                 raise TypeError('`input_edges` should be List[int] or List[AbstractEdge] type')
-            node = Node(shape=(batch_size, edge.size()),
-                        axes_names=('batch', 'feature'),
+            node = Node(shape=(*batch_sizes, edge.size()),
+                        axes_names=(*[f'batch_{i}' for i in range(len(batch_sizes))],
+                                    'feature'),
                         name=f'data_{i}',
                         network=self)
             node['feature'] ^ edge
@@ -1482,19 +1480,38 @@ class TensorNetwork(nn.Module):
                 self.delete_node(node)
             self._data_nodes = dict()
 
-    # TODO: take care of situations with data nodes with different feature sizes
-    def _add_data(self, data: torch.Tensor) -> None:
+    def _add_data(self, data: Union[torch.Tensor, Sequence[torch.Tensor]]) -> None:
         """
         Add data to data nodes, that is, change its tensor by a new one given a new data set.
-        Input data should have shape batch_size x feature_size x n_features.
+        If each data_node has a different feature size, a sequence of data tensors of shape
+        batch_size x feature_size_{i} is provided, one for each data node. If all feature sizes
+        are equal, the tensors can be passed as a sequence or as a unique tensor with shape
+        batch_size x feature_size x n_features.
         """
-        i = 0
-        for node in self.data_nodes.values():
-            node.tensor = data[:, :, i]
-            i += 1
-        if i != data.shape[2]:
-            raise IndexError(f'Number of data nodes does not match number of features '
-                             f'for input data with {data.shape[2]} features')
+        if isinstance(data, torch.Tensor):
+            if len(data.shape) != 3:
+                raise ValueError('Input data should have shape batch_size x feature_size x n_features')
+            if data.shape[2] != len(self.data_nodes):
+                raise IndexError(f'Number of data nodes does not match number of features '
+                                 f'for input data with {data.shape[2]} features')
+        if isinstance(data, Sequence):
+            if len(data) != len(self.data_nodes):
+                raise IndexError(f'Number of data nodes does not match number of features '
+                                 f'for input data with {len(data)} features')
+            for i in range(len(data[:-1])):
+                if len(data[i].shape) != 2:
+                    raise ValueError('If input data is given as a sequence, each data tensor should have'
+                                     ' shape batch_size x feature_size_{i}')
+                if data[i].shape[0] != data[i + 1].shape[0]:
+                    raise ValueError('If input data is given as a sequence, all data tensors should have '
+                                     'the same batch size')
+
+        if isinstance(data, torch.Tensor):
+            for i, node in enumerate(self.data_nodes.values()):
+                node.tensor = data[:, :, i]
+        elif isinstance(data, Sequence):
+            for i, node in enumerate(self.data_nodes.values()):
+                node.tensor = data[i]
 
     def contract(self) -> AbstractNode:
         # Custom, optimized contraction methods should be defined for each new subclass of TensorNetwork

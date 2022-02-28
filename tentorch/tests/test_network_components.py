@@ -585,7 +585,7 @@ def test_tn_data_nodes():
     input_edges = []
     for i in range(4):
         input_edges.append(net[f'node_{i}']['input'])
-    net.set_data_nodes(input_edges, 10)
+    net.set_data_nodes(input_edges, [10])
     assert len(net.nodes) == 8
     assert len(net.data_nodes) == 4
 
@@ -593,7 +593,7 @@ def test_tn_data_nodes():
     for i in range(3):
         input_edges.append(net[f'node_{i}']['input'])
     with pytest.raises(ValueError):
-        net.set_data_nodes(input_edges, 10)
+        net.set_data_nodes(input_edges, [10])
 
     net.unset_data_nodes()
     assert len(net.nodes) == 4
@@ -602,7 +602,7 @@ def test_tn_data_nodes():
     input_edges = []
     for i in range(2):
         input_edges.append(net[f'node_{i}']['input'])
-    net.set_data_nodes(input_edges, 10)
+    net.set_data_nodes(input_edges, [10])
     assert len(net.nodes) == 6
     assert len(net.data_nodes) == 2
 

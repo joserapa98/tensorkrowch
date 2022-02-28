@@ -15,7 +15,7 @@ def test_einsum():
                    axes_names=('input', 'input', 'input', 'input', 'output'),
                    network=net,
                    init_method='randn')
-    net.set_data_nodes(node.edges[:-1], 10)
+    net.set_data_nodes(node.edges[:-1], [10])
     data = torch.randn(10, 5, 4)
     net._add_data(data)
 
@@ -34,7 +34,7 @@ def test_einsum():
                         network=net,
                         param_edges=True,
                         init_method='randn')
-    net.set_data_nodes(node.edges[:-1], 10)
+    net.set_data_nodes(node.edges[:-1], [10])
     data = torch.randn(10, 5, 4)
     net._add_data(data)
 
@@ -95,7 +95,7 @@ def test_stack():
         nodes.append(node)
         input_edges += [node['input_0'], node['input_1']]
     net.set_data_nodes(input_edges=input_edges,
-                       batch_size=10)
+                       batch_sizes=[10])
     data = torch.randn(10, 3, 2*5)
     net._add_data(data)
     
@@ -128,7 +128,7 @@ def test_stack():
         nodes.append(node)
         input_edges += [node['input_0'], node['input_1']]
     net.set_data_nodes(input_edges=input_edges,
-                       batch_size=10)
+                       batch_sizes=[10])
     data = torch.randn(10, 3, 2 * 5)
     net._add_data(data)
 
@@ -156,7 +156,7 @@ def test_stack():
         nodes.append(node)
         input_edges += [node['input_0'], node['input_1']]
     net.set_data_nodes(input_edges=input_edges,
-                       batch_size=10)
+                       batch_sizes=[10])
     data = torch.randn(10, 3, 2 * 5)
     net._add_data(data)
 
@@ -182,7 +182,7 @@ def test_stack():
         nodes.append(node)
         input_edges += [node['input_0'], node['input_1']]
     net.set_data_nodes(input_edges=input_edges,
-                       batch_size=10)
+                       batch_sizes=[10])
     data = torch.randn(10, 3, 2 * 5)
     net._add_data(data)
     net['data_0'].disconnect_edges()

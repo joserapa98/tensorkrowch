@@ -193,3 +193,77 @@ def test_stack():
 
     with pytest.raises(ValueError):
         stack_node['input_0'] ^ stack_input_0['feature']
+
+
+def test_mps():
+    net = tn.TensorNetwork()
+    nodes = []
+    input_edges = []
+    for i in range(11):
+        node = tn.Node(shape=(2, 5, 2),
+                       axes_names=('left', 'input', 'right'),
+                       name=f'node_{i}',
+                       network=net,
+                       init_method='randn')
+        nodes.append(node)
+        if i != 5:
+            input_edges.append(node['input'])
+    for i in range(10):
+        net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
+    net.set_data_nodes(input_edges=input_edges,
+                       batch_sizes=[10])
+    data = torch.randn(10, 5, 10)
+    net._add_data(data)
+    result_list = tn.stacked_einsum('lir,bi->lbr', nodes[:5] + nodes[6:], list(net.data_nodes.values()))
+    result_list = result_list[:5] + [nodes[5]] + result_list[5:]
+
+    node = result_list[0]
+    for i in range(1, 5):
+        node = tn.einsum('lbr,rbs->lbs', node, result_list[i])
+    node = tn.einsum('lbr,ris->lbis', node, result_list[5])
+    for i in range(6, 11):
+        node = tn.einsum('lbir,rbs->lbis', node, result_list[i])
+
+    assert node.shape == (2, 10, 5, 2)
+
+    # Param
+    net = tn.TensorNetwork()
+    nodes = []
+    input_edges = []
+    shift = nn.Parameter(torch.tensor(-0.5))
+    slope = nn.Parameter(torch.tensor(20.))
+    for i in range(11):
+        node = tn.ParamNode(shape=(2, 5, 2),
+                            axes_names=('left', 'input', 'right'),
+                            name=f'node_{i}',
+                            network=net,
+                            param_edges=True,
+                            init_method='randn')
+        for edge in node.edges:
+            edge.set_parameters(shift, slope)
+        nodes.append(node)
+        if i != 5:
+            input_edges.append(node['input'])
+    for i in range(10):
+        net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
+    net.set_data_nodes(input_edges=input_edges,
+                       batch_sizes=[10])
+    data = torch.randn(10, 5, 10)
+    net._add_data(data)
+    result_list = tn.stacked_einsum('lir,bi->lbr', nodes[:5] + nodes[6:], list(net.data_nodes.values()))
+    result_list = result_list[:5] + [nodes[5]] + result_list[5:]
+
+    node = result_list[0]
+    for i in range(1, 5):
+        node = tn.einsum('lbr,rbs->lbs', node, result_list[i])
+    node = tn.einsum('lbr,ris->lbis', node, result_list[5])
+    for i in range(6, 11):
+        node = tn.einsum('lbir,rbs->lbis', node, result_list[i])
+
+    assert node.shape == (2, 10, 5, 2)
+    mean = node.tensor.mean()
+    mean.backward()
+    node
+
+
+

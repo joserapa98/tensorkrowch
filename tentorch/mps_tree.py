@@ -37,5 +37,4 @@ class Tree(TensorNetwork):
     # Lo mismo que en MPS
     pass
 
-# TODO: poder acceder a los edges libres de la network
 # nombrar los moduels de nodos y edges por orden: node0, node1, ..., edge0, edge1, ...

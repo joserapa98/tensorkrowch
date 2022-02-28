@@ -9,7 +9,7 @@ This script contains:
 # split, svd, qr, rq, etc.
 # contract, contract_between, batched_contract_between, einsum, etc.
 
-from typing import (Union, Optional, Sequence, Text, List, Dict)
+from typing import (Union, Optional, Sequence, Text, List, Tuple, Dict)
 
 from tentorch import AbstractEdge
 from tentorch.network_components import Ax, Shape
@@ -64,8 +64,15 @@ def einsum(string: Text, *nodes: AbstractNode) -> Node:
                                          f'input should be a batch index, but it does not '
                                          f'appear among the output subscripts')
                     if edge != contracted_edges[char][0]:
-                        raise ValueError(f'Subscript {char} appears in two nodes that do not '
-                                         f'share a connected edge at the specified axis')
+                        if isinstance(edge, StackEdge) and \
+                                isinstance(contracted_edges[char][0], StackEdge):
+                            edge = edge ^ contracted_edges[char][0]
+                        elif isinstance(edge, ParamStackEdge) and \
+                                isinstance(contracted_edges[char][0], ParamStackEdge):
+                            edge = edge ^ contracted_edges[char][0]
+                        else:
+                            raise ValueError(f'Subscript {char} appears in two nodes that do not '
+                                             f'share a connected edge at the specified axis')
                     contracted_edges[char] += [edge]
                 if isinstance(edge, ParamEdge):
                     in_matrices = False
@@ -214,6 +221,7 @@ def batched_contract_between(node1: AbstractNode,
 
 class StackNode(Node):
 
+    # TODO: better raise errors when find the False, without having to finish the loop
     def __init__(self,
                  nodes: List[AbstractNode],
                  name: Optional[Text] = None) -> None:
@@ -261,12 +269,16 @@ class StackNode(Node):
     def make_edge(self, axis: Axis) -> Union['Edge', 'ParamEdge']:
         if axis.num == 0:
             return Edge(node1=self, axis1=axis)
+        # TODO: cuidado con apilar que solo usamos los parámetros del primer edge,
+        #  si apilamos deberían ser compartidos los parámetros de los edges al menos
+        # TODO: podemos hacer que se creen nuevos parámetros compartidos al crear la pila
         if isinstance(self.edges_dict[axis.name][0], Edge):
             return StackEdge(self.edges_dict[axis.name], node1=self, axis1=axis)
         elif isinstance(self.edges_dict[axis.name][0], ParamEdge):
             return ParamStackEdge(self.edges_dict[axis.name], node1=self, axis1=axis)
 
 
+# TODO: better subclass AbstractEdge with AbstractStackEdge??
 class StackEdge(Edge):
     def __init__(self,
                  edges: List[Edge],
@@ -316,14 +328,14 @@ def connect_stack(edge1: Union[StackEdge, ParamStackEdge],
                    override_network=override_network)
 
 
-def stack(nodes: List[AbstractNode], name: Optional[Text] = None):
+def stack(nodes: List[AbstractNode], name: Optional[Text] = None) -> StackNode:
     """
     The stack dimension will be the first one in the resultant node
     """
     return StackNode(nodes, name=name)
 
 
-def unbind(node: StackNode) -> List[Node]:
+def unbind(node: AbstractNode) -> List[Node]:
     """
     It is assumed that the stacked dimension is the first one
     """
@@ -333,17 +345,41 @@ def unbind(node: StackNode) -> List[Node]:
         new_node = Node(axes_names=node.axes_names[1:],
                         network=node.network,
                         tensor=tensor,
-                        edges=[stack_edge.edges[i] for stack_edge in node.edges[1:]],
+                        edges=[edge.edges[i] if (isinstance(edge, StackEdge) or
+                                                 isinstance(edge, ParamStackEdge))  # TODO: Use AbstractStackEdge
+                               else edge for edge in node.edges[1:]],
                         node1_list=node.node1_list[1:])
         nodes.append(new_node)
     return nodes
 
 
-def stacked_contract():
-    # pasar expresión del tipo einsum y pasando una lista
-    # de las secuencias de nodos que irían en einsum
-    pass
+def stacked_einsum(string: Text, *nodes_lists: List[AbstractNode]) -> List[Node]:
+    stacks_list = []
+    for nodes_list in nodes_lists:
+        stacks_list.append(stack(nodes_list))
+
+    input_strings = string.split('->')[0].split(',')
+    output_string = string.split('->')[1]
+
+    i = 0
+    stack_char = opt_einsum.get_symbol(i)
+    for input_string in input_strings:
+        for input_char in input_string:
+            if input_char == stack_char:
+                i += 1
+                stack_char = opt_einsum.get_symbol(i)
+    input_strings = list(map(lambda s: stack_char + s, input_strings))
+    input_string = ','.join(input_strings)
+    output_string = stack_char + output_string
+    string = input_string + '->' + output_string
+
+    result = einsum(string, *stacks_list)
+    return unbind(result)
 
 # TODO: MPS -> contraemos resultados y luego hacemos delete_node(node) y
 #  del node para eliminar los nodos intermedios de la red y borrar las
 #  referencias a ellos para poder liberar memoria
+# TODO: poner nombre "especial" a los nodos resultantes para deletearlos fácil
+
+# TODO: resolver lo de que los nodos tienen abstarctedges y no edges o paramedges,
+#  y entonces a veces hay lío con el tipo que deberían tener ciertas funciones

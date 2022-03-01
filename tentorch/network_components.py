@@ -34,7 +34,8 @@ import torch.nn as nn
 import opt_einsum
 
 from tentorch.utils import (tab_string, check_name_style,
-                            erase_enum, enum_repeated_names)
+                            erase_enum, enum_repeated_names,
+                            permute_list, is_permutation)
 
 
 ################################################
@@ -312,6 +313,13 @@ class AbstractNode(ABC):
     def copy(self) -> 'AbstractNode':
         """
         Copy the node, creating a new one with new edges that are reattached to it
+        """
+        pass
+
+    @abstractmethod
+    def permute(self, axes: Sequence[Ax]) -> 'AbstractNode':
+        """
+        Extend the permute function of tensors
         """
         pass
 
@@ -875,6 +883,26 @@ class Node(AbstractNode):
         new_node.reattach_edges(override=False)
         return new_node
 
+    def permute(self, axes: Sequence[Ax]) -> 'Node':
+        """
+        Extend the permute function of tensors
+        """
+        axes_nums = []
+        for axis in axes:
+            axes_nums.append(self.get_axis_number(axis))
+        if not is_permutation(list(range(len(axes_nums))), axes_nums):
+            raise ValueError('The provided list of axis is not a permutation of the'
+                             ' axes of the node')
+        else:
+            new_node = Node(axes_names=permute_list(self.axes_names, axes_nums),
+                            name='permute_' + self.name,
+                            network=self.network,
+                            param_edges=self.param_edges(),
+                            tensor=self.tensor.permute(axes_nums),
+                            edges=permute_list(self.edges, axes_nums),
+                            node1_list=permute_list(self.node1_list, axes_nums))
+            return new_node
+
     def make_edge(self, axis: Axis) -> Union['Edge', 'ParamEdge']:
         if self.param_edges():
             return ParamEdge(node1=self, axis1=axis)
@@ -1001,6 +1029,26 @@ class ParamNode(AbstractNode, nn.Module):
                              node1_list=self.node1_list)
         new_node.reattach_edges(override=False)
         return new_node
+
+    def permute(self, axes: Sequence[Ax]) -> 'ParamNode':
+        """
+        Extend the permute function of tensors
+        """
+        axes_nums = []
+        for axis in axes:
+            axes_nums.append(self.get_axis_number(axis))
+        if not is_permutation(list(range(len(axes_nums))), axes_nums):
+            raise ValueError('The provided list of axis is not a permutation of the'
+                             ' axes of the node')
+        else:
+            new_node = ParamNode(axes_names=permute_list(self.axes_names, axes_nums),
+                                 name='permute_' + self.name,
+                                 network=self.network,
+                                 param_edges=self.param_edges(),
+                                 tensor=self.tensor.permute(axes_nums),
+                                 edges=permute_list(self.edges, axes_nums),
+                                 node1_list=permute_list(self.node1_list, axes_nums))
+            return new_node
 
     def make_edge(self, axis: Axis) -> Union['ParamEdge', 'Edge']:
         if self.param_edges():

@@ -3,9 +3,18 @@ from typing import List, Text
 
 
 def tab_string(string: Text, num_tabs: int = 1) -> Text:
+    """
+    Introduce '\t' a certain amount of times before each line.
+
+    Parameters
+    ----------
+    string: text to be displaced
+    num_tabs: number of '\t' introduced
+    """
     string_lst = string.split('\n')
     string_lst = list(map(lambda x: num_tabs * '\t' + x, string_lst))
-    return '\n'.join(string_lst)
+    displaced_string = '\n'.join(string_lst)
+    return displaced_string
 
 
 def check_name_style(name: Text) -> bool:
@@ -22,7 +31,7 @@ def check_name_style(name: Text) -> bool:
 def erase_enum(name: Text) -> Text:
     """
     Given a name, returns the same name without any
-    enumeration suffix (like `_{digit}`)
+    enumeration suffix with format `_{digit}`.
     """
     name_list = name.split('_')
     i = len(name_list) - 1
@@ -37,8 +46,8 @@ def erase_enum(name: Text) -> Text:
 
 def enum_repeated_names(names_list: List[Text]) -> List[Text]:
     """
-    Given a list of (axes, nodes) names, returns the same list but adding
-    an enumeration for the names that appear more than once in the list
+    Given a list of (axes or nodes) names, returns the same list but adding
+    an enumeration for the names that appear more than once in the list.
     """
     counts = dict()
     aux_list = []

@@ -616,3 +616,4 @@ def test_tn_data_nodes():
         net._add_data(data)
 
 # TODO: test is_updated() shift and slope ParamEdge
+# TODO: test permute() node

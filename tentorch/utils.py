@@ -1,5 +1,5 @@
 
-from typing import List, Text
+from typing import List, Sequence, Text
 
 
 def tab_string(string: Text, num_tabs: int = 1) -> Text:
@@ -70,3 +70,32 @@ def enum_repeated_names(names_list: List[Text]) -> List[Text]:
             counts[name] -= 1
     aux_list.reverse()
     return aux_list
+
+
+def permute_list(lst: List, dims: Sequence[int]) -> List:
+    """
+    Permute elements of list based on a permutation of indices.
+
+    Parameters
+    ----------
+    lst: list to be permuted
+    dims: list of dimensions (indices) in the new order
+    """
+    if len(dims) != len(lst):
+        raise ValueError('Number of `dims` must match number of elements in `lst`')
+    new_lst = []
+    for i in dims:
+        new_lst.append(lst[i])
+    return new_lst
+
+
+def is_permutation(lst: List, permuted_lst: List) -> bool:
+    """
+    Decide whether `permuted_lst` is a permutation of the elements of `lst`
+    """
+    aux_lst = lst[:]
+    for i in permuted_lst:
+        if (i not in aux_lst) or (len(aux_lst) == 0):
+            return False
+        aux_lst.remove(i)
+    return len(aux_lst) == 0

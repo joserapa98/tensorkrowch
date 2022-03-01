@@ -1,4 +1,4 @@
-from tentorch.network_components import AbstractNode, Node, CopyNode, ParamNode
+from tentorch.network_components import AbstractNode, Node, ParamNode
 from tentorch.network_components import AbstractEdge, Edge, ParamEdge
 from tentorch.network_components import TensorNetwork
 

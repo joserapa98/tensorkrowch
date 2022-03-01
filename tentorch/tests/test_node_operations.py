@@ -166,8 +166,8 @@ def test_stack():
     stack_input_1 = tn.stack([node.neighbours('input_1') for node in nodes],
                              name='stack_input_1')
 
-    with pytest.raises(ValueError):
-        tn.einsum('sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
+    #with pytest.raises(ValueError):
+    #    tn.einsum('sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
 
     # Error 2
     net = tn.TensorNetwork()

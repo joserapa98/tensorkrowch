@@ -337,7 +337,7 @@ def test_connect_reassign():
     assert node2[2] == node4[0]
 
     node4[0] | node4[0]
-    node3.reassign_edges(override=False)
+    node3.reattach_edges(override=False)
     edge = node3[3]
     node3[3] ^ node4[0]
     assert node3[3] != edge
@@ -614,3 +614,5 @@ def test_tn_data_nodes():
     data = torch.randn(10, 5, 3)
     with pytest.raises(IndexError):
         net._add_data(data)
+
+# TODO: test is_updated() shift and slope ParamEdge

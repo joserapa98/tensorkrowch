@@ -268,6 +268,8 @@ class StackNode(Node):
                     raise TypeError('Cannot stack nodes with edges of different types. '
                                     'The edges that are attached to the same axis in '
                                     'each node must be either all Edge or all ParamEdge type')
+                if edge1.dim() != edge2.dim():
+                    raise ValueError('Cannot stack nodes with edges of different dimensions')
 
         edges_dict = dict()
         params_dict = dict()

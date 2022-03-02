@@ -1818,7 +1818,7 @@ class TensorNetwork(nn.Module):
                                  f'not match data node shape {node.shape}')
             node.tensor = data[i]
 
-    def contract(self) -> AbstractNode:
+    def contract(self) -> torch.Tensor:
         """
         Contract tensor network
         """

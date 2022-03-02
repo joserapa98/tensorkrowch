@@ -135,6 +135,12 @@ class Axis:
     def batch(self, batch: bool) -> None:
         if batch != self.batch:
             if self.node[self].is_dangling():
+                if self.node is not None:
+                    if self.node.network is not None:
+                        if batch:
+                            self.node.network._edges.remove(self.node[self])
+                        else:
+                            self.node.network._edges += [self.node[self]]
                 self._batch = batch
             else:
                 raise ValueError('Cannot change `batch` attribute of non-dangling edges')
@@ -157,8 +163,6 @@ Ax = Union[int, Text, Axis]
 Shape = Union[int, Sequence[int], torch.Size]
 
 
-# TODO: implement all operations of tensors to nodes (sum, mean, std, etc.)
-# TODO: permute, transpose
 class AbstractNode(ABC):
     """
     Abstract class for nodes. Should be subclassed.
@@ -1298,6 +1302,17 @@ class ParamEdge(AbstractEdge, nn.Module):
         nn.Module.__init__(self)
         AbstractEdge.__init__(self, node1, axis1, node2, axis2)
 
+        # batch
+        if axis1.batch:
+            warnings.warn('`axis1` is for a batch index. Batch edges should '
+                          'not be parameterized. De-parameterize it before'
+                          ' usage')
+        if axis2 is not None:
+            if axis2.batch:
+                warnings.warn('`axis2` is for a batch index. Batch edges should '
+                              'not be parameterized. De-parameterize it before'
+                              ' usage')
+
         # shift and slope
         if dim is not None:
             if (shift is not None) or (slope is not None):
@@ -1833,10 +1848,24 @@ class TensorNetwork(nn.Module):
 def connect(edge1: AbstractEdge,
             edge2: AbstractEdge,
             override_network: bool = False) -> Union[Edge, ParamEdge]:
+    """
+    Connect two dangling, non-batch edges.
+
+    Parameters
+    ----------
+    edge1: first edge to be connected
+    edge2: second edge to be connected
+    override_network: boolean indicating whether network of node2 should
+                      be overridden with network of node1, in case both
+                      nodes are already in a network. If only one node
+                      is in a network, the other is moved to that network
+    """
     for edge in [edge1, edge2]:
         if not edge.is_dangling():
             raise ValueError(f'Edge {edge!s} is not a dangling edge. '
                              f'This edge points to nodes: {edge.node1!s} and {edge.node2!s}')
+        if edge.is_batch():
+            raise ValueError(f'Edge {edge!s} is a batch edge')
     if edge1 == edge2:
         raise ValueError(f'Cannot connect edge {edge1!s} to itself')
     if edge1.dim() != edge2.dim():
@@ -1909,6 +1938,9 @@ def connect(edge1: AbstractEdge,
 
 def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
                                                       Union[Edge, ParamEdge]]:
+    """
+    Disconnect an edge, returning a couple of dangling edges
+    """
     if edge.is_dangling():
         raise ValueError('Cannot disconnect a dangling edge')
 
@@ -1940,17 +1972,69 @@ def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
     return new_edge1, new_edge2
 
 
-def contract_edges(shared_edges: List[AbstractEdge],
+def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
+    """
+    Obtain list of edges shared between two nodes
+    """
+    edges = []
+    for edge in node1.edges:
+        if (edge in node2.edges) and (not edge.is_dangling()):
+            edges.append(edge)
+    return edges
+
+
+def get_batch_edges(node: AbstractNode) -> List[AbstractEdge]:
+    """
+    Obtain list of batch edges shared between two nodes
+    """
+    edges = []
+    for edge in node.edges:
+        if edge.is_batch():
+            edges.append(edge)
+    return edges
+
+
+def contract_edges(edges: List[AbstractEdge],
                    node1: AbstractNode,
                    node2: AbstractNode) -> Node:
-    if any([edge not in get_shared_edges(node1, node2) for edge in shared_edges]):
-        raise ValueError('All edges in `shared_edges` should be non-dangling, '
-                         'shared edges between `node1` and `node2`')
+    """
+    Contract edges between two nodes.
+
+    Parameters
+    ----------
+    edges: list of edges that are to be contracted. They can be edges shared
+           between `node1` and `node2`, or batch edges that are in both nodes
+    node1: first node of the contraction
+    node2: second node of the contraction
+
+    Returns
+    -------
+    new_node: Node resultant from the contraction
+    """
+    all_shared_edges = get_shared_edges(node1, node2)
+    shared_edges = []
+    batch_edges = dict()
+    for edge in edges:
+        if edge in all_shared_edges:
+            shared_edges.append(edge)
+        elif edge.is_batch():
+            if edge.axis1.name in batch_edges:
+                batch_edges[edge.axis1.name] += 1
+            else:
+                batch_edges[edge.axis1.name] = 1
+        else:
+            raise ValueError('All edges in `edges` should be non-dangling, '
+                             'shared edges between `node1` and `node2`, or batch edges')
 
     n_shared = len(shared_edges)
-    shared_subscripts = dict(zip(shared_edges, [opt_einsum.get_symbol(i) for i in range(n_shared)]))
+    n_batch = len(batch_edges)
+    shared_subscripts = dict(zip(shared_edges,
+                                 [opt_einsum.get_symbol(i) for i in range(n_shared)]))
+    batch_subscripts = dict(zip(batch_edges,
+                                [opt_einsum.get_symbol(i)
+                                 for i in range(n_shared, n_shared + n_batch)]))
 
-    index = n_shared
+    index = n_shared + n_batch
     input_strings = []
     used_nodes = []
     output_string = ''
@@ -1961,7 +2045,7 @@ def contract_edges(shared_edges: List[AbstractEdge],
             break
         string = ''
         for edge in node.edges:
-            if edge in shared_edges:
+            if edge in edges:
                 string += shared_subscripts[edge]
                 if isinstance(edge, ParamEdge):
                     in_matrices = False
@@ -1972,6 +2056,13 @@ def contract_edges(shared_edges: List[AbstractEdge],
                     if not in_matrices:
                         matrices_strings.append(2 * shared_subscripts[edge])
                         matrices.append(edge.matrix)
+            elif edge.is_batch():
+                if batch_edges[edge.axis1.name] == 2:
+                    # Only perform batch contraction if the batch edge appears
+                    # with the same name in both nodes
+                    string += batch_subscripts[edge.axis1.name]
+                    if i == 0:
+                        output_string += batch_subscripts[edge.axis1.name]
             else:
                 string += opt_einsum.get_symbol(index)
                 output_string += opt_einsum.get_symbol(index)
@@ -2002,6 +2093,7 @@ def contract_edges(shared_edges: List[AbstractEdge],
             k = 0
             j += 1
 
+    # If nodes were connected, we can assume that both are in the same network
     new_node = Node(axes_names=axes_names,
                     name=new_name,
                     network=used_nodes[0].network,
@@ -2013,19 +2105,19 @@ def contract_edges(shared_edges: List[AbstractEdge],
 
 
 def contract(edge: AbstractEdge) -> Node:
+    """
+    Contract only one edge
+    """
     return contract_edges([edge], edge.node1, edge.node2)
 
 
-def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
-    edges = []
-    for edge in node1.edges:
-        if (edge in node2.edges) and (not edge.is_dangling()):
-            edges.append(edge)
-    return edges
-
-
 def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
-    shared_edges = get_shared_edges(node1, node2)
-    if not shared_edges:
-        raise ValueError(f'No edges found between nodes {node1!s} and {node2!s}')
-    return contract_edges(shared_edges, node1, node2)
+    """
+    Contract all shared edges between two nodes, also performing batch contraction
+    between batch edges that share name in both nodes
+    """
+    edges = get_shared_edges(node1, node2) + get_batch_edges(node1) + get_batch_edges(node2)
+    if not edges:
+        raise ValueError(f'No batch edges neither shared edges between '
+                         f'nodes {node1!s} and {node2!s} found')
+    return contract_edges(edges, node1, node2)

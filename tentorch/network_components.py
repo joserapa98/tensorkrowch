@@ -712,6 +712,13 @@ class AbstractNode(ABC):
                 axis_num.append(self.get_axis_number(ax))
         return self.tensor.std(dim=axis_num)
 
+    def norm(self, p=2, axis: Optional[Sequence[Ax]] = None) -> torch.tensor:
+        axis_num = []
+        if axis is not None:
+            for ax in axis:
+                axis_num.append(self.get_axis_number(ax))
+        return self.tensor.norm(p=p, dim=axis_num)
+
     # ---------------
     # Node operations
     # ---------------

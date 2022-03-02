@@ -17,7 +17,7 @@ def test_einsum():
                    init_method='randn')
     net.set_data_nodes(node.edges[:-1], [10])
     data = torch.randn(10, 5, 4)
-    net._add_data(data)
+    net._add_data(data.unbind(2))
 
     out_node = tn.einsum('ijklm,bi,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
     assert out_node.shape == (10, 2)
@@ -36,7 +36,7 @@ def test_einsum():
                         init_method='randn')
     net.set_data_nodes(node.edges[:-1], [10])
     data = torch.randn(10, 5, 4)
-    net._add_data(data)
+    net._add_data(data.unbind(2))
 
     out_node = tn.einsum('ijklm,bi,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
     assert out_node.shape == (10, 2)
@@ -97,7 +97,7 @@ def test_stack():
     net.set_data_nodes(input_edges=input_edges,
                        batch_sizes=[10])
     data = torch.randn(10, 3, 2*5)
-    net._add_data(data)
+    net._add_data(data.unbind(2))
     
     stack_node = tn.stack(nodes, name='stack_node')
     stack_input_0 = tn.stack([node.neighbours('input_0') for node in nodes],
@@ -130,7 +130,7 @@ def test_stack():
     net.set_data_nodes(input_edges=input_edges,
                        batch_sizes=[10])
     data = torch.randn(10, 3, 2 * 5)
-    net._add_data(data)
+    net._add_data(data.unbind(2))
 
     stack_node = tn.stack(nodes, name='stack_node')
     stack_input_0 = tn.stack([node.neighbours('input_0') for node in nodes],
@@ -158,7 +158,7 @@ def test_stack():
     net.set_data_nodes(input_edges=input_edges,
                        batch_sizes=[10])
     data = torch.randn(10, 3, 2 * 5)
-    net._add_data(data)
+    net._add_data(data.unbind(2))
 
     stack_node = tn.stack(nodes, name='stack_node')
     stack_input_0 = tn.stack([node.neighbours('input_0') for node in nodes],
@@ -184,7 +184,7 @@ def test_stack():
     net.set_data_nodes(input_edges=input_edges,
                        batch_sizes=[10])
     data = torch.randn(10, 3, 2 * 5)
-    net._add_data(data)
+    net._add_data(data.unbind(2))
     net['data_0'].disconnect_edges()
 
     stack_node = tn.stack(nodes, name='stack_node')
@@ -213,7 +213,7 @@ def test_mps():
     net.set_data_nodes(input_edges=input_edges,
                        batch_sizes=[10])
     data = torch.randn(10, 5, 10)
-    net._add_data(data)
+    net._add_data(data.unbind(2))
     result_list = tn.stacked_einsum('lir,bi->lbr', nodes[:5] + nodes[6:], list(net.data_nodes.values()))
     result_list = result_list[:5] + [nodes[5]] + result_list[5:]
 
@@ -249,7 +249,7 @@ def test_mps():
     net.set_data_nodes(input_edges=input_edges,
                        batch_sizes=[10])
     data = torch.randn(10, 5, 10)
-    net._add_data(data)
+    net._add_data(data.unbind(2))
     result_list = tn.stacked_einsum('lir,bi->lbr', nodes[:5] + nodes[6:], list(net.data_nodes.values()))
     result_list = result_list[:5] + [nodes[5]] + result_list[5:]
 

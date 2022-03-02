@@ -137,6 +137,41 @@ def test_copy_node():
             assert copy.edges[i].node1 == node.edges[i].node1
 
 
+def test_permute():
+    node = tn.Node(shape=(2, 5, 2),
+                   axes_names=('left', 'input', 'right'),
+                   name='node',
+                   init_method='randn')
+    permuted_node = node.permute((0, 2, 1))
+
+    assert permuted_node['left'] == node['left']
+    assert permuted_node['input'] == node['input']
+    assert permuted_node['right'] == node['right']
+
+    assert permuted_node[0] == node[0]
+    assert permuted_node[1] == node[2]
+    assert permuted_node[2] == node[1]
+
+    assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
+
+    # Param
+    node = tn.ParamNode(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        init_method='randn')
+    permuted_node = node.permute((0, 2, 1))
+
+    assert permuted_node['left'] == node['left']
+    assert permuted_node['input'] == node['input']
+    assert permuted_node['right'] == node['right']
+
+    assert permuted_node[0] == node[0]
+    assert permuted_node[1] == node[2]
+    assert permuted_node[2] == node[1]
+
+    assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
+
+
 def test_param_edge():
     node = tn.Node(shape=(2, 5, 2),
                    axes_names=('left', 'input', 'right'),

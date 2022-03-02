@@ -1470,11 +1470,13 @@ class ParamEdge(AbstractEdge, nn.Module):
             warnings.warn(f'Dimension of edge {self!r} is not greater than zero')
         self._dim = dim
 
-    def dim(self, dim: Optional[int] = None) -> int:
-        if dim is not None:
+    def dim(self) -> int:
+        return self._dim
+
+    def change_dim(self, dim: Optional[int] = None) -> None:
+        if dim != self.dim():
             shift, slope = self.compute_parameters(self.size(), dim)
             self.set_parameters(shift, slope)
-        return self._dim
 
     def change_size(self, size: int, padding_method: Text = 'zeros', **kwargs) -> None:
         if not isinstance(size, int):

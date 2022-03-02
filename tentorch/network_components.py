@@ -4,8 +4,7 @@ This script contains:
     Classes for Nodes and Edges:
         *Axis
         *AbstractNode:
-            +Node:
-                -CopyNode
+            +Node
             +ParamNode
         *AbstractEdge:
             +Edge
@@ -17,9 +16,10 @@ This script contains:
     Operations:
         *connect
         *disconnect
+        *get_shared_edges
+        *get_batch_edges
         *contract_edges
         *contract
-        *get_shared_edges
         *contract_between
 """
 
@@ -92,7 +92,7 @@ class Axis:
 
         if not isinstance(batch, bool):
             raise TypeError('`batch` should be bool type')
-        if ('batch' in name) or batch:
+        if ('batch' in name) or ('stack' in name) or batch:
             self._batch = True
         else:
             self._batch = False
@@ -2045,7 +2045,7 @@ def contract_edges(edges: List[AbstractEdge],
             break
         string = ''
         for edge in node.edges:
-            if edge in edges:
+            if edge in shared_edges:
                 string += shared_subscripts[edge]
                 if isinstance(edge, ParamEdge):
                     in_matrices = False
@@ -2063,6 +2063,10 @@ def contract_edges(edges: List[AbstractEdge],
                     string += batch_subscripts[edge.axis1.name]
                     if i == 0:
                         output_string += batch_subscripts[edge.axis1.name]
+                else:
+                    string += opt_einsum.get_symbol(index)
+                    output_string += opt_einsum.get_symbol(index)
+                    index += 1
             else:
                 string += opt_einsum.get_symbol(index)
                 output_string += opt_einsum.get_symbol(index)

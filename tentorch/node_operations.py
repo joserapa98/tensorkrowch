@@ -14,7 +14,7 @@ This script contains:
             +StackEdge
             +ParamStackEdge
 """
-# split, svd, qr, rq, etc.
+# split, svd, qr, rq, etc. -> using einsum-like strings, useful
 
 from typing import Union, Optional, Text, List, Dict
 from abc import abstractmethod

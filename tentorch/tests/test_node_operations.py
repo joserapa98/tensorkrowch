@@ -62,6 +62,8 @@ def test_batched_contract_between():
     node3 = tn.batched_contract_between(node1, node2,
                                         node1['batch'],
                                         node2['batch'])
+    node4 = node1 @ node2
+    assert torch.equal(node3.tensor, node4.tensor)
     assert node3.shape == (10,)
 
     node1 = tn.ParamNode(shape=(10, 2, 3),
@@ -79,6 +81,8 @@ def test_batched_contract_between():
     node3 = tn.batched_contract_between(node1, node2,
                                         node1['batch'],
                                         node2['batch'])
+    node4 = node1 @ node2
+    assert torch.equal(node3.tensor, node4.tensor)
     assert node3.shape == (10,)
 
 

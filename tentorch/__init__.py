@@ -6,7 +6,6 @@ from tentorch.network_components import (connect, disconnect, get_shared_edges,
                                          get_batch_edges, contract_edges, contract,
                                          contract_between)
 
-from tentorch.node_operations import (einsum, batched_contract_between,
-                                      stack, unbind, stacked_einsum)
+from tentorch.node_operations import einsum, stack, unbind, stacked_einsum
 
 from tentorch.initializers import zeros, ones, copy, rand, randn

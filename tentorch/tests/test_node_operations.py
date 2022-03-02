@@ -218,11 +218,14 @@ def test_mps():
     result_list = result_list[:5] + [nodes[5]] + result_list[5:]
 
     node = result_list[0]
-    for i in range(1, 5):
-        node = tn.einsum('lbr,rbs->lbs', node, result_list[i])
-    node = tn.einsum('lbr,ris->lbis', node, result_list[5])
-    for i in range(6, 11):
-        node = tn.einsum('lbir,rbs->lbis', node, result_list[i])
+    for i in range(1, 11):
+        node @= result_list[i]
+
+    #for i in range(1, 5):
+    #    node = tn.einsum('lbr,rbs->lbs', node, result_list[i])
+    #node = tn.einsum('lbr,ris->lbis', node, result_list[5])
+    #for i in range(6, 11):
+    #    node = tn.einsum('lbir,rbs->lbis', node, result_list[i])
 
     assert node.shape == (2, 10, 5, 2)
 
@@ -254,11 +257,14 @@ def test_mps():
     result_list = result_list[:5] + [nodes[5]] + result_list[5:]
 
     node = result_list[0]
-    for i in range(1, 5):
-        node = tn.einsum('lbr,rbs->lbs', node, result_list[i])
-    node = tn.einsum('lbr,ris->lbis', node, result_list[5])
-    for i in range(6, 11):
-        node = tn.einsum('lbir,rbs->lbis', node, result_list[i])
+    for i in range(1, 11):
+        node @= result_list[i]
+
+    #for i in range(1, 5):
+    #    node = tn.einsum('lbr,rbs->lbs', node, result_list[i])
+    #node = tn.einsum('lbr,ris->lbis', node, result_list[5])
+    #for i in range(6, 11):
+    #    node = tn.einsum('lbir,rbs->lbis', node, result_list[i])
 
     assert node.shape == (2, 10, 5, 2)
     mean = node.tensor.mean()
@@ -266,4 +272,5 @@ def test_mps():
     node
 
 
-
+# TODO: test apilar edges de distintos tipos
+# TODO: test compartir parámetros entre edges, luego se dejan de compartir o que?

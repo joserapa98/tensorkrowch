@@ -693,5 +693,3 @@ def test_tn_data_nodes():
     data = torch.randn(10, 5, 3)
     with pytest.raises(IndexError):
         net._add_data(data)
-
-# TODO: test permute() node

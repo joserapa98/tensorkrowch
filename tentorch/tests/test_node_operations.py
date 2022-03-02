@@ -59,30 +59,24 @@ def test_batched_contract_between():
                     init_method='randn')
     node1['left'] ^ node2['left']
     node1['right'] ^ node2['right']
-    node3 = tn.batched_contract_between(node1, node2,
-                                        node1['batch'],
-                                        node2['batch'])
-    node4 = node1 @ node2
-    assert torch.equal(node3.tensor, node4.tensor)
+    node3 = node1 @ node2
     assert node3.shape == (10,)
 
     node1 = tn.ParamNode(shape=(10, 2, 3),
                          axes_names=('batch', 'left', 'right'),
                          name='node1',
-                         param_edges=True,
                          init_method='randn')
+    node1['left'].parameterize(True)
+    node1['right'].parameterize(True)
     node2 = tn.ParamNode(shape=(10, 2, 3),
                          axes_names=('batch', 'left', 'right'),
                          name='node2',
-                         param_edges=True,
                          init_method='randn')
+    node2['left'].parameterize(True)
+    node2['right'].parameterize(True)
     node1['left'] ^ node2['left']
     node1['right'] ^ node2['right']
-    node3 = tn.batched_contract_between(node1, node2,
-                                        node1['batch'],
-                                        node2['batch'])
-    node4 = node1 @ node2
-    assert torch.equal(node3.tensor, node4.tensor)
+    node3 = node1 @ node2
     assert node3.shape == (10,)
 
 
@@ -147,7 +141,8 @@ def test_stack():
     stack_result = tn.einsum('sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
     assert stack_result.shape == (5, 10, 2)
 
-    # Error 1
+    # If stack edges are not connected but they should,
+    # we connect them in einsum
     net = tn.TensorNetwork()
     nodes = []
     input_edges = []
@@ -170,10 +165,14 @@ def test_stack():
     stack_input_1 = tn.stack([node.neighbours('input_1') for node in nodes],
                              name='stack_input_1')
 
-    #with pytest.raises(ValueError):
-    #    tn.einsum('sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
+    stack_result = tn.einsum('sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
+    assert stack_result.shape == (5, 10, 2)
 
-    # Error 2
+    nodes = tn.unbind(stack_result)
+    assert len(nodes) == 5
+    assert nodes[0].shape == (10, 2)
+
+    # Error 1
     net = tn.TensorNetwork()
     nodes = []
     input_edges = []
@@ -195,11 +194,30 @@ def test_stack():
     stack_input_0 = tn.stack([net['data_0']] + [node.neighbours('input_0') for node in nodes][1:],
                              name='stack_input_0')
 
+    # Try to connect stack edges when some edge of one stack is
+    # not connected to the corresponding edge in the other stack
     with pytest.raises(ValueError):
         stack_node['input_0'] ^ stack_input_0['feature']
 
+    # Error 2
+    net = tn.TensorNetwork()
+    nodes = []
+    for i in range(5):
+        node = tn.Node(shape=(3, 3, 2),
+                       axes_names=('input', 'input', 'output'),
+                       name='node',
+                       network=net,
+                       init_method='randn')
+        nodes.append(node)
+    net['node_0'].param_edges(True)
 
-def test_mps():
+    # Try to stack edges of different types
+    with pytest.raises(TypeError):
+        stack_node = tn.stack(nodes, name='stack_node')
+
+
+def test_stacked_einsum():
+    # MPS
     net = tn.TensorNetwork()
     nodes = []
     input_edges = []
@@ -221,24 +239,25 @@ def test_mps():
     result_list = tn.stacked_einsum('lir,bi->lbr', nodes[:5] + nodes[6:], list(net.data_nodes.values()))
     result_list = result_list[:5] + [nodes[5]] + result_list[5:]
 
-    node = result_list[0]
+    node1 = result_list[0]
     for i in range(1, 11):
-        node @= result_list[i]
+        node1 @= result_list[i]
+    assert node1.shape == (2, 10, 5, 2)
 
-    #for i in range(1, 5):
-    #    node = tn.einsum('lbr,rbs->lbs', node, result_list[i])
-    #node = tn.einsum('lbr,ris->lbis', node, result_list[5])
-    #for i in range(6, 11):
-    #    node = tn.einsum('lbir,rbs->lbis', node, result_list[i])
+    node2 = result_list[0]
+    for i in range(1, 5):
+        node2 = tn.einsum('lbr,rbs->lbs', node2, result_list[i])
+    node2 = tn.einsum('lbr,ris->lbis', node2, result_list[5])
+    for i in range(6, 11):
+        node2 = tn.einsum('lbir,rbs->lbis', node2, result_list[i])
+    assert node2.shape == (2, 10, 5, 2)
 
-    assert node.shape == (2, 10, 5, 2)
+    assert torch.equal(node1.tensor, node2.tensor)
 
     # Param
     net = tn.TensorNetwork()
     nodes = []
     input_edges = []
-    shift = nn.Parameter(torch.tensor(-0.5))
-    slope = nn.Parameter(torch.tensor(20.))
     for i in range(11):
         node = tn.ParamNode(shape=(2, 5, 2),
                             axes_names=('left', 'input', 'right'),
@@ -246,8 +265,6 @@ def test_mps():
                             network=net,
                             param_edges=True,
                             init_method='randn')
-        for edge in node.edges:
-            edge.set_parameters(shift, slope)
         nodes.append(node)
         if i != 5:
             input_edges.append(node['input'])
@@ -260,21 +277,26 @@ def test_mps():
     result_list = tn.stacked_einsum('lir,bi->lbr', nodes[:5] + nodes[6:], list(net.data_nodes.values()))
     result_list = result_list[:5] + [nodes[5]] + result_list[5:]
 
-    node = result_list[0]
+    node1 = result_list[0]
     for i in range(1, 11):
-        node @= result_list[i]
+        node1 @= result_list[i]
+    assert node1.shape == (2, 10, 5, 2)
 
-    #for i in range(1, 5):
-    #    node = tn.einsum('lbr,rbs->lbs', node, result_list[i])
-    #node = tn.einsum('lbr,ris->lbis', node, result_list[5])
-    #for i in range(6, 11):
-    #    node = tn.einsum('lbir,rbs->lbis', node, result_list[i])
+    mean1 = node1.tensor.mean()
+    mean1.backward()
 
-    assert node.shape == (2, 10, 5, 2)
-    mean = node.tensor.mean()
-    mean.backward()
-    node
+    # When stacking, stacked edges get new parameters, shared
+    # among all stacked edges
+    for i, _ in enumerate(nodes[:-1]):
+        if (i != 5) and (i != 4):
+            assert nodes[i]['input'].grad == nodes[i + 1]['input'].grad
 
+    node2 = result_list[0]
+    for i in range(1, 5):
+        node2 = tn.einsum('lbr,rbs->lbs', node2, result_list[i])
+    node2 = tn.einsum('lbr,ris->lbis', node2, result_list[5])
+    for i in range(6, 11):
+        node2 = tn.einsum('lbir,rbs->lbis', node2, result_list[i])
+    assert node2.shape == (2, 10, 5, 2)
 
-# TODO: test apilar edges de distintos tipos
-# TODO: test compartir parámetros entre edges, luego se dejan de compartir o que?
+    assert torch.equal(node1.tensor, node2.tensor)

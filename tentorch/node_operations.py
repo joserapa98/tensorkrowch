@@ -3,30 +3,29 @@ This script contains:
 
     Node operations:
         *einsum
-        *batched_contract_between
+        *connect_stack
+        *stack
+        *unbind
+        *stacked_einsum
 
+    Classes for stacks:
+        *StackNode
+        *AbstractStackEdge:
+            +StackEdge
+            +ParamStackEdge
 """
 # split, svd, qr, rq, etc.
-# contract, contract_between, batched_contract_between, einsum, etc.
 
-from typing import (Union, Optional, Sequence, Text, List, Tuple, Dict)
-from abc import ABC, abstractmethod
-
-from tentorch import AbstractEdge
-from tentorch.network_components import Ax, Shape
-import warnings
-import copy
+from typing import Union, Optional, Text, List, Dict
+from abc import abstractmethod
 
 import torch
-import torch.nn as nn
 import opt_einsum
 
 from tentorch.network_components import Axis
-from tentorch.network_components import AbstractNode, Node, ParamNode
+from tentorch.network_components import AbstractNode, Node
 from tentorch.network_components import AbstractEdge, Edge, ParamEdge
-from tentorch.network_components import TensorNetwork
-from tentorch.network_components import (connect, disconnect, get_shared_edges,
-                                         contract_between)
+from tentorch.network_components import connect
 
 
 def einsum(string: Text, *nodes: AbstractNode) -> Node:

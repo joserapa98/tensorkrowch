@@ -165,6 +165,32 @@ def test_param_edge():
     assert param_edge.node1.dim() == (2, 5, 2)
 
 
+def test_is_updated():
+    node1 = tn.Node(shape=(2, 3),
+                    axes_names=('left', 'right'),
+                    name='node1',
+                    param_edges=True,
+                    init_method='randn')
+    node2 = tn.Node(shape=(3, 4),
+                    axes_names=('left', 'right'),
+                    name='node2',
+                    param_edges=True,
+                    init_method='randn')
+    new_edge = node1['right'] ^ node2['left']
+    prev_matrix = new_edge.matrix
+    optimizer = torch.optim.SGD(params=new_edge.parameters(), lr=0.1)
+
+    node3 = node1 @ node2
+    mean = node3.mean()
+    mean.backward()
+    optimizer.step()
+
+    assert not new_edge.is_updated()
+
+    new_matrix = new_edge.matrix
+    assert not torch.equal(prev_matrix, new_matrix)
+
+
 def test_connect():
     net = tn.TensorNetwork(name='net')
     node1 = tn.Node(shape=(2, 5, 2),
@@ -633,5 +659,4 @@ def test_tn_data_nodes():
     with pytest.raises(IndexError):
         net._add_data(data)
 
-# TODO: test is_updated() shift and slope ParamEdge
 # TODO: test permute() node

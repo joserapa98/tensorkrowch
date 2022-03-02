@@ -34,42 +34,60 @@ def test_init_param_node():
 
 
 def test_set_tensor():
+    # Node with empty tensor
     node1 = tn.Node(shape=(2, 5, 2),
                     axes_names=('left', 'input', 'right'),
                     name='node1')
 
+    # Node with tensor
     tensor = torch.randn(2, 5, 2)
     node2 = tn.Node(axes_names=('left', 'input', 'right'),
                     name='node2',
                     tensor=tensor)
 
+    # Set tensor in node1
     node1.set_tensor(tensor=tensor)
     assert torch.equal(node1.tensor, node2.tensor)
 
+    # Changing tensor changes node1's and node2's tensor
     tensor[0, 0, 0] = 1000
     assert node1.tensor[0, 0, 0] == 1000
+    assert node2.tensor[0, 0, 0] == 1000
 
+    # Unset tensor in node1
     node1.unset_tensor()
-    assert not torch.equal(node1.tensor, torch.empty(node1.shape))
+    assert not torch.equal(node1.tensor, tensor)
+    assert node1.shape == tensor.shape
 
+    # Try to set tensor with wrong shape
     wrong_tensor = torch.randn(2, 5, 5)
     with pytest.raises(ValueError):
         node1.set_tensor(tensor=wrong_tensor)
 
+    # Initialize tensor of node1
     node1.set_tensor(init_method='randn', mean=1., std=2.)
+
+    # Set node1's tensor as node2's tensor
     node2.tensor = node1.tensor
     assert torch.equal(node1.tensor, node2.tensor)
 
+    # Changing node1's tensor changes node2's tensor
+    node1.tensor[0, 0, 0] = 1000
+    assert node2.tensor[0, 0, 0] == 1000
+
+    # Create parametric node
     node3 = tn.ParamNode(axes_names=('left', 'input', 'right'),
                          name='node3',
                          tensor=tensor)
     assert isinstance(node3.tensor, nn.Parameter)
     assert torch.equal(node3.tensor.data, tensor)
 
+    # Creating parameter from tensor does not affect tensor's grad
     param = nn.Parameter(tensor)
     param.mean().backward()
     assert node3.grad is None
 
+    # Set nn.Parameter as node3's tensor
     node3.set_tensor(param)
     assert node3.grad is not None
     assert torch.equal(node3.grad, node3.tensor.grad)
@@ -134,7 +152,7 @@ def test_param_edge():
     assert param_edge.dim() == 2
     assert param_edge.node1.dim() == (2, 5, 2)
 
-    param_edge.dim(dim=3)
+    param_edge.change_dim(dim=3)
     assert param_edge.size() == 4
     assert param_edge.node1.size() == (4, 5, 2)
     assert param_edge.dim() == 3

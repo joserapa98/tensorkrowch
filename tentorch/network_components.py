@@ -1531,6 +1531,9 @@ class TensorNetwork(nn.Module):
 
     @property
     def nodes(self) -> Dict[Text, AbstractNode]:
+        """
+        All the nodes belonging to the network (including data nodes)
+        """
         return self._nodes
 
     @property
@@ -1539,13 +1542,31 @@ class TensorNetwork(nn.Module):
 
     @property
     def data_nodes(self) -> Dict[Text, AbstractNode]:
+        """
+        Data nodes created to feed the tensor network with input data
+        """
         return self._data_nodes
 
     @property
     def edges(self) -> List[AbstractEdge]:
+        """
+        List of dangling, non-batch edges of the network
+        """
         return self._edges
 
     def _add_node(self, node: AbstractNode, override: bool = False) -> None:
+        """
+        Add node to the network, adding its parameters (parametric tensor anr/or edges)
+        to the network parameters.
+
+        Parameters
+        ----------
+        node: node to be added
+        override: if the node that is to be added has the same name that other node
+                  that already belongs to the network, override indicates if the first
+                  node have to override the second one. If not, the names are changed
+                  to avoid conflicts
+        """
         if node.network == self:
             warnings.warn('`node` is already in the network')
         else:
@@ -1573,14 +1594,18 @@ class TensorNetwork(nn.Module):
                     if isinstance(edge, ParamEdge):
                         self._add_param(edge)
             node._network = self
-            self._edges += [edge for edge in node.edges if edge.is_dangling()]
+            self._edges += [edge for edge in node.edges if (edge.is_dangling() and not edge.is_batch())]
+
+    def add_nodes_from(self, nodes_list: Sequence[AbstractNode]):
+        for name, node in nodes_list:
+            self._add_node(node)
 
     def remove_node(self, node: AbstractNode) -> None:
         """
         This function only removes the reference to the node, and the reference
         to the TN that is kept by the node. To completely get rid of the node,
         it should be disconnected from any other node of the TN and removed from
-        the TN.
+        the TN
         """
         del self.nodes[node.name]
         node._network = None
@@ -1589,22 +1614,21 @@ class TensorNetwork(nn.Module):
             new_nodes_names = enum_repeated_names(nodes_names)
             self._rename_nodes(nodes_names, new_nodes_names)
         for edge in node.edges:
-            if edge.is_dangling():
+            if edge.is_dangling() and not edge.is_batch():
                 self._edges.remove(edge)
 
     def delete_node(self, node: AbstractNode) -> None:
         """
-        This function disconnects the node from its neighbours and is
-        removed from the TN.
+        This function disconnects the node from its neighbours and
+        removes it from the TN
         """
         node.disconnect_edges()
         self.remove_node(node)
 
-    def add_nodes_from(self, nodes_list: Sequence[AbstractNode]):
-        for name, node in nodes_list:
-            self._add_node(node)
-
     def _add_param(self, param: Union[ParamNode, ParamEdge]) -> None:
+        """
+        Add parameters of ParamNode or ParamEdge to the TN
+        """
         if isinstance(param, ParamNode):
             if not hasattr(self, param.name):
                 self.add_module(param.name, param)
@@ -1614,10 +1638,13 @@ class TensorNetwork(nn.Module):
         elif isinstance(param, ParamEdge):
             if not hasattr(self, param.module_name):
                 self.add_module(param.module_name, param)
-            # If ParamEdge is already a module, it is the case in which we are
+            # If ParamEdge is already a submodule, it is the case in which we are
             # adding a node that "inherits" edges from previous nodes
 
     def _remove_param(self, param: Union[ParamNode, ParamEdge]) -> None:
+        """
+        Remove parameters of ParamNode or ParamEdge from the TN
+        """
         if isinstance(param, ParamNode):
             if hasattr(self, param.name):
                 delattr(self, param.name)
@@ -1631,7 +1658,7 @@ class TensorNetwork(nn.Module):
 
     def _rename_nodes(self, prev_names: List[Text], new_names: List[Text]) -> None:
         """
-        Rename nodes in the network given the old and new lists of names.
+        Rename nodes in the network given the old and new lists of names
         """
         if len(prev_names) != len(new_names):
             raise ValueError('Both lists of names should have the same length')
@@ -1654,7 +1681,7 @@ class TensorNetwork(nn.Module):
     def _change_node_name(self, node: AbstractNode, name: Text) -> None:
         """
         Used to change the name of a node. If a node belongs to a network,
-        we have to take care of repeated names in the network.
+        we have to take care of repeated names in the network
         """
         if node.network != self:
             raise ValueError('Cannot change the name of a node that does '
@@ -1671,6 +1698,16 @@ class TensorNetwork(nn.Module):
     def parameterize(self,
                      set_param: bool = True,
                      override: bool = False) -> 'TensorNetwork':
+        """
+        Parameterize all nodes and edges of the network.
+
+        Parameters
+        ----------
+        set_param: boolean indicating whether the Tn has to be
+                   parameterized (True) or de-parameterized (False)
+        override: boolean indicating if the TN must be copied before
+                  parameterized (False) or not (True)
+        """
         if not override:
             new_net = copy.deepcopy(self)
             for node in new_net.nodes.values():
@@ -1684,12 +1721,14 @@ class TensorNetwork(nn.Module):
             return self
 
     def initialize(self) -> None:
-        # Initialization methods depends on the topology of the network. Number of nodes,
+        """
+        Initialize all nodes' tensors in the network
+        """
+        # Initialization methods depend on the topology of the network. Number of nodes,
         # edges and its dimensions might be relevant when specifying the initial distribution
-        # (mean, std) of each node.
+        # (e.g. mean, std) of each node
         raise NotImplementedError('Initialization methods not implemented for generic TensorNetwork class')
 
-    # TODO: should we connect all batch edges to a copy node and have only one batch edge?
     def set_data_nodes(self,
                        input_edges: Union[List[int], List[AbstractEdge]],
                        batch_sizes: Sequence[int]) -> None:
@@ -1702,8 +1741,9 @@ class TensorNetwork(nn.Module):
         ----------
         input_edges: list of edges in the same order as they are expected to be
                      contracted with each feature node of the input data_nodes
-        batch_sizes: Sequence[int], list of sizes of data_nodes tensor dimensions
-                    associated to batch indices
+        batch_sizes: Sequence[int], list of sizes of data nodes' tensors dimensions
+                     associated to batch indices. Each data node will have as many
+                     batch edges as elements in `batch_sizes`
         """
         if self.data_nodes:
             raise ValueError('Tensor network data nodes should be unset in order to set new ones')
@@ -1716,7 +1756,7 @@ class TensorNetwork(nn.Module):
             else:
                 raise TypeError('`input_edges` should be List[int] or List[AbstractEdge] type')
             node = Node(shape=(*batch_sizes, edge.size()),
-                        axes_names=(*[f'batch_{i}' for i in range(len(batch_sizes))],
+                        axes_names=(*[f'batch_{j}' for j in range(len(batch_sizes))],
                                     'feature'),
                         name=f'data_{i}',
                         network=self)
@@ -1729,40 +1769,35 @@ class TensorNetwork(nn.Module):
                 self.delete_node(node)
             self._data_nodes = dict()
 
-    def _add_data(self, data: Union[torch.Tensor, Sequence[torch.Tensor]]) -> None:
+    def _add_data(self, data: Sequence[torch.Tensor]) -> None:
         """
-        Add data to data nodes, that is, change its tensor by a new one given a new data set.
-        If each data_node has a different feature size, a sequence of data tensors of shape
-        batch_size x feature_size_{i} is provided, one for each data node. If all feature sizes
-        are equal, the tensors can be passed as a sequence or as a unique tensor with shape
-        batch_size x feature_size x n_features.
+                Add data to data nodes, that is, change its tensor by a new one given a new data set.
+                If each `data_node` has a different feature size, a sequence of data tensors of shape
+                batch_size x feature_size_{i} is provided, one for each data node. If all feature sizes
+                are equal, the tensors can be passed as a sequence or as a unique tensor with shape
+                batch_size x feature_size x n_features.
+                """
         """
-        if isinstance(data, torch.Tensor):
-            if len(data.shape) != 3:
-                raise ValueError('Input data should have shape batch_size x feature_size x n_features')
-            if data.shape[2] != len(self.data_nodes):
-                raise IndexError(f'Number of data nodes does not match number of features '
-                                 f'for input data with {data.shape[2]} features')
-        if isinstance(data, Sequence):
-            if len(data) != len(self.data_nodes):
-                raise IndexError(f'Number of data nodes does not match number of features '
-                                 f'for input data with {len(data)} features')
-            for i in range(len(data[:-1])):
-                if len(data[i].shape) != 2:
-                    raise ValueError('If input data is given as a sequence, each data tensor should have'
-                                     ' shape batch_size x feature_size_{i}')
-                if data[i].shape[0] != data[i + 1].shape[0]:
-                    raise ValueError('If input data is given as a sequence, all data tensors should have '
-                                     'the same batch size')
-
-        if isinstance(data, torch.Tensor):
-            for i, node in enumerate(self.data_nodes.values()):
-                node.tensor = data[:, :, i]
-        elif isinstance(data, Sequence):
-            for i, node in enumerate(self.data_nodes.values()):
-                node.tensor = data[i]
+        Add data to data nodes, that is, change their tensors by new data tensors given a new data set.
+        
+        Parameters
+        ----------
+        data: sequence of tensors, each having the same shape as the corresponding data node,
+              batch_size_{0} x ... x batch_size_{n} x feature_size_{i}
+        """
+        if len(data) != len(self.data_nodes):
+            raise IndexError(f'Number of data nodes does not match number of features '
+                             f'for input data with {len(data)} features')
+        for i, node in enumerate(self.data_nodes.values()):
+            if data[i].shape != node.shape:
+                raise ValueError(f'Input data tensor with shape {data[i].shape} does '
+                                 f'not match data node shape {node.shape}')
+            node.tensor = data[i]
 
     def contract(self) -> AbstractNode:
+        """
+        Contract tensor network
+        """
         # Custom, optimized contraction methods should be defined for each new subclass of TensorNetwork
         raise NotImplementedError('Contraction methods not implemented for generic TensorNetwork class')
 
@@ -1770,10 +1805,7 @@ class TensorNetwork(nn.Module):
         """
         Contract Tensor Network with input data with shape batch x n_features x feature.
         """
-        if not self.data_nodes:
-            raise ValueError('Data nodes must be created before calling forward')
-        self._add_data(data)
-        return self.contract().tensor
+        raise NotImplementedError('Forward method not implemented for generic TensorNetwork class')
 
     def __getitem__(self, key: Union[int, Text]) -> Union[AbstractEdge, AbstractNode]:
         if isinstance(key, int):

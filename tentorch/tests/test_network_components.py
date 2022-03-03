@@ -94,9 +94,11 @@ def test_set_tensor():
 
 
 def test_parameterize():
-    node = tn.Node(shape=(2, 5, 2),
+    net = tn.TensorNetwork()
+    node = tn.Node(shape=(3, 5, 2),
                    axes_names=('left', 'input', 'right'),
                    name='node',
+                   network=net,
                    init_method='randn')
     node = node.parameterize()
     assert isinstance(node, tn.ParamNode)
@@ -107,6 +109,30 @@ def test_parameterize():
     assert isinstance(node, tn.Node)
     assert node['left'].node1 == node
     assert isinstance(node['left'], tn.Edge)
+
+    prev_edge = node['left']
+    assert prev_edge in net.edges
+
+    node['left'].parameterize(set_param=True, size=4)
+    assert isinstance(node['left'], tn.ParamEdge)
+    assert node.shape == (4, 5, 2)
+    assert node.dim() == (3, 5, 2)
+
+    assert prev_edge not in net.edges
+    assert node['left'] in net.edges
+
+    node['left'].parameterize(set_param=False)
+    assert isinstance(node['left'], tn.Edge)
+    assert node.shape == (3, 5, 2)
+    assert node.dim() == (3, 5, 2)
+
+    node['left'].parameterize(set_param=True, size=2)
+    assert node.shape == (2, 5, 2)
+    assert node.dim() == (2, 5, 2)
+
+    node['left'].parameterize(set_param=False)
+    assert node.shape == (2, 5, 2)
+    assert node.dim() == (2, 5, 2)
 
 
 def test_param_edges():

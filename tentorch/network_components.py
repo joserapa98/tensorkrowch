@@ -452,7 +452,8 @@ class AbstractNode(ABC):
                  edge: 'AbstractEdge',
                  axis: Ax,
                  override: bool = False,
-                 node1: Optional[bool] = None) -> None:
+                 node1: Optional[bool] = None,
+                 parameterize: bool = False) -> None:
         """
         Add an edge to a given axis of the node.
 
@@ -463,11 +464,15 @@ class AbstractNode(ABC):
         override: boolean indicating whether `edge` should override
                   an existing non-dangling edge at `axis`
         node1: boolean indicating if `self` is the node1 or node2 of `edge`
+        parameterize: boolean used to indicate if the added edge is a parameterized
+                      version (maybe with different dimension) of the previous edge
+                      in that axis
         """
         if edge.size() != self.size(axis):
             raise ValueError(f'Edge size should match node size at axis {axis!r}')
-        if edge.dim() != self.dim(axis):
-            raise ValueError(f'Edge dimension should match node dimension at axis {axis!r}')
+        if not parameterize:
+            if edge.dim() != self.dim(axis):
+                raise ValueError(f'Edge dimension should match node dimension at axis {axis!r}')
         if node1 is None:
             if edge.node1 == self:
                 node1 = True
@@ -1251,18 +1256,19 @@ class Edge(AbstractEdge):
         if set_param:
             dim = self.dim()
             if size is not None:
-                if size > dim:
-                    self.change_size(size)
-                elif size < dim:
-                    raise ValueError(f'`size` should be greater than current '
-                                     f'dimension: {dim}, or NoneType')
-            new_edge = ParamEdge(node1=self.node1, axis1=self.axis1, dim=dim,
+                self.change_size(size)
+            new_edge = ParamEdge(node1=self.node1, axis1=self.axis1,
+                                 dim=min(dim, self.size()),
                                  node2=self.node2, axis2=self.axis2)
             if not self.is_dangling():
-                self.node2.add_edge(new_edge, self.axis2, override=True)
-            self.node1.add_edge(new_edge, self.axis1, override=True)
+                self.node2.add_edge(new_edge, self.axis2,
+                                    override=True, parameterize=True)
+            self.node1.add_edge(new_edge, self.axis1,
+                                override=True, parameterize=True)
             if self.node1.network is not None:
                 self.node1.network._add_param(new_edge)
+                self.node1.network._edges.remove(self)
+                self.node1.network._edges += [new_edge]
             return new_edge
         else:
             return self
@@ -1496,10 +1502,14 @@ class ParamEdge(AbstractEdge, nn.Module):
             new_edge = Edge(node1=self.node1, axis1=self.axis1,
                             node2=self.node2, axis2=self.axis2)
             if not self.is_dangling():
-                self.node2.add_edge(new_edge, self.axis2, override=True)
-            self.node1.add_edge(new_edge, self.axis1, override=True)
+                self.node2.add_edge(new_edge, self.axis2,
+                                    override=True, parameterize=True)
+            self.node1.add_edge(new_edge, self.axis1,
+                                override=True, parameterize=True)
             if self.node1.network is not None:
                 self.node1.network._remove_param(self)
+                self.node1.network._edges.remove(self)
+                self.node1.network._edges += [new_edge]
             return new_edge
         else:
             return self
@@ -1618,7 +1628,9 @@ class TensorNetwork(nn.Module):
                     if isinstance(edge, ParamEdge):
                         self._add_param(edge)
             node._network = self
-            self._edges += [edge for edge in node.edges if (edge.is_dangling() and not edge.is_batch())]
+            self._edges += [edge for edge in node.edges if
+                            (edge.is_dangling() and not edge.is_batch()
+                             and edge not in self.edges)]
 
     def add_nodes_from(self, nodes_list: Sequence[AbstractNode]):
         for name, node in nodes_list:

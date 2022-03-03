@@ -205,12 +205,12 @@ def test_is_updated():
                     axes_names=('left', 'right'),
                     name='node1',
                     param_edges=True,
-                    init_method='randn')
+                    init_method='ones')
     node2 = tn.Node(shape=(3, 4),
                     axes_names=('left', 'right'),
                     name='node2',
                     param_edges=True,
-                    init_method='randn')
+                    init_method='ones')
     new_edge = node1['right'] ^ node2['left']
     prev_matrix = new_edge.matrix
     optimizer = torch.optim.SGD(params=new_edge.parameters(), lr=0.1)

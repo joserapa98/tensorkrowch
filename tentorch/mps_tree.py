@@ -42,9 +42,10 @@ class MPS(TensorNetwork):
                 dimension is always the dimension of the right edge of
                 th i-th node
         l_position: position of output site
+        param_bond: boolean indicating whether bond edges should be parametric
         """
 
-        super().__init__()
+        super().__init__(name='mps')
 
         # l_position
         if l_position is None:
@@ -105,6 +106,10 @@ class MPS(TensorNetwork):
         self.right_env = []
         self.right_node = None
 
+        self._make_nodes()
+        self.param_bond(set_param=param_bond)
+        self.initialize()
+
     @property
     def l_position(self) -> int:
         return self._l_position
@@ -125,65 +130,151 @@ class MPS(TensorNetwork):
     def d_bond(self) -> List[int]:
         return self._d_bond
 
-    @property
-    def param_bond(self) -> bool:
-        return self._param_bond
+    def param_bond(self, set_param: Optional[bool] = None) -> Optional[bool]:
+        """
+        Return param_bond attribute or change it if set_param is provided.
 
-    # TODO: create MPS nodes
-    def _create_mps(self) -> None:
+        Parameters
+        ----------
+        set_param: boolean indicating whether edges have to be parameterized
+                   (True) or de-parameterized (False)
+        """
+        if set_param is None:
+            return self._param_bond
+        else:
+            for node in self.nodes.values():
+                if 'left' in node.axes_names:
+                    node['left'].parameterize(set_param=set_param)
+                if 'right' in node.axes_names:
+                    node['right'].parameterize(set_param=set_param)
+            self._param_bond = set_param
+
+    def _make_nodes(self) -> None:
         if self.nodes:
             raise ValueError('Cannot create MPS nodes if the MPS already has nodes')
 
-        if self.boundary == 'obc':
-            if self.l_position == 0:
-                self.left_node = ParamNode(shape=(self.d_phys[0], self.d_bond[0]),
-                                           axes_names=('output', 'right'),
-                                           name='mps_output',
-                                           network=self,
-                                           param_edges=self.param_bond)
-            else:
+        if self.l_position > 0:
+            # Left node
+            if self.boundary == 'obc':
                 self.left_node = ParamNode(shape=(self.d_phys[0], self.d_bond[0]),
                                            axes_names=('input', 'right'),
                                            name='mps_left_node',
                                            network=self,
                                            param_edges=self.param_bond)
-        elif self.boundary == 'pbc':
-            if self.l_position == 0:
-                self.left_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[0], self.d_bond[0]),
-                                           axes_names=('left', 'output', 'right'),
-                                           name='mps_output',
-                                           network=self,
-                                           param_edges=self.param_bond)
-            else:
+            elif self.boundary == 'pbc':
                 self.left_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[0], self.d_bond[0]),
                                            axes_names=('left', 'input', 'right'),
                                            name='mps_left_node',
                                            network=self,
                                            param_edges=self.param_bond)
-        for i in range(1, self.l_position):
-            node = ParamNode(shape=(self.bond[i - 1], self.d_phys[i], self.d_bond[i]),
-                             axes_names=('left', 'input', 'right'),
-                             name='mps_left_env',
-                             network=self,
-                             param_edges=self.param_bond)
-            self.left_env.append(node)
-        self.output_node = ParamNode(shape=(self.bond[self.l_position - 1],
-                                            self.d_phys[self.l_position],
-                                            self.d_bond[self.l_position]),
-                                     axes_names=('left', 'output', 'right'),
-                                     name='mps_output',
-                                     network=self,
-                                     param_edges=self.param_bond)
-        for i in range(self.l_position + 1, self.n_sites - 1):
-            node = ParamNode(shape=(self.bond[i - 1], self.d_phys[i], self.d_bond[i]),
-                             axes_names=('left', 'input', 'right'),
-                             name='mps_left_env',
-                             network=self,
-                             param_edges=self.param_bond)
+                periodic_edge = self.left_node['left']
+
+            # Left environment
+            for i in range(1, self.l_position):
+                node = ParamNode(shape=(self.d_bond[i - 1], self.d_phys[i], self.d_bond[i]),
+                                 axes_names=('left', 'input', 'right'),
+                                 name='mps_left_env',
+                                 network=self,
+                                 param_edges=self.param_bond)
+                self.left_env.append(node)
+                if i == 1:
+                    self.left_node['right'] ^ self.left_env[-1]['left']
+                else:
+                    self.left_env[-2]['right'] ^ self.left_env[-1]['left']
+
+        # Output
+        if self.l_position == 0:
+            if self.boundary == 'obc':
+                self.output = ParamNode(shape=(self.d_phys[0], self.d_bond[0]),
+                                        axes_names=('output', 'right'),
+                                        name='mps_output',
+                                        network=self,
+                                        param_edges=self.param_bond)
+            elif self.boundary == 'pbc':
+                self.output = ParamNode(shape=(self.d_bond[-1], self.d_phys[0], self.d_bond[0]),
+                                        axes_names=('left', 'output', 'right'),
+                                        name='mps_output',
+                                        network=self,
+                                        param_edges=self.param_bond)
+                periodic_edge = self.output['left']
+
+        elif self.l_position == self.n_sites - 1:
+            if self.boundary == 'obc':
+                self.output = ParamNode(shape=(self.d_bond[-1], self.d_phys[-1]),
+                                        axes_names=('left', 'output'),
+                                        name='mps_output',
+                                        network=self,
+                                        param_edges=self.param_bond)
+            elif self.boundary == 'pbc':
+                self.output = ParamNode(shape=(self.d_bond[-2], self.d_phys[-1], self.d_bond[-1]),
+                                        axes_names=('left', 'output', 'right'),
+                                        name='mps_output',
+                                        network=self,
+                                        param_edges=self.param_bond)
+                self.output['right'] ^ periodic_edge
+            self.left_env[-1]['right'] ^ self.output['left']
+
+        else:
+            self.output = ParamNode(shape=(self.d_bond[self.l_position - 1],
+                                           self.d_phys[self.l_position],
+                                           self.d_bond[self.l_position]),
+                                    axes_names=('left', 'output', 'right'),
+                                    name='mps_output',
+                                    network=self,
+                                    param_edges=self.param_bond)
+            self.left_env[-1]['right'] ^ self.output['left']
+
+        if self.l_position < self.n_sites - 1:
+            # Right environment
+            for i in range(self.l_position + 1, self.n_sites - 1):
+                node = ParamNode(shape=(self.d_bond[i - 1], self.d_phys[i], self.d_bond[i]),
+                                 axes_names=('left', 'input', 'right'),
+                                 name='mps_right_env',
+                                 network=self,
+                                 param_edges=self.param_bond)
+                self.right_env.append(node)
+                if i == self.l_position + 1:
+                    self.output['right'] ^ self.right_env[-1]['left']
+                else:
+                    self.right_env[-2]['right'] ^ self.right_env[-1]['left']
+
+            # Right node
+            if self.boundary == 'obc':
+                self.right_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[-1]),
+                                            axes_names=('left', 'input'),
+                                            name='mps_right_node',
+                                            network=self,
+                                            param_edges=self.param_bond)
+            elif self.boundary == 'pbc':
+                self.right_node = ParamNode(shape=(self.d_bond[-2], self.d_phys[-1], self.d_bond[-1]),
+                                            axes_names=('left', 'input', 'right'),
+                                            name='mps_right_node',
+                                            network=self,
+                                            param_edges=self.param_bond)
+                self.right_node['right'] ^ periodic_edge
+            self.right_env[-1]['right'] ^ self.right_node['left']
 
     def initialize(self) -> None:
-        pass
+        for node in self.nodes.values():
+            node.set_tensor(init_method='randn')
 
+    def set_data_nodes(self,
+                       batch_sizes: Sequence[int],
+                       input_edges: Optional[Union[List[int],
+                                                   List[AbstractEdge]]] = None) -> None:
+        if input_edges is None:
+            input_edges = []
+            if self.left_node is not None:
+                input_edges.append(self.left_node['input'])
+            input_edges += list(map(lambda node: node['input'],
+                                    self.left_env + self.right_env))
+            if self.right_node is not None:
+                input_edges.append(self.right_node['input'])
+        super().set_data_nodes(input_edges=input_edges,
+                               batch_sizes=batch_sizes)
+
+    # TODO: 2 types of contractions: with param_bond (brute) and
+    #  without it (stacked contraction)
     def contract(self) -> torch.Tensor:
         # TODO: we can only contract if all bond dimensions are equal,
         #  maybe we could permit stacked contractions when edges have

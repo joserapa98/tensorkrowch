@@ -9,3 +9,5 @@ from tentorch.network_components import (connect, disconnect, get_shared_edges,
 from tentorch.node_operations import einsum, stack, unbind, stacked_einsum
 
 from tentorch.initializers import zeros, ones, copy, rand, randn
+
+from tentorch.mps_tree import MPS

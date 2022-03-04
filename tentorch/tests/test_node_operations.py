@@ -141,7 +141,58 @@ def test_stack():
     stack_result = tn.einsum('sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
     assert stack_result.shape == (5, 10, 2)
 
-    # If stack edges are not connected but they should,
+    # Dimensions
+    net = tn.TensorNetwork()
+    nodes = []
+    input_edges = []
+    for i in range(5):
+        node = tn.ParamNode(shape=(3, 3, 2),
+                            axes_names=('input', 'input', 'output'),
+                            name='node',
+                            network=net,
+                            param_edges=True,
+                            init_method='randn')
+        nodes.append(node)
+        input_edges += [node['input_0'], node['input_1']]
+    net.set_data_nodes(input_edges=input_edges,
+                       batch_sizes=[10])
+    data = torch.randn(10, 3, 2 * 5)
+    net._add_data(data.unbind(2))
+
+    stack_node = tn.stack(nodes, name='stack_node')
+    stack_input_0 = tn.stack([node.neighbours('input_0') for node in nodes],
+                             name='stack_input_0')
+    stack_input_1 = tn.stack([node.neighbours('input_1') for node in nodes],
+                             name='stack_input_1')
+
+    # If edges have not the same dimension in an axis
+    # that is not connected, it does not matter
+    stack_node.edges_dict['output'][0].change_dim(1)
+    assert stack_node.edges_dict['output'][0].dim() == 1
+
+    # If edges have not the same dimension in an axis
+    # that is going to be connected, it is raised a ValueError
+    stack_node.edges_dict['input_0'][0].change_dim(1)
+    assert stack_node.edges_dict['input_0'][0].dim() == 1
+    with pytest.raises(ValueError):
+        stack_node['input_0'] ^ stack_input_0['feature']
+
+    # If edges have not the same parameters in an axis,
+    # but they have the same dimension, the parameters
+    # are changed to be shared among all edges
+    stack_node.edges_dict['input_1'][0].set_parameters(shift=-1., slope=30.)
+    assert stack_node.edges_dict['input_1'][0].shift == -1.
+    assert stack_node.edges_dict['input_1'][0].slope == 30.
+    assert stack_node.edges_dict['input_1'][1].shift == -0.5
+    assert stack_node.edges_dict['input_1'][1].slope == 20.
+
+    stack_node['input_1'] ^ stack_input_1['feature']
+    assert stack_node.edges_dict['input_1'][0].shift == -1.
+    assert stack_node.edges_dict['input_1'][0].slope == 30.
+    assert stack_node.edges_dict['input_1'][1].shift == -1.
+    assert stack_node.edges_dict['input_1'][1].slope == 30.
+
+    # If stack edges are not connected, but they should,
     # we connect them in einsum
     net = tn.TensorNetwork()
     nodes = []

@@ -400,6 +400,20 @@ class MPS(TensorNetwork):
         for node in result_list[1:]:
             result @= node
 
+        # Clean intermediate nodes
+        permanent_nodes = []
+        if self.left_node is not None:
+            permanent_nodes.append(self.left_node)
+        permanent_nodes += self.left_env + [self.output] + self.right_env
+        if self.right_node is not None:
+            permanent_nodes.append(self.right_node)
+        permanent_nodes += list(self.data_nodes.values())
+
+        mps_nodes = list(self.nodes.values())
+        for node in mps_nodes:
+            if node not in permanent_nodes:
+                self.delete_node(node)
+
         return result
 
     def forward(self, data: Sequence[torch.Tensor]) -> torch.Tensor:

@@ -10,6 +10,195 @@ import tentorch as tn
 
 
 def test_mps():
+    # boundary = obc, param_bond = False
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=5,
+                 boundary='obc')
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=0,
+                 boundary='obc')
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=1,
+                 boundary='obc')
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=9,
+                 boundary='obc')
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=10,
+                 boundary='obc')
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    # boundary = obc, param_bond = True
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=5,
+                 boundary='obc',
+                 param_bond=True)
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=0,
+                 boundary='obc',
+                 param_bond=True)
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=1,
+                 boundary='obc',
+                 param_bond=True)
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=9,
+                 boundary='obc',
+                 param_bond=True)
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=10,
+                 boundary='obc',
+                 param_bond=True)
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    # boundary = pbc, param_bond = False
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=5,
+                 boundary='pbc')
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=0,
+                 boundary='pbc')
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=1,
+                 boundary='pbc')
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=9,
+                 boundary='pbc')
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=10,
+                 boundary='pbc')
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    # boundary = pbc, param_bond = True
     mps = tn.MPS(n_sites=11,
                  d_phys=5,
                  d_phys_l=10,
@@ -19,5 +208,83 @@ def test_mps():
                  param_bond=True)
 
     mps.set_data_nodes(batch_sizes=[100])
-    mps
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
 
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=0,
+                 boundary='pbc',
+                 param_bond=True)
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=1,
+                 boundary='pbc',
+                 param_bond=True)
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=9,
+                 boundary='pbc',
+                 param_bond=True)
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    mps = tn.MPS(n_sites=11,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=10,
+                 boundary='pbc',
+                 param_bond=True)
+
+    mps.set_data_nodes(batch_sizes=[100])
+    data = torch.randn(10, 100, 5)
+    result = mps.forward(data.unbind())
+    result.mean().backward()
+
+    # Extreme cases
+    mps = tn.MPS(n_sites=2,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=0,
+                 boundary='obc',
+                 param_bond=True)
+
+    mps = tn.MPS(n_sites=2,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=1,
+                 boundary='obc',
+                 param_bond=True)
+
+    mps = tn.MPS(n_sites=1,
+                 d_phys=5,
+                 d_phys_l=10,
+                 d_bond=2,
+                 l_position=0,
+                 boundary='pbc',
+                 param_bond=True)

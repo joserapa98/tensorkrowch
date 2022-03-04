@@ -1650,8 +1650,9 @@ class TensorNetwork(nn.Module):
             new_nodes_names = enum_repeated_names(nodes_names)
             self._rename_nodes(nodes_names, new_nodes_names)
         for edge in node.edges:
-            if edge.is_dangling() and not edge.is_batch():
-                self._edges.remove(edge)
+            if edge.is_attached_to(node):
+                if edge.is_dangling() and not edge.is_batch():
+                    self._edges.remove(edge)
 
     def delete_node(self, node: AbstractNode) -> None:
         """

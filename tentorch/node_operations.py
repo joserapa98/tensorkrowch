@@ -162,25 +162,15 @@ class StackNode(Node):
                     raise TypeError('Cannot stack nodes with edges of different types. '
                                     'The edges that are attached to the same axis in '
                                     'each node must be either all Edge or all ParamEdge type')
-                if edge1.dim() != edge2.dim():
-                    raise ValueError('Cannot stack nodes with edges of different dimensions')
 
         edges_dict = dict()
-        params_dict = dict()
-        # When creating stacks, parameters are shared among
-        # all edges in the same ParamStackEdge
         for node in nodes:
             for axis in node.axes:
                 edge = node[axis]
                 if axis.name not in edges_dict:
                     edges_dict[axis.name] = [edge]
-                    if isinstance(edge, ParamEdge):
-                        params_dict[axis.name] = {'shift': edge.shift,
-                                                  'slope': edge.slope}
                 else:
                     edges_dict[axis.name] += [edge]
-                    if isinstance(edge, ParamEdge):
-                        edge.set_parameters(**params_dict[axis.name])
         self._edges_dict = edges_dict
 
         stacked_tensor = torch.stack([node.tensor for node in nodes])
@@ -276,6 +266,18 @@ def connect_stack(edge1: AbstractStackEdge,
                          ' edges are not the same. They will be the '
                          'same when both lists contain edges connecting'
                          ' the nodes that formed the stack nodes.')
+    if isinstance(edge1.edges[0], ParamEdge):
+        shift = edge1.edges[0].shift
+        slope = edge1.edges[0].slope
+        params_dict = dict()
+        # When connecting stacked edges, parameters have to be
+        # shared among all edges in the same ParamStackEdge
+        for i, _ in enumerate(edge1.edges[:-1]):
+            if edge1.edges[i].dim() != edge1.edges[i + 1].dim():
+                raise ValueError('Cannot connect stacked edges with lists of edges '
+                                 'of different dimensions')
+            edge1.edges[i + 1].set_parameters(shift=shift, slope=slope)
+
     return connect(edge1=edge1, edge2=edge2,
                    override_network=override_network)
 

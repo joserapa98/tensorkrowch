@@ -1807,13 +1807,6 @@ class TensorNetwork(nn.Module):
 
     def _add_data(self, data: Sequence[torch.Tensor]) -> None:
         """
-                Add data to data nodes, that is, change its tensor by a new one given a new data set.
-                If each `data_node` has a different feature size, a sequence of data tensors of shape
-                batch_size x feature_size_{i} is provided, one for each data node. If all feature sizes
-                are equal, the tensors can be passed as a sequence or as a unique tensor with shape
-                batch_size x feature_size x n_features.
-                """
-        """
         Add data to data nodes, that is, change their tensors by new data tensors given a new data set.
         
         Parameters

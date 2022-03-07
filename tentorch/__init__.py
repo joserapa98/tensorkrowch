@@ -10,4 +10,4 @@ from tentorch.node_operations import einsum, stack, unbind, stacked_einsum
 
 from tentorch.initializers import zeros, ones, copy, rand, randn
 
-from tentorch.mps_tree import MPS
+from tentorch.tn_models.mps import MPS

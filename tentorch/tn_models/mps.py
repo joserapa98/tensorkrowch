@@ -304,8 +304,54 @@ class MPS(TensorNetwork):
                 self.output['right'] ^ self.right_node['left']
 
     def initialize(self) -> None:
+        if self.boundary == 'obc':
+            if self.left_node is not None:
+                self.left_node.set_tensor(init_method='randn',
+                                          std=self.left_node['input'].dim() ** (-1/2))
+            for node in self.left_env:
+                node.set_tensor(init_method='randn',
+                                std=(node['input'].dim() * node['left'].dim()) ** (-1/2))
+            if self.output:
+                bonds = self.output.axes_names[:]
+                bonds.remove('output')
+                bonds_product = 1
+                for name in bonds:
+                    bonds_product *= self.output[name].dim()
+                self.output.set_tensor(init_method='randn', std=bonds_product ** (-1/2))
+            for node in self.right_env:
+                node.set_tensor(init_method='randn',
+                                std=(node['input'].dim() * node['right'].dim()) ** (-1/2))
+            if self.right_node is not None:
+                self.right_node.set_tensor(init_method='randn',
+                                           std=self.right_node['input'].dim() ** (-1/2))
+        else:
+            eps = 10e-3
+            if self.left_node is not None:
+                self.left_node.set_tensor(init_method='randn',
+                                          std=(self.left_node['input'].dim() *
+                                               self.left_node['left'].dim()) ** (-1/2) + eps)
+            for node in self.left_env:
+                node.set_tensor(init_method='randn',
+                                std=(node['input'].dim() * node['left'].dim()) ** (-1/2) + eps)
+            if self.output:
+                self.output.set_tensor(init_method='randn',
+                                       std=(self.output['output'].dim() *
+                                            self.output['left'].dim()) ** (-1/2) + eps)
+            for node in self.right_env:
+                node.set_tensor(init_method='randn',
+                                std=(node['input'].dim() * node['left'].dim()) ** (-1/2) + eps)
+            if self.right_node is not None:
+                self.right_node.set_tensor(init_method='randn',
+                                           std=(self.right_node['input'].dim() *
+                                                self.right_node['left'].dim()) ** (-1/2) + eps)
+
+        """
+        bond_product = 1
+        for d in self.d_bond:
+            bond_product *= d
         for node in self.nodes.values():
-            node.set_tensor(init_method='randn')
+            node.set_tensor(init_method='randn', std=bond_product ** (-1 / (2 * self.n_sites)))
+        """
 
     def set_data_nodes(self,
                        batch_sizes: Sequence[int],

@@ -353,6 +353,61 @@ class MPS(TensorNetwork):
             node.set_tensor(init_method='randn', std=bond_product ** (-1 / (2 * self.n_sites)))
         """
 
+    # TODO: check this
+    def initialize2(self) -> None:
+        if self.boundary == 'obc':
+            if self.left_node is not None:
+                data = self.left_node.neighbours('input').tensor
+                squared_mean = data.mean(1).pow(2)
+                squared_std = data.std(1).pow(2)
+                target_std = (squared_mean + squared_std).pow(-1/2)
+
+                tensor = torch.empty_like(self.left_node.tensor)
+                for i in tensor.shape[1]:
+                    tensor[:, i] = torch.randn(tensor.shape[0]) * target_std
+                self.left_node.set_tensor(tensor=tensor)
+
+            for node in self.left_env:
+                data = node.neighbours('input').tensor
+                squared_mean = data.mean(1).pow(2)
+                squared_std = data.std(1).pow(2)
+                target_std = (node['left'].dim() * (squared_mean + squared_std)).pow(-1/2)
+
+                tensor = torch.empty_like(node.tensor)
+                for i in tensor.shape[1]:
+                    tensor[:, i, :] = torch.randn(tensor.shape[0], tensor.shape[2]) * target_std
+                self.left_node.set_tensor(tensor=tensor)
+
+            if self.output:
+                bonds = self.output.axes_names[:]
+                bonds.remove('output')
+                bonds_product = 1
+                for name in bonds:
+                    bonds_product *= self.output[name].dim()
+                self.output.set_tensor(init_method='randn', std=bonds_product ** (-1/2))
+
+            for node in self.right_env:
+                data = node.neighbours('input').tensor
+                squared_mean = data.mean(1).pow(2)
+                squared_std = data.std(1).pow(2)
+                target_std = (node['right'].dim() * (squared_mean + squared_std)).pow(-1 / 2)
+
+                tensor = torch.empty_like(node.tensor)
+                for i in tensor.shape[1]:
+                    tensor[:, i, :] = torch.randn(tensor.shape[0], tensor.shape[2]) * target_std
+                self.left_node.set_tensor(tensor=tensor)
+
+            if self.right_node is not None:
+                data = self.right_node.neighbours('input').tensor
+                squared_mean = data.mean(1).pow(2)
+                squared_std = data.std(1).pow(2)
+                target_std = (squared_mean + squared_std).pow(-1/2)
+
+                tensor = torch.empty_like(self.right_node.tensor)
+                for i in tensor.shape[0]:
+                    tensor[i, :] = torch.randn(tensor.shape[1]) * target_std
+                self.left_node.set_tensor(tensor=tensor)
+
     def set_data_nodes(self,
                        batch_sizes: Sequence[int],
                        input_edges: Optional[Union[List[int],

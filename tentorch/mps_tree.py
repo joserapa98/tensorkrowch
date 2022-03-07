@@ -112,6 +112,15 @@ class MPS(TensorNetwork):
         self.param_bond(set_param=param_bond)
         self.initialize()
 
+        # Save references to permanent nodes
+        permanent_nodes = []
+        if self.left_node is not None:
+            permanent_nodes.append(self.left_node)
+        permanent_nodes += self.left_env + [self.output] + self.right_env
+        if self.right_node is not None:
+            permanent_nodes.append(self.right_node)
+        self._permanent_nodes = permanent_nodes
+
     @property
     def l_position(self) -> int:
         return self._l_position
@@ -131,6 +140,10 @@ class MPS(TensorNetwork):
     @property
     def d_bond(self) -> List[int]:
         return self._d_bond
+
+    @property
+    def permanent_nodes(self) -> List[AbstractNode]:
+        return self._permanent_nodes
 
     def param_bond(self, set_param: Optional[bool] = None) -> Optional[bool]:
         """
@@ -315,6 +328,7 @@ class MPS(TensorNetwork):
                 input_edges.append(self.right_node['input'])
         super().set_data_nodes(input_edges=input_edges,
                                batch_sizes=batch_sizes)
+        self._permanent_nodes += list(self.data_nodes.values())
 
     def _input_contraction(self) -> Tuple[List[Node], List[Node]]:
         left_result = None
@@ -361,7 +375,6 @@ class MPS(TensorNetwork):
 
         return nodes[0]
 
-    # TODO: remove intermediate nodes
     def contract(self) -> Node:
         left_env, right_env = self._input_contraction()
         
@@ -401,17 +414,9 @@ class MPS(TensorNetwork):
             result @= node
 
         # Clean intermediate nodes
-        permanent_nodes = []
-        if self.left_node is not None:
-            permanent_nodes.append(self.left_node)
-        permanent_nodes += self.left_env + [self.output] + self.right_env
-        if self.right_node is not None:
-            permanent_nodes.append(self.right_node)
-        permanent_nodes += list(self.data_nodes.values())
-
         mps_nodes = list(self.nodes.values())
         for node in mps_nodes:
-            if node not in permanent_nodes:
+            if node not in self.permanent_nodes:
                 self.delete_node(node)
 
         return result

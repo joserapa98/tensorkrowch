@@ -99,3 +99,16 @@ def is_permutation(lst: List, permuted_lst: List) -> bool:
             return False
         aux_lst.remove(i)
     return len(aux_lst) == 0
+
+
+def fact(n: int) -> int:
+    if n < 0:
+        raise ValueError('Argument should be greater than zero')
+    result = 1
+    for i in range(1, n + 1):
+        result *= i
+    return result
+
+
+def comb_num(n: int, k: int) -> int:
+    return fact(n) // (fact(k) * fact(n - k))

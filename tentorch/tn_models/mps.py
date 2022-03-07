@@ -15,6 +15,7 @@ from tentorch.node_operations import einsum, stacked_einsum
 
 
 # TODO: move_l_position -> needs svd and qr to contract and split nodes
+# TODO: change d_phys by n_labels
 class MPS(TensorNetwork):
 
     def __init__(self,
@@ -30,13 +31,13 @@ class MPS(TensorNetwork):
 
         Parameters
         ----------
-        n_sites: number of sites, including the input and output sites
+        n_sites: number of sites, including the input and output_node sites
         d_phys: physic dimension
-        d_phys_l: output dimension
+        d_phys_l: output_node dimension
         d_bond: bond dimension. If given as a sequence, the i-th bond
                 dimension is always the dimension of the right edge of
                 th i-th node
-        l_position: position of output site
+        l_position: position of output_node site
         param_bond: boolean indicating whether bond edges should be parametric
         """
 
@@ -109,7 +110,7 @@ class MPS(TensorNetwork):
         permanent_nodes = []
         if self.left_node is not None:
             permanent_nodes.append(self.left_node)
-        permanent_nodes += self.left_env + [self.output] + self.right_env
+        permanent_nodes += self.left_env + [self.output_node] + self.right_env
         if self.right_node is not None:
             permanent_nodes.append(self.right_node)
         self._permanent_nodes = permanent_nodes
@@ -224,49 +225,49 @@ class MPS(TensorNetwork):
         # Output
         if self.l_position == 0:
             if self.boundary == 'obc':
-                self.output = ParamNode(shape=(self.d_phys[0], self.d_bond[0]),
-                                        axes_names=('output', 'right'),
-                                        name='mps_output',
-                                        network=self,
-                                        param_edges=self.param_bond())
+                self.output_node = ParamNode(shape=(self.d_phys[0], self.d_bond[0]),
+                                             axes_names=('output_node', 'right'),
+                                             name='mps_output_node',
+                                             network=self,
+                                             param_edges=self.param_bond())
             else:
-                self.output = ParamNode(shape=(self.d_bond[-1], self.d_phys[0], self.d_bond[0]),
-                                        axes_names=('left', 'output', 'right'),
-                                        name='mps_output',
-                                        network=self,
-                                        param_edges=self.param_bond())
-                periodic_edge = self.output['left']
+                self.output_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[0], self.d_bond[0]),
+                                             axes_names=('left', 'output_node', 'right'),
+                                             name='mps_output_node',
+                                             network=self,
+                                             param_edges=self.param_bond())
+                periodic_edge = self.output_node['left']
 
         if self.l_position == self.n_sites - 1:
             if self.n_sites - 1 != 0:
                 if self.boundary == 'obc':
-                    self.output = ParamNode(shape=(self.d_bond[-1], self.d_phys[-1]),
-                                            axes_names=('left', 'output'),
-                                            name='mps_output',
-                                            network=self,
-                                            param_edges=self.param_bond())
+                    self.output_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[-1]),
+                                                 axes_names=('left', 'output_node'),
+                                                 name='mps_output_node',
+                                                 network=self,
+                                                 param_edges=self.param_bond())
                 else:
-                    self.output = ParamNode(shape=(self.d_bond[-2], self.d_phys[-1], self.d_bond[-1]),
-                                            axes_names=('left', 'output', 'right'),
-                                            name='mps_output',
-                                            network=self,
-                                            param_edges=self.param_bond())
-                    self.output['right'] ^ periodic_edge
+                    self.output_node = ParamNode(shape=(self.d_bond[-2], self.d_phys[-1], self.d_bond[-1]),
+                                                 axes_names=('left', 'output_node', 'right'),
+                                                 name='mps_output_node',
+                                                 network=self,
+                                                 param_edges=self.param_bond())
+                    self.output_node['right'] ^ periodic_edge
             if self.left_env:
-                self.left_env[-1]['right'] ^ self.output['left']
+                self.left_env[-1]['right'] ^ self.output_node['left']
 
         if (self.l_position > 0) and (self.l_position < self.n_sites - 1):
-            self.output = ParamNode(shape=(self.d_bond[self.l_position - 1],
-                                           self.d_phys[self.l_position],
-                                           self.d_bond[self.l_position]),
-                                    axes_names=('left', 'output', 'right'),
-                                    name='mps_output',
-                                    network=self,
-                                    param_edges=self.param_bond())
+            self.output_node = ParamNode(shape=(self.d_bond[self.l_position - 1],
+                                                self.d_phys[self.l_position],
+                                                self.d_bond[self.l_position]),
+                                         axes_names=('left', 'output_node', 'right'),
+                                         name='mps_output_node',
+                                         network=self,
+                                         param_edges=self.param_bond())
             if self.left_env:
-                self.left_env[-1]['right'] ^ self.output['left']
+                self.left_env[-1]['right'] ^ self.output_node['left']
             else:
-                self.left_node['right'] ^ self.output['left']
+                self.left_node['right'] ^ self.output_node['left']
 
         # Right
         if self.l_position < self.n_sites - 2:
@@ -279,7 +280,7 @@ class MPS(TensorNetwork):
                                  param_edges=self.param_bond())
                 self.right_env.append(node)
                 if i == self.l_position + 1:
-                    self.output['right'] ^ self.right_env[-1]['left']
+                    self.output_node['right'] ^ self.right_env[-1]['left']
                 else:
                     self.right_env[-2]['right'] ^ self.right_env[-1]['left']
 
@@ -301,112 +302,199 @@ class MPS(TensorNetwork):
             if self.right_env:
                 self.right_env[-1]['right'] ^ self.right_node['left']
             else:
-                self.output['right'] ^ self.right_node['left']
+                self.output_node['right'] ^ self.right_node['left']
 
-    def initialize(self) -> None:
+    def initialize(self, eps: float = 10e-4) -> None:
+        # OBC
         if self.boundary == 'obc':
+            # Left node
             if self.left_node is not None:
                 self.left_node.set_tensor(init_method='randn',
-                                          std=self.left_node['input'].dim() ** (-1/2))
+                                          std=self.left_node['input'].dim() ** (-1/2) + eps)
+
+            # Left environment
             for node in self.left_env:
                 node.set_tensor(init_method='randn',
-                                std=(node['input'].dim() * node['left'].dim()) ** (-1/2))
-            if self.output:
-                bonds = self.output.axes_names[:]
-                bonds.remove('output')
-                bonds_product = 1
-                for name in bonds:
-                    bonds_product *= self.output[name].dim()
-                self.output.set_tensor(init_method='randn', std=bonds_product ** (-1/2))
+                                std=(node['input'].dim() * node['left'].dim()) ** (-1/2) + eps)
+
+            # Output
+            bonds = self.output_node.axes_names[:]
+            bonds.remove('output_node')
+            bonds_product = 1
+            for name in bonds:
+                bonds_product *= self.output_node[name].dim()
+            self.output_node.set_tensor(init_method='randn', std=bonds_product ** (-1 / 2) + eps)
+
+            # Right environment
             for node in self.right_env:
                 node.set_tensor(init_method='randn',
-                                std=(node['input'].dim() * node['right'].dim()) ** (-1/2))
+                                std=(node['input'].dim() * node['right'].dim()) ** (-1/2) + eps)
+
+            # Right node
             if self.right_node is not None:
                 self.right_node.set_tensor(init_method='randn',
-                                           std=self.right_node['input'].dim() ** (-1/2))
+                                           std=self.right_node['input'].dim() ** (-1/2) + eps)
         else:
-            eps = 10e-3
+            # Left node
             if self.left_node is not None:
                 self.left_node.set_tensor(init_method='randn',
                                           std=(self.left_node['input'].dim() *
                                                self.left_node['left'].dim()) ** (-1/2) + eps)
+
+            # Left environment
             for node in self.left_env:
                 node.set_tensor(init_method='randn',
-                                std=(node['input'].dim() * node['left'].dim()) ** (-1/2) + eps)
-            if self.output:
-                self.output.set_tensor(init_method='randn',
-                                       std=(self.output['output'].dim() *
-                                            self.output['left'].dim()) ** (-1/2) + eps)
+                                std=(node['input'].dim() *
+                                     node['left'].dim()) ** (-1/2) + eps)
+
+            # Output
+            self.output_node.set_tensor(init_method='randn',
+                                        std=(self.output_node['output_node'].dim() *
+                                             self.output_node['left'].dim()) ** (-1 / 2) + eps)
+
+            # Right environment
             for node in self.right_env:
                 node.set_tensor(init_method='randn',
-                                std=(node['input'].dim() * node['left'].dim()) ** (-1/2) + eps)
+                                std=(node['input'].dim() *
+                                     node['left'].dim()) ** (-1/2) + eps)
+
+            # Right node
             if self.right_node is not None:
                 self.right_node.set_tensor(init_method='randn',
                                            std=(self.right_node['input'].dim() *
                                                 self.right_node['left'].dim()) ** (-1/2) + eps)
 
-        """
-        bond_product = 1
-        for d in self.d_bond:
-            bond_product *= d
-        for node in self.nodes.values():
-            node.set_tensor(init_method='randn', std=bond_product ** (-1 / (2 * self.n_sites)))
-        """
+        # Same distribution for all nodes -> it seems to be worse
+        #bond_product = 1
+        #for d in self.d_bond:
+        #    bond_product *= d
+        #for node in self.nodes.values():
+        #    node.set_tensor(init_method='randn', std=bond_product ** (-1 / (2 * self.n_sites)))
 
-    # TODO: check this
     def initialize2(self) -> None:
+        # OBC
         if self.boundary == 'obc':
+            # Left node
             if self.left_node is not None:
                 data = self.left_node.neighbours('input').tensor
-                squared_mean = data.mean(1).pow(2)
-                squared_std = data.std(1).pow(2)
-                target_std = (squared_mean + squared_std).pow(-1/2)
+                mean_squared = data.pow(2).mean(0)
+                target_std = (mean_squared *
+                              self.left_node['input'].dim()).pow(-1 / 2)
 
                 tensor = torch.empty_like(self.left_node.tensor)
-                for i in tensor.shape[1]:
+                for i in range(tensor.shape[1]):
                     tensor[:, i] = torch.randn(tensor.shape[0]) * target_std
                 self.left_node.set_tensor(tensor=tensor)
 
+            # Left environment
             for node in self.left_env:
                 data = node.neighbours('input').tensor
-                squared_mean = data.mean(1).pow(2)
-                squared_std = data.std(1).pow(2)
-                target_std = (node['left'].dim() * (squared_mean + squared_std)).pow(-1/2)
+                mean_squared = data.pow(2).mean(0)
+                target_std = (mean_squared *
+                              node['input'].dim() *
+                              node['left'].dim()).pow(-1 / 2)
 
                 tensor = torch.empty_like(node.tensor)
-                for i in tensor.shape[1]:
-                    tensor[:, i, :] = torch.randn(tensor.shape[0], tensor.shape[2]) * target_std
-                self.left_node.set_tensor(tensor=tensor)
+                for i in range(tensor.shape[0]):
+                    for j in range(tensor.shape[2]):
+                        tensor[i, :, j] = torch.randn(tensor.shape[1]) * target_std
+                node.set_tensor(tensor=tensor)
 
-            if self.output:
-                bonds = self.output.axes_names[:]
-                bonds.remove('output')
-                bonds_product = 1
-                for name in bonds:
-                    bonds_product *= self.output[name].dim()
-                self.output.set_tensor(init_method='randn', std=bonds_product ** (-1/2))
+            # Output
+            bonds = self.output_node.axes_names[:]
+            bonds.remove('output_node')
+            bonds_product = 1
+            for name in bonds:
+                bonds_product *= self.output_node[name].dim()
+            self.output_node.set_tensor(init_method='randn', std=bonds_product ** (-1 / 2))
 
+            # Right environment
             for node in self.right_env:
                 data = node.neighbours('input').tensor
-                squared_mean = data.mean(1).pow(2)
-                squared_std = data.std(1).pow(2)
-                target_std = (node['right'].dim() * (squared_mean + squared_std)).pow(-1 / 2)
+                mean_squared = data.pow(2).mean(0)
+                target_std = (mean_squared *
+                              node['input'].dim() *
+                              node['right'].dim()).pow(-1 / 2)
 
                 tensor = torch.empty_like(node.tensor)
-                for i in tensor.shape[1]:
-                    tensor[:, i, :] = torch.randn(tensor.shape[0], tensor.shape[2]) * target_std
-                self.left_node.set_tensor(tensor=tensor)
+                for i in range(tensor.shape[0]):
+                    for j in range(tensor.shape[2]):
+                        tensor[i, :, j] = torch.randn(tensor.shape[1]) * target_std
+                node.set_tensor(tensor=tensor)
 
+            # Right node
             if self.right_node is not None:
                 data = self.right_node.neighbours('input').tensor
-                squared_mean = data.mean(1).pow(2)
-                squared_std = data.std(1).pow(2)
-                target_std = (squared_mean + squared_std).pow(-1/2)
+                mean_squared = data.pow(2).mean(0)
+                target_std = (mean_squared *
+                              self.right_node['input'].dim()).pow(-1 / 2)
 
                 tensor = torch.empty_like(self.right_node.tensor)
-                for i in tensor.shape[0]:
+                for i in range(tensor.shape[0]):
                     tensor[i, :] = torch.randn(tensor.shape[1]) * target_std
+                self.right_node.set_tensor(tensor=tensor)
+
+        # PBC
+        else:
+            # Left node
+            if self.left_node is not None:
+                data = self.left_node.neighbours('input').tensor
+                mean_squared = data.pow(2).mean(0)
+                target_std = (mean_squared *
+                              self.left_node['input'].dim() *
+                              self.left_node['left'].dim()).pow(-1 / 2)
+
+                tensor = torch.empty_like(self.left_node.tensor)
+                for i in range(tensor.shape[0]):
+                    for j in range(tensor.shape[2]):
+                        tensor[i, :, j] = torch.randn(tensor.shape[1]) * target_std
                 self.left_node.set_tensor(tensor=tensor)
+
+            # Left environment
+            for node in self.left_env:
+                data = node.neighbours('input').tensor
+                mean_squared = data.pow(2).mean(0)
+                target_std = (mean_squared *
+                              node['input'].dim() *
+                              node['left'].dim()).pow(-1 / 2)
+
+                tensor = torch.empty_like(node.tensor)
+                for i in range(tensor.shape[0]):
+                    for j in range(tensor.shape[2]):
+                        tensor[i, :, j] = torch.randn(tensor.shape[1]) * target_std
+                node.set_tensor(tensor=tensor)
+
+            # Output
+            self.output_node.set_tensor(init_method='randn',
+                                        std=self.output_node['left'].dim() ** (-1 / 2))
+
+            # Right environment
+            for node in self.right_env:
+                data = node.neighbours('input').tensor
+                mean_squared = data.pow(2).mean(0)
+                target_std = (mean_squared *
+                              node['input'].dim() *
+                              node['left'].dim()).pow(-1 / 2)
+
+                tensor = torch.empty_like(node.tensor)
+                for i in range(tensor.shape[0]):
+                    for j in range(tensor.shape[2]):
+                        tensor[i, :, j] = torch.randn(tensor.shape[1]) * target_std
+                node.set_tensor(tensor=tensor)
+
+            # Right node
+            if self.right_node is not None:
+                data = self.right_node.neighbours('input').tensor
+                mean_squared = data.pow(2).mean(0)
+                target_std = (mean_squared *
+                              self.right_node['input'].dim() *
+                              self.right_node['left'].dim()).pow(-1 / 2)
+
+                tensor = torch.empty_like(self.right_node.tensor)
+                for i in range(tensor.shape[0]):
+                    for j in range(tensor.shape[2]):
+                        tensor[i, :, j] = torch.randn(tensor.shape[1]) * target_std
+                self.right_node.set_tensor(tensor=tensor)
 
     def set_data_nodes(self,
                        batch_sizes: Sequence[int],
@@ -502,7 +590,7 @@ class MPS(TensorNetwork):
                 right_env_contracted = self._inline_contraction(right_env)
             right_list.append(right_env_contracted)
             
-        result_list = left_list + [self.output] + right_list
+        result_list = left_list + [self.output_node] + right_list
         result = result_list[0]
         for node in result_list[1:]:
             result @= node
@@ -515,6 +603,17 @@ class MPS(TensorNetwork):
 
         return result
 
-    def forward(self, data: Sequence[torch.Tensor]) -> torch.Tensor:
-        self._add_data(data=data)
+    def forward(self, data: torch.Tensor) -> torch.Tensor:
+        """
+        Parameters
+        ----------
+        data: tensor with shape batch x feature x n_features
+        """
+        if not self.data_nodes:
+            # All data tensors have the same batch size
+            self.set_data_nodes(batch_sizes=[data.shape[0]])
+            self._add_data(data=data.unbind(2))
+            #self.initialize2()
+        else:
+            self._add_data(data=data.unbind(2))
         return self.contract().tensor

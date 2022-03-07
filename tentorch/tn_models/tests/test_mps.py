@@ -18,9 +18,8 @@ def test_mps():
                  l_position=5,
                  boundary='obc')
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
     mean = result.mean(0)
     mean[0].backward()
     std = result.std(0)
@@ -34,10 +33,11 @@ def test_mps():
                  l_position=0,
                  boundary='obc')
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
-    result.mean().backward()
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -48,10 +48,11 @@ def test_mps():
                  l_position=1,
                  boundary='obc')
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
-    result.mean().backward()
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -62,10 +63,11 @@ def test_mps():
                  l_position=9,
                  boundary='obc')
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
-    result.mean().backward()
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -76,10 +78,11 @@ def test_mps():
                  l_position=10,
                  boundary='obc')
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
-    result.mean().backward()
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -92,10 +95,11 @@ def test_mps():
                  boundary='obc',
                  param_bond=True)
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
-    result.mean().backward()
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -107,10 +111,11 @@ def test_mps():
                  boundary='obc',
                  param_bond=True)
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
-    result.mean().backward()
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -122,10 +127,11 @@ def test_mps():
                  boundary='obc',
                  param_bond=True)
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
-    result.mean().backward()
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -137,10 +143,11 @@ def test_mps():
                  boundary='obc',
                  param_bond=True)
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
-    result.mean().backward()
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -152,9 +159,8 @@ def test_mps():
                  boundary='obc',
                  param_bond=True)
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
     mean = result.mean(0)
     mean[0].backward()
     std = result.std(0)
@@ -169,9 +175,8 @@ def test_mps():
                  l_position=5,
                  boundary='pbc')
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
     mean = result.mean(0)
     mean[0].backward()
     std = result.std(0)
@@ -185,10 +190,11 @@ def test_mps():
                  l_position=0,
                  boundary='pbc')
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
-    result.mean().backward()
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -199,10 +205,11 @@ def test_mps():
                  l_position=1,
                  boundary='pbc')
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
-    result.mean().backward()
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -213,10 +220,11 @@ def test_mps():
                  l_position=9,
                  boundary='pbc')
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
-    result.mean().backward()
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -227,10 +235,11 @@ def test_mps():
                  l_position=10,
                  boundary='pbc')
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
-    result.mean().backward()
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -243,10 +252,11 @@ def test_mps():
                  boundary='pbc',
                  param_bond=True)
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
-    result.mean().backward()
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -258,10 +268,11 @@ def test_mps():
                  boundary='pbc',
                  param_bond=True)
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
-    result.mean().backward()
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -273,10 +284,11 @@ def test_mps():
                  boundary='pbc',
                  param_bond=True)
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
-    result.mean().backward()
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -288,10 +300,11 @@ def test_mps():
                  boundary='pbc',
                  param_bond=True)
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
-    result.mean().backward()
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -303,10 +316,11 @@ def test_mps():
                  boundary='pbc',
                  param_bond=True)
 
-    mps.set_data_nodes(batch_sizes=[100])
-    data = torch.randn(10, 100, 5)
-    result = mps.forward(data.unbind())
-    result.mean().backward()
+    data = torch.randn(1000, 5, 10)
+    result = mps.forward(data)
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 

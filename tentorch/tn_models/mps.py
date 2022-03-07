@@ -2,26 +2,19 @@
 MPS class
 """
 
-import warnings
-from typing import (overload, Union, Optional,
-                    Sequence, Text, List, Tuple)
+from typing import (Union, Optional, Sequence,
+                    Text, List, Tuple)
 
 import torch
-import torch.nn as nn
 
 from tentorch.network_components import (AbstractNode, Node, ParamNode,
-                                         AbstractEdge, Edge, ParamEdge)
+                                         AbstractEdge)
 from tentorch.network_components import TensorNetwork
 
 from tentorch.node_operations import einsum, stacked_einsum
 
 
-# TODO: MPS -> contraemos resultados y luego hacemos delete_node(node) y
-#  del node para eliminar los nodos intermedios de la red y borrar las
-#  referencias a ellos para poder liberar memoria
-# TODO: poner nombre "especial" a los nodos resultantes para deletearlos fácil
 # TODO: move_l_position -> needs svd and qr to contract and split nodes
-
 class MPS(TensorNetwork):
 
     def __init__(self,
@@ -424,23 +417,3 @@ class MPS(TensorNetwork):
     def forward(self, data: Sequence[torch.Tensor]) -> torch.Tensor:
         self._add_data(data=data)
         return self.contract().tensor
-
-
-class Tree(TensorNetwork):
-
-    def __init__(self,
-                 n_sites: int,
-                 d_phys: int,
-                 d_bond: int,
-                 l_position: Optional[int] = None):
-        super().__init__()
-        pass
-
-    def initialize(self) -> None:
-        pass
-
-    def contract(self) -> torch.Tensor:
-        pass
-
-    def forward(self, data: torch.Tensor) -> torch.Tensor:
-        pass

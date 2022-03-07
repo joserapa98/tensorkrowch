@@ -21,7 +21,9 @@ def test_mps():
     mps.set_data_nodes(batch_sizes=[100])
     data = torch.randn(10, 100, 5)
     result = mps.forward(data.unbind())
-    result.mean().backward()
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -153,7 +155,9 @@ def test_mps():
     mps.set_data_nodes(batch_sizes=[100])
     data = torch.randn(10, 100, 5)
     result = mps.forward(data.unbind())
-    result.mean().backward()
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 
@@ -168,7 +172,9 @@ def test_mps():
     mps.set_data_nodes(batch_sizes=[100])
     data = torch.randn(10, 100, 5)
     result = mps.forward(data.unbind())
-    result.mean().backward()
+    mean = result.mean(0)
+    mean[0].backward()
+    std = result.std(0)
     assert len(mps.nodes) == 21
     assert len(mps.edges) == 1
 

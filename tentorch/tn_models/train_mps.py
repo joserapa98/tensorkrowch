@@ -61,7 +61,7 @@ transform = transforms.Compose([transforms.ToTensor(),
                                 transforms.Resize(14),
                                 transforms.Lambda(embedding)])
 
-batch_size = 1000
+batch_size = 500
 train_set = torchvision.datasets.MNIST(root='~/PycharmProjects/TeNTorch/tentorch/tn_models/data',
                                        train=True,
                                        download=True,

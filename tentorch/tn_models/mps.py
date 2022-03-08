@@ -624,7 +624,7 @@ class MPS(TensorNetwork):
             self.set_data_nodes(batch_sizes=[data.shape[0]])
             self._add_data(data=data.unbind(2))
             self._permanent_nodes = list(self.nodes.values())
-            #self.initialize2()
+            self.initialize2()
         else:
             self._add_data(data=data.unbind(2))
         return self.contract().tensor

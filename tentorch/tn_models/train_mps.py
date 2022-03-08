@@ -44,7 +44,8 @@ class MyMPS(nn.Module):
 
 
 def embedding(image: torch.Tensor) -> torch.Tensor:
-    return unit(image.unsqueeze(1), dim=2)
+    return torch.stack([image, 1 - image], dim=1)
+    #return unit(image.unsqueeze(1), dim=2)
 
 
 def accuracy(model, data, labels):
@@ -58,24 +59,28 @@ def accuracy(model, data, labels):
 
 transform = transforms.Compose([transforms.ToTensor(),
                                 transforms.Normalize((0.1307,), (0.3081,)),
-                                transforms.Resize(14),
+                                #transforms.Resize(14),
                                 transforms.Lambda(embedding)])
 
-batch_size = 500
+num_train = 2000
+num_test = 1000
+batch_size = 100
+
 train_set = torchvision.datasets.MNIST(root='~/PycharmProjects/TeNTorch/tentorch/tn_models/data',
                                        train=True,
                                        download=True,
                                        transform=transform)
-train_set, val_set = torch.utils.data.random_split(train_set, [50000, 10000])
-
-train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True)
-val_loader = torch.utils.data.DataLoader(val_set, batch_size=1000)
+#train_set, val_set = torch.utils.data.random_split(train_set, [50000, 10000])
+train_sampler = torch.utils.data.SubsetRandomSampler(range(num_train))
+train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=False, sampler=train_sampler)
+#val_loader = torch.utils.data.DataLoader(val_set, batch_size=1000)
 
 test_set = torchvision.datasets.MNIST(root='~/PycharmProjects/TeNTorch/tentorch/tn_models/data',
                                       train=False,
                                       download=True,
                                       transform=transform)
-test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=True)
+test_sampler = torch.utils.data.SubsetRandomSampler(range(num_test))
+test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False, sampler=test_sampler)
 
 mps = MyMPS(n_sites=14*14 + 1,
             d_phys=2,
@@ -94,7 +99,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(mps.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
 num_epochs = 20
-n_print = 5
+n_print = 2
 
 # Train
 mps = mps.to(device)
@@ -117,8 +122,8 @@ for epoch in range(num_epochs):
             for images, labels in test_loader:
                 images, labels = images.to(device), labels.to(device)
                 acc += accuracy(mps, images.squeeze(1).view(-1, 2, 14*14), labels)
-            print(f'Epoch: [{epoch + 1}/{num_epochs}], Batch: [{i + 1}/{len(train_set)//batch_size}], '
-                  f'Train. Loss: {running_loss}, Acc.: {acc/(len(val_set)/batch_size)}')
+            print(f'Epoch: [{epoch + 1}/{num_epochs}], Batch: [{i + 1}/{num_train//batch_size}], '
+                  f'Train. Loss: {running_loss/n_print}, Acc.: {acc/(num_test//batch_size)}')
             running_loss = 0
 
 print('Finished training')

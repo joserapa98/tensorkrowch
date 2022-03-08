@@ -12,10 +12,12 @@ def unit(data: torch.Tensor, dim: int) -> torch.Tensor:
     """
     Parameters
     ----------
-    data: input tensor with shape batch x 1 -> batch x dim
+    data: input tensor with shape batch x 1 x n_features -> batch x dim x n_features
     dim: embedding dimension
     """
-    embedded_data = torch.empty(data.shape[0], dim)
+    shape = list(data.shape)
+    shape[1] = dim
+    embedded_data = torch.empty(shape)
     for i in range(1, dim + 1):
         aux = sqrt(comb_num(dim - 1, i - 1)) *\
               (pi / 2 * data[:, 0]).cos().pow(dim - i) *\

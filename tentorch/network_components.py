@@ -1071,6 +1071,12 @@ class ParamNode(AbstractNode, nn.Module):
             return ParamEdge(node1=self, axis1=axis)
         return Edge(node1=self, axis1=axis)
 
+    def __setattr__(self, name: Text, value: Union[torch.Tensor, nn.Module]) -> None:
+        if name == '_network':
+            ABC.__setattr__(self, name, value)
+        else:
+            nn.Module.__setattr__(self, name, value)
+
 
 ################################################
 #                   EDGES                      #

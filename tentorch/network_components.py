@@ -575,13 +575,9 @@ class AbstractNode(ABC):
 
     @staticmethod
     def _make_copy_tensor(shape: Shape) -> torch.Tensor:
-        for i in shape[1:]:
-            if i != shape[0]:
-                raise ValueError(f'`shape` has unequal dimensions. Copy tensors '
-                                 f'have the same dimension in all their axes.')
         copy_tensor = torch.zeros(shape)
         rank = len(shape)
-        i = torch.arange(shape[0])
+        i = torch.arange(min(shape))
         copy_tensor[(i,) * rank] = 1.
         return copy_tensor
 

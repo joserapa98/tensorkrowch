@@ -2,6 +2,11 @@
 Train MPS models
 """
 
+from typing import (Union, Optional, Sequence,
+                    Text, List, Tuple)
+
+import matplotlib.pyplot as plt
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -10,6 +15,32 @@ from torchvision import transforms
 
 from tentorch.tn_models.embeddings import unit
 from tentorch.tn_models.mps import MPS
+
+
+class MyMPS(nn.Module):
+    def __init__(self,
+                 n_sites: int,
+                 d_phys: Union[int, Sequence[int]],
+                 n_labels: int,
+                 d_bond: Union[int, Sequence[int]],
+                 l_position: Optional[int] = None,
+                 boundary: Text = 'obc',
+                 param_bond: bool = False) -> None:
+
+        super().__init__()
+
+        self.mps = MPS(n_sites=n_sites,
+                       d_phys=d_phys,
+                       n_labels=n_labels,
+                       d_bond=d_bond,
+                       l_position=l_position,
+                       boundary=boundary,
+                       param_bond=param_bond)
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, x):
+        x = self.mps(x)
+        return self.softmax(x)
 
 
 def embedding(image: torch.Tensor) -> torch.Tensor:
@@ -30,7 +61,7 @@ transform = transforms.Compose([transforms.ToTensor(),
                                 transforms.Resize(14),
                                 transforms.Lambda(embedding)])
 
-batch_size = 100
+batch_size = 1000
 train_set = torchvision.datasets.MNIST(root='~/PycharmProjects/TeNTorch/tentorch/tn_models/data',
                                        train=True,
                                        download=True,
@@ -44,37 +75,25 @@ test_set = torchvision.datasets.MNIST(root='~/PycharmProjects/TeNTorch/tentorch/
                                       train=False,
                                       download=True,
                                       transform=transform)
-test_loader = torch.utils.data.DataLoader(test_set, batch_size=10000, shuffle=True)
+test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=True)
 
-#data = torch.randn(10000, 1, 2)  # batch x feature x n_features
-#data_list = data.unbind(2)
-#embedded_data_list = list(map(lambda x: unit(data=x, dim=2), data_list))
-#embedded_data = torch.stack(embedded_data_list, dim=2)
-#labels = data.sum((1, 2))
-
-mps = MPS(n_sites=14*14 + 1,
-          d_phys=2,
-          n_labels=10,
-          d_bond=2,
-          l_position=None,
-          boundary='obc',
-          param_bond=False)
-
-print(mps.children)
+mps = MyMPS(n_sites=14*14 + 1,
+            d_phys=2,
+            n_labels=10,
+            d_bond=10,
+            l_position=None,
+            boundary='obc',
+            param_bond=False)
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 learning_rate = 1e-4
-weight_decay = 0.1
-#momentum = 0.6
+weight_decay = 0.0
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(mps.parameters(),
-                       lr=learning_rate,
-                       weight_decay=weight_decay,)
-                       #momentum=momentum)
+optimizer = optim.Adam(mps.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
-num_epochs = 100
+num_epochs = 20
 n_print = 5
 
 # Train
@@ -94,17 +113,12 @@ for epoch in range(num_epochs):
         running_loss += loss.item()
 
         if i % n_print == n_print - 1:
-            val_loss = 0
+            acc = 0
             for images, labels in test_loader:
                 images, labels = images.to(device), labels.to(device)
-                acc = accuracy(mps, images.squeeze(1).view(-1, 2, 14*14), labels)
-
-                #outputs = mps(images.squeeze(1).view(-1, 2, 14*14))
-                #loss = criterion(outputs, labels)
-                #val_loss += loss.item()
-                print(f'Epoch: [{epoch + 1}/{num_epochs}], Batch: [{(i + 1)/batch_size}/{8000/batch_size}], '
-                      f'Train. Loss: {running_loss}, Acc.: {acc}')
-            #val_loss = 0
+                acc += accuracy(mps, images.squeeze(1).view(-1, 2, 14*14), labels)
+            print(f'Epoch: [{epoch + 1}/{num_epochs}], Batch: [{i + 1}/{len(train_set)//batch_size}], '
+                  f'Train. Loss: {running_loss}, Acc.: {acc/(len(val_set)/batch_size)}')
             running_loss = 0
 
 print('Finished training')

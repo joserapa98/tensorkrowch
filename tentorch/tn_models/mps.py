@@ -1,7 +1,6 @@
 """
 MPS class
 """
-# cambio
 
 from typing import (Union, Optional, Sequence,
                     Text, List, Tuple)

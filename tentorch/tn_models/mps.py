@@ -308,6 +308,7 @@ class MPS(TensorNetwork):
             self.right_node = None
 
     def initialize(self, eps: float = 10e-4) -> None:
+        """
         # OBC
         if self.boundary == 'obc':
             # Left node
@@ -366,15 +367,18 @@ class MPS(TensorNetwork):
                 self.right_node.set_tensor(init_method='randn',
                                            std=(self.right_node['input'].dim() *
                                                 self.right_node['left'].dim()) ** (-1/2) + eps)
-
+        """
         # Same distribution for all nodes -> it seems to be worse
-        #bond_product = 1
-        #for d in self.d_bond:
-        #    bond_product *= d
-        #for node in self.nodes.values():
-        #    node.set_tensor(init_method='randn', std=bond_product ** (-1 / (2 * self.n_sites)))
+        bond_product = 1
+        for d in self.d_bond:
+            bond_product *= d
+        for node in self.nodes.values():
+            node.set_tensor(init_method='randn', std=bond_product ** (-1 / (2 * self.n_sites)))
 
     def initialize2(self) -> None:
+        # TODO: device should be eligible
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
         # OBC
         if self.boundary == 'obc':
             # Left node
@@ -384,9 +388,9 @@ class MPS(TensorNetwork):
                 target_std = (mean_squared *
                               self.left_node['input'].dim()).pow(-1 / 2)
 
-                tensor = torch.empty_like(self.left_node.tensor)
+                tensor = torch.empty_like(self.left_node.tensor).to(device)
                 for i in range(tensor.shape[1]):
-                    tensor[:, i] = torch.randn(tensor.shape[0]) * target_std
+                    tensor[:, i] = torch.randn(tensor.shape[0]).to(device) * target_std
                 self.left_node.set_tensor(tensor=tensor)
 
             # Left environment
@@ -397,10 +401,10 @@ class MPS(TensorNetwork):
                               node['input'].dim() *
                               node['left'].dim()).pow(-1 / 2)
 
-                tensor = torch.empty_like(node.tensor)
+                tensor = torch.empty_like(node.tensor).to(device)
                 for i in range(tensor.shape[0]):
                     for j in range(tensor.shape[2]):
-                        tensor[i, :, j] = torch.randn(tensor.shape[1]) * target_std
+                        tensor[i, :, j] = torch.randn(tensor.shape[1]).to(device) * target_std
                 node.set_tensor(tensor=tensor)
 
             # Output
@@ -409,7 +413,9 @@ class MPS(TensorNetwork):
             bonds_product = 1
             for name in bonds:
                 bonds_product *= self.output_node[name].dim()
-            self.output_node.set_tensor(init_method='randn', std=bonds_product ** (-1 / 2))
+            self.output_node.set_tensor(device=device,
+                                        init_method='randn',
+                                        std=bonds_product ** (-1 / 2))
 
             # Right environment
             for node in self.right_env:
@@ -419,10 +425,10 @@ class MPS(TensorNetwork):
                               node['input'].dim() *
                               node['right'].dim()).pow(-1 / 2)
 
-                tensor = torch.empty_like(node.tensor)
+                tensor = torch.empty_like(node.tensor).to(device)
                 for i in range(tensor.shape[0]):
                     for j in range(tensor.shape[2]):
-                        tensor[i, :, j] = torch.randn(tensor.shape[1]) * target_std
+                        tensor[i, :, j] = torch.randn(tensor.shape[1]).to(device) * target_std
                 node.set_tensor(tensor=tensor)
 
             # Right node
@@ -432,9 +438,9 @@ class MPS(TensorNetwork):
                 target_std = (mean_squared *
                               self.right_node['input'].dim()).pow(-1 / 2)
 
-                tensor = torch.empty_like(self.right_node.tensor)
+                tensor = torch.empty_like(self.right_node.tensor).to(device)
                 for i in range(tensor.shape[0]):
-                    tensor[i, :] = torch.randn(tensor.shape[1]) * target_std
+                    tensor[i, :] = torch.randn(tensor.shape[1]).to(device) * target_std
                 self.right_node.set_tensor(tensor=tensor)
 
         # PBC
@@ -447,10 +453,10 @@ class MPS(TensorNetwork):
                               self.left_node['input'].dim() *
                               self.left_node['left'].dim()).pow(-1 / 2)
 
-                tensor = torch.empty_like(self.left_node.tensor)
+                tensor = torch.empty_like(self.left_node.tensor).to(device)
                 for i in range(tensor.shape[0]):
                     for j in range(tensor.shape[2]):
-                        tensor[i, :, j] = torch.randn(tensor.shape[1]) * target_std
+                        tensor[i, :, j] = torch.randn(tensor.shape[1]).to(device) * target_std
                 self.left_node.set_tensor(tensor=tensor)
 
             # Left environment
@@ -461,14 +467,15 @@ class MPS(TensorNetwork):
                               node['input'].dim() *
                               node['left'].dim()).pow(-1 / 2)
 
-                tensor = torch.empty_like(node.tensor)
+                tensor = torch.empty_like(node.tensor).to(device)
                 for i in range(tensor.shape[0]):
                     for j in range(tensor.shape[2]):
-                        tensor[i, :, j] = torch.randn(tensor.shape[1]) * target_std
+                        tensor[i, :, j] = torch.randn(tensor.shape[1]).to(device) * target_std
                 node.set_tensor(tensor=tensor)
 
             # Output
-            self.output_node.set_tensor(init_method='randn',
+            self.output_node.set_tensor(device=device,
+                                        init_method='randn',
                                         std=self.output_node['left'].dim() ** (-1 / 2))
 
             # Right environment
@@ -479,10 +486,10 @@ class MPS(TensorNetwork):
                               node['input'].dim() *
                               node['left'].dim()).pow(-1 / 2)
 
-                tensor = torch.empty_like(node.tensor)
+                tensor = torch.empty_like(node.tensor).to(device)
                 for i in range(tensor.shape[0]):
                     for j in range(tensor.shape[2]):
-                        tensor[i, :, j] = torch.randn(tensor.shape[1]) * target_std
+                        tensor[i, :, j] = torch.randn(tensor.shape[1]).to(device) * target_std
                 node.set_tensor(tensor=tensor)
 
             # Right node
@@ -493,10 +500,10 @@ class MPS(TensorNetwork):
                               self.right_node['input'].dim() *
                               self.right_node['left'].dim()).pow(-1 / 2)
 
-                tensor = torch.empty_like(self.right_node.tensor)
+                tensor = torch.empty_like(self.right_node.tensor).to(device)
                 for i in range(tensor.shape[0]):
                     for j in range(tensor.shape[2]):
-                        tensor[i, :, j] = torch.randn(tensor.shape[1]) * target_std
+                        tensor[i, :, j] = torch.randn(tensor.shape[1]).to(device) * target_std
                 self.right_node.set_tensor(tensor=tensor)
 
     def set_data_nodes(self,

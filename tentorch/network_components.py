@@ -631,6 +631,7 @@ class AbstractNode(ABC):
 
     def set_tensor(self,
                    tensor: Optional[torch.Tensor] = None,
+                   device: torch.device = torch.device('cpu'),
                    init_method: Optional[Text] = 'zeros',
                    **kwargs: float) -> None:
         """
@@ -646,6 +647,7 @@ class AbstractNode(ABC):
             self._tensor = self.set_tensor_format(tensor)
         elif init_method is not None:
             tensor = self.make_tensor(init_method=init_method, **kwargs)
+            tensor = tensor.to(device)
             self._tensor = self.set_tensor_format(tensor)
         else:
             raise ValueError('One of `tensor` or `init_method` must be provided')

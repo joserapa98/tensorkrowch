@@ -220,3 +220,24 @@ def test_mps():
     mps = tn.MPS(n_sites=2, d_phys=5, n_labels=10, d_bond=2, l_position=1, boundary='obc', param_bond=True)
 
     mps = tn.MPS(n_sites=1, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='pbc', param_bond=True)
+
+
+def test_example_mps():
+    mps = tn.MPS(n_sites=2, d_phys=2, n_labels=2, d_bond=2, l_position=1, boundary='obc')
+
+    data = torch.randn(1, 2, 1).cuda()
+    result = mps.forward(data)
+    result[0, 0].backward()
+
+    I = data.squeeze(2)
+    A = mps.left_node.tensor
+    B = mps.output_node.tensor
+
+    grad_A = I.t() @ B[:, 0].view(2, 1).t()
+    grad_B = (I @ A).t() @ torch.tensor([[1., 0.]]).cuda()
+
+    assert torch.equal(A.grad, grad_A)
+    assert torch.equal(B.grad, grad_B)
+
+
+

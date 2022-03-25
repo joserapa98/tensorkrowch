@@ -139,7 +139,8 @@ def einsum(string: Text, *nodes: AbstractNode) -> Node:
                     param_edges=False,
                     tensor=new_tensor,
                     edges=list(edges.values()),
-                    node1_list=list(node1_list.values()))
+                    node1_list=list(node1_list.values()),
+                    override_node=True)
     return new_node
 
 
@@ -147,7 +148,8 @@ class StackNode(Node):
 
     def __init__(self,
                  nodes: List[AbstractNode],
-                 name: Optional[Text] = None) -> None:
+                 name: Optional[Text] = None,
+                 override_node: bool = False) -> None:
 
         for i in range(len(nodes[:-1])):
             if not isinstance(nodes[i], type(nodes[i + 1])):
@@ -177,7 +179,8 @@ class StackNode(Node):
         super().__init__(axes_names=['stack'] + nodes[0].axes_names,
                          name=name,
                          network=nodes[0].network,
-                         tensor=stacked_tensor)
+                         tensor=stacked_tensor,
+                         override_node=override_node)
 
     @property
     def edges_dict(self) -> Dict[Text, Union[List[Edge], List[ParamEdge]]]:
@@ -287,7 +290,8 @@ def stack(nodes: List[AbstractNode], name: Optional[Text] = None) -> StackNode:
     Stack nodes into a StackNode. The stack dimension will be the
     first one in the resultant node
     """
-    return StackNode(nodes, name=name)
+    # TODO: override_node = True para solo cambiar el tensor
+    return StackNode(nodes, name=name, override_node=True)
 
 
 def unbind(node: AbstractNode) -> List[Node]:
@@ -303,7 +307,8 @@ def unbind(node: AbstractNode) -> List[Node]:
                         tensor=tensor,
                         edges=[edge.edges[i] if isinstance(edge, AbstractStackEdge)
                                else edge for edge in node.edges[1:]],
-                        node1_list=node.node1_list[1:])
+                        node1_list=node.node1_list[1:],
+                        override_node=True)
         nodes.append(new_node)
     return nodes
 

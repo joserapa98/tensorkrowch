@@ -240,4 +240,25 @@ def test_example_mps():
     assert torch.equal(B.grad, grad_B)
 
 
+def test_example2_mps():
+    mps = tn.MPS(n_sites=5, d_phys=2, n_labels=2, d_bond=2, boundary='obc')
+    for node in mps.nodes.values():
+        node.set_tensor(init_method='ones')
+
+    data = torch.ones(1, 4)
+    data = torch.stack([data, 1 - data], dim=1)
+    result = mps.forward(data)
+    result[0, 0].backward()
+
+    I = data.squeeze(2)
+    A = mps.left_node.tensor
+    B = mps.output_node.tensor
+
+    grad_A = I.t() @ B[:, 0].view(2, 1).t()
+    grad_B = (I @ A).t() @ torch.tensor([[1., 0.]]).cuda()
+
+    assert torch.equal(A.grad, grad_A)
+    assert torch.equal(B.grad, grad_B)
+
+
 

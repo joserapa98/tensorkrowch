@@ -603,18 +603,18 @@ class MPS(TensorNetwork):
 
         # Operations of right environment
         right_list = []
-        if self.right_node is not None:
-            if self.boundary == 'obc':
-                right_node = einsum('li,bi->lb', self.right_node, self.right_node.neighbours('input'))
-            else:
-                right_node = einsum('lir,bi->lbr', self.right_node, self.right_node.neighbours('input'))
-            right_list.append(right_node)
         if right_env is not None:
             if not self.param_bond() and self.same_d_phys() and self.same_d_bond():
                 right_env_contracted = self._pairwise_contraction(right_env)
             else:
                 right_env_contracted = self._inline_contraction(right_env)
             right_list.append(right_env_contracted)
+        if self.right_node is not None:
+            if self.boundary == 'obc':
+                right_node = einsum('li,bi->lb', self.right_node, self.right_node.neighbours('input'))
+            else:
+                right_node = einsum('lir,bi->lbr', self.right_node, self.right_node.neighbours('input'))
+            right_list.append(right_node)
             
         result_list = left_list + [self.output_node] + right_list
         result = result_list[0]

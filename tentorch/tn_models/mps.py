@@ -256,6 +256,8 @@ class MPS(TensorNetwork):
                     self.output_node['right'] ^ periodic_edge
             if self.left_env:
                 self.left_env[-1]['right'] ^ self.output_node['left']
+            else:
+                self.left_node['right'] ^ self.output_node['left']
 
         if (self.l_position > 0) and (self.l_position < self.n_sites - 1):
             self.output_node = ParamNode(shape=(self.d_bond[self.l_position - 1],
@@ -307,7 +309,7 @@ class MPS(TensorNetwork):
         else:
             self.right_node = None
 
-    def initialize(self, eps: float = 10e-4) -> None:
+    def initialize(self, eps: float = 10e-10) -> None:
         """
         # OBC
         if self.boundary == 'obc':
@@ -367,13 +369,27 @@ class MPS(TensorNetwork):
                 self.right_node.set_tensor(init_method='randn',
                                            std=(self.right_node['input'].dim() *
                                                 self.right_node['left'].dim()) ** (-1/2) + eps)
-        """
+
         # Same distribution for all nodes -> it seems to be worse
         bond_product = 1
         for d in self.d_bond:
             bond_product *= d
         for node in self.nodes.values():
             node.set_tensor(init_method='randn', std=bond_product ** (-1 / (2 * self.n_sites)))
+        """
+        # initialize like torchMPS
+        std = 1e-9
+        for node in self.nodes.values():
+            if node.name != 'output_node':
+                node.set_tensor(init_method='randn', std=std)
+            else:
+                # TODO: case output node is in the left or right end
+                eye_tensor = torch.eye(node.shape[0], node.shape[2]).view([node.shape[0], 1, node.shape[2]])
+                eye_tensor = eye_tensor.expand(node.shape)
+
+                # Add on a bit of random noise
+                tensor = eye_tensor + std * torch.randn(node.shape)
+                node.set_tensor(tensor=tensor)
 
     def initialize2(self) -> None:
         # TODO: device should be eligible
@@ -624,7 +640,7 @@ class MPS(TensorNetwork):
             self.set_data_nodes(batch_sizes=[data.shape[0]])
             self._add_data(data=data.unbind(2))
             self._permanent_nodes = list(self.nodes.values())
-            self.initialize2()
+            #self.initialize2()
         else:
             self._add_data(data=data.unbind(2))
         return self.contract().tensor

@@ -139,8 +139,7 @@ def einsum(string: Text, *nodes: AbstractNode) -> Node:
                     param_edges=False,
                     tensor=new_tensor,
                     edges=list(edges.values()),
-                    node1_list=list(node1_list.values()),
-                    override_node=True)
+                    node1_list=list(node1_list.values()))
     return new_node
 
 
@@ -291,7 +290,7 @@ def stack(nodes: List[AbstractNode], name: Optional[Text] = None) -> StackNode:
     first one in the resultant node
     """
     # TODO: override_node = True para solo cambiar el tensor
-    return StackNode(nodes, name=name, override_node=True)
+    return StackNode(nodes, name=name)
 
 
 def unbind(node: AbstractNode) -> List[Node]:
@@ -307,8 +306,7 @@ def unbind(node: AbstractNode) -> List[Node]:
                         tensor=tensor,
                         edges=[edge.edges[i] if isinstance(edge, AbstractStackEdge)
                                else edge for edge in node.edges[1:]],
-                        node1_list=node.node1_list[1:],
-                        override_node=True)
+                        node1_list=node.node1_list[1:])
         nodes.append(new_node)
     return nodes
 

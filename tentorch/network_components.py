@@ -2133,8 +2133,7 @@ def contract_edges(edges: List[AbstractEdge],
                     param_edges=False,
                     tensor=new_tensor,
                     edges=edges,
-                    node1_list=node1_list,
-                    override_node=True)
+                    node1_list=node1_list)
     return new_node
 
 

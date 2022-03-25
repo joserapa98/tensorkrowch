@@ -21,7 +21,7 @@ periodic_bc = False
 num_train = 2000
 num_test = 1000
 batch_size = 100
-num_epochs = 20
+num_epochs = 5
 learn_rate = 1e-4
 l2_reg = 0.0
 
@@ -50,7 +50,8 @@ class MyMPS(nn.Module):
 
     def forward(self, x):
         x = self.mps(x)
-        return self.softmax(x)
+        #return self.softmax(x)
+        return x
 
 
 mps = MyMPS(n_sites=28*28 + 1,
@@ -142,6 +143,7 @@ for epoch_num in range(1, num_epochs + 1):
 
         for inputs, labels in loaders["test"]:
             inputs, labels = inputs.view([batch_size, 2, 28 ** 2]), labels.data
+            inputs, labels = inputs.cuda(), labels.cuda()
 
             # Call our MPS to get logit scores and predictions
             scores = mps(inputs)

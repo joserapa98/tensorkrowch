@@ -1608,17 +1608,38 @@ class TensorNetwork(nn.Module):
         if node.network == self:
             warnings.warn('`node` is already in the network')
         else:
+            # TODO: Nos cargamos lo de override para arreglar lo de la contracción en TN.
+            #  Habrá que arreglarlo. Si dos nodos tienen el mismo nombre, lo que hacemos es
+            #  solo cambiarle su tensor.
+
+            override = True
             if override:
                 # when overriding nodes, we do not take care of its edges
                 # we suppose they have already been handled
                 if node.name not in self.nodes_names:
-                    raise ValueError('Cannot override with a node whose name is not in the network')
-                prev_node = self.nodes[node.name]
-                if isinstance(prev_node, ParamNode):
-                    self._remove_param(prev_node)
-                self._nodes[node.name] = node
-                if isinstance(node, ParamNode):
-                    self._add_param(node)
+                    #raise ValueError('Cannot override with a node whose name is not in the network')
+                    if erase_enum(node.name) in map(erase_enum, self.nodes_names):
+                        nodes_names = self.nodes_names + [node.name]
+                        new_nodes_names = enum_repeated_names(nodes_names)
+                        self._rename_nodes(nodes_names[:-1], new_nodes_names[:-1])
+                        node._name = new_nodes_names[-1]
+                    self._nodes[node.name] = node
+                    if isinstance(node, ParamNode):
+                        self._add_param(node)
+                    for edge in node.edges:
+                        if isinstance(edge, ParamEdge):
+                            self._add_param(edge)
+                else:
+                    prev_node = self.nodes[node.name]
+                    if prev_node.shape == node.shape:
+                        prev_node.set_tensor(tensor=node.tensor)
+                    #prev_node = self.nodes[node.name]
+                    #if isinstance(prev_node, ParamNode):
+                    #    self._remove_param(prev_node)
+                    #self._nodes[node.name] = node
+                    #if isinstance(node, ParamNode):
+                    #    self._add_param(node)
+
             else:
                 if erase_enum(node.name) in map(erase_enum, self.nodes_names):
                     nodes_names = self.nodes_names + [node.name]

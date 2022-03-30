@@ -622,12 +622,17 @@ class MPS(TensorNetwork):
             result @= node
 
         # Clean intermediate nodes
-        mps_nodes = list(self.nodes.values())
-        for node in mps_nodes:
-            if node not in self.permanent_nodes:
-                self.delete_node(node)
+        #mps_nodes = list(self.nodes.values())
+        #for node in mps_nodes:
+        #    if node not in self.permanent_nodes:
+        #        self.delete_node(node)
 
         return result
+
+    def _update_current_op_nodes(self) -> None:
+        for node in self.nodes.values():
+            if not node.permanent and node.current_op:
+                node.current_op = False
 
     def forward(self, data: torch.Tensor) -> torch.Tensor:
         """
@@ -643,4 +648,6 @@ class MPS(TensorNetwork):
             #self.initialize2()
         else:
             self._add_data(data=data.unbind(2))
-        return self.contract().tensor
+        output = self.contract().tensor
+        self._update_current_op_nodes()
+        return output

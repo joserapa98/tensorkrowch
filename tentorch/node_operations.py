@@ -136,6 +136,8 @@ def einsum(string: Text, *nodes: AbstractNode) -> Node:
     new_node = Node(axes_names=list(axes_names.values()),
                     name='einsum_node',
                     network=nodes[0].network,
+                    permanent=False,
+                    current_op=True,
                     param_edges=False,
                     tensor=new_tensor,
                     edges=list(edges.values()),
@@ -178,6 +180,8 @@ class StackNode(Node):
         super().__init__(axes_names=['stack'] + nodes[0].axes_names,
                          name=name,
                          network=nodes[0].network,
+                         permanent=False,
+                         current_op=True,
                          tensor=stacked_tensor,
                          override_node=override_node)
 
@@ -303,10 +307,13 @@ def unbind(node: AbstractNode) -> List[Node]:
     for i, tensor in enumerate(tensors_list):
         new_node = Node(axes_names=node.axes_names[1:],
                         network=node.network,
+                        permanent=False,
+                        current_op=True,
                         tensor=tensor,
                         edges=[edge.edges[i] if isinstance(edge, AbstractStackEdge)
                                else edge for edge in node.edges[1:]],
-                        node1_list=node.node1_list[1:])
+                        node1_list=node.node1_list[1:],
+                        name='unbind_node')
         nodes.append(new_node)
     return nodes
 

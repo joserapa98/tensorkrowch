@@ -21,6 +21,7 @@ periodic_bc = False
 num_train = 2000
 num_test = 1000
 batch_size = 100
+image_size = (14, 14)
 num_epochs = 5
 learn_rate = 1e-4
 l2_reg = 0.0
@@ -54,7 +55,7 @@ class MyMPS(nn.Module):
         return x
 
 
-mps = MyMPS(n_sites=7*7 + 1,
+mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
             d_phys=2,
             n_labels=10,
             d_bond=bond_dim,
@@ -73,7 +74,7 @@ def embedding(image: torch.Tensor) -> torch.Tensor:
     return torch.stack([image, 1 - image], dim=1).squeeze(0)
 
 
-transform = transforms.Compose([transforms.Resize((7, 7)),
+transform = transforms.Compose([transforms.Resize(image_size),
                                 transforms.ToTensor(),
                                 transforms.Lambda(embedding)])
 train_set = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
@@ -115,7 +116,7 @@ for epoch_num in range(1, num_epochs + 1):
     running_acc = 0.0
 
     for inputs, labels in loaders["train"]:
-        inputs, labels = inputs.view([batch_size, 2, 7 ** 2]), labels.data
+        inputs, labels = inputs.view([batch_size, 2, image_size[0] * image_size[1]]), labels.data
         inputs, labels = inputs.cuda(), labels.cuda()
 
         # Call our MPS to get logit scores and predictions
@@ -143,7 +144,7 @@ for epoch_num in range(1, num_epochs + 1):
         running_acc = 0.0
 
         for inputs, labels in loaders["test"]:
-            inputs, labels = inputs.view([batch_size, 2, 7 ** 2]), labels.data
+            inputs, labels = inputs.view([batch_size, 2, image_size[0] * image_size[1]]), labels.data
             inputs, labels = inputs.cuda(), labels.cuda()
 
             # Call our MPS to get logit scores and predictions

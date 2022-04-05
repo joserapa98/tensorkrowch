@@ -147,43 +147,57 @@ def einsum(string: Text, *nodes: AbstractNode) -> Node:
 
 class StackNode(Node):
 
+    def __new__(cls,
+                nodes: List[AbstractNode],
+                name: Optional[Text] = None,
+                override_node: bool = False) -> AbstractNode:
+        # Me obligo a poner primero el nombre para que vaya bien el orden de usar __new__ e __init__
+        # También tengo que crear el tensor antes de __init__
+        stacked_tensor = torch.stack([node.tensor for node in nodes])
+        self = super().__new__(cls, nodes=nodes, name='stacknode',
+                               tensor=stacked_tensor,
+                               override_node=override_node, network=nodes[0].network,
+                               permanent=False, current_op=True)
+        return self
+
     def __init__(self,
                  nodes: List[AbstractNode],
                  name: Optional[Text] = None,
                  override_node: bool = False) -> None:
 
-        for i in range(len(nodes[:-1])):
-            if not isinstance(nodes[i], type(nodes[i + 1])):
-                raise TypeError('Cannot stack nodes of different types. Nodes '
-                                'must be either all Node or all ParamNode type')
-            if nodes[i].shape != nodes[i + 1].shape:
-                raise ValueError('Cannot stack nodes with different shapes')
-            if nodes[i].axes_names != nodes[i + 1].axes_names:
-                raise ValueError('Stacked nodes must have the same name for each axis')
-            for edge1, edge2 in zip(nodes[i].edges, nodes[i + 1].edges):
-                if not isinstance(edge1, type(edge2)):
-                    raise TypeError('Cannot stack nodes with edges of different types. '
-                                    'The edges that are attached to the same axis in '
-                                    'each node must be either all Edge or all ParamEdge type')
+        if not self.init:
+            for i in range(len(nodes[:-1])):
+                if not isinstance(nodes[i], type(nodes[i + 1])):
+                    raise TypeError('Cannot stack nodes of different types. Nodes '
+                                    'must be either all Node or all ParamNode type')
+                if nodes[i].shape != nodes[i + 1].shape:
+                    raise ValueError('Cannot stack nodes with different shapes')
+                if nodes[i].axes_names != nodes[i + 1].axes_names:
+                    raise ValueError('Stacked nodes must have the same name for each axis')
+                for edge1, edge2 in zip(nodes[i].edges, nodes[i + 1].edges):
+                    if not isinstance(edge1, type(edge2)):
+                        raise TypeError('Cannot stack nodes with edges of different types. '
+                                        'The edges that are attached to the same axis in '
+                                        'each node must be either all Edge or all ParamEdge type')
 
-        edges_dict = dict()
-        for node in nodes:
-            for axis in node.axes:
-                edge = node[axis]
-                if axis.name not in edges_dict:
-                    edges_dict[axis.name] = [edge]
-                else:
-                    edges_dict[axis.name] += [edge]
-        self._edges_dict = edges_dict
+            edges_dict = dict()
+            for node in nodes:
+                for axis in node.axes:
+                    edge = node[axis]
+                    if axis.name not in edges_dict:
+                        edges_dict[axis.name] = [edge]
+                    else:
+                        edges_dict[axis.name] += [edge]
+            self._edges_dict = edges_dict
 
-        stacked_tensor = torch.stack([node.tensor for node in nodes])
-        super().__init__(axes_names=['stack'] + nodes[0].axes_names,
-                         name=name,
-                         network=nodes[0].network,
-                         permanent=False,
-                         current_op=True,
-                         tensor=stacked_tensor,
-                         override_node=override_node)
+            stacked_tensor = torch.stack([node.tensor for node in nodes])
+            super().__init__(axes_names=['stack'] + nodes[0].axes_names,
+                             name=name,
+                             network=nodes[0].network,
+                             permanent=False,
+                             current_op=True,
+                             tensor=stacked_tensor,
+                             override_node=override_node)
 
     @property
     def edges_dict(self) -> Dict[Text, Union[List[Edge], List[ParamEdge]]]:
@@ -294,7 +308,8 @@ def stack(nodes: List[AbstractNode], name: Optional[Text] = None) -> StackNode:
     first one in the resultant node
     """
     # TODO: override_node = True para solo cambiar el tensor
-    return StackNode(nodes, name=name)
+    self = StackNode(nodes, name=name)
+    return self
 
 
 def unbind(node: AbstractNode) -> List[Node]:

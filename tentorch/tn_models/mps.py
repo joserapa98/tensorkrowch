@@ -649,6 +649,6 @@ class MPS(TensorNetwork):
         else:
             self._add_data(data=data.unbind(2))
         output = self.contract().tensor
-        #self._update_current_op_nodes()
-        self.num_current_op_nodes = []
+        self._update_current_op_nodes()
+        #self.num_current_op_nodes = []
         return output

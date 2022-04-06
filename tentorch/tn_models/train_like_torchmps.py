@@ -13,7 +13,7 @@ torch.manual_seed(0)
 start_time = time.time()
 
 # MPS parameters
-bond_dim = 5
+bond_dim = 10
 adaptive_mode = False
 periodic_bc = False
 
@@ -22,7 +22,7 @@ num_train = 2000
 num_test = 1000
 batch_size = 100
 image_size = (14, 14)
-num_epochs = 5
+num_epochs = 20
 learn_rate = 1e-4
 l2_reg = 0.0
 
@@ -71,7 +71,8 @@ optimizer = torch.optim.Adam(mps.parameters(), lr=learn_rate, weight_decay=l2_re
 
 # Get the training and test sets
 def embedding(image: torch.Tensor) -> torch.Tensor:
-    return torch.stack([image, 1 - image], dim=1).squeeze(0)
+    #return torch.stack([image, 1 - image], dim=1).squeeze(0)
+    return torch.stack([torch.ones_like(image), image], dim=1).squeeze(0)
 
 
 transform = transforms.Compose([transforms.Resize(image_size),

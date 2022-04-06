@@ -381,7 +381,20 @@ class MPS(TensorNetwork):
         std = 1e-9
         for node in self.nodes.values():
             if node.name != 'output_node':
-                node.set_tensor(init_method='randn', std=std)
+                #node.set_tensor(init_method='randn', std=std)
+                tensor = torch.randn(node.shape) * std
+                if node.name == 'left_node':
+                    aux = torch.randn(tensor.shape[1]) * std
+                    aux[0] = 1.
+                    tensor[0, :] = aux
+                elif node.name == 'right_node':
+                    aux = torch.randn(tensor.shape[0]) * std
+                    aux[0] = 1.
+                    tensor[:, 0] = aux
+                else:
+                    aux = torch.randn(tensor.shape[0], tensor.shape[2]) * std + torch.eye(tensor.shape[0])
+                    tensor[:, 0, :] = aux
+                node.set_tensor(tensor=tensor)
             else:
                 # TODO: case output node is in the left or right end
                 eye_tensor = torch.eye(node.shape[0], node.shape[2]).view([node.shape[0], 1, node.shape[2]])

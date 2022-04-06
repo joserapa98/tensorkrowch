@@ -56,7 +56,7 @@ class MyMPS(nn.Module):
 
 
 mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
-            d_phys=2,
+            d_phys=3,
             n_labels=10,
             d_bond=bond_dim,
             l_position=None,
@@ -72,7 +72,7 @@ optimizer = torch.optim.Adam(mps.parameters(), lr=learn_rate, weight_decay=l2_re
 # Get the training and test sets
 def embedding(image: torch.Tensor) -> torch.Tensor:
     #return torch.stack([image, 1 - image], dim=1).squeeze(0)
-    return torch.stack([torch.ones_like(image), image], dim=1).squeeze(0)
+    return torch.stack([torch.ones_like(image), image, 1 - image], dim=1).squeeze(0)
 
 
 transform = transforms.Compose([transforms.Resize(image_size),
@@ -117,7 +117,7 @@ for epoch_num in range(1, num_epochs + 1):
     running_acc = 0.0
 
     for inputs, labels in loaders["train"]:
-        inputs, labels = inputs.view([batch_size, 2, image_size[0] * image_size[1]]), labels.data
+        inputs, labels = inputs.view([batch_size, 3, image_size[0] * image_size[1]]), labels.data
         inputs, labels = inputs.cuda(), labels.cuda()
 
         # Call our MPS to get logit scores and predictions
@@ -145,7 +145,7 @@ for epoch_num in range(1, num_epochs + 1):
         running_acc = 0.0
 
         for inputs, labels in loaders["test"]:
-            inputs, labels = inputs.view([batch_size, 2, image_size[0] * image_size[1]]), labels.data
+            inputs, labels = inputs.view([batch_size, 3, image_size[0] * image_size[1]]), labels.data
             inputs, labels = inputs.cuda(), labels.cuda()
 
             # Call our MPS to get logit scores and predictions

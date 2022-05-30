@@ -8,6 +8,9 @@ from torchvision import transforms, datasets
 from typing import (Union, Optional, Sequence,
                     Text, List, Tuple)
 
+import pandas as pd
+import matplotlib.pyplot as plt
+
 # Miscellaneous initialization
 torch.manual_seed(0)
 start_time = time.time()
@@ -135,6 +138,15 @@ for epoch_num in range(1, num_epochs + 1):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+    # grads = []
+    # for p in list(mps.parameters())[100:]:
+    #     print(p.shape)
+    #     grads = p.grad.cpu()
+    #     print(grads)
+    #     break
+    #plt.hist(grads, bins=10)
+    #plt.show()
 
     print(f"### Epoch {epoch_num} ###")
     print(f"Average loss:           {running_loss / num_batches['train']:.4f}")

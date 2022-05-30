@@ -134,16 +134,16 @@ class Axis:
     @batch.setter
     def batch(self, batch: bool) -> None:
         if batch != self.batch:
-            if self.node[self].is_dangling():
-                if self.node is not None:
+            if self.node is not None:
+                if self.node[self].is_dangling():
                     if self.node.network is not None:
                         if batch:
                             self.node.network._edges.remove(self.node[self])
                         else:
                             self.node.network._edges += [self.node[self]]
-                self._batch = batch
-            else:
-                raise ValueError('Cannot change `batch` attribute of non-dangling edges')
+                else:
+                    raise ValueError('Cannot change `batch` attribute of non-dangling edges')
+            self._batch = batch
 
     # methods
     def __int__(self) -> int:

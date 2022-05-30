@@ -27,6 +27,9 @@ from tentorch.network_components import AbstractNode, Node
 from tentorch.network_components import AbstractEdge, Edge, ParamEdge
 from tentorch.network_components import connect
 
+# TODO:
+import time
+
 
 def einsum(string: Text, *nodes: AbstractNode) -> Node:
     """
@@ -319,6 +322,7 @@ def unbind(node: AbstractNode) -> List[Node]:
     """
     tensors_list = torch.unbind(node.tensor)
     nodes = []
+    start = time.time()
     for i, tensor in enumerate(tensors_list):
         new_node = Node(axes_names=node.axes_names[1:],
                         network=node.network,
@@ -330,6 +334,7 @@ def unbind(node: AbstractNode) -> List[Node]:
                         node1_list=node.node1_list[1:],
                         name='unbind_node')
         nodes.append(new_node)
+    print('Create nodes:', time.time() - start)
     return nodes
 
 
@@ -352,9 +357,11 @@ def stacked_einsum(string: Text, *nodes_lists: List[AbstractNode]) -> List[Node]
     unbind(result): list of nodes resultant from operating the stack nodes and
                     unbind the result
     """
+    #start = time.time()
     stacks_list = []
     for nodes_list in nodes_lists:
         stacks_list.append(stack(nodes_list))
+    #print('Stacks:', time.time() - start)
 
     input_strings = string.split('->')[0].split(',')
     output_string = string.split('->')[1]
@@ -371,5 +378,10 @@ def stacked_einsum(string: Text, *nodes_lists: List[AbstractNode]) -> List[Node]
     output_string = stack_char + output_string
     string = input_string + '->' + output_string
 
+    #start = time.time()
     result = einsum(string, *stacks_list)
-    return unbind(result)
+    #print('Einsum:', time.time() - start)
+    start = time.time()
+    unbinded_result = unbind(result)  # <-- Lo más lento
+    print('Unbind:', time.time() - start)
+    return unbinded_result

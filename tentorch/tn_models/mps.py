@@ -590,6 +590,15 @@ class MPS(TensorNetwork):
             right_env_data = list(map(lambda node: node.neighbours('input'), self.right_env))
             right_result = stacked_einsum('lir,bi->lbr', self.right_env, right_env_data)
         return left_result, right_result
+        # start = time.time()
+        # env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
+        # print('Find data:', time.time() - start)
+        # start = time.time()
+        # result = stacked_einsum('lir,bi->lbr', self.left_env + self.right_env, env_data)
+        # print('result:', time.time() - start)
+        # left_result = result[:len(self.left_env)]
+        # right_result = result[len(self.left_env):]
+        # return left_result, right_result
 
     @staticmethod
     def _inline_contraction(nodes: List[Node]) -> Node:
@@ -628,7 +637,7 @@ class MPS(TensorNetwork):
     def contract(self) -> Node:
         start = time.time()
         left_env, right_env = self._input_contraction()
-        #print('Input:', time.time() - start)
+        print('Input:', time.time() - start)
         
         # Operations of left environment
         left_list = []
@@ -639,7 +648,7 @@ class MPS(TensorNetwork):
             else:
                 left_node = einsum('lir,bi->lbr', self.left_node, self.left_node.neighbours('input'))
             left_list.append(left_node)
-            #print('Left node:', time.time() - start)
+            print('Left node:', time.time() - start)
         if left_env is not None:
             start = time.time()
             if not self.param_bond() and self.same_d_phys() and self.same_d_bond():
@@ -647,7 +656,7 @@ class MPS(TensorNetwork):
             else:
                 left_env_contracted = self._inline_contraction(left_env)
             left_list.append(left_env_contracted)
-            #print('Left env:', time.time() - start)
+            print('Left env:', time.time() - start)
 
         # Operations of right environment
         right_list = []
@@ -658,7 +667,7 @@ class MPS(TensorNetwork):
             else:
                 right_env_contracted = self._inline_contraction(right_env)
             right_list.append(right_env_contracted)
-            #print('Right env:', time.time() - start)
+            print('Right env:', time.time() - start)
         if self.right_node is not None:
             start = time.time()
             if self.boundary == 'obc':
@@ -666,14 +675,14 @@ class MPS(TensorNetwork):
             else:
                 right_node = einsum('lir,bi->lbr', self.right_node, self.right_node.neighbours('input'))
             right_list.append(right_node)
-            #print('Right node:', time.time() - start)
+            print('Right node:', time.time() - start)
 
         start = time.time()
         result_list = left_list + [self.output_node] + right_list
         result = result_list[0]
         for node in result_list[1:]:
             result @= node
-        #print('Final contraction:', time.time() - start)
+        print('Final contraction:', time.time() - start)
 
         # Clean intermediate nodes
         #mps_nodes = list(self.nodes.values())
@@ -701,16 +710,16 @@ class MPS(TensorNetwork):
             self._add_data(data=data.unbind(2))
             self._permanent_nodes = list(self.nodes.values())
             #self.initialize2()
-            #print('Add data:', time.time() - start)
+            print('Add data:', time.time() - start)
         else:
             start = time.time()
             self._add_data(data=data.unbind(2))
             end = time.time()
-            #print('Add data:', end - start)
+            print('Add data:', end - start)
         start = time.time()
         output = self.contract().tensor
-        #print('Contract:', time.time() - start)
-        #print()
+        print('Contract:', time.time() - start)
+        print()
         self._update_current_op_nodes()
         #self.num_current_op_nodes = []
         return output

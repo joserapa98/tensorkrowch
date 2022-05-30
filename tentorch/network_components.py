@@ -835,6 +835,8 @@ class Node(AbstractNode):
                 init_method: Optional[Text] = None,
                 **kwargs: float) -> AbstractNode:
 
+        # TODO: IMPORTANT! This is a bottleneck, we have to optimize the
+        #  way we preserve the nodes and reallocate the new ones
         if current_op and not permanent:
             new_instance = True
             if network is not None:

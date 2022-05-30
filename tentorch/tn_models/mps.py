@@ -13,6 +13,8 @@ from tentorch.network_components import TensorNetwork
 
 from tentorch.node_operations import einsum, stacked_einsum
 
+import time
+
 
 # TODO: move_l_position -> needs svd and qr to contract and split nodes
 # TODO: change l_position int by just 'start', 'end', 'medium',
@@ -101,6 +103,7 @@ class MPS(TensorNetwork):
         self.initialize()
 
         # Save references to permanent nodes
+        # TODO: This should be in all TN
         self._permanent_nodes = []
 
         permanent_nodes = []
@@ -227,13 +230,13 @@ class MPS(TensorNetwork):
         if self.l_position == 0:
             if self.boundary == 'obc':
                 self.output_node = ParamNode(shape=(self.d_phys[0], self.d_bond[0]),
-                                             axes_names=('output_node', 'right'),
+                                             axes_names=('output', 'right'),
                                              name='output_node',
                                              network=self,
                                              param_edges=self.param_bond())
             else:
                 self.output_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[0], self.d_bond[0]),
-                                             axes_names=('left', 'output_node', 'right'),
+                                             axes_names=('left', 'output', 'right'),
                                              name='output_node',
                                              network=self,
                                              param_edges=self.param_bond())
@@ -243,13 +246,13 @@ class MPS(TensorNetwork):
             if self.n_sites - 1 != 0:
                 if self.boundary == 'obc':
                     self.output_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[-1]),
-                                                 axes_names=('left', 'output_node'),
+                                                 axes_names=('left', 'output'),
                                                  name='output_node',
                                                  network=self,
                                                  param_edges=self.param_bond())
                 else:
                     self.output_node = ParamNode(shape=(self.d_bond[-2], self.d_phys[-1], self.d_bond[-1]),
-                                                 axes_names=('left', 'output_node', 'right'),
+                                                 axes_names=('left', 'output', 'right'),
                                                  name='output_node',
                                                  network=self,
                                                  param_edges=self.param_bond())
@@ -257,13 +260,14 @@ class MPS(TensorNetwork):
             if self.left_env:
                 self.left_env[-1]['right'] ^ self.output_node['left']
             else:
-                self.left_node['right'] ^ self.output_node['left']
+                if self.left_node:
+                    self.left_node['right'] ^ self.output_node['left']
 
         if (self.l_position > 0) and (self.l_position < self.n_sites - 1):
             self.output_node = ParamNode(shape=(self.d_bond[self.l_position - 1],
                                                 self.d_phys[self.l_position],
                                                 self.d_bond[self.l_position]),
-                                         axes_names=('left', 'output_node', 'right'),
+                                         axes_names=('left', 'output', 'right'),
                                          name='output_node',
                                          network=self,
                                          param_edges=self.param_bond())
@@ -325,7 +329,7 @@ class MPS(TensorNetwork):
 
             # Output
             bonds = self.output_node.axes_names[:]
-            bonds.remove('output_node')
+            bonds.remove('output')
             bonds_product = 1
             for name in bonds:
                 bonds_product *= self.output_node[name].dim()
@@ -355,7 +359,7 @@ class MPS(TensorNetwork):
 
             # Output
             self.output_node.set_tensor(init_method='randn',
-                                        std=(self.output_node['output_node'].dim() *
+                                        std=(self.output_node['output'].dim() *
                                              self.output_node['left'].dim()) ** (-1 / 2) + eps)
 
             # Right environment
@@ -383,22 +387,47 @@ class MPS(TensorNetwork):
             if node.name != 'output_node':
                 #node.set_tensor(init_method='randn', std=std)
                 tensor = torch.randn(node.shape) * std
+                # TODO: can be also simplified
                 if node.name == 'left_node':
-                    aux = torch.randn(tensor.shape[1]) * std
-                    aux[0] = 1.
-                    tensor[0, :] = aux
+                    if self.boundary == 'obc':
+                        aux = torch.randn(tensor.shape[1]) * std
+                        aux[0] = 1.
+                        tensor[0, :] = aux
+                    else:
+                        aux = torch.eye(node.shape[0], node.shape[2])
+                        tensor[:, 0, :] = aux
                 elif node.name == 'right_node':
-                    aux = torch.randn(tensor.shape[0]) * std
-                    aux[0] = 1.
-                    tensor[:, 0] = aux
+                    if self.boundary == 'obc':
+                        aux = torch.randn(tensor.shape[0]) * std
+                        aux[0] = 1.
+                        tensor[:, 0] = aux
+                    else:
+                        aux = torch.eye(node.shape[0], node.shape[2])
+                        tensor[:, 0, :] = aux
                 else:
                     aux = torch.randn(tensor.shape[0], tensor.shape[2]) * std + torch.eye(tensor.shape[0])
                     tensor[:, 0, :] = aux
                 node.set_tensor(tensor=tensor)
             else:
-                # TODO: case output node is in the left or right end
-                eye_tensor = torch.eye(node.shape[0], node.shape[2]).view([node.shape[0], 1, node.shape[2]])
-                eye_tensor = eye_tensor.expand(node.shape)
+                # TODO: can be simplified
+                if self.l_position == 0:
+                    if self.boundary == 'obc':
+                        eye_tensor = torch.eye(node.shape[1])[0, :].view([1, node.shape[1]])
+                        eye_tensor = eye_tensor.expand(node.shape)
+                    else:
+                        eye_tensor = torch.eye(node.shape[0], node.shape[2]).view([node.shape[0], 1, node.shape[2]])
+                        eye_tensor = eye_tensor.expand(node.shape)
+
+                elif self.l_position == self.n_sites - 1:
+                    if self.boundary == 'obc':
+                        eye_tensor = torch.eye(node.shape[0])[0, :].view([node.shape[0], 1])
+                        eye_tensor = eye_tensor.expand(node.shape)
+                    else:
+                        eye_tensor = torch.eye(node.shape[0], node.shape[2]).view([node.shape[0], 1, node.shape[2]])
+                        eye_tensor = eye_tensor.expand(node.shape)
+                else:
+                    eye_tensor = torch.eye(node.shape[0], node.shape[2]).view([node.shape[0], 1, node.shape[2]])
+                    eye_tensor = eye_tensor.expand(node.shape)
 
                 # Add on a bit of random noise
                 tensor = eye_tensor + std * torch.randn(node.shape)
@@ -438,7 +467,7 @@ class MPS(TensorNetwork):
 
             # Output
             bonds = self.output_node.axes_names[:]
-            bonds.remove('output_node')
+            bonds.remove('output')
             bonds_product = 1
             for name in bonds:
                 bonds_product *= self.output_node[name].dim()
@@ -597,42 +626,54 @@ class MPS(TensorNetwork):
         return nodes[0]
 
     def contract(self) -> Node:
+        start = time.time()
         left_env, right_env = self._input_contraction()
+        #print('Input:', time.time() - start)
         
         # Operations of left environment
         left_list = []
         if self.left_node is not None:
+            start = time.time()
             if self.boundary == 'obc':
                 left_node = einsum('ir,bi->br', self.left_node, self.left_node.neighbours('input'))
             else:
                 left_node = einsum('lir,bi->lbr', self.left_node, self.left_node.neighbours('input'))
             left_list.append(left_node)
+            #print('Left node:', time.time() - start)
         if left_env is not None:
+            start = time.time()
             if not self.param_bond() and self.same_d_phys() and self.same_d_bond():
                 left_env_contracted = self._pairwise_contraction(left_env)
             else:
                 left_env_contracted = self._inline_contraction(left_env)
             left_list.append(left_env_contracted)
+            #print('Left env:', time.time() - start)
 
         # Operations of right environment
         right_list = []
         if right_env is not None:
+            start = time.time()
             if not self.param_bond() and self.same_d_phys() and self.same_d_bond():
                 right_env_contracted = self._pairwise_contraction(right_env)
             else:
                 right_env_contracted = self._inline_contraction(right_env)
             right_list.append(right_env_contracted)
+            #print('Right env:', time.time() - start)
         if self.right_node is not None:
+            start = time.time()
             if self.boundary == 'obc':
                 right_node = einsum('li,bi->lb', self.right_node, self.right_node.neighbours('input'))
             else:
                 right_node = einsum('lir,bi->lbr', self.right_node, self.right_node.neighbours('input'))
             right_list.append(right_node)
-            
+            #print('Right node:', time.time() - start)
+
+        start = time.time()
         result_list = left_list + [self.output_node] + right_list
         result = result_list[0]
         for node in result_list[1:]:
             result @= node
+        #print('Final contraction:', time.time() - start)
 
         # Clean intermediate nodes
         #mps_nodes = list(self.nodes.values())
@@ -654,14 +695,22 @@ class MPS(TensorNetwork):
         data: tensor with shape batch x feature x n_features
         """
         if not self.data_nodes:
+            start = time.time()
             # All data tensors have the same batch size
             self.set_data_nodes(batch_sizes=[data.shape[0]])
             self._add_data(data=data.unbind(2))
             self._permanent_nodes = list(self.nodes.values())
             #self.initialize2()
+            #print('Add data:', time.time() - start)
         else:
+            start = time.time()
             self._add_data(data=data.unbind(2))
+            end = time.time()
+            #print('Add data:', end - start)
+        start = time.time()
         output = self.contract().tensor
+        #print('Contract:', time.time() - start)
+        #print()
         self._update_current_op_nodes()
         #self.num_current_op_nodes = []
         return output

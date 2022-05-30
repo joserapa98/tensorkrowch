@@ -581,14 +581,23 @@ class MPS(TensorNetwork):
         self._permanent_nodes += list(self.data_nodes.values())
 
     def _input_contraction(self) -> Tuple[List[Node], List[Node]]:
-        left_result = None
-        right_result = None
-        if self.left_env:
-            left_env_data = list(map(lambda node: node.neighbours('input'), self.left_env))
-            left_result = stacked_einsum('lir,bi->lbr', self.left_env, left_env_data)
-        if self.right_env:
-            right_env_data = list(map(lambda node: node.neighbours('input'), self.right_env))
-            right_result = stacked_einsum('lir,bi->lbr', self.right_env, right_env_data)
+        # left_result = None
+        # right_result = None
+        # if self.left_env:
+        #     left_env_data = list(map(lambda node: node.neighbours('input'), self.left_env))
+        #     left_result = stacked_einsum('lir,bi->lbr', self.left_env, left_env_data)
+        # if self.right_env:
+        #     right_env_data = list(map(lambda node: node.neighbours('input'), self.right_env))
+        #     right_result = stacked_einsum('lir,bi->lbr', self.right_env, right_env_data)
+        # return left_result, right_result
+        start = time.time()
+        env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
+        print('Find data:', time.time() - start)
+        start = time.time()
+        result = stacked_einsum('lir,bi->lbr', self.left_env + self.right_env, env_data)
+        print('result:', time.time() - start)
+        left_result = result[:len(self.left_env)]
+        right_result = result[len(self.left_env):]
         return left_result, right_result
         # start = time.time()
         # env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))

@@ -1762,7 +1762,7 @@ class TensorNetwork(nn.Module):
         if node.network == self:
             warnings.warn('`node` is already in the network')
         else:
-            # TODO: I think i never use this :(
+            # TODO: I think I never use this :(
             if override:
                 # when overriding nodes, we do not take care of its edges
                 # we suppose they have already been handled

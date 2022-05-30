@@ -194,7 +194,7 @@ class AbstractNode(ABC):
 
         Parameters
         ----------
-        shape: node shape (the shape of its tensor)
+        shape: node shape (the shape of its tensor, it is always provided)
         axes_names: list of names for each of the node's axes
         name: node name
         permanent: indicates if the node is a permanent node in the network
@@ -233,7 +233,7 @@ class AbstractNode(ABC):
                         for i, name in enumerate(axes_names)]
         self._axes = axes
         self._tensor = torch.empty(shape)
-        self._param_edges = False
+        self._param_edges = False  # TODO: If not all edges are param or non-param, should be None
         self._edges = []
 
         # name
@@ -252,6 +252,8 @@ class AbstractNode(ABC):
         # TODO: not all combinations are allowed (permanent=1 and current_op=1)
         self.permanent = permanent
         self.current_op = current_op
+
+        # TODO: create Network when creating node? Node would not have None as self.network
 
         self.init = True
 
@@ -330,7 +332,7 @@ class AbstractNode(ABC):
     @abstractmethod
     def parameterize(self, set_param: bool) -> 'AbstractNode':
         """
-        Make a normal node a parametric node and viceversa, replacing the node in
+        Make a normal node a parametric node and vice versa, replacing the node in
         the network
         """
         pass
@@ -364,7 +366,6 @@ class AbstractNode(ABC):
         it is returned its dimension (number of 1's in the diagonal of
         the matrix) rather than its total size (number of 1's and 0's
         in the diagonal of the matrix)
-
         """
         if axis is None:
             return torch.Size(list(map(lambda edge: edge.dim(), self.edges)))
@@ -428,7 +429,7 @@ class AbstractNode(ABC):
         if size <= 0:
             raise ValueError('new `size` should be greater than zero')
         axis_num = self.get_axis_number(axis)
-        index = list()
+        index = []
         for i, dim in enumerate(self.shape):
             if i == axis_num:
                 if size > dim:
@@ -665,7 +666,7 @@ class AbstractNode(ABC):
             self._tensor = self.set_tensor_format(tensor)
         elif init_method is not None:
             tensor = self.make_tensor(init_method=init_method, **kwargs)
-            tensor = tensor.to(device)
+            #tensor = tensor.to(device)  # TODO: check device movements, make tests
             self._tensor = self.set_tensor_format(tensor)
         else:
             raise ValueError('One of `tensor` or `init_method` must be provided')
@@ -836,12 +837,13 @@ class Node(AbstractNode):
 
         if current_op and not permanent:
             new_instance = True
-            for node in network.nodes.values():
-                if not (node.current_op or node.permanent):
-                    # Asumo que con que exista un nodo no current_op ni permanent,
-                    # es que ya estoy en la segunda iteración
-                    new_instance = False
-                    break
+            if network is not None:
+                for node in network.nodes.values():
+                    if not (node.current_op or node.permanent):
+                        # Asumo que con que exista un nodo no current_op ni permanent,
+                        # es que ya estoy en la segunda iteración
+                        new_instance = False
+                        break
 
             if new_instance:
                 return super().__new__(cls,
@@ -1222,6 +1224,7 @@ class ParamNode(AbstractNode, nn.Module):
 
     def __setattr__(self, name: Text, value: Union[torch.Tensor, nn.Module]) -> None:
         if name == '_network':
+            # This is done in order to not having the network as submodule
             ABC.__setattr__(self, name, value)
         else:
             nn.Module.__setattr__(self, name, value)
@@ -1778,85 +1781,110 @@ class TensorNetwork(nn.Module):
                                  and edge not in self.edges)]
 
             else:
-                if node.current_op:
-                    current_nodes_names = []
-                    for n in self.nodes.values():
-                        if n.permanent or n.current_op:
-                            current_nodes_names.append(n.name)
+                # Original case
+                if erase_enum(node.name) in map(erase_enum, self.nodes_names):
+                    nodes_names = self.nodes_names + [node.name]
+                    new_nodes_names = enum_repeated_names(nodes_names)
+                    self._rename_nodes(nodes_names[:-1], new_nodes_names[:-1])
+                    node._name = new_nodes_names[-1]
+                self._nodes[node.name] = node
+                if isinstance(node, ParamNode):
+                    self._add_param(node)
+                for edge in node.edges:
+                    if isinstance(edge, ParamEdge):
+                        self._add_param(edge)
 
-                    if erase_enum(node.name) in map(erase_enum, current_nodes_names):
-                        current_nodes_names = current_nodes_names + [node.name]
-                        new_current_nodes_names = enum_repeated_names(current_nodes_names)
-                        non_current_nodes_names = []
-                        for n in self.nodes.values():
-                            if not (n.permanent or n.current_op):
-                                non_current_nodes_names.append(n.name)
-                        nodes_names = current_nodes_names[:-1] + non_current_nodes_names
-                        new_nodes_names = new_current_nodes_names[:-1] + non_current_nodes_names
-                        self._rename_nodes(nodes_names, new_nodes_names)
+                node._network = self
+                self._edges += [edge for edge in node.edges if
+                                (edge.is_dangling() and not edge.is_batch()
+                                 and edge not in self.edges)]
 
-                        if new_current_nodes_names[-1] in non_current_nodes_names:
-                            prev_node = self.nodes[new_current_nodes_names[-1]]
-                            if prev_node.shape == node.shape:
-                                prev_node.set_tensor(tensor=node.tensor)
-                            else:
-                                raise ValueError('Cannot set tensor in node with different shape')
-                            prev_node.current_op = True
-                        else:
-                            node._name = new_current_nodes_names[-1]
-                            self._nodes[node.name] = node
-                            if isinstance(node, ParamNode):
-                                self._add_param(node)
-                            for edge in node.edges:
-                                if isinstance(edge, ParamEdge):
-                                    self._add_param(edge)
-
-                            node._network = self
-                            self._edges += [edge for edge in node.edges if
-                                            (edge.is_dangling() and not edge.is_batch()
-                                             and edge not in self.edges)]
-
-                    elif erase_enum(node.name) in map(erase_enum, self.nodes_names):
-                        prev_node = self.nodes[node.name + '_0']
-                        if prev_node.shape == node.shape:
-                            prev_node.set_tensor(tensor=node.tensor)
-                        else:
-                            raise ValueError('Cannot set tensor in node with different shape')
-                        prev_node.current_op = True
-
-                    else:
-                        self._nodes[node.name] = node
-                        if isinstance(node, ParamNode):
-                            self._add_param(node)
-                        for edge in node.edges:
-                            if isinstance(edge, ParamEdge):
-                                self._add_param(edge)
-
-                        node._network = self
-                        self._edges += [edge for edge in node.edges if
-                                        (edge.is_dangling() and not edge.is_batch()
-                                         and edge not in self.edges)]
-
-                elif node.permanent and not node.current_op:
-                    # Original case
-                    if erase_enum(node.name) in map(erase_enum, self.nodes_names):
-                        nodes_names = self.nodes_names + [node.name]
-                        new_nodes_names = enum_repeated_names(nodes_names)
-                        self._rename_nodes(nodes_names[:-1], new_nodes_names[:-1])
-                        node._name = new_nodes_names[-1]
-                    self._nodes[node.name] = node
-                    if isinstance(node, ParamNode):
-                        self._add_param(node)
-                    for edge in node.edges:
-                        if isinstance(edge, ParamEdge):
-                            self._add_param(edge)
-
-                    node._network = self
-                    self._edges += [edge for edge in node.edges if
-                                    (edge.is_dangling() and not edge.is_batch()
-                                     and edge not in self.edges)]
-                else:
-                    raise ValueError('This case was not supposed to happen')
+                # if node.current_op:
+                #     # TODO: only used in first iteration
+                #     print('hola1')
+                #     current_nodes_names = []
+                #     for n in self.nodes.values():
+                #         if n.permanent or n.current_op:
+                #             current_nodes_names.append(n.name)
+                #
+                #     if erase_enum(node.name) in map(erase_enum, current_nodes_names):
+                #         print('hola2')
+                #         current_nodes_names = current_nodes_names + [node.name]
+                #         new_current_nodes_names = enum_repeated_names(current_nodes_names)
+                #         non_current_nodes_names = []
+                #         for n in self.nodes.values():
+                #             if not (n.permanent or n.current_op):
+                #                 non_current_nodes_names.append(n.name)
+                #         nodes_names = current_nodes_names[:-1] + non_current_nodes_names
+                #         new_nodes_names = new_current_nodes_names[:-1] + non_current_nodes_names
+                #         self._rename_nodes(nodes_names, new_nodes_names)
+                #
+                #         if new_current_nodes_names[-1] in non_current_nodes_names:
+                #             print('hola3')
+                #             prev_node = self.nodes[new_current_nodes_names[-1]]
+                #             if prev_node.shape == node.shape:
+                #                 prev_node.set_tensor(tensor=node.tensor)
+                #             else:
+                #                 raise ValueError('Cannot set tensor in node with different shape')
+                #             prev_node.current_op = True
+                #         else:
+                #             print('hola4')
+                #             node._name = new_current_nodes_names[-1]
+                #             self._nodes[node.name] = node
+                #             if isinstance(node, ParamNode):
+                #                 self._add_param(node)
+                #             for edge in node.edges:
+                #                 if isinstance(edge, ParamEdge):
+                #                     self._add_param(edge)
+                #
+                #             node._network = self
+                #             self._edges += [edge for edge in node.edges if
+                #                             (edge.is_dangling() and not edge.is_batch()
+                #                              and edge not in self.edges)]
+                #
+                #     elif erase_enum(node.name) in map(erase_enum, self.nodes_names):
+                #         print('hola5')
+                #         prev_node = self.nodes[node.name + '_0']
+                #         if prev_node.shape == node.shape:
+                #             prev_node.set_tensor(tensor=node.tensor)
+                #         else:
+                #             raise ValueError('Cannot set tensor in node with different shape')
+                #         prev_node.current_op = True
+                #
+                #     else:
+                #         print('hola6')
+                #         self._nodes[node.name] = node
+                #         if isinstance(node, ParamNode):
+                #             self._add_param(node)
+                #         for edge in node.edges:
+                #             if isinstance(edge, ParamEdge):
+                #                 self._add_param(edge)
+                #
+                #         node._network = self
+                #         self._edges += [edge for edge in node.edges if
+                #                         (edge.is_dangling() and not edge.is_batch()
+                #                          and edge not in self.edges)]
+                #
+                # elif node.permanent and not node.current_op:
+                #     # Original case
+                #     if erase_enum(node.name) in map(erase_enum, self.nodes_names):
+                #         nodes_names = self.nodes_names + [node.name]
+                #         new_nodes_names = enum_repeated_names(nodes_names)
+                #         self._rename_nodes(nodes_names[:-1], new_nodes_names[:-1])
+                #         node._name = new_nodes_names[-1]
+                #     self._nodes[node.name] = node
+                #     if isinstance(node, ParamNode):
+                #         self._add_param(node)
+                #     for edge in node.edges:
+                #         if isinstance(edge, ParamEdge):
+                #             self._add_param(edge)
+                #
+                #     node._network = self
+                #     self._edges += [edge for edge in node.edges if
+                #                     (edge.is_dangling() and not edge.is_batch()
+                #                      and edge not in self.edges)]
+                # else:
+                #     raise ValueError('This case was not supposed to happen')
 
     def add_nodes_from(self, nodes_list: Sequence[AbstractNode]):
         for name, node in nodes_list:
@@ -1926,44 +1954,60 @@ class TensorNetwork(nn.Module):
         # TODO: I am not controlling the case in which one of the new names is
         #  the same as other name that i am not changing. We can force to only
         #  use lists with the length of the number of nodes, that is, change all names
+        # TODO: It is implicit that all names in new_names are distinct,
+        #  but this could/should be controlled
         if len(prev_names) != len(new_names):
             raise ValueError('Both lists of names should have the same length')
         for prev_name, new_name in zip(prev_names, new_names):
+            # TODO: use better new property 'node_type' to save the way the node was created?
             if 'stacknode' in prev_name:
                 a = ''
             if 'einsum' in prev_name:
                 b = ''
             if prev_name != new_name:
+                prev_node = self.nodes[prev_name]
+                if isinstance(prev_node, ParamNode):
+                    self._remove_param(prev_node)
+                for edge in prev_node.edges:
+                    if isinstance(edge, ParamEdge):
+                        self._remove_param(edge)
+                self._nodes[new_name] = self._nodes.pop(prev_name)
+                prev_node._name = new_name
+                if isinstance(prev_node, ParamNode):
+                    self._add_param(prev_node)
+                for edge in prev_node.edges:
+                    if isinstance(edge, ParamEdge):
+                        self._add_param(edge)
 
-                non_current_nodes_names = []
-                for n in self.nodes.values():
-                    if not (n.permanent or n.current_op):
-                        non_current_nodes_names.append(n.name)
-
-                new_node = self.nodes[prev_name]
-                if (new_name in non_current_nodes_names) and (not new_node.permanent and new_node.current_op):
-                    prev_node = self.nodes[new_name]
-                    if prev_node.shape == new_node.shape:
-                        prev_node.set_tensor(tensor=new_node.tensor)
-                    else:
-                        raise ValueError('Cannot set tensor in node with different shape')
-                    self.remove_node(new_node)
-                    prev_node.current_op = True
-
-                else:
-                    prev_node = self.nodes[prev_name]
-                    if isinstance(prev_node, ParamNode):
-                        self._remove_param(prev_node)
-                    for edge in prev_node.edges:
-                        if isinstance(edge, ParamEdge):
-                            self._remove_param(edge)
-                    self._nodes[new_name] = self._nodes.pop(prev_name)
-                    prev_node._name = new_name
-                    if isinstance(prev_node, ParamNode):
-                        self._add_param(prev_node)
-                    for edge in prev_node.edges:
-                        if isinstance(edge, ParamEdge):
-                            self._add_param(edge)
+                # non_current_nodes_names = []
+                # for n in self.nodes.values():
+                #     if not (n.permanent or n.current_op):
+                #         non_current_nodes_names.append(n.name)
+                #
+                # new_node = self.nodes[prev_name]
+                # if (new_name in non_current_nodes_names) and (not new_node.permanent and new_node.current_op):
+                #     prev_node = self.nodes[new_name]
+                #     if prev_node.shape == new_node.shape:
+                #         prev_node.set_tensor(tensor=new_node.tensor)
+                #     else:
+                #         raise ValueError('Cannot set tensor in node with different shape')
+                #     self.remove_node(new_node)
+                #     prev_node.current_op = True
+                #
+                # else:
+                #     prev_node = self.nodes[prev_name]
+                #     if isinstance(prev_node, ParamNode):
+                #         self._remove_param(prev_node)
+                #     for edge in prev_node.edges:
+                #         if isinstance(edge, ParamEdge):
+                #             self._remove_param(edge)
+                #     self._nodes[new_name] = self._nodes.pop(prev_name)
+                #     prev_node._name = new_name
+                #     if isinstance(prev_node, ParamNode):
+                #         self._add_param(prev_node)
+                #     for edge in prev_node.edges:
+                #         if isinstance(edge, ParamEdge):
+                #             self._add_param(edge)
 
     def _change_node_name(self, node: AbstractNode, name: Text) -> None:
         """

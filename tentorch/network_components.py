@@ -757,6 +757,7 @@ class AbstractNode(ABC):
         return contract_between(self, other)
 
     # Tensor product of two nodes
+    # TODO: cannot be performed between connected nodes
     def __mod__(self, other: 'AbstractNode') -> 'Node':
         i = 0
         self_string = ''

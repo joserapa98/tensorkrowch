@@ -21,9 +21,9 @@ adaptive_mode = False
 periodic_bc = False
 
 # Training parameters
-num_train = 2000
+num_train = 20000
 num_test = 1000
-batch_size = 100
+batch_size = 1000
 image_size = (14, 14)
 num_epochs = 20
 learn_rate = 1e-4

@@ -24,7 +24,7 @@ This script contains:
 """
 
 from typing import (overload, Union, Optional, Dict,
-                    Sequence, Text, List, Tuple)
+                    Sequence, Text, List, Tuple, Set)
 from abc import ABC, abstractmethod
 import warnings
 import copy
@@ -253,6 +253,9 @@ class AbstractNode(ABC):
         self.permanent = permanent
         self.current_op = current_op
 
+        # successors
+        self._successors = []
+
         # TODO: create Network when creating node? Node would not have None as self.network
 
         self.init = True
@@ -316,6 +319,14 @@ class AbstractNode(ABC):
     @network.setter
     def network(self, network: 'TensorNetwork') -> None:
         self.move_to_network(network)
+
+    @property
+    def successors(self) -> List[dict]:
+        """
+        Successors list can only be modified with append() or list operations,
+        but cannot be substituted by another list
+        """
+        return self._successors
 
     # ----------------
     # Abstract methods
@@ -387,6 +398,17 @@ class AbstractNode(ABC):
             if node2 is not None:
                 neighbours.add(node2)
         return list(neighbours)
+
+    #def add_successor(self, other: 'AbstractNode', operation: Text) -> None:
+    #    """
+    #    When the node is operated with another one, the other node and the operation
+    #    are stored (when the resultant node is instantiated it is added to the dict).
+    #    All child nodes are of class Node
+    #    """
+    #    binary_op = ['tprod', 'mul', 'add', 'sub', 'contract']
+    #    if operation not in binary_op and not operation.startswith('contract_edge'):
+    #        raise ValueError('Not a valid operation string')
+    #    self._successors.append({'other': other, 'op': operation})
 
     def _change_axis_name(self, axis: Axis, name: Text) -> None:
         """
@@ -752,6 +774,7 @@ class AbstractNode(ABC):
     All operations return a Node, since the nodes resulting from
     tensor network operations should not be parameterized
     """
+    # TODO: all nodes resultant from operations are current_op, not permanent
     # Contraction of all edges connecting two nodes
     def __matmul__(self, other: 'AbstractNode') -> 'Node':
         return contract_between(self, other)
@@ -771,11 +794,15 @@ class AbstractNode(ABC):
         einsum_string = self_string + ',' + other_string + '->' + self_string + other_string
         new_tensor = opt_einsum.contract(einsum_string, self.tensor, other.tensor)
         new_node = Node(axes_names=self.axes_names + other.axes_names,
-                        name=f'product_{self.name}_{other.name}',
+                        name=f'tprod_{self.name}_{other.name}',
                         network=self.network,
+                        permanent=False,
+                        current_op=True,
                         tensor=new_tensor,
                         edges=self.edges + other.edges,
-                        node1_list=self.node1_list + other.node1_list)
+                        node1_list=self.node1_list + other.node1_list,
+                        parents={self, other},
+                        operation='tprod')
         return new_node
 
     # For element-wise operations (not tensor-network-like operations),
@@ -784,21 +811,33 @@ class AbstractNode(ABC):
         new_node = Node(axes_names=self.axes_names,
                         name=f'mul_{self.name}_{other.name}',
                         network=self.network,
-                        tensor=self.tensor * other.tensor)
+                        permanent=False,
+                        current_op=True,
+                        tensor=self.tensor * other.tensor,
+                        parents={self, other},
+                        operation='mul')
         return new_node
 
     def __add__(self, other: 'AbstractNode') -> 'Node':
         new_node = Node(axes_names=self.axes_names,
                         name=f'add_{self.name}_{other.name}',
                         network=self.network,
-                        tensor=self.tensor + other.tensor)
+                        permanent=False,
+                        current_op=True,
+                        tensor=self.tensor + other.tensor,
+                        parents={self, other},
+                        operation='add')
         return new_node
 
     def __sub__(self, other: 'AbstractNode') -> 'Node':
         new_node = Node(axes_names=self.axes_names,
                         name=f'sub_{self.name}_{other.name}',
                         network=self.network,
-                        tensor=self.tensor - other.tensor)
+                        permanent=False,
+                        current_op=True,
+                        tensor=self.tensor - other.tensor,
+                        parents={self, other},
+                        operation='sub')
         return new_node
 
     def __str__(self) -> Text:
@@ -833,12 +872,39 @@ class Node(AbstractNode):
                 tensor: Optional[torch.Tensor] = None,
                 edges: Optional[List['AbstractEdge']] = None,
                 node1_list: Optional[List[bool]] = None,
+                parents: Optional[Set[AbstractNode]] = None,
+                operation: Optional[Text] = None,
                 init_method: Optional[Text] = None,
                 **kwargs: float) -> AbstractNode:
 
         # TODO: IMPORTANT! This is a bottleneck, we have to optimize the
         #  way we preserve the nodes and reallocate the new ones
         if current_op and not permanent:
+            assert (parents is not None) and parents
+            assert operation is not None
+
+            binary_op = ['tprod', 'mul', 'add', 'sub', 'contract', 'einsum', 'stack', 'unbind']
+            if operation not in binary_op and not operation.startswith('contract_edge'):
+                raise ValueError('Not a valid operation string')
+
+            parent = list(parents)[0]
+            for succ_dict in parent.successors:
+                if (succ_dict['parents'] == parents) and (succ_dict['operation'] == operation):
+                    child = succ_dict['child']
+                    if not child.current_op and not child.permanent:
+                        if child.shape == tensor.shape:
+                            child.set_tensor(tensor=tensor)
+                        else:
+                            raise ValueError('Cannot set tensor in node with different shape')
+                        child.current_op = True
+                        return child
+            return super().__new__(cls,
+                                   shape=shape,
+                                   axes_names=axes_names,
+                                   name=name,
+                                   permanent=permanent,
+                                   current_op=current_op)
+
             new_instance = True
             if network is not None:
                 for node in network.nodes.values():
@@ -935,6 +1001,8 @@ class Node(AbstractNode):
                  tensor: Optional[torch.Tensor] = None,
                  edges: Optional[List['AbstractEdge']] = None,
                  node1_list: Optional[List[bool]] = None,
+                 parents: Optional[Set[AbstractNode]] = None,
+                 operation: Optional[Text] = None,
                  init_method: Optional[Text] = None,
                  **kwargs: float) -> None:
         """
@@ -951,6 +1019,9 @@ class Node(AbstractNode):
         tensor: tensor "contained" in the node
         edges: list of edges to attach to the node
         node1_list: list of node1 boolean values to attach to each axis
+        parents: set of parents if node is created by operating nodes
+        operation: operation performed to obtain the node, if node
+                   is created by operating nodes
         init_method: method to use to initialize the
                      node's tensor when it is not provided
         kwargs: keyword arguments for the init_method
@@ -992,6 +1063,20 @@ class Node(AbstractNode):
                 if not isinstance(network, TensorNetwork):
                     raise TypeError('`network` should be TensorNetwork type')
                 network._add_node(self, override=override_node)
+
+            # parents
+            if (parents is not None) and parents:
+                binary_op = ['tprod', 'mul', 'add', 'sub', 'contract', 'einsum', 'stack', 'unbind']
+                if operation not in binary_op and not operation.startswith('contract_edge'):
+                    raise ValueError('Not a valid operation string')
+
+                for parent in parents:
+                    for succ_dict in parent.successors:
+                        if (succ_dict['parents'] == parents) and \
+                                (succ_dict['operation'] == operation) and (succ_dict['child'] == self):
+                            raise ValueError('Repeated operations without replacing previous node,'
+                                             'this should not happen')
+                    parent.successors.append({'parents': parents, 'operation': operation, 'child': self})
 
     # -------
     # Methods
@@ -2308,7 +2393,8 @@ def get_batch_edges(node: AbstractNode) -> List[AbstractEdge]:
 
 def contract_edges(edges: List[AbstractEdge],
                    node1: AbstractNode,
-                   node2: AbstractNode) -> Node:
+                   node2: AbstractNode,
+                   operation: Optional[Text] = None) -> Node:
     """
     Contract edges between two nodes.
 
@@ -2318,6 +2404,8 @@ def contract_edges(edges: List[AbstractEdge],
            between `node1` and `node2`, or batch edges that are in both nodes
     node1: first node of the contraction
     node2: second node of the contraction
+    operation: operation string referencing the operation form which
+               `contract_between` is called
 
     Returns
     -------
@@ -2410,6 +2498,8 @@ def contract_edges(edges: List[AbstractEdge],
             j += 1
 
     # If nodes were connected, we can assume that both are in the same network
+    if operation is None:
+        operation = f'contract_edge_{edges}'
     new_node = Node(axes_names=axes_names,
                     name=new_name,
                     network=used_nodes[0].network,
@@ -2418,7 +2508,9 @@ def contract_edges(edges: List[AbstractEdge],
                     param_edges=False,
                     tensor=new_tensor,
                     edges=edges,
-                    node1_list=node1_list)
+                    node1_list=node1_list,
+                    parents={node1, node2},
+                    operation=operation)
     return new_node
 
 
@@ -2438,4 +2530,4 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
     if not edges:
         raise ValueError(f'No batch edges neither shared edges between '
                          f'nodes {node1!s} and {node2!s} found')
-    return contract_edges(edges, node1, node2)
+    return contract_edges(edges, node1, node2, 'contract')

@@ -144,7 +144,9 @@ def einsum(string: Text, *nodes: AbstractNode) -> Node:
                     param_edges=False,
                     tensor=new_tensor,
                     edges=list(edges.values()),
-                    node1_list=list(node1_list.values()))
+                    node1_list=list(node1_list.values()),
+                    parents=set(nodes),
+                    operation='einsum')
     return new_node
 
 
@@ -157,10 +159,14 @@ class StackNode(Node):
         # Me obligo a poner primero el nombre para que vaya bien el orden de usar __new__ e __init__
         # También tengo que crear el tensor antes de __init__
         stacked_tensor = torch.stack([node.tensor for node in nodes])
-        self = super().__new__(cls, nodes=nodes, name='stacknode',
+        self = super().__new__(cls,
+                               name='stacknode',
                                tensor=stacked_tensor,
                                override_node=override_node, network=nodes[0].network,
-                               permanent=False, current_op=True)
+                               permanent=False,
+                               current_op=True,
+                               parents=set(nodes),
+                               operation='stack')
         return self
 
     def __init__(self,
@@ -200,7 +206,9 @@ class StackNode(Node):
                              permanent=False,
                              current_op=True,
                              tensor=stacked_tensor,
-                             override_node=override_node)
+                             override_node=override_node,
+                             parents=set(nodes),
+                             operation='stack')
 
     @property
     def edges_dict(self) -> Dict[Text, Union[List[Edge], List[ParamEdge]]]:
@@ -324,7 +332,8 @@ def unbind(node: AbstractNode) -> List[Node]:
     nodes = []
     start = time.time()
     for i, tensor in enumerate(tensors_list):
-        new_node = Node(axes_names=node.axes_names[1:],
+        new_node = Node(name='unbind_node',
+                        axes_names=node.axes_names[1:],
                         network=node.network,
                         permanent=False,
                         current_op=True,
@@ -332,9 +341,10 @@ def unbind(node: AbstractNode) -> List[Node]:
                         edges=[edge.edges[i] if isinstance(edge, AbstractStackEdge)
                                else edge for edge in node.edges[1:]],
                         node1_list=node.node1_list[1:],
-                        name='unbind_node')
+                        parents={node},
+                        operation='unbind')
         nodes.append(new_node)
-    print('Create nodes:', time.time() - start)
+    print('\t\t\t\tCreate nodes:', time.time() - start)
     return nodes
 
 
@@ -357,11 +367,11 @@ def stacked_einsum(string: Text, *nodes_lists: List[AbstractNode]) -> List[Node]
     unbind(result): list of nodes resultant from operating the stack nodes and
                     unbind the result
     """
-    #start = time.time()
+    start = time.time()
     stacks_list = []
     for nodes_list in nodes_lists:
         stacks_list.append(stack(nodes_list))
-    #print('Stacks:', time.time() - start)
+    print('\t\t\tStacks:', time.time() - start)
 
     input_strings = string.split('->')[0].split(',')
     output_string = string.split('->')[1]
@@ -378,10 +388,10 @@ def stacked_einsum(string: Text, *nodes_lists: List[AbstractNode]) -> List[Node]
     output_string = stack_char + output_string
     string = input_string + '->' + output_string
 
-    #start = time.time()
+    start = time.time()
     result = einsum(string, *stacks_list)
-    #print('Einsum:', time.time() - start)
+    print('\t\t\tEinsum:', time.time() - start)
     start = time.time()
     unbinded_result = unbind(result)  # <-- Lo más lento
-    print('Unbind:', time.time() - start)
+    print('\t\t\tUnbind:', time.time() - start)
     return unbinded_result

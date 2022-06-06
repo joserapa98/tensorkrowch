@@ -331,20 +331,64 @@ def unbind(node: AbstractNode) -> List[Node]:
     tensors_list = torch.unbind(node.tensor)
     nodes = []
     start = time.time()
-    for i, tensor in enumerate(tensors_list):
+    lst_times = []
+
+    # for i, tensor in enumerate(tensors_list):
+    #     start2 = time.time()
+    #     new_node = Node(name='unbind_node',
+    #                     axes_names=node.axes_names[1:],
+    #                     network=node.network,
+    #                     permanent=False,
+    #                     current_op=True,
+    #                     tensor=tensor,
+    #                     edges=[edge.edges[i] if isinstance(edge, AbstractStackEdge)
+    #                            else edge for edge in node.edges[1:]],
+    #                     node1_list=node.node1_list[1:],
+    #                     parents={node},
+    #                     operation=f'unbind_{i}')
+    #     nodes.append(new_node)
+    #     lst_times.append(time.time() - start2)
+    # print('\t\t\t\t\tCreate 1 node:',
+    #       torch.tensor(lst_times).mean(),
+    #       torch.tensor(lst_times).min(0),
+    #       torch.tensor(lst_times).max(0),
+    #       torch.tensor(lst_times).median(0),
+    #       len(tensors_list))
+
+    # Invert structure of node.edges
+    # TODO: just 1 sec faster per epoch
+    is_stack_edge = list(map(lambda e: isinstance(e, AbstractStackEdge), node.edges[1:]))
+    edges_to_zip = []
+    for i, edge in enumerate(node.edges[1:]):
+        if is_stack_edge[i]:
+            edges_to_zip.append(edge.edges)
+        else:
+            edges_to_zip.append([edge] * len(tensors_list))
+
+    lst = list(zip(*([tensors_list, list(zip(*edges_to_zip))])))
+
+    for i, (tensor, edges) in enumerate(lst):
+        start2 = time.time()
         new_node = Node(name='unbind_node',
                         axes_names=node.axes_names[1:],
                         network=node.network,
                         permanent=False,
                         current_op=True,
                         tensor=tensor,
-                        edges=[edge.edges[i] if isinstance(edge, AbstractStackEdge)
-                               else edge for edge in node.edges[1:]],
+                        edges=list(edges),
                         node1_list=node.node1_list[1:],
                         parents={node},
-                        operation='unbind')
+                        operation=f'unbind_{i}')
         nodes.append(new_node)
-    print('\t\t\t\tCreate nodes:', time.time() - start)
+        lst_times.append(time.time() - start2)
+    # print('\t\t\t\t\tCreate 1 node:',
+    #       torch.tensor(lst_times).mean(),
+    #       torch.tensor(lst_times).min(0),
+    #       torch.tensor(lst_times).max(0),
+    #       torch.tensor(lst_times).median(0),
+    #       len(tensors_list))
+
+    #print('\t\t\t\tCreate nodes:', time.time() - start)
     return nodes
 
 
@@ -371,7 +415,7 @@ def stacked_einsum(string: Text, *nodes_lists: List[AbstractNode]) -> List[Node]
     stacks_list = []
     for nodes_list in nodes_lists:
         stacks_list.append(stack(nodes_list))
-    print('\t\t\tStacks:', time.time() - start)
+    #print('\t\t\tStacks:', time.time() - start)
 
     input_strings = string.split('->')[0].split(',')
     output_string = string.split('->')[1]
@@ -390,8 +434,8 @@ def stacked_einsum(string: Text, *nodes_lists: List[AbstractNode]) -> List[Node]
 
     start = time.time()
     result = einsum(string, *stacks_list)
-    print('\t\t\tEinsum:', time.time() - start)
+    #print('\t\t\tEinsum:', time.time() - start)
     start = time.time()
     unbinded_result = unbind(result)  # <-- Lo más lento
-    print('\t\t\tUnbind:', time.time() - start)
+    #print('\t\t\tUnbind:', time.time() - start)
     return unbinded_result

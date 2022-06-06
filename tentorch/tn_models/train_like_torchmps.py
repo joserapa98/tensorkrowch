@@ -16,16 +16,16 @@ torch.manual_seed(0)
 start_time = time.time()
 
 # MPS parameters
-bond_dim = 10
-adaptive_mode = False
-periodic_bc = False
+# bond_dim = 10
+# boundary = 'obc'
+# param_bond = False
 
 # Training parameters
-num_train = 20000
+num_train = 6000
 num_test = 1000
-batch_size = 1000
+batch_size = 100
 image_size = (14, 14)
-num_epochs = 20
+num_epochs = 5
 learn_rate = 1e-4
 l2_reg = 0.0
 
@@ -58,13 +58,51 @@ class MyMPS(nn.Module):
         return x
 
 
+# MPS - Linear
+# ------------
+# mps = nn.Sequential(MyMPS(n_sites=image_size[0] * image_size[1] + 1,
+#                           d_phys=3,
+#                           n_labels=50,
+#                           d_bond=10,
+#                           l_position=None,
+#                           boundary='obc',
+#                           param_bond=False),
+#                     nn.Linear(50, 10))
+# Epoch: 10, Runtime: 621 s, Train acc.: 0.9782, Test acc.: 0.9763
+
+# MPS - obc
+# ---------
+# mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
+#             d_phys=3,
+#             n_labels=10,
+#             d_bond=10,
+#             l_position=None,
+#             boundary='obc',
+#             param_bond=False)
+# Epoch: 10, Runtime: 606 s, Train acc.: 0.9800, Test acc.: 0.9788, LR: 1e-4
+
+# MPS - pbc
+# ---------
+# mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
+#             d_phys=3,
+#             n_labels=10,
+#             d_bond=10,
+#             l_position=None,
+#             boundary='pbc',
+#             param_bond=False)
+# Epoch: 10, Runtime: 606 s, Train acc.: 0.9803, Test acc.: 0.9747, LR: 1e-4
+
+# MPS - obc
+# ---------
 mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
             d_phys=3,
             n_labels=10,
-            d_bond=bond_dim,
+            d_bond=2,
             l_position=None,
             boundary='obc',
-            param_bond=False)
+            param_bond=True)
+# Epoch: 10, Runtime: 606 s, Train acc.: 0.9803, Test acc.: 0.9747, LR: 1e-4
+
 mps = mps.cuda()
 
 # Set our loss function and optimizer
@@ -106,9 +144,9 @@ print(
     f"Training on {num_train} MNIST images \n"
     f"(testing on {num_test}) for {num_epochs} epochs"
 )
-print(f"Maximum MPS bond dimension = {bond_dim}")
-print(f" * {'Adaptive' if adaptive_mode else 'Fixed'} bond dimensions")
-print(f" * {'Periodic' if periodic_bc else 'Open'} boundary conditions")
+# print(f"Maximum MPS bond dimension = {bond_dim}")
+# print(f" * {'Adaptive' if param_bond else 'Fixed'} bond dimensions")
+# print(f" * {'Periodic' if boundary == 'pbc' else 'Open'} boundary conditions")
 print(f"Using Adam w/ learning rate = {learn_rate:.1e}")
 if l2_reg > 0:
     print(f" * L2 regularization = {l2_reg:.2e}")
@@ -167,3 +205,87 @@ for epoch_num in range(1, num_epochs + 1):
 
     print(f"Test accuracy:          {running_acc / num_batches['test']:.4f}")
     print(f"Runtime so far:         {int(time.time()-start_time)} sec\n")
+
+
+# Increase bond dim
+# -----------------
+# for n in mps.mps.permanent_nodes:
+#     if 'right' in n.axes_names:
+#         n['right'].change_size(10, padding_method='randn', mean=0., std=1e-9)
+#
+# tensors = []
+# for n in mps.mps.permanent_nodes:
+#     tensors.append(n.tensor)
+#
+# # Creamos ahora mps nuevo porque si no hay mucho lío
+# mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
+#             d_phys=3,
+#             n_labels=10,
+#             d_bond=10,  # 2 -> 10
+#             l_position=None,
+#             boundary='obc',
+#             param_bond=False)
+#
+# for i, n in enumerate(mps.mps.permanent_nodes):
+#     n.set_tensor(tensors[i])
+#
+# mps = mps.cuda()
+#
+# # Set our loss function and optimizer
+# loss_fun = torch.nn.CrossEntropyLoss()
+# optimizer = torch.optim.Adam(mps.parameters(), lr=learn_rate, weight_decay=l2_reg)
+#
+#
+# # Let's start training!
+# for epoch_num in range(1, num_epochs + 1):
+#     running_loss = 0.0
+#     running_acc = 0.0
+#
+#     for inputs, labels in loaders["train"]:
+#         inputs, labels = inputs.view([batch_size, 3, image_size[0] * image_size[1]]), labels.data
+#         inputs, labels = inputs.cuda(), labels.cuda()
+#
+#         # Call our MPS to get logit scores and predictions
+#         scores = mps(inputs)
+#         _, preds = torch.max(scores, 1)
+#
+#         # Compute the loss and accuracy, add them to the running totals
+#         loss = loss_fun(scores, labels)
+#         with torch.no_grad():
+#             accuracy = torch.sum(preds == labels).item() / batch_size
+#             running_loss += loss
+#             running_acc += accuracy
+#
+#         # Backpropagate and update parameters
+#         optimizer.zero_grad()
+#         loss.backward()
+#         optimizer.step()
+#
+#     # grads = []
+#     # for p in list(mps.parameters())[100:]:
+#     #     print(p.shape)
+#     #     grads = p.grad.cpu()
+#     #     print(grads)
+#     #     break
+#     #plt.hist(grads, bins=10)
+#     #plt.show()
+#
+#     print(f"### Epoch {epoch_num} ###")
+#     print(f"Average loss:           {running_loss / num_batches['train']:.4f}")
+#     print(f"Average train accuracy: {running_acc / num_batches['train']:.4f}")
+#
+#     # Evaluate accuracy of MPS classifier on the test set
+#     with torch.no_grad():
+#         running_acc = 0.0
+#
+#         for inputs, labels in loaders["test"]:
+#             inputs, labels = inputs.view([batch_size, 3, image_size[0] * image_size[1]]), labels.data
+#             inputs, labels = inputs.cuda(), labels.cuda()
+#
+#             # Call our MPS to get logit scores and predictions
+#             scores = mps(inputs)
+#             _, preds = torch.max(scores, 1)
+#             running_acc += torch.sum(preds == labels).item() / batch_size
+#
+#     print(f"Test accuracy:          {running_acc / num_batches['test']:.4f}")
+#     print(f"Runtime so far:         {int(time.time()-start_time)} sec\n")

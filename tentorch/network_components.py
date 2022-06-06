@@ -883,8 +883,10 @@ class Node(AbstractNode):
             assert (parents is not None) and parents
             assert operation is not None
 
-            binary_op = ['tprod', 'mul', 'add', 'sub', 'contract', 'einsum', 'stack', 'unbind']
-            if operation not in binary_op and not operation.startswith('contract_edge'):
+            binary_op = ['tprod', 'mul', 'add', 'sub', 'contract', 'einsum', 'stack']
+            if operation not in binary_op and \
+                    not operation.startswith('contract_edge_') and \
+                    not operation.startswith('unbind_'):
                 raise ValueError('Not a valid operation string')
 
             parent = list(parents)[0]
@@ -895,7 +897,14 @@ class Node(AbstractNode):
                         if child.shape == tensor.shape:
                             child.set_tensor(tensor=tensor)
                         else:
-                            raise ValueError('Cannot set tensor in node with different shape')
+                            return super().__new__(cls,
+                                                   shape=shape,
+                                                   axes_names=axes_names,
+                                                   name=name,
+                                                   permanent=permanent,
+                                                   current_op=current_op)
+                            # If shape is not the same, it must be a neww child
+                            #raise ValueError('Cannot set tensor in node with different shape')
                         child.current_op = True
                         return child
             return super().__new__(cls,
@@ -1066,8 +1075,10 @@ class Node(AbstractNode):
 
             # parents
             if (parents is not None) and parents:
-                binary_op = ['tprod', 'mul', 'add', 'sub', 'contract', 'einsum', 'stack', 'unbind']
-                if operation not in binary_op and not operation.startswith('contract_edge'):
+                binary_op = ['tprod', 'mul', 'add', 'sub', 'contract', 'einsum', 'stack']
+                if operation not in binary_op and \
+                        not operation.startswith('contract_edge_') and \
+                        not operation.startswith('unbind_'):
                     raise ValueError('Not a valid operation string')
 
                 for parent in parents:
@@ -1315,6 +1326,7 @@ class ParamNode(AbstractNode, nn.Module):
             # This is done in order to not having the network as submodule
             ABC.__setattr__(self, name, value)
         else:
+            # TODO: problem with node.tensor = new_tensor
             nn.Module.__setattr__(self, name, value)
 
 
@@ -1513,8 +1525,9 @@ class Edge(AbstractEdge):
                                 override=True, parameterize=True)
             if self.node1.network is not None:
                 self.node1.network._add_param(new_edge)
-                self.node1.network._edges.remove(self)
-                self.node1.network._edges += [new_edge]
+                if self.is_dangling():
+                    self.node1.network._edges.remove(self)
+                    self.node1.network._edges += [new_edge]
             return new_edge
         else:
             return self
@@ -1660,26 +1673,28 @@ class ParamEdge(AbstractEdge, nn.Module):
         if shift is not None:
             if isinstance(shift, int):
                 shift = float(shift)
-                self._shift = nn.Parameter(torch.tensor(shift))
+                self._shift = nn.Parameter(torch.tensor(shift))#.cuda().detach().requires_grad_()
                 self._prev_shift = shift
             elif isinstance(shift, float):
-                self._shift = nn.Parameter(torch.tensor(shift))
+                self._shift = nn.Parameter(torch.tensor(shift))#.cuda().detach().requires_grad_()
                 self._prev_shift = shift
-            elif isinstance(shift, nn.Parameter):
-                self._shift = shift
+            elif isinstance(shift, nn.Parameter):  #(nn.Parameter, torch.Tensor)):
+                # TODO: eligible device (previous to sending TN to device)
+                self._shift = shift#.cuda().detach().requires_grad_()
                 self._prev_shift = shift.item()
             else:
                 raise TypeError('`shift` should be int, float or nn.Parameter type')
         if slope is not None:
             if isinstance(slope, int):
                 slope = float(slope)
-                self._slope = nn.Parameter(torch.tensor(slope))
+                self._slope = nn.Parameter(torch.tensor(slope))#.cuda().detach().requires_grad_()
                 self._prev_slope = slope
             elif isinstance(slope, float):
-                self._slope = nn.Parameter(torch.tensor(slope))
+                self._slope = nn.Parameter(torch.tensor(slope))#.cuda().detach().requires_grad_()
                 self._prev_slope = slope
-            elif isinstance(slope, nn.Parameter):
-                self._slope = slope
+            elif isinstance(slope, nn.Parameter):  #(nn.Parameter, torch.Tensor)):
+                # TODO: eligible device
+                self._slope = slope#.cuda().detach().requires_grad_()
                 self._prev_slope = slope.item()
             else:
                 raise TypeError('`slope` should be int, float or nn.Parameter type')
@@ -1705,8 +1720,9 @@ class ParamEdge(AbstractEdge, nn.Module):
         positions of the diagonal (dimension is equal to number of 1's, while
         size is equal to the matrix size)
         """
-        matrix = torch.zeros((self.size(), self.size()))
-        i = torch.arange(self.size())
+        # TODO: eligible device (several errors in tests)
+        matrix = torch.zeros((self.size(), self.size()))#.cuda().detach()
+        i = torch.arange(self.size())#.cuda().detach()
         matrix[(i, i)] = self.sigmoid(self.slope * (i - self.shift))
         return matrix
 
@@ -1754,8 +1770,9 @@ class ParamEdge(AbstractEdge, nn.Module):
                                 override=True, parameterize=True)
             if self.node1.network is not None:
                 self.node1.network._remove_param(self)
-                self.node1.network._edges.remove(self)
-                self.node1.network._edges += [new_edge]
+                if self.is_dangling():
+                    self.node1.network._edges.remove(self)
+                    self.node1.network._edges += [new_edge]
             return new_edge
         else:
             return self

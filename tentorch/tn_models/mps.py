@@ -200,14 +200,14 @@ class MPS(TensorNetwork):
                 self.left_node = ParamNode(shape=(self.d_phys[0], self.d_bond[0]),
                                            axes_names=('input', 'right'),
                                            name='left_node',
-                                           network=self,
-                                           param_edges=self.param_bond())
+                                           network=self,)
+                                           #param_edges=self.param_bond())
             else:
                 self.left_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[0], self.d_bond[0]),
                                            axes_names=('left', 'input', 'right'),
                                            name='left_node',
-                                           network=self,
-                                           param_edges=self.param_bond())
+                                           network=self,)
+                                           #param_edges=self.param_bond())
                 periodic_edge = self.left_node['left']
         else:
             self.left_node = None
@@ -218,8 +218,8 @@ class MPS(TensorNetwork):
                 node = ParamNode(shape=(self.d_bond[i - 1], self.d_phys[i], self.d_bond[i]),
                                  axes_names=('left', 'input', 'right'),
                                  name='left_env_node',
-                                 network=self,
-                                 param_edges=self.param_bond())
+                                 network=self,)
+                                 #param_edges=self.param_bond())
                 self.left_env.append(node)
                 if i == 1:
                     self.left_node['right'] ^ self.left_env[-1]['left']
@@ -232,14 +232,14 @@ class MPS(TensorNetwork):
                 self.output_node = ParamNode(shape=(self.d_phys[0], self.d_bond[0]),
                                              axes_names=('output', 'right'),
                                              name='output_node',
-                                             network=self,
-                                             param_edges=self.param_bond())
+                                             network=self,)
+                                             #param_edges=self.param_bond())
             else:
                 self.output_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[0], self.d_bond[0]),
                                              axes_names=('left', 'output', 'right'),
                                              name='output_node',
-                                             network=self,
-                                             param_edges=self.param_bond())
+                                             network=self,)
+                                             #param_edges=self.param_bond())
                 periodic_edge = self.output_node['left']
 
         if self.l_position == self.n_sites - 1:
@@ -248,14 +248,14 @@ class MPS(TensorNetwork):
                     self.output_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[-1]),
                                                  axes_names=('left', 'output'),
                                                  name='output_node',
-                                                 network=self,
-                                                 param_edges=self.param_bond())
+                                                 network=self,)
+                                                 #param_edges=self.param_bond())
                 else:
                     self.output_node = ParamNode(shape=(self.d_bond[-2], self.d_phys[-1], self.d_bond[-1]),
                                                  axes_names=('left', 'output', 'right'),
                                                  name='output_node',
-                                                 network=self,
-                                                 param_edges=self.param_bond())
+                                                 network=self,)
+                                                 #param_edges=self.param_bond())
                     self.output_node['right'] ^ periodic_edge
             if self.left_env:
                 self.left_env[-1]['right'] ^ self.output_node['left']
@@ -269,8 +269,8 @@ class MPS(TensorNetwork):
                                                 self.d_bond[self.l_position]),
                                          axes_names=('left', 'output', 'right'),
                                          name='output_node',
-                                         network=self,
-                                         param_edges=self.param_bond())
+                                         network=self,)
+                                         #param_edges=self.param_bond())
             if self.left_env:
                 self.left_env[-1]['right'] ^ self.output_node['left']
             else:
@@ -283,8 +283,8 @@ class MPS(TensorNetwork):
                 node = ParamNode(shape=(self.d_bond[i - 1], self.d_phys[i], self.d_bond[i]),
                                  axes_names=('left', 'input', 'right'),
                                  name='right_env_node',
-                                 network=self,
-                                 param_edges=self.param_bond())
+                                 network=self,)
+                                 #param_edges=self.param_bond())
                 self.right_env.append(node)
                 if i == self.l_position + 1:
                     self.output_node['right'] ^ self.right_env[-1]['left']
@@ -297,14 +297,14 @@ class MPS(TensorNetwork):
                 self.right_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[-1]),
                                             axes_names=('left', 'input'),
                                             name='right_node',
-                                            network=self,
-                                            param_edges=self.param_bond())
+                                            network=self,)
+                                            #param_edges=self.param_bond())
             else:
                 self.right_node = ParamNode(shape=(self.d_bond[-2], self.d_phys[-1], self.d_bond[-1]),
                                             axes_names=('left', 'input', 'right'),
                                             name='right_node',
-                                            network=self,
-                                            param_edges=self.param_bond())
+                                            network=self,)
+                                            #param_edges=self.param_bond())
                 self.right_node['right'] ^ periodic_edge
             if self.right_env:
                 self.right_env[-1]['right'] ^ self.right_node['left']
@@ -595,15 +595,15 @@ class MPS(TensorNetwork):
         start = time.time()
         if self.left_env + self.right_env:
             env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
-            print('\t\tFind data:', time.time() - start)
+            #print('\t\tFind data:', time.time() - start)
             start = time.time()
             result = stacked_einsum('lir,bi->lbr', self.left_env + self.right_env, env_data)
-            print('\t\tResult:', time.time() - start)
+            #print('\t\tResult:', time.time() - start)
             left_result = result[:len(self.left_env)]
             right_result = result[len(self.left_env):]
             return left_result, right_result
         else:
-            return None, None
+            return [], []
 
         # start = time.time()
         # env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
@@ -627,32 +627,104 @@ class MPS(TensorNetwork):
         return result_node
 
     @staticmethod
-    def _pairwise_contraction(nodes: List[Node]) -> Node:
+    def _pairwise_contraction(left_nodes: List[Node], right_nodes: List[Node]) -> Tuple[Node, Node]:
         """
         Contract a sequence of MPS tensors that do not have
         parameterized bond dimensions, making the operation
         more efficient (from jemisjoki/TorchMPS)
         """
-        length = len(nodes)
-        while length > 1:
-            odd_length = length % 2 == 1
-            half_length = length // 2
-            nice_length = 2 * half_length
+        # TODO: rewrite this (simplify)
+        length_left = len(left_nodes)
+        length_right = len(right_nodes)
+        while (length_left > 1) or (length_right > 1):
+            if (length_left > 1) and (length_right > 1):
+                odd_length_left = length_left % 2 == 1
+                half_length_left = length_left // 2
+                nice_length_left = 2 * half_length_left
 
-            even_nodes = nodes[0:nice_length:2]
-            odd_nodes = nodes[1:nice_length:2]
-            leftover = nodes[nice_length:]
+                left_even_nodes = left_nodes[0:nice_length_left:2]
+                left_odd_nodes = left_nodes[1:nice_length_left:2]
+                left_leftover = left_nodes[nice_length_left:]
 
-            nodes = stacked_einsum('ibj,jbk->ibk', even_nodes, odd_nodes)
-            nodes += leftover
-            length = half_length + int(odd_length)
+                odd_length_right = length_right % 2 == 1
+                half_length_right = length_right // 2
+                nice_length_right = 2 * half_length_right
 
-        return nodes[0]
+                right_even_nodes = right_nodes[0:nice_length_right:2]
+                right_odd_nodes = right_nodes[1:nice_length_right:2]
+                right_leftover = right_nodes[nice_length_right:]
+
+                nodes = stacked_einsum('ibj,jbk->ibk',
+                                       left_even_nodes + right_even_nodes,
+                                       left_odd_nodes + right_odd_nodes)
+
+                left_nodes = nodes[:half_length_left]
+                left_nodes += left_leftover
+                length_left = half_length_left + int(odd_length_left)
+
+                right_nodes = nodes[half_length_left:]
+                right_nodes += right_leftover
+                length_right = half_length_right + int(odd_length_right)
+
+            elif length_left > 1:
+                odd_length_left = length_left % 2 == 1
+                half_length_left = length_left // 2
+                nice_length_left = 2 * half_length_left
+
+                left_even_nodes = left_nodes[0:nice_length_left:2]
+                left_odd_nodes = left_nodes[1:nice_length_left:2]
+                left_leftover = left_nodes[nice_length_left:]
+
+                nodes = stacked_einsum('ibj,jbk->ibk',
+                                       left_even_nodes,
+                                       left_odd_nodes)
+
+                left_nodes = nodes
+                left_nodes += left_leftover
+                length_left = half_length_left + int(odd_length_left)
+
+            else:
+                odd_length_right = length_right % 2 == 1
+                half_length_right = length_right // 2
+                nice_length_right = 2 * half_length_right
+
+                right_even_nodes = right_nodes[0:nice_length_right:2]
+                right_odd_nodes = right_nodes[1:nice_length_right:2]
+                right_leftover = right_nodes[nice_length_right:]
+
+                nodes = stacked_einsum('ibj,jbk->ibk',
+                                       right_even_nodes,
+                                       right_odd_nodes)
+
+                right_nodes = nodes
+                right_nodes += right_leftover
+                length_right = half_length_right + int(odd_length_right)
+
+        if left_nodes and right_nodes:
+            return left_nodes[0], right_nodes[0]
+        elif left_nodes:
+            return left_nodes[0], None
+        elif right_nodes:
+            return None, right_nodes[0]
+        else:
+            return None, None
 
     def contract(self) -> Node:
         start = time.time()
         left_env, right_env = self._input_contraction()
-        print('\tInput:', time.time() - start)
+        #print('\tInput:', time.time() - start)
+
+
+        if not self.param_bond() and self.same_d_phys() and self.same_d_bond():
+            left_env_contracted, right_env_contracted = self._pairwise_contraction(left_env, right_env)
+        else:
+            left_env_contracted = None
+            right_env_contracted = None
+            if left_env:
+                left_env_contracted = self._inline_contraction(left_env)
+            if right_env:
+                right_env_contracted = self._inline_contraction(right_env)
+
         
         # Operations of left environment
         left_list = []
@@ -663,26 +735,30 @@ class MPS(TensorNetwork):
             else:
                 left_node = einsum('lir,bi->lbr', self.left_node, self.left_node.neighbours('input'))
             left_list.append(left_node)
-            print('\tLeft node:', time.time() - start)
-        if left_env:
-            start = time.time()
-            if not self.param_bond() and self.same_d_phys() and self.same_d_bond():
-                left_env_contracted = self._pairwise_contraction(left_env)
-            else:
-                left_env_contracted = self._inline_contraction(left_env)
-            left_list.append(left_env_contracted)
-            print('\tLeft env:', time.time() - start)
+        if left_env_contracted is not None:
+            left_list.append(left_env_contracted)  # new
+            #print('\tLeft node:', time.time() - start)
+        # if left_env:
+        #     start = time.time()
+        #     if not self.param_bond() and self.same_d_phys() and self.same_d_bond():
+        #         left_env_contracted = self._pairwise_contraction(left_env)
+        #     else:
+        #         left_env_contracted = self._inline_contraction(left_env)
+        #     left_list.append(left_env_contracted)
+        #     #print('\tLeft env:', time.time() - start)
 
         # Operations of right environment
         right_list = []
-        if right_env:
-            start = time.time()
-            if not self.param_bond() and self.same_d_phys() and self.same_d_bond():
-                right_env_contracted = self._pairwise_contraction(right_env)
-            else:
-                right_env_contracted = self._inline_contraction(right_env)
-            right_list.append(right_env_contracted)
-            print('\tRight env:', time.time() - start)
+        if right_env_contracted is not None:
+            right_list.append(right_env_contracted)  # new
+        # if right_env:
+        #     start = time.time()
+        #     if not self.param_bond() and self.same_d_phys() and self.same_d_bond():
+        #         right_env_contracted = self._pairwise_contraction(right_env)
+        #     else:
+        #         right_env_contracted = self._inline_contraction(right_env)
+        #     right_list.append(right_env_contracted)
+        #     #print('\tRight env:', time.time() - start)
         if self.right_node is not None:
             start = time.time()
             if self.boundary == 'obc':
@@ -690,14 +766,14 @@ class MPS(TensorNetwork):
             else:
                 right_node = einsum('lir,bi->lbr', self.right_node, self.right_node.neighbours('input'))
             right_list.append(right_node)
-            print('\tRight node:', time.time() - start)
+            #print('\tRight node:', time.time() - start)
 
         start = time.time()
         result_list = left_list + [self.output_node] + right_list
         result = result_list[0]
         for node in result_list[1:]:
             result @= node
-        print('\tFinal contraction:', time.time() - start)
+        #print('\tFinal contraction:', time.time() - start)
 
         # Clean intermediate nodes
         #mps_nodes = list(self.nodes.values())
@@ -725,16 +801,16 @@ class MPS(TensorNetwork):
             self._add_data(data=data.unbind(2))
             self._permanent_nodes = list(self.nodes.values())
             #self.initialize2()
-            print('Add data:', time.time() - start)
+            #print('Add data:', time.time() - start)
         else:
             start = time.time()
             self._add_data(data=data.unbind(2))
             end = time.time()
-            print('Add data:', end - start)
+            #print('Add data:', end - start)
         start = time.time()
         output = self.contract().tensor
-        print('Contract:', time.time() - start)
-        print()
+        #print('Contract:', time.time() - start)
+        #print()
         self._update_current_op_nodes()
         #self.num_current_op_nodes = []
         return output

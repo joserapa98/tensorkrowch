@@ -199,7 +199,7 @@ class AbstractNode(ABC):
         name: node name
         permanent: indicates if the node is a permanent node in the network
         current_op: indicates if the node is being used in the current
-                    iteration of operations
+                    iteration of operations (for training)
 
         Raises
         ------
@@ -351,7 +351,7 @@ class AbstractNode(ABC):
     @abstractmethod
     def copy(self) -> 'AbstractNode':
         """
-        Copy the node, creating a new one with new edges that are reattached to it
+        Copy the node, creating a new one with new, copied edges that are reattached to it
         """
         pass
 
@@ -619,15 +619,16 @@ class AbstractNode(ABC):
                     edge | edge
 
     @staticmethod
-    def _make_copy_tensor(shape: Shape) -> torch.Tensor:
-        copy_tensor = torch.zeros(shape)
+    def _make_copy_tensor(shape: Shape, device: torch.device) -> torch.Tensor:
+        copy_tensor = torch.zeros(shape, device=device)
         rank = len(shape)
-        i = torch.arange(min(shape))
+        i = torch.arange(min(shape), device=device)
         copy_tensor[(i,) * rank] = 1.
         return copy_tensor
 
     @staticmethod
     def _make_rand_tensor(shape: Shape,
+                          device: torch.device,
                           low: float = 0.,
                           high: float = 1.) -> torch.Tensor:
         if not isinstance(low, float):
@@ -636,10 +637,11 @@ class AbstractNode(ABC):
             raise TypeError('`high` should be float type')
         if low >= high:
             raise ValueError('`low` should be strictly smaller than `high`')
-        return torch.rand(shape) * (high - low) + low
+        return torch.rand(shape, device=device) * (high - low) + low
 
     @staticmethod
     def _make_randn_tensor(shape: Shape,
+                           device: torch.device,
                            mean: float = 0.,
                            std: float = 1.) -> torch.Tensor:
         if not isinstance(mean, float):
@@ -648,24 +650,25 @@ class AbstractNode(ABC):
             raise TypeError('`std` should be float type')
         if std <= 0:
             raise ValueError('`std` should be positive')
-        return torch.randn(shape) * std + mean
+        return torch.randn(shape, device=device) * std + mean
 
     def make_tensor(self,
                     shape: Optional[Shape] = None,
+                    device: torch.device = torch.device('cpu'),
                     init_method: Text = 'zeros',
                     **kwargs: float) -> torch.Tensor:
         if shape is None:
             shape = self.shape
         if init_method == 'zeros':
-            return torch.zeros(shape)
+            return torch.zeros(shape, device=device)
         elif init_method == 'ones':
-            return torch.ones(shape)
+            return torch.ones(shape, device=device)
         elif init_method == 'copy':
-            return self._make_copy_tensor(shape)
+            return self._make_copy_tensor(shape, device=device)
         elif init_method == 'rand':
-            return self._make_rand_tensor(shape, **kwargs)
+            return self._make_rand_tensor(shape, device=device, **kwargs)
         elif init_method == 'randn':
-            return self._make_randn_tensor(shape, **kwargs)
+            return self._make_randn_tensor(shape, device=device, **kwargs)
         else:
             raise ValueError('Choose a valid `init_method`: "zeros", '
                              '"ones", "copy", "rand", "randn"')
@@ -687,17 +690,16 @@ class AbstractNode(ABC):
                 raise ValueError('`tensor` shape should match node shape')
             self._tensor = self.set_tensor_format(tensor)
         elif init_method is not None:
-            tensor = self.make_tensor(init_method=init_method, **kwargs)
-            #tensor = tensor.to(device)  # TODO: check device movements, make tests
+            tensor = self.make_tensor(init_method=init_method, device=device, **kwargs)
             self._tensor = self.set_tensor_format(tensor)
         else:
             raise ValueError('One of `tensor` or `init_method` must be provided')
 
-    def unset_tensor(self) -> None:
+    def unset_tensor(self, device: torch.device = torch.device('cpu')) -> None:
         """
         Change node's tensor by an empty tensor.
         """
-        self._tensor = torch.empty(self.shape)
+        self._tensor = torch.empty(self.shape, device=device)
 
     def move_to_network(self,
                         network: 'TensorNetwork',
@@ -850,6 +852,12 @@ class AbstractNode(ABC):
                f'\taxes: {self.axes_names}\n' \
                f'\tedges:\n{tab_string(repr(self.edges), 2)})'
 
+    def foo(self, other: 'AbstractNode'):
+        from tentorch.functionals import Foo
+        f = Foo()
+        f.op(self, other)
+        return
+
 
 class Node(AbstractNode):
     """
@@ -903,7 +911,7 @@ class Node(AbstractNode):
                                                    name=name,
                                                    permanent=permanent,
                                                    current_op=current_op)
-                            # If shape is not the same, it must be a neww child
+                            # If shape is not the same, it must be a new child
                             #raise ValueError('Cannot set tensor in node with different shape')
                         child.current_op = True
                         return child

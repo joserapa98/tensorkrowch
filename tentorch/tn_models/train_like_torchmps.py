@@ -11,6 +11,8 @@ from typing import (Union, Optional, Sequence,
 import pandas as pd
 import matplotlib.pyplot as plt
 
+import PIL.ImageOps
+
 # Miscellaneous initialization
 torch.manual_seed(0)
 start_time = time.time()
@@ -21,10 +23,10 @@ start_time = time.time()
 # param_bond = False
 
 # Training parameters
-num_train = 6000
-num_test = 1000
+num_train = 60000
+num_test = 10000
 batch_size = 100
-image_size = (14, 14)
+image_size = (28, 28)
 num_epochs = 5
 learn_rate = 1e-4
 l2_reg = 0.0
@@ -97,10 +99,10 @@ class MyMPS(nn.Module):
 mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
             d_phys=3,
             n_labels=10,
-            d_bond=2,
+            d_bond=10,  # torch.randint(2, 10, (image_size[0] * image_size[1], )).tolist(),
             l_position=None,
             boundary='obc',
-            param_bond=True)
+            param_bond=False)
 # Epoch: 10, Runtime: 606 s, Train acc.: 0.9803, Test acc.: 0.9747, LR: 1e-4
 
 mps = mps.cuda()
@@ -119,10 +121,18 @@ def embedding(image: torch.Tensor) -> torch.Tensor:
 transform = transforms.Compose([transforms.Resize(image_size),
                                 transforms.ToTensor(),
                                 transforms.Lambda(embedding)])
-train_set = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
-                           download=True, transform=transform)
-test_set = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
-                          download=True, transform=transform, train=False)
+train_set = datasets.FashionMNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
+                                  download=True, transform=transform)
+test_set = datasets.FashionMNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
+                                 download=True, transform=transform, train=False)
+
+train_set_aux = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
+                               download=True)
+inv_image = transform(PIL.ImageOps.invert(train_set_aux[0][0]))
+inv_image = inv_image.view(1, 3, -1).cuda()
+inv_label = torch.tensor(train_set_aux[0][1]).view(1).cuda()
+torch.save(inv_image, 'inv_image.pth')
+torch.save(inv_label, 'inv_label.pth')
 
 # Put MNIST data into dataloaders
 samplers = {
@@ -157,9 +167,16 @@ for epoch_num in range(1, num_epochs + 1):
     running_loss = 0.0
     running_acc = 0.0
 
+    first = True
+
     for inputs, labels in loaders["train"]:
         inputs, labels = inputs.view([batch_size, 3, image_size[0] * image_size[1]]), labels.data
         inputs, labels = inputs.cuda(), labels.cuda()
+
+        if first:
+            inputs = torch.cat([inputs[:-1], inv_image], dim=0)
+            labels = torch.cat([labels[:-1], inv_label], dim=0)
+            first = False
 
         # Call our MPS to get logit scores and predictions
         scores = mps(inputs)
@@ -205,6 +222,8 @@ for epoch_num in range(1, num_epochs + 1):
 
     print(f"Test accuracy:          {running_acc / num_batches['test']:.4f}")
     print(f"Runtime so far:         {int(time.time()-start_time)} sec\n")
+
+    torch.save(mps.state_dict(), 'mps.pth')
 
 
 # Increase bond dim

@@ -13,6 +13,8 @@ from tentorch.network_components import TensorNetwork
 
 from tentorch.node_operations import einsum, stacked_einsum
 
+import opt_einsum
+
 import time
 
 
@@ -405,7 +407,8 @@ class MPS(TensorNetwork):
                         aux = torch.eye(node.shape[0], node.shape[2])
                         tensor[:, 0, :] = aux
                 else:
-                    aux = torch.randn(tensor.shape[0], tensor.shape[2]) * std + torch.eye(tensor.shape[0])
+                    aux = torch.randn(tensor.shape[0], tensor.shape[2]) * std +\
+                          torch.eye(tensor.shape[0], tensor.shape[2])
                     tensor[:, 0, :] = aux
                 node.set_tensor(tensor=tensor)
             else:
@@ -711,6 +714,9 @@ class MPS(TensorNetwork):
 
     def contract(self) -> Node:
         start = time.time()
+        # TODO: case different bond dimensions
+        # TODO: should be better to use the same bond dimension across "stackable"  operations,
+        #  and add function to "simplify" dimensions later
         left_env, right_env = self._input_contraction()
         #print('\tInput:', time.time() - start)
 
@@ -783,6 +789,59 @@ class MPS(TensorNetwork):
 
         return result
 
+    def contract2(self) -> Node:
+        list_data_tensors = list(map(lambda node: node.neighbours('input').tensor, self.left_env + self.right_env))
+        data_tensor = torch.stack(list_data_tensors)
+
+        list_mps_tensors = list(map(lambda node: node.tensor, self.left_env + self.right_env))
+        mps_tensor = torch.stack(list_mps_tensors)
+
+        envs_result = opt_einsum.contract('slir,sbi->slbr', mps_tensor, data_tensor)
+        left_tensors = envs_result[:len(self.left_env)].permute(2, 0, 1, 3)
+        right_tensors = envs_result[len(self.left_env):].permute(2, 0, 1, 3)
+
+        n_mats = left_tensors.shape[1]
+        while n_mats > 1:
+            half_n = n_mats // 2
+            floor_n = half_n * 2
+
+            # Split matrices up into even and odd numbers (maybe w/ leftover)
+            even_mats = left_tensors[:, 0:floor_n:2, :, :]
+            odd_mats = left_tensors[:, 1:floor_n:2, :, :]
+            leftover = left_tensors[:, floor_n:, :, :]
+
+            # Batch multiply everything, append remainder
+            left_tensors = even_mats @ odd_mats
+            left_tensors = torch.cat((left_tensors, leftover), dim=1)
+            n_mats = left_tensors.shape[1]
+        left_tensors = left_tensors.squeeze(1)
+
+        n_mats = right_tensors.shape[1]
+        while n_mats > 1:
+            half_n = n_mats // 2
+            floor_n = half_n * 2
+
+            # Split matrices up into even and odd numbers (maybe w/ leftover)
+            even_mats = right_tensors[:, 0:floor_n:2, :, :]
+            odd_mats = right_tensors[:, 1:floor_n:2, :, :]
+            leftover = right_tensors[:, floor_n:, :, :]
+
+            # Batch multiply everything, append remainder
+            right_tensors = even_mats @ odd_mats
+            right_tensors = torch.cat((right_tensors, leftover), dim=1)
+            n_mats = right_tensors.shape[1]
+        right_tensors = right_tensors.squeeze(1)
+
+        left_result = opt_einsum.contract('bi,il,blr->br', *[self.left_node.neighbours('input').tensor,
+                                                             self.left_node.tensor,
+                                                             left_tensors])
+        right_result = opt_einsum.contract('blr,ri,bi->bl', *[right_tensors,
+                                                              self.right_node.tensor,
+                                                              self.right_node.neighbours('input').tensor])
+        result = opt_einsum.contract('bl,lor,br->bo', *[left_result, self.output_node.tensor, right_result])
+
+        return result
+
     def _update_current_op_nodes(self) -> None:
         for node in self.nodes.values():
             if not node.permanent and node.current_op:
@@ -808,7 +867,7 @@ class MPS(TensorNetwork):
             end = time.time()
             #print('Add data:', end - start)
         start = time.time()
-        output = self.contract().tensor
+        output = self.contract2()  #self.contract().tensor
         #print('Contract:', time.time() - start)
         #print()
         self._update_current_op_nodes()

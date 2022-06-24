@@ -214,7 +214,8 @@ class StackNode(Node):
     def edges_dict(self) -> Dict[Text, Union[List[Edge], List[ParamEdge]]]:
         return self._edges_dict
 
-    def make_edge(self, axis: Axis) -> Union['Edge', 'ParamEdge']:
+    def make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
+        # TODO: param_edges not used here
         if axis.num == 0:
             return Edge(node1=self, axis1=axis)
         if isinstance(self.edges_dict[axis.name][0], Edge):

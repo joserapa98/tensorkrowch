@@ -233,7 +233,6 @@ class AbstractNode(ABC):
                         for i, name in enumerate(axes_names)]
         self._axes = axes
         self._tensor = torch.empty(shape)
-        self._param_edges = False  # TODO: If not all edges are param or non-param, should be None
         self._edges = []
 
         # name
@@ -255,8 +254,6 @@ class AbstractNode(ABC):
 
         # successors
         self._successors = []
-
-        # TODO: create Network when creating node? Node would not have None as self.network
 
         self.init = True
 
@@ -547,7 +544,20 @@ class AbstractNode(ABC):
                shape (in that case, sizes and dimensions will be different)
         """
         if set_param is None:
-            return self._param_edges
+            all_edges = True
+            all_param_edges = True
+            for edge in self.edges:
+                if isinstance(edge, ParamEdge):
+                    all_edges = False
+                elif isinstance(edge, Edge):
+                    all_param_edges = False
+            if all_edges:
+                return False
+            elif all_param_edges:
+                return True
+            else:
+                return None
+
         else:
             if set_param:
                 if not sizes:
@@ -559,7 +569,6 @@ class AbstractNode(ABC):
             else:
                 for param_edge in self.edges:
                     param_edge.parameterize(False)
-            self._param_edges = set_param
 
     def reattach_edges(self,
                        axis: Optional[Ax] = None,
@@ -628,9 +637,9 @@ class AbstractNode(ABC):
 
     @staticmethod
     def _make_rand_tensor(shape: Shape,
-                          device: torch.device,
                           low: float = 0.,
-                          high: float = 1.) -> torch.Tensor:
+                          high: float = 1.,
+                          device: torch.device = torch.device('cpu')) -> torch.Tensor:
         if not isinstance(low, float):
             raise TypeError('`low` should be float type')
         if not isinstance(high, float):
@@ -641,9 +650,9 @@ class AbstractNode(ABC):
 
     @staticmethod
     def _make_randn_tensor(shape: Shape,
-                           device: torch.device,
                            mean: float = 0.,
-                           std: float = 1.) -> torch.Tensor:
+                           std: float = 1.,
+                           device: torch.device = torch.device('cpu')) -> torch.Tensor:
         if not isinstance(mean, float):
             raise TypeError('`mean` should be float type')
         if not isinstance(std, float):
@@ -654,8 +663,8 @@ class AbstractNode(ABC):
 
     def make_tensor(self,
                     shape: Optional[Shape] = None,
-                    device: torch.device = torch.device('cpu'),
                     init_method: Text = 'zeros',
+                    device: torch.device = torch.device('cpu'),
                     **kwargs: float) -> torch.Tensor:
         if shape is None:
             shape = self.shape
@@ -675,8 +684,8 @@ class AbstractNode(ABC):
 
     def set_tensor(self,
                    tensor: Optional[torch.Tensor] = None,
-                   device: torch.device = torch.device('cpu'),
                    init_method: Optional[Text] = 'zeros',
+                   device: torch.device = torch.device('cpu'),
                    **kwargs: float) -> None:
         """
         Set a new node's tensor or create one with `make_tensor` and set it.
@@ -1062,9 +1071,8 @@ class Node(AbstractNode):
                 self.set_tensor(tensor=tensor)
 
             # edges
-            self._param_edges = param_edges
             if edges is None:
-                edges = [self.make_edge(ax)
+                edges = [self.make_edge(ax, param_edges)
                          for ax in self.axes]
             else:
                 if node1_list is None:
@@ -1152,8 +1160,8 @@ class Node(AbstractNode):
                             node1_list=permute_list(self.node1_list, axes_nums))
             return new_node
 
-    def make_edge(self, axis: Axis) -> Union['Edge', 'ParamEdge']:
-        if self.param_edges():
+    def make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
+        if param_edges:
             return ParamEdge(node1=self, axis1=axis)
         return Edge(node1=self, axis1=axis)
 
@@ -1239,9 +1247,8 @@ class ParamNode(AbstractNode, nn.Module):
             self.set_tensor(tensor=tensor)
 
         # edges
-        self._param_edges = param_edges
         if edges is None:
-            edges = [self.make_edge(ax)
+            edges = [self.make_edge(ax, param_edges)
                      for ax in self.axes]
         else:
             if node1_list is None:
@@ -1324,8 +1331,8 @@ class ParamNode(AbstractNode, nn.Module):
                                  node1_list=permute_list(self.node1_list, axes_nums))
             return new_node
 
-    def make_edge(self, axis: Axis) -> Union['ParamEdge', 'Edge']:
-        if self.param_edges():
+    def make_edge(self, axis: Axis, param_edges: bool) -> Union['ParamEdge', 'Edge']:
+        if param_edges:
             return ParamEdge(node1=self, axis1=axis)
         return Edge(node1=self, axis1=axis)
 

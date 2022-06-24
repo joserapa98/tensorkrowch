@@ -867,7 +867,7 @@ class MPS(TensorNetwork):
             end = time.time()
             #print('Add data:', end - start)
         start = time.time()
-        output = self.contract2()  #self.contract().tensor
+        output = self.contract().tensor  #self.contract2()
         #print('Contract:', time.time() - start)
         #print()
         self._update_current_op_nodes()

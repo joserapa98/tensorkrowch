@@ -23,11 +23,11 @@ start_time = time.time()
 # param_bond = False
 
 # Training parameters
-num_train = 60000
-num_test = 10000
+num_train = 10000
+num_test = 1000
 batch_size = 100
-image_size = (28, 28)
-num_epochs = 5
+image_size = (14, 14)
+num_epochs = 20
 learn_rate = 1e-4
 l2_reg = 0.0
 
@@ -96,14 +96,24 @@ class MyMPS(nn.Module):
 
 # MPS - obc
 # ---------
+# mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
+#             d_phys=3,
+#             n_labels=10,
+#             d_bond=10,
+#             l_position=None,
+#             boundary='obc',
+#             param_bond=False)
+# Epoch: 10, Runtime: 606 s, Train acc.: 0.9803, Test acc.: 0.9747, LR: 1e-4
+
+# MPS - obc
+# ---------
 mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
             d_phys=3,
             n_labels=10,
-            d_bond=10,  # torch.randint(2, 10, (image_size[0] * image_size[1], )).tolist(),
+            d_bond=torch.randint(5, 10, (image_size[0] * image_size[1], )).tolist(),
             l_position=None,
             boundary='obc',
-            param_bond=False)
-# Epoch: 10, Runtime: 606 s, Train acc.: 0.9803, Test acc.: 0.9747, LR: 1e-4
+            param_bond=True)
 
 mps = mps.cuda()
 
@@ -224,6 +234,8 @@ for epoch_num in range(1, num_epochs + 1):
     print(f"Runtime so far:         {int(time.time()-start_time)} sec\n")
 
     torch.save(mps.state_dict(), 'mps.pth')
+
+print('Finished')
 
 
 # Increase bond dim

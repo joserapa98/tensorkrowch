@@ -595,18 +595,28 @@ class MPS(TensorNetwork):
         #     right_result = stacked_einsum('lir,bi->lbr', self.right_env, right_env_data)
         # return left_result, right_result
 
-        start = time.time()
-        if self.left_env + self.right_env:
-            env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
-            #print('\t\tFind data:', time.time() - start)
-            start = time.time()
-            result = stacked_einsum('lir,bi->lbr', self.left_env + self.right_env, env_data)
-            #print('\t\tResult:', time.time() - start)
-            left_result = result[:len(self.left_env)]
-            right_result = result[len(self.left_env):]
-            return left_result, right_result
+        if self.same_d_bond():
+            #start = time.time()
+            if self.left_env + self.right_env:
+                env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
+                #print('\t\tFind data:', time.time() - start)
+                #start = time.time()
+                result = stacked_einsum('lir,bi->lbr', self.left_env + self.right_env, env_data)
+                #print('\t\tResult:', time.time() - start)
+                left_result = result[:len(self.left_env)]
+                right_result = result[len(self.left_env):]
+                return left_result, right_result
+            else:
+                return [], []
+
         else:
-            return [], []
+            left_result = []
+            for node in self.left_env:
+                left_result.append(node['input'].contract())
+            right_result = []
+            for node in self.right_env:
+                right_result.append(node['input'].contract())
+            return left_result, right_result
 
         # start = time.time()
         # env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))

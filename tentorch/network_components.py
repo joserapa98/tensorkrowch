@@ -1641,8 +1641,8 @@ class ParamEdge(AbstractEdge, nn.Module):
 
     @property
     def matrix(self) -> torch.Tensor:
-        if self.is_updated():
-            return self._matrix
+        #if self.is_updated():
+        #    return self._matrix
         self.set_matrix()
         return self._matrix
 
@@ -1736,8 +1736,8 @@ class ParamEdge(AbstractEdge, nn.Module):
         size is equal to the matrix size)
         """
         # TODO: eligible device (several errors in tests)
-        matrix = torch.zeros((self.size(), self.size()))#.cuda().detach()
-        i = torch.arange(self.size())#.cuda().detach()
+        matrix = torch.zeros((self.size(), self.size()), device=self.shift.device)#.cuda().detach()
+        i = torch.arange(self.size(), device=self.shift.device)#.cuda().detach()
         matrix[(i, i)] = self.sigmoid(self.slope * (i - self.shift))
         return matrix
 
@@ -2407,7 +2407,7 @@ def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractE
     """
     edges = []
     for edge in node1.edges:
-        if (edge in node2.edges) and (not edge.is_dangling()):
+        if (edge in node2.edges):  # and (not edge.is_dangling()):  # TODO: why I had this?
             edges.append(edge)
     return edges
 
@@ -2550,7 +2550,9 @@ def contract(edge: AbstractEdge) -> Node:
     """
     Contract only one edge
     """
-    return contract_edges([edge], edge.node1, edge.node2)
+    return contract_edges([edge] + get_batch_edges(edge.node1) + get_batch_edges(edge.node2),
+                          edge.node1,
+                          edge.node2)
 
 
 def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:

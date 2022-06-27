@@ -255,6 +255,8 @@ class AbstractNode(ABC):
         # successors
         self._successors = []
 
+        # TODO: Create always TN associated to the nodes
+
         self.init = True
 
     # ----------
@@ -685,13 +687,15 @@ class AbstractNode(ABC):
     def set_tensor(self,
                    tensor: Optional[torch.Tensor] = None,
                    init_method: Optional[Text] = 'zeros',
-                   device: torch.device = torch.device('cpu'),
+                   device: Optional[torch.device] = None,
                    **kwargs: float) -> None:
         """
         Set a new node's tensor or create one with `make_tensor` and set it.
         To set the tensor it is also used `set_tensor_format`, which depends
         on the type of node.
         """
+        if device is None and self.tensor is not None:
+            device = self.tensor.device
         if tensor is not None:
             if not isinstance(tensor, torch.Tensor):
                 raise ValueError('`tensor` should be torch.Tensor type')
@@ -1492,6 +1496,114 @@ class AbstractEdge(ABC):
 
     def contract(self) -> Node:
         return contract(self)
+
+    def svd(self,
+            side='left',
+            rank: Optional[int] = None,
+            cum_percentage: Optional[float] = None) -> None:
+
+        contracted_node = self.contract()
+
+        lst_permute_all = []
+        lst_batches = []
+        lst_batches_names = []
+        lst_reshape_edges1 = []
+        idx = 0
+        for edge in self.node1.edges:
+            if edge in contracted_node.edges:
+                if edge.is_batch() and edge.axis1.name in self.node2.axes_names:
+                    lst_permute_all = [idx] + lst_permute_all
+                    lst_batches = [edge.size()] + lst_batches
+                    lst_batches_names = [edge.axis1.name] + lst_batches_names
+                else:
+                    lst_permute_all.append(idx)
+                    lst_reshape_edges1.append(edge.size())
+                idx += 1
+
+        lst_reshape_edges2 = []
+        for edge in self.node2.edges:
+            if edge in contracted_node.edges:
+                lst_permute_all.append(idx)
+                lst_reshape_edges2.append(edge.size())
+                idx += 1
+
+        contracted_tensor = contracted_node.tensor.\
+            permute(*lst_permute_all).\
+            reshape(*(lst_batches +
+                      [torch.tensor(lst_reshape_edges1).prod().item()] +
+                      [torch.tensor(lst_reshape_edges2).prod().item()]))
+        u, s, vh = torch.linalg.svd(contracted_tensor, full_matrices=False)
+
+        if cum_percentage is not None:
+            if rank is not None:
+                raise ValueError('Only one of `rank` and `cum_percentage` should be provided')
+            percentages = s.cumsum(-1) / s.sum(-1).view(*s.shape[:-1], 1).expand(s.shape)
+            cum_percentage_tensor = torch.tensor(cum_percentage).repeat(percentages.shape[:-1])
+            rank = 0
+            for i in range(percentages.shape[-1]):
+                p = percentages[..., i]
+                rank += 1
+                if torch.ge(p, cum_percentage_tensor).all():
+                    break
+
+        if rank is None:
+            raise ValueError('One of `rank` and `cum_percentage` should be provided')
+        if rank < len(s):
+            u = u[..., :rank]
+            s = s[..., :rank]
+            vh = vh[..., :rank, :]
+
+        if side == 'left':
+            u = u @ torch.diag_embed(s)
+        elif side == 'right':
+            vh = torch.diag_embed(s) @ vh
+        else:
+            # TODO: could be changed to bool or "node1"/"node2"
+            raise ValueError('`side` can only be "left" or "right"')
+
+        u = u.reshape(*(lst_batches + lst_reshape_edges1 + [rank]))
+        vh = vh.reshape(*(lst_batches + [rank] + lst_reshape_edges2))
+
+        n_batches = len(lst_batches)
+        lst_permute1 = []
+        idx = 0
+        idx_batch = 0
+        for edge in self.node1.edges:
+            if edge == self:
+                lst_permute1.append(len(u.shape) - 1)
+            else:
+                if edge.is_batch() and edge.axis1.name in lst_batches_names:
+                    lst_permute1.append(idx_batch)
+                    idx_batch += 1
+                else:
+                    lst_permute1.append(n_batches + idx)
+                    idx += 1
+
+        lst_permute2 = []
+        idx = 0
+        for edge in self.node2.edges:
+            if edge == self:
+                lst_permute2.append(n_batches)
+            else:
+                if edge.is_batch():
+                    found = False
+                    for idx_name, name in enumerate(lst_batches_names):
+                        if edge.axis1.name == name:
+                            found = True
+                            lst_permute2.append(idx_name)
+                    if not found:
+                        lst_permute2.append(n_batches + 1 + idx)
+                        idx += 1
+                else:
+                    lst_permute2.append(n_batches + 1 + idx)
+                    idx += 1
+
+        u = u.permute(*lst_permute1)
+        vh = vh.permute(*lst_permute2)
+
+        self.change_size(rank)
+        self.node1.tensor = u
+        self.node2.tensor = vh
 
     def __str__(self) -> Text:
         return self.name

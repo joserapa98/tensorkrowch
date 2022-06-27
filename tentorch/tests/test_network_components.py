@@ -392,6 +392,19 @@ def test_contract_edge():
     assert node2[0].axis1.name == 'input'
 
 
+def test_svd_edge():
+    node1 = tn.Node(shape=(2, 5, 3),
+                    axes_names=('left', 'contract', 'batch1'),
+                    name='node1',
+                    init_method='randn')
+    node2 = tn.Node(shape=(3, 5, 7),
+                    axes_names=('batch2', 'contract', 'right'),
+                    name='node2',
+                    init_method='randn')
+    edge = node1['contract'] ^ node2['contract']
+    edge.svd(side='left', cum_percentage=0.9)
+
+
 def test_connect_different_sizes():
     node1 = tn.Node(shape=(2, 5, 2),
                     axes_names=('left', 'input', 'right'),

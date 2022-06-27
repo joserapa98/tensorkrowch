@@ -1548,7 +1548,7 @@ class AbstractEdge(ABC):
 
         if rank is None:
             raise ValueError('One of `rank` and `cum_percentage` should be provided')
-        if rank < len(s):
+        if rank <= len(s):
             u = u[..., :rank]
             s = s[..., :rank]
             vh = vh[..., :rank, :]

@@ -59,6 +59,7 @@ class MyMPS(nn.Module):
         #return self.softmax(x)
         return x
 
+
 # MPS - obc
 # ---------
 mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
@@ -71,7 +72,8 @@ mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
 # Epoch: 10, Runtime: 606 s, Train acc.: 0.9803, Test acc.: 0.9747, LR: 1e-4
 
 mps = mps.cuda()
-mps.load_state_dict(torch.load('mps.pth'))
+# mps.load_state_dict(torch.load('mps_inv_image.pth'))
+mps.load_state_dict(torch.load('mps_rand2_image.pth'))
 
 
 # Get the training and test sets
@@ -88,8 +90,10 @@ train_set = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
 test_set = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
                           download=True, transform=transform, train=False)
 
-inv_image = torch.load('inv_image.pth').cuda()
-inv_label = torch.load('inv_label.pth').cuda()
+# new_image = torch.load('inv_image.pth').cuda()
+# new_label = torch.load('inv_label.pth').cuda()
+new_image = torch.load('rand2_image.pth').cuda()
+new_label = torch.load('rand2_label.pth').cuda()
 
 # Put MNIST data into dataloaders
 samplers = {
@@ -128,14 +132,18 @@ print(f"Test accuracy:          {running_acc / num_batches['test']:.4f}")
 # Al reciclar los nodos, el stack de los nodos sigue enlazado (haciendo referencia)
 # al stack de data_nodes anteriores, no al nuevo
 # TODO: batch dimension should not play any role
-scores = mps(inv_image.expand(100, 3, -1))
+scores = mps(new_image.expand(100, 3, -1))
+#scores = mps(torch.rand(1, 3, 28*28).cuda().expand(100, 3, -1))
 _, preds = torch.max(scores, 1)
-acc = torch.sum(preds == inv_label.expand(100)).item() / 100
-print(f'Inverted image: {preds[0]}, {inv_label[0]}, {acc}')
+acc = torch.sum(preds == new_label.expand(100)).item() / 100
+print(f'Inverted image: {preds[0]}, {new_label[0]}, {acc}')
 
 n_params = 0
-# TODO: mps.nodes is a dict but mps.permanent_nodes is a list
-for node in mps.mps.permanent_nodes:
+for node in ([mps.mps.left_node] +
+             mps.mps.left_env +
+             [mps.mps.output_node] +
+             mps.mps.right_env +
+             [mps.mps.right_node]):
     n_params += torch.tensor(node.shape).prod().item()
 print('Nº params:', n_params)
 
@@ -143,13 +151,13 @@ print('Nº params:', n_params)
 # Canonical form
 left_nodes = [mps.mps.left_node] + mps.mps.left_env
 for node in left_nodes:
-    node['right'].svd(side='right', cum_percentage=0.99)
+    node['right'].svd(side='right', cum_percentage=0.95)
 
 right_nodes = mps.mps.right_env[:]
 right_nodes.reverse()
 right_nodes = [mps.mps.right_node] + right_nodes
 for node in right_nodes:
-    node['left'].svd(side='left', cum_percentage=0.99)
+    node['left'].svd(side='left', cum_percentage=0.95)
 
 # Check accuracy
 with torch.no_grad():
@@ -166,16 +174,59 @@ with torch.no_grad():
 
 print(f"Test accuracy:          {running_acc / num_batches['test']:.4f}")
 
-scores = mps(inv_image.expand(100, 3, -1))
+scores = mps(new_image.expand(100, 3, -1))
+#scores = mps(torch.rand(1, 3, 28*28).cuda().expand(100, 3, -1))
 _, preds = torch.max(scores, 1)
-acc = torch.sum(preds == inv_label.expand(100)).item() / 100
-print(f'Inverted image: {preds[0]}, {inv_label[0]}, {acc}')
+acc = torch.sum(preds == new_label.expand(100)).item() / 100
+print(f'Inverted image: {preds[0]}, {new_label[0]}, {acc}')
 
 n_params = 0
-for node in mps.mps.permanent_nodes:
+# TODO: mps.nodes is a dict but mps.permanent_nodes is a list
+# TODO: problem updating permanent_nodes, nodes resultant from operations are becoming permanent (still problem??)
+#for node in mps.mps.permanent_nodes:
+for node in ([mps.mps.left_node] +
+             mps.mps.left_env +
+             [mps.mps.output_node] +
+             mps.mps.right_env +
+             [mps.mps.right_node]):
     n_params += torch.tensor(node.shape).prod().item()
 print('Nº params:', n_params)
 
+
+# Accuracy on inverted image dataset
+# ----------------------------------
+# Original -> Test Acc.: 0.9732, Inv. image: Y, N params: 235660
+
+# 1. -> Test Acc.: 0.9729, Inv. image: Y, N params: 522598
+# 0.975 -> Test Acc.: 0.9603, Inv. image: Y, N params: 103242
+# 0.9625 -> Test Acc.: 0.9085, Inv. image: Y, N params: 74499
+# 0.96225 -> Test Acc.: 0.9085, Inv. image: Y, N params: 74499
+# 0.962 -> Test Acc.: 0.8512, Inv. image: N, N params: 72864
+# 0.961 -> Test Acc.: 0.8337, Inv. image: N, N params: 70692
+# 0.9575 -> Test Acc.: 0.8336, Inv. image: N, N params: 61296
+
+# rank 10 -> Test Acc.: 0.9730, Inv. image: Y, N params: 235120
+# rank 9 -> Test Acc.: 0.9667, Inv. image: Y, N params: 190530
+# rank 8 -> Test Acc.: 0.9359, Inv. image: Y, N params: 150562
+# rank 7 -> Test Acc.: 0.8845, Inv. image: Y, N params: 115294
+# rank 6 -> Test Acc.: 0.7632, Inv. image: Y, N params: 84726
+# rank 5 -> Test Acc.: 0.6824, Inv. image: N, N params: 58858
+
+# Accuracy on rand image dataset
+# ------------------------------
+# Original -> Test Acc.: 0.9681, Inv. image: Y, N params: 235660
+
+# 1. -> Test Acc.: 0.9675, Inv. image: Y, N params: 548458
+# 0.975 -> Test Acc.: 0.9185, Inv. image: Y, N params: 104510
+# 0.9625 -> Test Acc.: 0.7482, Inv. image: Y, N params: 68079
+# 0.9575 -> Test Acc.: 0.7909, Inv. image: Y, N params: 61847
+# 0.95 -> Test Acc.: 0.6180, Inv. image: Y, N params: 49875
+
+# Accuracy on rand2 image dataset
+# ------------------------------
+# Original -> Doesn't even learn the random image,
+# there was a problem when using as random label 0.
+# May be random noise gives a 0 in mean.
 
 # # TODO
 # # Decrease bond dim

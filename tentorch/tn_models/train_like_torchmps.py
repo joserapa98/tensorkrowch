@@ -138,11 +138,17 @@ test_set = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
 
 train_set_aux = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
                                download=True)
-inv_image = transform(PIL.ImageOps.invert(train_set_aux[0][0]))
-inv_image = inv_image.view(1, 3, -1).cuda()
-inv_label = torch.tensor(train_set_aux[0][1]).view(1).cuda()
-#torch.save(inv_image, 'inv_image.pth')
-#torch.save(inv_label, 'inv_label.pth')
+
+# inv_image = transform(PIL.ImageOps.invert(train_set_aux[0][0]))
+# inv_image = inv_image.view(1, 3, -1).cuda()
+# inv_label = torch.tensor(train_set_aux[0][1]).view(1).cuda()
+# torch.save(inv_image, 'inv_image.pth')
+# torch.save(inv_label, 'inv_label.pth')
+
+rand_image = torch.rand(1, 3, image_size[0]*image_size[1]).cuda()
+rand_label = torch.tensor(3).view(1).cuda()
+#torch.save(rand_image, 'rand2_image.pth')
+#torch.save(rand_label, 'rand2_label.pth')
 
 # Put MNIST data into dataloaders
 samplers = {
@@ -184,8 +190,12 @@ for epoch_num in range(1, num_epochs + 1):
         inputs, labels = inputs.cuda(), labels.cuda()
 
         if first:
-            inputs = torch.cat([inputs[:-1], inv_image], dim=0)
-            labels = torch.cat([labels[:-1], inv_label], dim=0)
+            # inputs = torch.cat([inputs[:-1], inv_image], dim=0)
+            # labels = torch.cat([labels[:-1], inv_label], dim=0)
+            # first = False
+
+            inputs = torch.cat([inputs[:-1], rand_image], dim=0)
+            labels = torch.cat([labels[:-1], rand_label], dim=0)
             first = False
 
         # Call our MPS to get logit scores and predictions
@@ -233,7 +243,7 @@ for epoch_num in range(1, num_epochs + 1):
     print(f"Test accuracy:          {running_acc / num_batches['test']:.4f}")
     print(f"Runtime so far:         {int(time.time()-start_time)} sec\n")
 
-    #torch.save(mps.state_dict(), 'mps.pth')
+    #torch.save(mps.state_dict(), 'mps_rand2_image.pth')
 
 print('Finished')
 

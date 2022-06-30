@@ -96,24 +96,24 @@ class MyMPS(nn.Module):
 
 # MPS - obc
 # ---------
-mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
-            d_phys=3,
-            n_labels=10,
-            d_bond=10,
-            l_position=None,
-            boundary='obc',
-            param_bond=False)
+# mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
+#             d_phys=3,
+#             n_labels=10,
+#             d_bond=10,
+#             l_position=None,
+#             boundary='obc',
+#             param_bond=False)
 # Epoch: 10, Runtime: 606 s, Train acc.: 0.9803, Test acc.: 0.9747, LR: 1e-4
 
 # MPS - obc
 # ---------
-# mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
-#             d_phys=3,
-#             n_labels=10,
-#             d_bond=torch.randint(5, 10, (image_size[0] * image_size[1], )).tolist(),
-#             l_position=None,
-#             boundary='obc',
-#             param_bond=True)
+mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
+            d_phys=3,
+            n_labels=10,
+            d_bond=torch.randint(5, 10, (image_size[0] * image_size[1], )).tolist(),
+            l_position=None,
+            boundary='obc',
+            param_bond=False)
 
 mps = mps.cuda()
 

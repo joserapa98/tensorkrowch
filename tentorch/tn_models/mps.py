@@ -6,6 +6,7 @@ from typing import (Union, Optional, Sequence,
                     Text, List, Tuple)
 
 import torch
+from torch.nn.functional import pad
 
 from tentorch.network_components import (AbstractNode, Node, ParamNode,
                                          AbstractEdge)
@@ -799,12 +800,39 @@ class MPS(TensorNetwork):
 
         return result
 
+    def stack(self, lst_tensors: List[torch.Tensor]) -> torch.Tensor:
+        if lst_tensors:
+            same_dims_all = True
+            max_shape = list(lst_tensors[0].shape)
+            for tensor in lst_tensors[1:]:
+                same_dims = True
+                for idx, dim in enumerate(tensor.shape):
+                    if dim > max_shape[idx]:
+                        max_shape[idx] = dim
+                        same_dims = False
+                    elif dim < max_shape[idx]:
+                        same_dims = False
+                if not same_dims:
+                    same_dims_all = False
+
+            if not same_dims_all:
+                for idx, tensor in enumerate(lst_tensors):
+                    if tensor.shape != max_shape:
+                        aux_zeros = torch.zeros(max_shape, device=tensor.device)
+                        replace_slice = []
+                        for dim in tensor.shape:
+                            replace_slice.append(slice(0, dim))
+                        replace_slice = tuple(replace_slice)
+                        aux_zeros[replace_slice] = tensor
+                        lst_tensors[idx] = aux_zeros
+            return torch.stack(lst_tensors)
+
     def contract2(self) -> Node:
         list_data_tensors = list(map(lambda node: node.neighbours('input').tensor, self.left_env + self.right_env))
         data_tensor = torch.stack(list_data_tensors)
 
         list_mps_tensors = list(map(lambda node: node.tensor, self.left_env + self.right_env))
-        mps_tensor = torch.stack(list_mps_tensors)
+        mps_tensor = self.stack(list_mps_tensors)
 
         envs_result = opt_einsum.contract('slir,sbi->slbr', mps_tensor, data_tensor)
         left_tensors = envs_result[:len(self.left_env)].permute(2, 0, 1, 3)
@@ -842,13 +870,21 @@ class MPS(TensorNetwork):
             n_mats = right_tensors.shape[1]
         right_tensors = right_tensors.squeeze(1)
 
+        left_node_tensor = pad(self.left_node.tensor,
+                               pad=(0, left_tensors.shape[1] - self.left_node.tensor.shape[1]))
         left_result = opt_einsum.contract('bi,il,blr->br', *[self.left_node.neighbours('input').tensor,
-                                                             self.left_node.tensor,
+                                                             left_node_tensor,
                                                              left_tensors])
+        right_node_tensor = pad(self.right_node.tensor,
+                                pad=(0, 0, 0, right_tensors.shape[2] - self.right_node.tensor.shape[0]))
         right_result = opt_einsum.contract('blr,ri,bi->bl', *[right_tensors,
-                                                              self.right_node.tensor,
+                                                              right_node_tensor,
                                                               self.right_node.neighbours('input').tensor])
-        result = opt_einsum.contract('bl,lor,br->bo', *[left_result, self.output_node.tensor, right_result])
+        output_tensor = pad(self.output_node.tensor,
+                            pad=(0, right_result.shape[1] - self.output_node.tensor.shape[2],
+                                 0, 0,
+                                 0, left_result.shape[1] - self.output_node.tensor.shape[0]))
+        result = opt_einsum.contract('bl,lor,br->bo', *[left_result, output_tensor, right_result])
 
         return result
 
@@ -877,7 +913,7 @@ class MPS(TensorNetwork):
             end = time.time()
             #print('Add data:', end - start)
         start = time.time()
-        output = self.contract().tensor  #self.contract2()
+        output = self.contract2()  #self.contract().tensor  #self.contract2()
         #print('Contract:', time.time() - start)
         #print()
         self._update_current_op_nodes()

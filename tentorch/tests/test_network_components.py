@@ -8,6 +8,70 @@ import torch
 import torch.nn as nn
 import tentorch as tn
 
+import time
+import opt_einsum
+import dis
+
+
+# TODO: remove test
+def test_foo():
+    a = tn.Node(tensor=torch.randn(2, 3))
+    a.foo(0)
+    with tn.tn_mode():
+        a.foo(0)
+
+
+# TODO: remove test - check times if using bmm instead of einsum
+def test_einsum_time():
+    a = torch.randn(20, 30, 40)
+    b = torch.randn(30, 60, 40)
+    c = torch.randn(20, 60)
+    print()
+    print('Start')
+    for _ in range(10):
+        start = time.time()
+        d = opt_einsum.contract('ijk,jlk,il->', a, b, c)
+        print(time.time() - start)
+
+
+# TODO: remove later
+def test_dis():
+    def foo(x: int, y: int):
+        return x + 1
+    def bar(z: int):
+        w = foo(z, z)
+        return w
+    print()
+    print(dis.dis(bar))
+    bytecode = dis.Bytecode(bar)
+    funcs = []
+    instrs = list(reversed([instr for instr in bytecode]))
+    for (ix, instr) in enumerate(instrs):
+        if instr.opname == "CALL_FUNCTION":
+            load_func_instr = instrs[ix + instr.arg + 1]
+            funcs.append(load_func_instr.argval)
+    funcs
+
+
+# TODO: remove later
+def test_time_unbind():
+    print()
+    s = torch.randn(1000, 100, 100)
+
+    start = time.time()
+    even = s[0:1000:2]
+    odd = s[1:1000:2]
+    result = even @ odd
+    print('Indexing stack:', time.time() - start)
+
+    start = time.time()
+    lst = s.unbind(0)
+    even = torch.stack(lst[0:1000:2])
+    odd = torch.stack(lst[1:1000:2])
+    result = even @ odd
+    print('Unbinding stack:', time.time() - start)
+    # Efectivamente, caca
+
 
 def test_init_node():
     node = tn.Node(shape=(2, 5, 2),

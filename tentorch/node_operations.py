@@ -120,7 +120,7 @@ def einsum(string: Text, *nodes: AbstractNode) -> Node:
             if char in batch_edges:
                 if batch_edges[char] < output_dict[char]:
                     raise ValueError(f'Subscript {char} used as batch, but some '
-                                     f'of those edge are not batch edges')
+                                     f'of those edges are not batch edges')
             else:
                 raise ValueError(f'Subscript {char} used as batch, but none '
                                  f'of those edges is a batch edge')
@@ -261,9 +261,9 @@ class StackEdge(AbstractStackEdge, Edge):
 
 class ParamStackEdge(AbstractStackEdge, ParamEdge):
     """
-        Base class for stacks of trainable edges.
-        Used for stacked contractions
-        """
+    Base class for stacks of trainable edges.
+    Used for stacked contractions
+    """
     def __init__(self,
                  edges: List[ParamEdge],
                  node1: StackNode,

@@ -237,6 +237,7 @@ class AbstractNode(ABC):
                         for i, name in enumerate(axes_names)]
         self._axes = axes
         self._tensor = torch.empty(shape)
+        self._empty_tensor = True
         self._edges = []
 
         # name
@@ -268,7 +269,9 @@ class AbstractNode(ABC):
     # ----------
     @property
     def tensor(self) -> Union[torch.Tensor, nn.Parameter]:
-        return self._tensor
+        if isinstance(self._tensor, torch.Tensor):
+            return self._tensor
+        return self.network._memory[self._tensor[0]][self._tensor[1]]
 
     @tensor.setter
     def tensor(self, tensor: torch.Tensor) -> None:
@@ -276,7 +279,7 @@ class AbstractNode(ABC):
 
     @property
     def shape(self) -> torch.Size:
-        return self._tensor.shape
+        return self.tensor.shape
 
     @property
     def rank(self) -> int:
@@ -465,13 +468,81 @@ class AbstractNode(ABC):
                 index.append(slice(0, dim))
 
         if size < self.shape[axis_num]:
-            self._tensor = self.set_tensor_format(self.tensor[index])
+            index_in_memory = self._tensor[1]
+            assert len(index_in_memory) >= len(index)
+            if len(index_in_memory) > len(index):
+                # First indices correspond to stack indices
+                index_in_memory_aux = index_in_memory[len(index_in_memory) - len(index):]
+                new_index_in_memory = []
+                for i in range(len(index)):
+                    new_index_in_memory.append(slice(index_in_memory_aux[i].start + index[i].start,
+                                                     index_in_memory_aux[i].start + index[i].stop))
+                    # We don't consider step
+                new_index_in_memory = index_in_memory[:len(index_in_memory) - len(index)] + new_index_in_memory
+            else:
+                # TODO: si no es una pila, este solo podr'ia ser el caso only_tensor=True
+                new_index_in_memory = index_in_memory
+
+            if torch.equal(self.network._memory[self._tensor[0]], self.tensor):
+                # TODO: If memory was used only by this node, maybe could be a flag
+                self._save_in_memory(tensor=self.tensor[index],
+                                     only_tensor=True)
+            else:
+                new_tensor_in_memory = self.make_tensor(self.shape, padding_method, **kwargs)
+                new_tensor_in_memory[index] = self.tensor[index]
+                new_tensor_in_memory = self.set_tensor_format(new_tensor_in_memory)
+                self._save_in_memory(tensor=new_tensor_in_memory,
+                                     new_index=new_index_in_memory)
         elif size > self.shape[axis_num]:
+            index_in_memory = self._tensor[1]
+            assert len(index_in_memory) >= len(index)
+            if len(index_in_memory) > len(index):
+                # First indices correspond to stack indices
+                index_in_memory_aux = index_in_memory[len(index_in_memory) - len(index):]
+                new_index_in_memory = []
+                for i in range(len(index)):
+                    new_index_in_memory.append(slice(index_in_memory_aux[i].start + index[i].start,
+                                                     index_in_memory_aux[i].start + index[i].stop))
+                    # We don't consider step
+                new_index_in_memory = index_in_memory[:len(index_in_memory) - len(index)] + new_index_in_memory
+            else:
+                # TODO: si no es una pila (no hay mas dimensiones de pila),
+                #  este solo podr'ia ser el caso only_tensor=True
+                new_index_in_memory = index_in_memory
+
             new_shape = list(self.shape)
             new_shape[axis_num] = size
+            # TODO: Padding can be done with function pad
             new_tensor = self.make_tensor(new_shape, padding_method, **kwargs)
             new_tensor[index] = self.tensor
-            self._tensor = self.set_tensor_format(new_tensor)
+            new_tensor = self.set_tensor_format(new_tensor)
+            if torch.equal(self.network._memory[self._tensor[0]], self.tensor):
+                # TODO: el caso new_index_in_memory = index_in_memory ya va a entrar aqu'i, no en el ultimo else
+                # If memory was used only by this node
+                self._save_in_memory(tensor=new_tensor,
+                                     only_tensor=True)
+            else:
+                if new_index_in_memory != index_in_memory:
+                    old_tensor_in_memory = self.network._memory[self._tensor[0]]
+                    new_tensor_in_memory = self.make_tensor(old_tensor_in_memory.shape, padding_method, **kwargs)
+
+                    # TODO: Habr'ia que colocar tambi'en todos los dem'as tensores de los otros nodos guardados en
+                    #  la misma memoria, teniendo que acceder a todos sus indices (reversed dict en TN)
+                    new_tensor_in_memory[self._tensor[1]] = new_tensor
+                    new_tensor_in_memory = self.set_tensor_format(new_tensor_in_memory)
+                    self._save_in_memory(new_tensor_in_memory, full_memory_change=True)
+                else:
+                    # TODO: En este caso también entraría si el nuevo tensor con 0's cabría en la misma capa donde
+                    #  antes estaba el tensor (porque a lo mejor ya hab'ia 0's antes, por estar apilando tensores
+                    #  de distintas dimensiones)
+                    new_shape = list(self.shape)
+                    new_shape[axis_num] = size
+                    # TODO: Padding can be done with function pad
+                    new_tensor_in_memory = self.make_tensor(new_shape, padding_method, **kwargs)
+                    new_tensor_in_memory[index] = self.tensor
+                    new_tensor_in_memory = self.set_tensor_format(new_tensor_in_memory)
+                    self._save_in_memory(tensor=new_tensor_in_memory,
+                                         new_index=new_index_in_memory)
 
     def get_axis_number(self, axis: Ax) -> int:
         if isinstance(axis, int):
@@ -706,10 +777,14 @@ class AbstractNode(ABC):
                 raise ValueError('`tensor` should be torch.Tensor type')
             if tensor.shape != self.shape:
                 raise ValueError('`tensor` shape should match node shape')
-            self._tensor = self.set_tensor_format(tensor)
+            correct_format_tensor = self.set_tensor_format(tensor)
+            self._save_in_memory(correct_format_tensor)
+            self._empty_tensor = False
         elif init_method is not None:
             tensor = self.make_tensor(init_method=init_method, device=device, **kwargs)
-            self._tensor = self.set_tensor_format(tensor)
+            correct_format_tensor = self.set_tensor_format(tensor)
+            self._save_in_memory(correct_format_tensor)
+            self._empty_tensor = False
         else:
             raise ValueError('One of `tensor` or `init_method` must be provided')
 
@@ -717,7 +792,52 @@ class AbstractNode(ABC):
         """
         Change node's tensor by an empty tensor.
         """
-        self._tensor = torch.empty(self.shape, device=device)
+        self.tensor = torch.empty(self.shape, device=device)
+        self._empty_tensor = True
+
+    def _save_in_memory(self,
+                        tensor: torch.Tensor,
+                        new_index: Optional[List[slice]] = None,
+                        full_memory_change: bool = False,
+                        only_tensor: bool = False) -> None:
+        assert (self._tensor is None) or isinstance(self._tensor, tuple) or isinstance(self._tensor, torch.Tensor)
+        if (not isinstance(self._tensor, tuple)) or only_tensor or self._empty_tensor:
+            # If it is the only tensor, the unique name is used as id, and new idx is created
+            self.network._memory[self.name] = tensor
+            if isinstance(tensor, nn.Parameter):
+                if hasattr(self.network, self.name):
+                    setattr(self.network, self.name + '_param', tensor)
+                else:
+                    self.network.register_parameter(self.name, tensor)
+            idx = []
+            for i in tensor.shape:
+                idx.append(slice(0, i))
+            self._tensor = (self.name, tuple(idx))
+        else:
+            # TODO: change name of _tensor (maybe also _memory)?
+            if full_memory_change:
+                # Address in memory is still the same
+                # Only used to expand tensor, so addresses remain the same
+                # TODO: We have to change the addresses of all the other nodes that have their memory in that slot
+                self.network._memory[self._tensor[0]] = tensor
+            else:
+                old_tensor = self.network._memory[self._tensor[0]]
+                if not (isinstance(old_tensor, nn.Parameter) or isinstance(tensor, nn.Parameter)) and \
+                        (isinstance(old_tensor, torch.Tensor) and isinstance(tensor, torch.Tensor)):
+                    self.network._memory[self._tensor[0]][self._tensor[1]] = tensor
+                elif isinstance(old_tensor, nn.Parameter) and isinstance(tensor, nn.Parameter):
+                    old_tensor = old_tensor.detach()
+                    old_tensor[self._tensor[1]] = tensor
+                    self.network._memory[self._tensor[0]] = nn.Parameter(old_tensor)
+                    if hasattr(self.network, self._tensor[0]):
+                        setattr(self.network, self._tensor[0] + '_param', self.network._memory[self._tensor[0]])
+                    else:
+                        self.network.register_parameter(self._tensor[0], self.network._memory[self._tensor[0]])
+                else:
+                    raise ValueError('Trying to save a tensor with different format than '
+                                     'the one used in the tensor stored in memory')
+                if new_index:
+                    self._tensor = (self._tensor[0], new_index)
 
     def move_to_network(self,
                         network: 'TensorNetwork',
@@ -732,6 +852,7 @@ class AbstractNode(ABC):
         visited: list indicating the nodes that are already moved to the
                  network, used by this DFS-like algorithm
         """
+        tensor = self.tensor
         if network != self.network:
             if visited is None:
                 visited = []
@@ -739,6 +860,8 @@ class AbstractNode(ABC):
                 if self.network is not None:
                     self.network.remove_node(self)
                 network._add_node(self)
+                # TODO: tensor format not okay
+                self._save_in_memory(tensor=tensor, only_tensor=True)
                 visited.append(self)
                 for neighbour in self.neighbours():
                     neighbour.move_to_network(network=network, visited=visited)
@@ -1076,12 +1199,9 @@ class Node(AbstractNode):
             elif shape is not None:
                 super().__init__(shape=shape, axes_names=axes_names, name=name,
                                  permanent=permanent, current_op=current_op)
-                if init_method is not None:
-                    self.set_tensor(init_method=init_method, **kwargs)
             else:
                 super().__init__(shape=tensor.shape, axes_names=axes_names, name=name,
                                  permanent=permanent, current_op=current_op)
-                self.set_tensor(tensor=tensor)
 
             # edges
             if edges is None:
@@ -1103,6 +1223,14 @@ class Node(AbstractNode):
             else:
                 network = TensorNetwork()
             network._add_node(self, override=override_node)
+
+            if shape is not None:
+                self._save_in_memory(torch.empty(shape))
+                if init_method is not None:
+                    self.set_tensor(init_method=init_method, **kwargs)
+            else:
+                self._save_in_memory(torch.empty(tensor.shape))
+                self.set_tensor(tensor=tensor)
 
             # parents
             if (parents is not None) and parents:
@@ -1255,12 +1383,9 @@ class ParamNode(AbstractNode, nn.Module):
         elif shape is not None:
             AbstractNode.__init__(self, shape=shape, axes_names=axes_names, name=name,
                                   permanent=permanent, current_op=current_op)
-            if init_method is not None:
-                self.set_tensor(init_method=init_method, **kwargs)
         else:
             AbstractNode.__init__(self, shape=tensor.shape, axes_names=axes_names, name=name,
                                   permanent=permanent, current_op=current_op)
-            self.set_tensor(tensor=tensor)
 
         # edges
         if edges is None:
@@ -1279,14 +1404,30 @@ class ParamNode(AbstractNode, nn.Module):
         if network is not None:
             if not isinstance(network, TensorNetwork):
                 raise TypeError('`network` should be TensorNetwork type')
-            network._add_node(self, override=override_node)
+        else:
+            network = TensorNetwork()
+        network._add_node(self, override=override_node)
+
+        if shape is not None:
+            self._save_in_memory(torch.empty(shape))
+            if init_method is not None:
+                self.set_tensor(init_method=init_method, **kwargs)
+        else:
+            self._save_in_memory(torch.empty(tensor.shape))
+            self.set_tensor(tensor=tensor)
 
     # ----------
     # Properties
     # ----------
     @property
     def grad(self) -> Optional[torch.Tensor]:
-        return self.tensor.grad
+        aux_grad = self.network._memory[self._tensor[0]].grad
+        if aux_grad is None:
+            return aux_grad
+        elif isinstance(aux_grad, torch.Tensor):
+            return aux_grad[self._tensor[1]]
+        else:
+            raise ValueError('This cannot happen')
 
     # -------
     # Methods
@@ -1967,6 +2108,7 @@ class TensorNetwork(nn.Module):
             name = 'net'
         self.name = name
         self._nodes = dict()
+        self._memory = dict()
         self._data_nodes = dict()
         self._edges = []
 
@@ -2399,6 +2541,12 @@ class TensorNetwork(nn.Module):
                f'\tname: {self.name}' \
                f'\tnodes: \n{tab_string(repr(list(self.nodes.keys())), 2)}\n' \
                f'\tedges:\n{tab_string(repr(self.edges), 2)})'
+
+    # TODO: Function to build instructions and reallocate memory, optimized for a function
+    #  (se deben reasignar los par'ametros)
+    # TODO: Function to allocate one memory tensor for each node, like old mode
+    # TODO: Problem! Ahora meto los nodos en la TN como submodules, pero ellos no tienen parametros,
+    #  y los parametros se guardan como parametros de la TN
 
 
 ################################################

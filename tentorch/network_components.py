@@ -1100,7 +1100,9 @@ class Node(AbstractNode):
             if network is not None:
                 if not isinstance(network, TensorNetwork):
                     raise TypeError('`network` should be TensorNetwork type')
-                network._add_node(self, override=override_node)
+            else:
+                network = TensorNetwork()
+            network._add_node(self, override=override_node)
 
             # parents
             if (parents is not None) and parents:
@@ -1688,7 +1690,7 @@ class Edge(AbstractEdge):
         pass
 
     def __xor__(self, other: Union['Edge', 'ParamEdge']) -> Union['Edge', 'ParamEdge']:
-        return connect(self, other)
+        return connect(self, other, True)
 
     def __or__(self, other: 'Edge') -> Tuple['Edge', 'Edge']:
         if other == self:
@@ -1934,7 +1936,7 @@ class ParamEdge(AbstractEdge, nn.Module):
         pass
 
     def __xor__(self, other: Union['Edge', 'ParamEdge']) -> 'ParamEdge':
-        return connect(self, other)
+        return connect(self, other, True)
 
     def __or__(self, other: 'ParamEdge') -> Tuple['ParamEdge', 'ParamEdge']:
         if other == self:
@@ -2394,6 +2396,7 @@ class TensorNetwork(nn.Module):
 
     def __repr__(self) -> Text:
         return f'{self.__class__.__name__}(\n ' \
+               f'\tname: {self.name}' \
                f'\tnodes: \n{tab_string(repr(list(self.nodes.keys())), 2)}\n' \
                f'\tedges:\n{tab_string(repr(self.edges), 2)})'
 

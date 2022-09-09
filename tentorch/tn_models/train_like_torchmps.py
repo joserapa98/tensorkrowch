@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+
+import os
+import psutil
+pid = os.getpid()
+python_process = psutil.Process(pid)
+
+
 import time
 import torch
 import torch.nn as nn
@@ -23,10 +30,10 @@ start_time = time.time()
 # param_bond = False
 
 # Training parameters
-num_train = 60000
-num_test = 10000
+num_train = 6000
+num_test = 1000
 batch_size = 100
-image_size = (28, 28)
+image_size = (14, 14)
 num_epochs = 10
 learn_rate = 1e-4
 l2_reg = 0.0
@@ -96,29 +103,55 @@ class MyMPS(nn.Module):
 
 # MPS - obc
 # ---------
-# mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
-#             d_phys=3,
-#             n_labels=10,
-#             d_bond=10,
-#             l_position=None,
-#             boundary='obc',
-#             param_bond=False)
+mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
+            d_phys=3,
+            n_labels=10,
+            d_bond=10,
+            l_position=None,
+            boundary='obc',
+            param_bond=False)
 # Epoch: 10, Runtime: 606 s, Train acc.: 0.9803, Test acc.: 0.9747, LR: 1e-4
 
 # MPS - obc
 # ---------
-mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
-            d_phys=3,
-            n_labels=10,
-            d_bond=torch.randint(5, 10, (image_size[0] * image_size[1], )).tolist(),
-            l_position=None,
-            boundary='obc',
-            param_bond=False)
+# mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
+#             d_phys=3,
+#             n_labels=10,
+#             d_bond=torch.randint(5, 10, (image_size[0] * image_size[1], )).tolist(),
+#             l_position=None,
+#             boundary='obc',
+#             param_bond=True)
 
-mps = mps.cuda()
+#device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda')
+#device = torch.device('cpu')
+mps = mps.to(device)
+
+memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
+print('memory use:', memoryUse)
 
 # Set our loss function and optimizer
 loss_fun = torch.nn.CrossEntropyLoss()
+
+# loss_fun_aux = torch.nn.CrossEntropyLoss()
+#
+#
+# def loss_fun(results, true_labels, weight=10):
+#     s = 0
+#
+#     left_nodes = [mps.mps.left_node] + mps.mps.left_env
+#     for node in left_nodes:
+#         s += node['right'].shift
+#
+#     right_nodes = mps.mps.right_env[:]
+#     right_nodes.reverse()
+#     right_nodes = [mps.mps.right_node] + right_nodes
+#     for node in right_nodes:
+#         s += node['left'].shift
+#
+#     return loss_fun_aux(results, true_labels) - weight * s
+
+
 optimizer = torch.optim.Adam(mps.parameters(), lr=learn_rate, weight_decay=l2_reg)
 
 
@@ -139,14 +172,17 @@ test_set = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
 train_set_aux = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
                                download=True)
 
+memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
+print('memory use:', memoryUse)
+
 # inv_image = transform(PIL.ImageOps.invert(train_set_aux[0][0]))
 # inv_image = inv_image.view(1, 3, -1).cuda()
 # inv_label = torch.tensor(train_set_aux[0][1]).view(1).cuda()
 # torch.save(inv_image, 'inv_image.pth')
 # torch.save(inv_label, 'inv_label.pth')
 
-rand_image = torch.rand(1, 3, image_size[0]*image_size[1]).cuda()
-rand_label = torch.tensor(3).view(1).cuda()
+rand_image = torch.rand(1, 3, image_size[0]*image_size[1]).to(device)
+rand_label = torch.tensor(3).view(1).to(device)
 #torch.save(rand_image, 'rand2_image.pth')
 #torch.save(rand_label, 'rand2_label.pth')
 
@@ -187,7 +223,7 @@ for epoch_num in range(1, num_epochs + 1):
 
     for inputs, labels in loaders["train"]:
         inputs, labels = inputs.view([batch_size, 3, image_size[0] * image_size[1]]), labels.data
-        inputs, labels = inputs.cuda(), labels.cuda()
+        inputs, labels = inputs.to(device), labels.to(device)
 
         if first:
             # inputs = torch.cat([inputs[:-1], inv_image], dim=0)
@@ -233,7 +269,7 @@ for epoch_num in range(1, num_epochs + 1):
 
         for inputs, labels in loaders["test"]:
             inputs, labels = inputs.view([batch_size, 3, image_size[0] * image_size[1]]), labels.data
-            inputs, labels = inputs.cuda(), labels.cuda()
+            inputs, labels = inputs.to(device), labels.to(device)
 
             # Call our MPS to get logit scores and predictions
             scores = mps(inputs)
@@ -246,6 +282,10 @@ for epoch_num in range(1, num_epochs + 1):
     #torch.save(mps.state_dict(), 'mps_rand2_image.pth')
 
 print('Finished')
+
+
+memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
+print('memory use:', memoryUse)
 
 
 # Increase bond dim

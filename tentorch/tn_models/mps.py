@@ -818,7 +818,7 @@ class MPS(TensorNetwork):
             if not same_dims_all:
                 for idx, tensor in enumerate(lst_tensors):
                     if tensor.shape != max_shape:
-                        aux_zeros = torch.zeros(max_shape, device=tensor.device)
+                        aux_zeros = torch.zeros(max_shape, device=tensor.device)  # TODO: replace with pad
                         replace_slice = []
                         for dim in tensor.shape:
                             replace_slice.append(slice(0, dim))
@@ -828,13 +828,36 @@ class MPS(TensorNetwork):
             return torch.stack(lst_tensors)
 
     def contract2(self) -> Node:
+        start = time.time()
+        # TODO: innecesario crear esta lista cada vez, deberíamos llevar guardados esos data_nodes
         list_data_tensors = list(map(lambda node: node.neighbours('input').tensor, self.left_env + self.right_env))
+        #print('Search for data tensors:', time.time() - start)
+        start = time.time()
         data_tensor = torch.stack(list_data_tensors)
+        #print('Stack data tensors:', time.time() - start)
 
+        start = time.time()
+        # TODO: lo mismo esto
         list_mps_tensors = list(map(lambda node: node.tensor, self.left_env + self.right_env))
+        #print('Search for node tensors:', time.time() - start)
+        start = time.time()
+        # TODO: también innecesario hacer bucle para buscar max_shape cada vez
         mps_tensor = self.stack(list_mps_tensors)
+        #print('Stack node tensors:', time.time() - start)
 
+        start = time.time()
+        # Similar in time
+        # mps_tensor = mps_tensor.permute(0, 1, 3, 2)
+        # data_tensor = data_tensor.permute(0, 2, 1)
+        # print('\tEinsum stacks - permutes:', time.time() - start)
+        # envs_result = mps_tensor.reshape(mps_tensor.shape[0], -1, mps_tensor.shape[-1]) @ data_tensor
+        # print('\tEinsum stacks - envs_result:', time.time() - start)
+        # envs_result = envs_result.view(*(list(mps_tensor.shape[:-1]) + [data_tensor.shape[-1]])).permute(0, 1, 3, 2)
+        # print('\tEinsum stacks - envs_result permute:', time.time() - start)
         envs_result = opt_einsum.contract('slir,sbi->slbr', mps_tensor, data_tensor)
+        #print('Einsum stacks:', time.time() - start)
+
+        start = time.time()
         left_tensors = envs_result[:len(self.left_env)].permute(2, 0, 1, 3)
         right_tensors = envs_result[len(self.left_env):].permute(2, 0, 1, 3)
 
@@ -869,22 +892,31 @@ class MPS(TensorNetwork):
             right_tensors = torch.cat((right_tensors, leftover), dim=1)
             n_mats = right_tensors.shape[1]
         right_tensors = right_tensors.squeeze(1)
+        #print('Pairwise contraction:', time.time() - start)
 
+        start = time.time()
         left_node_tensor = pad(self.left_node.tensor,
                                pad=(0, left_tensors.shape[1] - self.left_node.tensor.shape[1]))
+        #print('Pad left node tensor:', time.time() - start)
+        start = time.time()
         left_result = opt_einsum.contract('bi,il,blr->br', *[self.left_node.neighbours('input').tensor,
                                                              left_node_tensor,
                                                              left_tensors])
+        #print('Contract left node:', time.time() - start)
         right_node_tensor = pad(self.right_node.tensor,
                                 pad=(0, 0, 0, right_tensors.shape[2] - self.right_node.tensor.shape[0]))
         right_result = opt_einsum.contract('blr,ri,bi->bl', *[right_tensors,
                                                               right_node_tensor,
                                                               self.right_node.neighbours('input').tensor])
+        start = time.time()
         output_tensor = pad(self.output_node.tensor,
                             pad=(0, right_result.shape[1] - self.output_node.tensor.shape[2],
                                  0, 0,
                                  0, left_result.shape[1] - self.output_node.tensor.shape[0]))
+        #print('Pad output node tensor:', time.time() - start)
+        start = time.time()
         result = opt_einsum.contract('bl,lor,br->bo', *[left_result, output_tensor, right_result])
+        #print('Final contraction:', time.time() - start)
 
         return result
 
@@ -900,19 +932,19 @@ class MPS(TensorNetwork):
         data: tensor with shape batch x feature x n_features
         """
         if not self.data_nodes:
-            start = time.time()
+            #start = time.time()
             # All data tensors have the same batch size
             self.set_data_nodes(batch_sizes=[data.shape[0]])
             self._add_data(data=data.unbind(2))
-            self._permanent_nodes = list(self.nodes.values())
+            self._permanent_nodes = list(self.nodes.values())  # TODO: this does nothing
             #self.initialize2()
             #print('Add data:', time.time() - start)
         else:
-            start = time.time()
+            #start = time.time()
             self._add_data(data=data.unbind(2))
             end = time.time()
             #print('Add data:', end - start)
-        start = time.time()
+        #start = time.time()
         output = self.contract2()  #self.contract().tensor  #self.contract2()
         #print('Contract:', time.time() - start)
         #print()

@@ -234,12 +234,14 @@ def test_example_mps():
     I = data.squeeze(2)
     A = mps.left_node.tensor
     B = mps.output_node.tensor
+    grad_A1 = mps.left_node.grad
+    grad_B1 = mps.output_node.grad
 
-    grad_A = I.t() @ B[:, 0].view(2, 1).t()
-    grad_B = (I @ A).t() @ torch.tensor([[1., 0.]]).cuda()
+    grad_A2 = I.t() @ B[:, 0].view(2, 1).t()
+    grad_B2 = (I @ A).t() @ torch.tensor([[1., 0.]]).cuda()
 
-    assert torch.equal(A.grad, grad_A)
-    assert torch.equal(B.grad, grad_B)
+    assert torch.equal(grad_A1, grad_A2)
+    assert torch.equal(grad_B1, grad_B2)
 
 
 def test_example2_mps():

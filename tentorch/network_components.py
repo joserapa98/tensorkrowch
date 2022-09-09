@@ -37,6 +37,8 @@ from tentorch.utils import (tab_string, check_name_style,
                             erase_enum, enum_repeated_names,
                             permute_list, is_permutation)
 
+from tentorch.functionals import Foo
+
 
 ################################################
 #                    AXIS                      #
@@ -112,6 +114,8 @@ class Axis:
         Set axis name. Should not contain blank spaces
         if it is intended to be used as index of submodules.
         """
+        if not isinstance(name, str):
+            raise TypeError('`name` should be str type')
         if not check_name_style(name):
             raise ValueError('Names can only contain letters, numbers and underscores')
         elif self.node is not None:
@@ -553,6 +557,7 @@ class AbstractNode(ABC):
                     all_edges = False
                 elif isinstance(edge, Edge):
                     all_param_edges = False
+            # TODO: simplify
             if all_edges:
                 return False
             elif all_param_edges:
@@ -578,8 +583,8 @@ class AbstractNode(ABC):
         """
         When a node has edges that are a reference to other previously created edges,
         those edges might make no reference to this node. With `reattach_edges`,
-        node1 or node2 of all/one of the edges is redirected to the node, according
-        to each axis node1 attribute.
+        `node1` or `node2` of all/one of the edges is redirected to the node, according
+        to each axis `node1` attribute.
 
         Parameters
         ----------
@@ -625,7 +630,7 @@ class AbstractNode(ABC):
         else:
             edges = self.edges
         for edge in edges:
-            if edge.is_attached_to(self):
+            if edge.is_attached_to(self):  # TODO: necessary?
                 if not edge.is_dangling():
                     edge | edge
 
@@ -865,11 +870,15 @@ class AbstractNode(ABC):
                f'\taxes: {self.axes_names}\n' \
                f'\tedges:\n{tab_string(repr(self.edges), 2)})'
 
-    def foo(self, other: 'AbstractNode'):
-        from tentorch.functionals import Foo
-        f = Foo()
-        f.op(self, other)
-        return
+    def foo(self, data):  #other: 'AbstractNode'):
+        # from tentorch.functionals import Foo
+        # f = Foo()
+        # f.op(self, other)
+        # return
+
+        # from tentorch.functionals import foo
+        # return foo(data)
+        return foo(data)
 
 
 class Node(AbstractNode):
@@ -914,8 +923,8 @@ class Node(AbstractNode):
             for succ_dict in parent.successors:
                 if (succ_dict['parents'] == parents) and (succ_dict['operation'] == operation):
                     child = succ_dict['child']
-                    if not child.current_op and not child.permanent:
-                        if child.shape == tensor.shape:
+                    if not child.current_op and not child.permanent:  # TODO: there is no other option
+                        if child.shape == tensor.shape:  # TODO: problem after canonical form
                             child.set_tensor(tensor=tensor)
                         else:
                             return super().__new__(cls,
@@ -1103,6 +1112,7 @@ class Node(AbstractNode):
 
                 for parent in parents:
                     for succ_dict in parent.successors:
+                        # TODO: bucle un poco redundante
                         if (succ_dict['parents'] == parents) and \
                                 (succ_dict['operation'] == operation) and (succ_dict['child'] == self):
                             raise ValueError('Repeated operations without replacing previous node,'
@@ -1344,8 +1354,11 @@ class ParamNode(AbstractNode, nn.Module):
         if name == '_network':
             # This is done in order to not having the network as submodule
             ABC.__setattr__(self, name, value)
+        elif name == 'network':
+            # This is done in order to not having the network as submodule
+            AbstractNode.__setattr__(self, name, value)
         else:
-            # TODO: problem with node.tensor = new_tensor
+            # TODO: problem with node.tensor = new_tensor -> I think there si no problem
             nn.Module.__setattr__(self, name, value)
 
 
@@ -1982,7 +1995,7 @@ class TensorNetwork(nn.Module):
 
     def _add_node(self, node: AbstractNode, override: bool = False) -> None:
         """
-        Add node to the network, adding its parameters (parametric tensor anr/or edges)
+        Add node to the network, adding its parameters (parametric tensor and/or edges)
         to the network parameters.
 
         Parameters
@@ -2012,7 +2025,7 @@ class TensorNetwork(nn.Module):
                 node._network = self
                 self._edges += [edge for edge in node.edges if
                                 (edge.is_dangling() and not edge.is_batch()
-                                 and edge not in self.edges)]
+                                 and edge not in self.edges)]  # TODO: can the edge be already in the network?
 
             else:
                 # Original case
@@ -2679,3 +2692,44 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
         raise ValueError(f'No batch edges neither shared edges between '
                          f'nodes {node1!s} and {node2!s} found')
     return contract_edges(edges, node1, node2, 'contract')
+
+
+# class mod_user:
+#
+#     def __init__(self):
+#         global MODE
+#         self._old_mode = MODE
+#         MODE = "user"
+#
+#     def __enter__(self):
+#         pass
+#
+#     def __exit__(self, *args, **kws):
+#         global MODE
+#         MODE = self._old_mode
+#
+# MODE = "sudo"
+#
+# with mod_user():
+#     print MODE  # print : user.
+#
+# print MODE  # print: sudo.
+#
+# mod_user()
+# print MODE   # print: user.
+
+def _func1(data):
+    print('Computing func1')
+
+
+def _func2(data):
+    print('Computing func2')
+
+
+foo = Foo(_func1, _func2)
+
+# Para leer las funciones que se ejecutan en el forward
+# https://stackoverflow.com/questions/51901676/get-the-lists-of-functions-used-called-within-a-function-in-python
+# https://stackoverflow.com/questions/3061/calling-a-function-of-a-module-by-using-its-name-a-string
+
+# https://pytorch.org/docs/stable/generated/torch.index_select.html

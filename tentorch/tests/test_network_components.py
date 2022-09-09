@@ -522,6 +522,9 @@ def test_connect_reassign():
     # TODO: Problem! Cuando conectamos edges, el nuevo edge se guarda en los nodos originales
     #  donde los edges estaban conectados, en este caso los edges de node3 están conectados a
     #  node1 y node2, por lo que las nuevas conexiones se verían en esos nodos, pero no en node3
+    # TODO: Prohibimos conectar nodos después de hacer operaciones, primero se construye toda la
+    #  red, después se definen operaciones, después se optimiza memoria para esas operaciones
+    #  y finalmente se realiza toda la contracción
     #node3 @ node4
 
     node4[0] | node4[0]

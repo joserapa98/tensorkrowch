@@ -92,12 +92,14 @@ def is_permutation(lst: List, permuted_lst: List) -> bool:
     """
     Decide whether `permuted_lst` is a permutation of the elements of `lst`
     """
+    if len(lst) != len(permuted_lst):
+        return False
     aux_lst = lst[:]
-    for i in permuted_lst:
-        if (i not in aux_lst) or (len(aux_lst) == 0):
+    for el in permuted_lst:
+        if el not in aux_lst:
             return False
-        aux_lst.remove(i)
-    return len(aux_lst) == 0
+        aux_lst.remove(el)
+    return True
 
 
 def fact(n: int) -> int:

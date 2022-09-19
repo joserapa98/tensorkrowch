@@ -800,6 +800,7 @@ class AbstractNode(ABC):
                         new_index: Optional[List[slice]] = None,
                         full_memory_change: bool = False,
                         only_tensor: bool = False) -> None:
+        # TODO: Actualizar direcci'on de memoria cuandos e cambia nombre del nodo, para mantener direcciones 'unicas
         assert (self._tensor is None) or isinstance(self._tensor, tuple) or isinstance(self._tensor, torch.Tensor)
         if (not isinstance(self._tensor, tuple)) or only_tensor or self._empty_tensor:
             # If it is the only tensor, the unique name is used as id, and new idx is created

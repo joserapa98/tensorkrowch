@@ -70,7 +70,32 @@ def test_time_unbind():
     odd = torch.stack(lst[1:1000:2])
     result = even @ odd
     print('Unbinding stack:', time.time() - start)
-    # Efectivamente, caca
+    # Efectivamente, caca, como el triple de tiempo
+
+
+# TODO: remove later
+def test_define_class():
+    class succesor:
+        parents = [tn.randn(shape=(3, 4)) for _ in range(100)]
+        op = 'stack'
+        child = tn.randn(shape=(10, 3, 4))
+
+    succ_obj = succesor()
+    print()
+    start = time.time()
+    print(succ_obj.parents, succ_obj.op, succ_obj.child)
+    print(time.time() - start)
+    print('=' * 200)
+
+    succ_dict = {'parents': [tn.randn(shape=(3, 4)) for _ in range(100)],
+                 'op': 'stack',
+                 'child': tn.randn(shape=(10, 3, 4))}
+    print()
+    start = time.time()
+    print(succ_obj.parents, succ_obj.op, succ_obj.child)
+    print(time.time() - start)
+    print('=' * 200)
+    # Almost the same
 
 
 def test_init_node():

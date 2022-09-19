@@ -375,7 +375,7 @@ def unbind(node: AbstractNode) -> List[Node]:
                         network=node.network,
                         permanent=False,
                         current_op=True,
-                        tensor=tensor,
+                        tensor=tensor.clone(),  # TODO: unbind parece que muestra una view del tensor del que est'an haciendo unbind, hay que clonar, pero ahora se rompe el grafo de gradientes
                         edges=list(edges),
                         node1_list=node.node1_list[1:],
                         parents={node},

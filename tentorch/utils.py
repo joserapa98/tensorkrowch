@@ -105,10 +105,9 @@ def is_permutation(lst: List, permuted_lst: List) -> bool:
 def fact(n: int) -> int:
     if n < 0:
         raise ValueError('Argument should be greater than zero')
-    result = 1
-    for i in range(1, n + 1):
-        result *= i
-    return result
+    if n == 0:
+        return 1
+    return n * (fact(n - 1))
 
 
 def comb_num(n: int, k: int) -> int:

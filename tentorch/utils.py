@@ -21,9 +21,8 @@ def check_name_style(name: Text) -> bool:
     """
     Names can only contain letters, numbers and underscores.
     """
-    aux_name = ''.join(name.split('_'))
-    for char in aux_name:
-        if not (char.isalpha() or char.isnumeric()):
+    for char in name:
+        if (not char.isalpha()) and (not char.isnumeric()) and (char != '_'):
             return False
     return True
 

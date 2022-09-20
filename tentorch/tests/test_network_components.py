@@ -32,6 +32,14 @@ def test_einsum_time():
         start = time.time()
         d = opt_einsum.contract('ijk,jlk,il->', a, b, c)
         print(time.time() - start)
+    print()
+    print('Start')
+    for _ in range(10):
+        start = time.time()
+        aux = a.reshape(20, -1) @ b.permute(0, 2, 1).reshape(-1, 60)
+        d = aux.flatten() @ c.flatten()
+        print(time.time() - start)
+    # Mucho más rápido!!
 
 
 # TODO: remove later

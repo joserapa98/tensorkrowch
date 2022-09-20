@@ -1,4 +1,6 @@
 #from tentorch.network_components import Node
+import tentorch.network_components as nc
+import torch
 
 
 TN_MODE = True
@@ -38,6 +40,21 @@ class Foo:
     #     return
 
 
+def _func1(data):
+    print('Computing func1')
+    a = nc.Node(tensor=torch.randn(2, 3))
+    print(type(a))
+
+
+def _func2(data):
+    a = torch.randn(2, 3)
+    print('Computing func2')
+    print(type(a))
+
+
+foo = Foo(_func1, _func2)
+
+
 # def _func1(data):
 #     print('Computing func1')
 #
@@ -59,3 +76,19 @@ class Foo:
 #     a.foo(0)
 #     with tn_mode():
 #         a.foo(0)
+
+
+from abc import ABC
+
+# TODO: usar esto para copy y permute
+class Foo2(ABC):
+    def foo2(self):
+        cls = self.__class__
+        new = cls()
+        return new
+
+class Foo2_1(Foo2):
+    pass
+
+class Foo2_2(Foo2):
+    pass

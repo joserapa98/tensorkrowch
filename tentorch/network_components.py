@@ -37,7 +37,8 @@ from tentorch.utils import (tab_string, check_name_style,
                             erase_enum, enum_repeated_names,
                             permute_list, is_permutation)
 
-from tentorch.functionals import Foo
+#from tentorch.functionals import Foo
+import tentorch.functionals as F
 
 
 ################################################
@@ -128,20 +129,21 @@ class Axis:
         return self._node
 
     @property
-    def node1(self) -> bool:
+    def node1(self) -> bool:  # TODO: change names to is_node1, is_batch
         return self._node1
 
     @property
     def batch(self) -> bool:
         return self._batch
 
-    @batch.setter
+    @batch.setter  # TODO: hace falta??
     def batch(self, batch: bool) -> None:
         if batch != self.batch:
             if self.node is not None:
                 if self.node[self].is_dangling():
                     if self.node.network is not None:
                         if batch:
+                            # TODO: si es ParamEdge habría que quitarlo como módulo
                             self.node.network._edges.remove(self.node[self])
                         else:
                             self.node.network._edges += [self.node[self]]
@@ -262,7 +264,7 @@ class AbstractNode(ABC):
 
         # TODO: Create always TN associated to the nodes
 
-        self.init = True
+        self.init = True  # TODO: use underscore
 
     # ----------
     # Properties
@@ -705,7 +707,7 @@ class AbstractNode(ABC):
                 if not edge.is_dangling():
                     edge | edge
 
-    @staticmethod
+    @staticmethod  # TODO: make copy node class, operation composed by indexing in diagonal and matrix multiplication
     def _make_copy_tensor(shape: Shape, device: torch.device) -> torch.Tensor:
         copy_tensor = torch.zeros(shape, device=device)
         rank = len(shape)
@@ -800,7 +802,7 @@ class AbstractNode(ABC):
                         new_index: Optional[List[slice]] = None,
                         full_memory_change: bool = False,
                         only_tensor: bool = False) -> None:
-        # TODO: Actualizar direcci'on de memoria cuandos e cambia nombre del nodo, para mantener direcciones 'unicas
+        # TODO: Actualizar direcci'on de memoria cuando se cambia nombre del nodo, para mantener direcciones 'unicas
         assert (self._tensor is None) or isinstance(self._tensor, tuple) or isinstance(self._tensor, torch.Tensor)
         if (not isinstance(self._tensor, tuple)) or only_tensor or self._empty_tensor:
             # If it is the only tensor, the unique name is used as id, and new idx is created
@@ -925,7 +927,9 @@ class AbstractNode(ABC):
 
     # Tensor product of two nodes
     # TODO: cannot be performed between connected nodes
+    # TODO: podríamos usar torch.outer()
     def __mod__(self, other: 'AbstractNode') -> 'Node':
+        # TODO: torch.outer(a.flatten(), b.flatten()).view(*(list(a.shape) + list(b.shape)))
         i = 0
         self_string = ''
         for _ in self.axes:
@@ -1002,7 +1006,7 @@ class AbstractNode(ABC):
 
         # from tentorch.functionals import foo
         # return foo(data)
-        return foo(data)
+        return F.foo(data)
 
 
 class Node(AbstractNode):
@@ -1495,6 +1499,7 @@ class ParamNode(AbstractNode, nn.Module):
         return Edge(node1=self, axis1=axis)
 
     def __setattr__(self, name: Text, value: Union[torch.Tensor, nn.Module]) -> None:
+        # TODO: si ParamNode deja de ser un Module, se acabó el problema
         if name == '_network':
             # This is done in order to not having the network as submodule
             ABC.__setattr__(self, name, value)
@@ -2170,7 +2175,9 @@ class TensorNetwork(nn.Module):
                 node._network = self
                 self._edges += [edge for edge in node.edges if
                                 (edge.is_dangling() and not edge.is_batch()
-                                 and edge not in self.edges)]  # TODO: can the edge be already in the network?
+                                 and edge not in self.edges)]
+                # TODO: can the edge be already in the network?
+                #  (Yes, if it is connected to another node already in the network)
 
             else:
                 # Original case
@@ -2492,7 +2499,7 @@ class TensorNetwork(nn.Module):
                 self.delete_node(node)
             self._data_nodes = dict()
 
-    def _add_data(self, data: Sequence[torch.Tensor]) -> None:
+    def _add_data(self, data: Sequence[torch.Tensor]) -> None:  # TODO: data should be stored as one stacked tensor
         """
         Add data to data nodes, that is, change their tensors by new data tensors given a new data set.
         
@@ -2522,6 +2529,9 @@ class TensorNetwork(nn.Module):
         Contract Tensor Network with input data with shape batch x n_features x feature.
         """
         raise NotImplementedError('Forward method not implemented for generic TensorNetwork class')
+    # TODO: add_data, wrap(contract), where we only define the way in which data is fed to the TN and TN
+    #  is contracted; `wrap` is used to manage memory and creation of nodes in the first epoch, feeding
+    #  data (zeros only batch_size=1) with torch.no_grad()
 
     def __getitem__(self, key: Union[int, Text]) -> Union[AbstractEdge, AbstractNode]:
         if isinstance(key, int):
@@ -2547,7 +2557,7 @@ class TensorNetwork(nn.Module):
     #  (se deben reasignar los par'ametros)
     # TODO: Function to allocate one memory tensor for each node, like old mode
     # TODO: Problem! Ahora meto los nodos en la TN como submodules, pero ellos no tienen parametros,
-    #  y los parametros se guardan como parametros de la TN
+    #  y los parametros se guardan como parametros de la TN (guardo lo mismo dos veces)
 
 
 ################################################
@@ -2870,15 +2880,15 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
 # mod_user()
 # print MODE   # print: user.
 
-def _func1(data):
-    print('Computing func1')
-
-
-def _func2(data):
-    print('Computing func2')
-
-
-foo = Foo(_func1, _func2)
+# def _func1(data):
+#     print('Computing func1')
+#
+#
+# def _func2(data):
+#     print('Computing func2')
+#
+#
+# foo = Foo(_func1, _func2)
 
 # Para leer las funciones que se ejecutan en el forward
 # https://stackoverflow.com/questions/51901676/get-the-lists-of-functions-used-called-within-a-function-in-python

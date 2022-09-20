@@ -2895,3 +2895,6 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
 # https://stackoverflow.com/questions/3061/calling-a-function-of-a-module-by-using-its-name-a-string
 
 # https://pytorch.org/docs/stable/generated/torch.index_select.html
+
+# Cross imports
+# https://stackoverflow.com/questions/17226016/simple-cross-import-in-python

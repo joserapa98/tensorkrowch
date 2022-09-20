@@ -41,6 +41,22 @@ def test_einsum_time():
         print(time.time() - start)
     # Mucho más rápido!!
 
+    a = torch.randn(20, 30)
+    b = torch.randn(30, 40)
+    print()
+    print('Start')
+    for _ in range(10):
+        start = time.time()
+        c = opt_einsum.contract('ij,jk->', a, b)
+        print(time.time() - start)
+    print()
+    print('Start')
+    for _ in range(10):
+        start = time.time()
+        c = a @ b
+        print(time.time() - start)
+    # Mucho más rápido!!
+
 
 # TODO: remove later
 def test_dis():

@@ -64,10 +64,10 @@ class Axis:
         name: axis name
         node: node to which the axis belongs
         node1: boolean indicating whether `node1` of the edge
-               attached to this axis is the node that contains
-               the axis. If False, node is `node2` of the edge
+            attached to this axis is the node that contains
+            the axis. If False, node is `node2` of the edge
         batch: boolean indicating whether the axis is used for
-               a batch index
+            a batch index
 
         Raises
         ------
@@ -113,7 +113,7 @@ class Axis:
     def name(self, name: Text) -> None:
         """
         Set axis name. Should not contain blank spaces
-        if it is intended to be used as index of submodules.
+        if it is intended to be used as name of submodules.
         """
         if not isinstance(name, str):
             raise TypeError('`name` should be str type')
@@ -128,17 +128,14 @@ class Axis:
     def node(self) -> 'AbstractNode':
         return self._node
 
-    @property
-    def node1(self) -> bool:  # TODO: change names to is_node1, is_batch
+    def is_node1(self) -> bool:
         return self._node1
 
-    @property
-    def batch(self) -> bool:
-        return self._batch
+    def is_batch(self, batch: Optional[bool] = None) -> bool:
+        if batch is None:
+            return self._batch
 
-    @batch.setter  # TODO: hace falta??
-    def batch(self, batch: bool) -> None:
-        if batch != self.batch:
+        if batch != self._batch:
             if self.node is not None:
                 if self.node[self].is_dangling():
                     if self.node.network is not None:
@@ -2558,6 +2555,7 @@ class TensorNetwork(nn.Module):
     # TODO: Function to allocate one memory tensor for each node, like old mode
     # TODO: Problem! Ahora meto los nodos en la TN como submodules, pero ellos no tienen parametros,
     #  y los parametros se guardan como parametros de la TN (guardo lo mismo dos veces)
+    # TODO: funciones de añadir edge o quitar edge (casos añadir y quitar módulos)
 
 
 ################################################

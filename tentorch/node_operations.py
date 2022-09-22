@@ -107,7 +107,7 @@ def einsum(string: Text, *nodes: AbstractNode) -> Node:
                     k = output_char_index[char]
                     axes_names[k] = nodes[i].axes[j].name
                     edges[k] = edge
-                    node1_list[k] = nodes[i].axes[j].node1
+                    node1_list[k] = nodes[i].axes[j].is_node1()
                 output_dict[char] += 1
                 if char in batch_edges:
                     batch_edges[char] += 1
@@ -151,7 +151,7 @@ class StackNode(Node):
         # Me obligo a poner primero el nombre para que vaya bien el orden de usar __new__ e __init__
         # También tengo que crear el tensor antes de __init__
         stacked_tensor = torch.stack([node.tensor for node in nodes])
-        self = super().__new__(cls, name='stacknode', network=nodes[0].network, leaf=False, current_op=True,
+        self = super().__new__(cls, name='stacknode', network=nodes[0].network, leaf=False,
                                override_node=override_node, tensor=stacked_tensor, parents=set(nodes),
                                operation='stack')
         return self
@@ -161,7 +161,7 @@ class StackNode(Node):
                  name: Optional[Text] = None,
                  override_node: bool = False) -> None:
 
-        if not self.init:
+        if not self._init:
             for i in range(len(nodes[:-1])):
                 if not isinstance(nodes[i], type(nodes[i + 1])):
                     raise TypeError('Cannot stack nodes of different types. Nodes '
@@ -352,7 +352,7 @@ def unbind(node: AbstractNode) -> List[Node]:
     for i, (tensor, edges) in enumerate(lst):
         start2 = time.time()
         new_node = Node(axes_names=node.axes_names[1:], name='unbind_node', network=node.network, tensor=tensor.clone(),
-                        edges=list(edges), node1_list=node.node1_list[1:], parents={node}, operation=f'unbind_{i}',
+                        edges=list(edges), node1_list=node.is_node1()[1:], parents={node}, operation=f'unbind_{i}',
                         leaf=False)
         nodes.append(new_node)
         lst_times.append(time.time() - start2)

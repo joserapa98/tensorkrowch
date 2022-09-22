@@ -20,7 +20,7 @@ def test_mps():
     std = result.std(0)
     assert len(mps.permanent_nodes) == 21
     # TODO: It is equal to 13 because it counts Stacknode edges,
-    #  should we have also references to the permanent nodes??
+    #  should we have also references to the _leaf nodes??
     #assert len(mps.edges) == 1
 
     mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='obc')

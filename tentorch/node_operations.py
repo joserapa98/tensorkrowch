@@ -136,17 +136,9 @@ def einsum(string: Text, *nodes: AbstractNode) -> Node:
     new_tensor = opt_einsum.contract(einsum_string, *(tensors + matrices))
 
     # We assume all nodes belong to the same network
-    new_node = Node(axes_names=list(axes_names.values()),
-                    name='einsum_node',
-                    network=nodes[0].network,
-                    permanent=False,
-                    current_op=True,
-                    param_edges=False,
-                    tensor=new_tensor,
-                    edges=list(edges.values()),
-                    node1_list=list(node1_list.values()),
-                    parents=set(nodes),
-                    operation='einsum')
+    new_node = Node(axes_names=list(axes_names.values()), name='einsum_node', network=nodes[0].network,
+                    param_edges=False, tensor=new_tensor, edges=list(edges.values()),
+                    node1_list=list(node1_list.values()), parents=set(nodes), operation='einsum', leaf=False)
     return new_node
 
 
@@ -159,13 +151,8 @@ class StackNode(Node):
         # Me obligo a poner primero el nombre para que vaya bien el orden de usar __new__ e __init__
         # También tengo que crear el tensor antes de __init__
         stacked_tensor = torch.stack([node.tensor for node in nodes])
-        self = super().__new__(cls,
-                               name='stacknode',
-                               tensor=stacked_tensor,
-                               override_node=override_node, network=nodes[0].network,
-                               permanent=False,
-                               current_op=True,
-                               parents=set(nodes),
+        self = super().__new__(cls, name='stacknode', network=nodes[0].network, leaf=False, current_op=True,
+                               override_node=override_node, tensor=stacked_tensor, parents=set(nodes),
                                operation='stack')
         return self
 
@@ -200,14 +187,8 @@ class StackNode(Node):
             self._edges_dict = edges_dict
 
             stacked_tensor = torch.stack([node.tensor for node in nodes])
-            super().__init__(axes_names=['stack'] + nodes[0].axes_names,
-                             name=name,
-                             network=nodes[0].network,
-                             permanent=False,
-                             current_op=True,
-                             tensor=stacked_tensor,
-                             override_node=override_node,
-                             parents=set(nodes),
+            super().__init__(axes_names=['stack'] + nodes[0].axes_names, name=name, network=nodes[0].network,
+                             leaf=False, override_node=override_node, tensor=stacked_tensor, parents=set(nodes),
                              operation='stack')
 
     @property
@@ -339,7 +320,7 @@ def unbind(node: AbstractNode) -> List[Node]:
     #     new_node = Node(name='unbind_node',
     #                     axes_names=node.axes_names[1:],
     #                     network=node.network,
-    #                     permanent=False,
+    #                     _leaf=False,
     #                     current_op=True,
     #                     tensor=tensor,
     #                     edges=[edge.edges[i] if isinstance(edge, AbstractStackEdge)
@@ -370,16 +351,9 @@ def unbind(node: AbstractNode) -> List[Node]:
 
     for i, (tensor, edges) in enumerate(lst):
         start2 = time.time()
-        new_node = Node(name='unbind_node',
-                        axes_names=node.axes_names[1:],
-                        network=node.network,
-                        permanent=False,
-                        current_op=True,
-                        tensor=tensor.clone(),  # TODO: unbind parece que muestra una view del tensor del que est'an haciendo unbind, hay que clonar, pero ahora se rompe el grafo de gradientes
-                        edges=list(edges),
-                        node1_list=node.node1_list[1:],
-                        parents={node},
-                        operation=f'unbind_{i}')
+        new_node = Node(axes_names=node.axes_names[1:], name='unbind_node', network=node.network, tensor=tensor.clone(),
+                        edges=list(edges), node1_list=node.node1_list[1:], parents={node}, operation=f'unbind_{i}',
+                        leaf=False)
         nodes.append(new_node)
         lst_times.append(time.time() - start2)
     # print('\t\t\t\t\tCreate 1 node:',

@@ -11,9 +11,7 @@ import tentorch as tn
 
 def test_einsum():
     net = tn.TensorNetwork(name='net')
-    node = tn.Node(shape=(5, 5, 5, 5, 2),
-                   axes_names=('input', 'input', 'input', 'input', 'output'),
-                   network=net,
+    node = tn.Node(shape=(5, 5, 5, 5, 2), axes_names=('input', 'input', 'input', 'input', 'output'), network=net,
                    init_method='randn')
     net.set_data_nodes(node.edges[:-1], [10])
     data = torch.randn(10, 5, 4)
@@ -29,11 +27,8 @@ def test_einsum():
         out_node = tn.einsum('ijklm,b,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
 
     net = tn.TensorNetwork(name='net')
-    node = tn.ParamNode(shape=(5, 5, 5, 5, 2),
-                        axes_names=('input', 'input', 'input', 'input', 'output'),
-                        network=net,
-                        param_edges=True,
-                        init_method='randn')
+    node = tn.ParamNode(shape=(5, 5, 5, 5, 2), axes_names=('input', 'input', 'input', 'input', 'output'), network=net,
+                        param_edges=True, init_method='randn')
     net.set_data_nodes(node.edges[:-1], [10])
     data = torch.randn(10, 5, 4)
     net._add_data(data.unbind(2))
@@ -49,29 +44,17 @@ def test_einsum():
 
 
 def test_batched_contract_between():
-    node1 = tn.Node(shape=(10, 2, 3),
-                    axes_names=('batch', 'left', 'right'),
-                    name='node1',
-                    init_method='randn')
-    node2 = tn.Node(shape=(10, 2, 3),
-                    axes_names=('batch', 'left', 'right'),
-                    name='node2',
-                    init_method='randn')
+    node1 = tn.Node(shape=(10, 2, 3), axes_names=('batch', 'left', 'right'), name='node1', init_method='randn')
+    node2 = tn.Node(shape=(10, 2, 3), axes_names=('batch', 'left', 'right'), name='node2', init_method='randn')
     node1['left'] ^ node2['left']
     node1['right'] ^ node2['right']
     node3 = node1 @ node2
     assert node3.shape == (10,)
 
-    node1 = tn.ParamNode(shape=(10, 2, 3),
-                         axes_names=('batch', 'left', 'right'),
-                         name='node1',
-                         init_method='randn')
+    node1 = tn.ParamNode(shape=(10, 2, 3), axes_names=('batch', 'left', 'right'), name='node1', init_method='randn')
     node1['left'].parameterize(True)
     node1['right'].parameterize(True)
-    node2 = tn.ParamNode(shape=(10, 2, 3),
-                         axes_names=('batch', 'left', 'right'),
-                         name='node2',
-                         init_method='randn')
+    node2 = tn.ParamNode(shape=(10, 2, 3), axes_names=('batch', 'left', 'right'), name='node2', init_method='randn')
     node2['left'].parameterize(True)
     node2['right'].parameterize(True)
     node1['left'] ^ node2['left']
@@ -85,10 +68,7 @@ def test_stack():
     nodes = []
     input_edges = []
     for i in range(5):
-        node = tn.Node(shape=(3, 3, 2),
-                       axes_names=('input', 'input', 'output'),
-                       name='node',
-                       network=net,
+        node = tn.Node(shape=(3, 3, 2), axes_names=('input', 'input', 'output'), name='node', network=net,
                        init_method='randn')
         nodes.append(node)
         input_edges += [node['input_0'], node['input_1']]
@@ -117,12 +97,8 @@ def test_stack():
     nodes = []
     input_edges = []
     for i in range(5):
-        node = tn.ParamNode(shape=(3, 3, 2),
-                            axes_names=('input', 'input', 'output'),
-                            name='node',
-                            network=net,
-                            param_edges=True,
-                            init_method='randn')
+        node = tn.ParamNode(shape=(3, 3, 2), axes_names=('input', 'input', 'output'), name='node', network=net,
+                            param_edges=True, init_method='randn')
         nodes.append(node)
         input_edges += [node['input_0'], node['input_1']]
     net.set_data_nodes(input_edges=input_edges,
@@ -146,12 +122,8 @@ def test_stack():
     nodes = []
     input_edges = []
     for i in range(5):
-        node = tn.ParamNode(shape=(3, 3, 2),
-                            axes_names=('input', 'input', 'output'),
-                            name='node',
-                            network=net,
-                            param_edges=True,
-                            init_method='randn')
+        node = tn.ParamNode(shape=(3, 3, 2), axes_names=('input', 'input', 'output'), name='node', network=net,
+                            param_edges=True, init_method='randn')
         nodes.append(node)
         input_edges += [node['input_0'], node['input_1']]
     net.set_data_nodes(input_edges=input_edges,
@@ -198,10 +170,7 @@ def test_stack():
     nodes = []
     input_edges = []
     for i in range(5):
-        node = tn.Node(shape=(3, 3, 2),
-                       axes_names=('input', 'input', 'output'),
-                       name='node',
-                       network=net,
+        node = tn.Node(shape=(3, 3, 2), axes_names=('input', 'input', 'output'), name='node', network=net,
                        init_method='randn')
         nodes.append(node)
         input_edges += [node['input_0'], node['input_1']]
@@ -228,10 +197,7 @@ def test_stack():
     nodes = []
     input_edges = []
     for i in range(5):
-        node = tn.Node(shape=(3, 3, 2),
-                       axes_names=('input', 'input', 'output'),
-                       name='node',
-                       network=net,
+        node = tn.Node(shape=(3, 3, 2), axes_names=('input', 'input', 'output'), name='node', network=net,
                        init_method='randn')
         nodes.append(node)
         input_edges += [node['input_0'], node['input_1']]
@@ -254,10 +220,7 @@ def test_stack():
     net = tn.TensorNetwork()
     nodes = []
     for i in range(5):
-        node = tn.Node(shape=(3, 3, 2),
-                       axes_names=('input', 'input', 'output'),
-                       name='node',
-                       network=net,
+        node = tn.Node(shape=(3, 3, 2), axes_names=('input', 'input', 'output'), name='node', network=net,
                        init_method='randn')
         nodes.append(node)
     net['node_0'].param_edges(True)
@@ -273,10 +236,7 @@ def test_stacked_einsum():
     nodes = []
     input_edges = []
     for i in range(11):
-        node = tn.Node(shape=(2, 5, 2),
-                       axes_names=('left', 'input', 'right'),
-                       name=f'node_{i}',
-                       network=net,
+        node = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name=f'node_{i}', network=net,
                        init_method='randn')
         nodes.append(node)
         if i != 5:
@@ -310,12 +270,8 @@ def test_stacked_einsum():
     nodes = []
     input_edges = []
     for i in range(11):
-        node = tn.ParamNode(shape=(2, 5, 2),
-                            axes_names=('left', 'input', 'right'),
-                            name=f'node_{i}',
-                            network=net,
-                            param_edges=True,
-                            init_method='randn')
+        node = tn.ParamNode(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name=f'node_{i}', network=net,
+                            param_edges=True, init_method='randn')
         nodes.append(node)
         if i != 5:
             input_edges.append(node['input'])

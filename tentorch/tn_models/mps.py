@@ -105,7 +105,7 @@ class MPS(TensorNetwork):
         self.param_bond(set_param=param_bond)
         self.initialize()
 
-        # Save references to permanent nodes
+        # Save references to _leaf nodes
         # TODO: This should be in all TN
         self._permanent_nodes = []
 
@@ -200,16 +200,12 @@ class MPS(TensorNetwork):
         if self.l_position > 0:
             # Left node
             if self.boundary == 'obc':
-                self.left_node = ParamNode(shape=(self.d_phys[0], self.d_bond[0]),
-                                           axes_names=('input', 'right'),
-                                           name='left_node',
-                                           network=self,)
+                self.left_node = ParamNode(shape=(self.d_phys[0], self.d_bond[0]), axes_names=('input', 'right'),
+                                           name='left_node', network=self)
                                            #param_edges=self.param_bond())
             else:
                 self.left_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[0], self.d_bond[0]),
-                                           axes_names=('left', 'input', 'right'),
-                                           name='left_node',
-                                           network=self,)
+                                           axes_names=('left', 'input', 'right'), name='left_node', network=self)
                                            #param_edges=self.param_bond())
                 periodic_edge = self.left_node['left']
         else:
@@ -219,9 +215,7 @@ class MPS(TensorNetwork):
             # Left environment
             for i in range(1, self.l_position):
                 node = ParamNode(shape=(self.d_bond[i - 1], self.d_phys[i], self.d_bond[i]),
-                                 axes_names=('left', 'input', 'right'),
-                                 name='left_env_node',
-                                 network=self,)
+                                 axes_names=('left', 'input', 'right'), name='left_env_node', network=self)
                                  #param_edges=self.param_bond())
                 self.left_env.append(node)
                 if i == 1:
@@ -232,16 +226,12 @@ class MPS(TensorNetwork):
         # Output
         if self.l_position == 0:
             if self.boundary == 'obc':
-                self.output_node = ParamNode(shape=(self.d_phys[0], self.d_bond[0]),
-                                             axes_names=('output', 'right'),
-                                             name='output_node',
-                                             network=self,)
+                self.output_node = ParamNode(shape=(self.d_phys[0], self.d_bond[0]), axes_names=('output', 'right'),
+                                             name='output_node', network=self)
                                              #param_edges=self.param_bond())
             else:
                 self.output_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[0], self.d_bond[0]),
-                                             axes_names=('left', 'output', 'right'),
-                                             name='output_node',
-                                             network=self,)
+                                             axes_names=('left', 'output', 'right'), name='output_node', network=self)
                                              #param_edges=self.param_bond())
                 periodic_edge = self.output_node['left']
 
@@ -249,15 +239,12 @@ class MPS(TensorNetwork):
             if self.n_sites - 1 != 0:
                 if self.boundary == 'obc':
                     self.output_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[-1]),
-                                                 axes_names=('left', 'output'),
-                                                 name='output_node',
-                                                 network=self,)
+                                                 axes_names=('left', 'output'), name='output_node', network=self)
                                                  #param_edges=self.param_bond())
                 else:
                     self.output_node = ParamNode(shape=(self.d_bond[-2], self.d_phys[-1], self.d_bond[-1]),
-                                                 axes_names=('left', 'output', 'right'),
-                                                 name='output_node',
-                                                 network=self,)
+                                                 axes_names=('left', 'output', 'right'), name='output_node',
+                                                 network=self)
                                                  #param_edges=self.param_bond())
                     self.output_node['right'] ^ periodic_edge
             if self.left_env:
@@ -269,10 +256,8 @@ class MPS(TensorNetwork):
         if (self.l_position > 0) and (self.l_position < self.n_sites - 1):
             self.output_node = ParamNode(shape=(self.d_bond[self.l_position - 1],
                                                 self.d_phys[self.l_position],
-                                                self.d_bond[self.l_position]),
-                                         axes_names=('left', 'output', 'right'),
-                                         name='output_node',
-                                         network=self,)
+                                                self.d_bond[self.l_position]), axes_names=('left', 'output', 'right'),
+                                         name='output_node', network=self)
                                          #param_edges=self.param_bond())
             if self.left_env:
                 self.left_env[-1]['right'] ^ self.output_node['left']
@@ -284,9 +269,7 @@ class MPS(TensorNetwork):
             # Right environment
             for i in range(self.l_position + 1, self.n_sites - 1):
                 node = ParamNode(shape=(self.d_bond[i - 1], self.d_phys[i], self.d_bond[i]),
-                                 axes_names=('left', 'input', 'right'),
-                                 name='right_env_node',
-                                 network=self,)
+                                 axes_names=('left', 'input', 'right'), name='right_env_node', network=self)
                                  #param_edges=self.param_bond())
                 self.right_env.append(node)
                 if i == self.l_position + 1:
@@ -297,16 +280,12 @@ class MPS(TensorNetwork):
         if self.l_position < self.n_sites - 1:
             # Right node
             if self.boundary == 'obc':
-                self.right_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[-1]),
-                                            axes_names=('left', 'input'),
-                                            name='right_node',
-                                            network=self,)
+                self.right_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[-1]), axes_names=('left', 'input'),
+                                            name='right_node', network=self)
                                             #param_edges=self.param_bond())
             else:
                 self.right_node = ParamNode(shape=(self.d_bond[-2], self.d_phys[-1], self.d_bond[-1]),
-                                            axes_names=('left', 'input', 'right'),
-                                            name='right_node',
-                                            network=self,)
+                                            axes_names=('left', 'input', 'right'), name='right_node', network=self)
                                             #param_edges=self.param_bond())
                 self.right_node['right'] ^ periodic_edge
             if self.right_env:
@@ -922,7 +901,7 @@ class MPS(TensorNetwork):
 
     def _update_current_op_nodes(self) -> None:
         for node in self.nodes.values():
-            if not node.permanent and node.current_op:
+            if not node._leaf and node.current_op:
                 node.current_op = False
 
     def forward(self, data: torch.Tensor) -> torch.Tensor:

@@ -37,7 +37,7 @@ from tentorch.utils import (tab_string, check_name_style,
                             erase_enum, enum_repeated_names,
                             permute_list, is_permutation)
 
-#from tentorch.functionals import Foo
+# from tentorch.functionals import Foo
 import tentorch.functionals as F
 
 
@@ -74,27 +74,30 @@ class Axis:
         TypeError
         """
 
+        # Check types
         if not isinstance(num, int):
             raise TypeError('`num` should be int type')
-        self._num = num
 
         if not isinstance(name, str):
             raise TypeError('`name` should be str type')
         if not check_name_style(name):
             raise ValueError('Names can only contain letters, numbers and underscores')
-        self._name = name
 
         if node is not None:
             if not isinstance(node, AbstractNode):
                 raise TypeError('`node` should be AbstractNode type')
-        self._node = node
 
         if not isinstance(node1, bool):
             raise TypeError('`node1` should be bool type')
-        self._node1 = node1
 
         if not isinstance(batch, bool):
             raise TypeError('`batch` should be bool type')
+
+        # Set attributes
+        self._num = num
+        self._name = name
+        self._node = node
+        self._node1 = node1
         if ('batch' in name) or ('stack' in name) or batch:
             self._batch = True
         else:
@@ -128,6 +131,7 @@ class Axis:
     def node(self) -> 'AbstractNode':
         return self._node
 
+    # methods
     def is_node1(self) -> bool:
         return self._node1
 
@@ -137,18 +141,16 @@ class Axis:
 
         if batch != self._batch:
             if self.node is not None:
-                if self.node[self].is_dangling():
-                    if self.node.network is not None:
-                        if batch:
-                            # TODO: si es ParamEdge habría que quitarlo como módulo
-                            self.node.network._edges.remove(self.node[self])
-                        else:
-                            self.node.network._edges += [self.node[self]]
+                edge = self.node[self]
+                if edge.is_dangling():
+                    if batch:
+                        self.node.network._remove_edge(edge)
+                    else:
+                        self.node.network._add_edge(edge)
                 else:
                     raise ValueError('Cannot change `batch` attribute of non-dangling edges')
             self._batch = batch
 
-    # methods
     def __int__(self) -> int:
         return self.num
 
@@ -165,7 +167,7 @@ class Axis:
 Ax = Union[int, Text, Axis]
 Shape = Union[int, Sequence[int], torch.Size]
 
-
+# TODO: protect with __ some attributes?
 class AbstractNode(ABC):
     """
     Abstract class for nodes. Should be subclassed.
@@ -179,18 +181,18 @@ class AbstractNode(ABC):
                 shape: Shape,
                 axes_names: Optional[Sequence[Text]] = None,
                 name: Optional[Text] = None,
-                permanent: bool = True,
-                current_op: bool = False) -> 'AbstractNode':
+                network: Optional['TensorNetwork'] = None,
+                leaf: bool = True) -> 'AbstractNode':
         self = super().__new__(cls)
-        self.init = False
+        self._init = False
         return self
 
     def __init__(self,
                  shape: Shape,
                  axes_names: Optional[Sequence[Text]] = None,
                  name: Optional[Text] = None,
-                 permanent: bool = True,
-                 current_op: bool = False) -> None:
+                 network: Optional['TensorNetwork'] = None,
+                 leaf: bool = True) -> None:
         """
         Create a node. Should be subclassed before usage and
         a limited number of abstract methods overridden.
@@ -200,9 +202,8 @@ class AbstractNode(ABC):
         shape: node shape (the shape of its tensor, it is always provided)
         axes_names: list of names for each of the node's axes
         name: node name
-        permanent: indicates if the node is a permanent node in the network
-        current_op: indicates if the node is being used in the current
-                    iteration of operations (for training)
+        network: tensor network to which the node belongs
+        leaf: indicates if the node is a leaf node in the network
 
         Raises
         ------
@@ -212,7 +213,7 @@ class AbstractNode(ABC):
 
         super().__init__()
 
-        # shape
+        # check shape
         if shape is not None:
             if not isinstance(shape, (int, tuple, list, torch.Size)):
                 raise TypeError('`shape` should be int, tuple[int, ...], list[int, ...] or torch.Size type')
@@ -221,7 +222,7 @@ class AbstractNode(ABC):
                     if not isinstance(i, int):
                         raise TypeError('`shape` elements should be int type')
 
-        # axes_names
+        # check axes_names
         if axes_names is None:
             axes = [Axis(num=i, name=f'axis_{i}', node=self)
                     for i, _ in enumerate(shape)]
@@ -234,43 +235,43 @@ class AbstractNode(ABC):
                 axes_names = enum_repeated_names(axes_names)
                 axes = [Axis(num=i, name=name, node=self)
                         for i, name in enumerate(axes_names)]
-        self._axes = axes
-        self._tensor = torch.empty(shape)
-        self._empty_tensor = True
-        self._edges = []
 
-        # name
+        # check name
         if name is None:
             name = self.__class__.__name__.lower()
         elif not isinstance(name, str):
             raise TypeError('`name` should be str type')
         elif not check_name_style(name):
             raise ValueError('Names can only contain letters, numbers and underscores')
+
+        # check network
+        if network is not None:
+            if not isinstance(network, TensorNetwork):
+                raise TypeError('`network` should be TensorNetwork type')
+        else:
+            network = TensorNetwork()
+
+        # Set attributes
+        self._tensor_info = None
+        self._temp_tensor = torch.empty(shape)
+        self._axes = axes
+        self._edges = []
         self._name = name
-
-        # network
-        self._network = None
-
-        # indicators
-        # TODO: not all combinations are allowed (permanent=1 and current_op=1)
-        self.permanent = permanent
-        self.current_op = current_op
-
-        # successors
+        self._network = network
         self._successors = []
-
-        # TODO: Create always TN associated to the nodes
-
-        self.init = True  # TODO: use underscore
+        self._leaf = leaf
+        self._init = True
 
     # ----------
     # Properties
     # ----------
     @property
     def tensor(self) -> Union[torch.Tensor, nn.Parameter]:
-        if isinstance(self._tensor, torch.Tensor):
-            return self._tensor
-        return self.network._memory[self._tensor[0]][self._tensor[1]]
+        if self._tensor_info is None:
+            return self._temp_tensor
+        if self._tensor_info['full']:
+            return self.network._memory_nodes[self._tensor_info['address']]
+        return self.network._memory_nodes[self._tensor_info['address']][self._tensor_info['index']]
 
     @tensor.setter
     def tensor(self, tensor: torch.Tensor) -> None:
@@ -278,6 +279,11 @@ class AbstractNode(ABC):
 
     @property
     def shape(self) -> torch.Size:
+        # if self._tensor_info is None:
+        #     return self._temp_tensor.shape
+        # if self._tensor_info['full']:
+        #     return self.network._memory_nodes[self._tensor_info['address']].shape
+        # return self.network._memory_nodes[self._tensor_info['address']][self._tensor_info['stack_idx']].shape
         return self.tensor.shape
 
     @property
@@ -297,10 +303,6 @@ class AbstractNode(ABC):
         return list(map(lambda axis: axis.name, self.axes))
 
     @property
-    def node1_list(self) -> List[bool]:
-        return list(map(lambda axis: axis.node1, self.axes))
-
-    @property
     def edges(self) -> List['AbstractEdge']:
         return self._edges
 
@@ -310,15 +312,14 @@ class AbstractNode(ABC):
 
     @name.setter
     def name(self, name: Text) -> None:
-        if not check_name_style(name):
+        if not isinstance(name, str):
+            raise TypeError('`name` should be str type')
+        elif not check_name_style(name):
             raise ValueError('Names can only contain letters, numbers and underscores')
-        elif self.network is not None:
-            self.network._change_node_name(self, name)
-        else:
-            self._name = name
+        self.network._change_node_name(self, name)
 
     @property
-    def network(self) -> Optional['TensorNetwork']:
+    def network(self) -> 'TensorNetwork':
         return self._network
 
     @network.setter
@@ -331,24 +332,24 @@ class AbstractNode(ABC):
         Successors list can only be modified with append() or list operations,
         but cannot be substituted by another list
         """
-        return self._successors
+        return self._successors[:]
 
     # ----------------
     # Abstract methods
     # ----------------
     @staticmethod
     @abstractmethod
-    def set_tensor_format(tensor: torch.Tensor) -> Union[torch.Tensor, nn.Parameter]:
+    def _set_tensor_format(tensor: torch.Tensor) -> Union[torch.Tensor, nn.Parameter]:
         """
         Set the tensor format for each type of node. For normal nodes the format
-        is just a torch.Tensor, but for parameterized nodes it might be a nn.Parameter
+        is just a torch.Tensor, but for parameterized nodes it should be a nn.Parameter
         """
         pass
 
     @abstractmethod
     def parameterize(self, set_param: bool) -> 'AbstractNode':
         """
-        Make a normal node a parametric node and vice versa, replacing the node in
+        Turn a normal node into a parametric node and vice versa, replacing the node in
         the network
         """
         pass
@@ -370,13 +371,16 @@ class AbstractNode(ABC):
     # -------
     # Methods
     # -------
+    def is_leaf(self) -> bool:
+        return self._leaf
+
     def size(self, axis: Optional[Ax] = None) -> Union[torch.Size, int]:
         if axis is None:
             return self.shape
         axis_num = self.get_axis_number(axis)
         return self.shape[axis_num]
 
-    def dim(self, axis: Optional[Ax] = None) -> Union[torch.Size, int]:
+    def dims(self, axis: Optional[Ax] = None) -> Union[torch.Size, int]:
         """
         Similar to `size`, but if a ParamEdge is attached to an axis,
         it is returned its dimension (number of 1's in the diagonal of
@@ -384,27 +388,46 @@ class AbstractNode(ABC):
         in the diagonal of the matrix)
         """
         if axis is None:
-            return torch.Size(list(map(lambda edge: edge.dim(), self.edges)))
+            return torch.Size(map(lambda edge: edge.dims(), self.edges))
         axis_num = self.get_axis_number(axis)
         return self.edges[axis_num].dim()
+
+    def _compatible_dims(self, tensor: torch.Tensor) -> bool:
+        """
+        Check if a tensor has a shape that is compatible with the dimensions
+        of the current node in order to set it as the new tensor
+        """
+        if len(tensor.shape) == self.rank:
+            for i, dim in enumerate(tensor.shape):
+                edge = self.get_edge(i)
+                if not edge.is_dangling() and dim != edge.dim():
+                    return False
+            return True
+        return False
+
+    def is_node1(self, axis: Optional[Ax] = None) -> Union[bool, List[bool]]:
+        if axis is None:
+            return list(map(lambda ax: ax.is_node1(), self.axes))
+        axis_num = self.get_axis_number(axis)
+        return self.axes[axis_num].is_node1()
 
     def neighbours(self, axis: Optional[Ax] = None) -> Union[Optional['AbstractNode'],
                                                              List['AbstractNode']]:
         """
         Return nodes to which self is connected
         """
-        node1_list = self.node1_list
+        node1_list = self.is_node1()
         if axis is not None:
             node2 = self[axis]._nodes[node1_list[self.get_axis_number(axis)]]
             return node2
         neighbours = set()
         for i, edge in enumerate(self.edges):
-            node2 = edge._nodes[node1_list[i]]
-            if node2 is not None:
+            if not edge.is_dangling():
+                node2 = edge._nodes[node1_list[i]]
                 neighbours.add(node2)
         return list(neighbours)
 
-    #def add_successor(self, other: 'AbstractNode', operation: Text) -> None:
+    # def add_successor(self, other: 'AbstractNode', operation: Text) -> None:
     #    """
     #    When the node is operated with another one, the other node and the operation
     #    are stored (when the resultant node is instantiated it is added to the dict).
@@ -432,8 +455,8 @@ class AbstractNode(ABC):
                     axes_names[i] = name
                     break
             new_axes_names = enum_repeated_names(axes_names)
-            for i, axis in enumerate(self.axes):
-                axis._name = new_axes_names[i]
+            for axis, axis_name in zip(self.axes, new_axes_names):
+                axis._name = axis_name
 
     def _change_axis_size(self,
                           axis: Ax,
@@ -449,12 +472,12 @@ class AbstractNode(ABC):
         axis: axis where the size is changed
         size: new size to set
         padding_method: if new size is greater than the older one, the method used to
-                        pad the new positions of the node's tensor. Available methods
-                        are the same used in `make_tensor`
+            pad the new positions of the node's tensor. Available methods are the same
+            used in `make_tensor`
         kwargs: keyword arguments used in `make_tensor`
         """
         if size <= 0:
-            raise ValueError('new `size` should be greater than zero')
+            raise ValueError('New `size` should be greater than zero')
         axis_num = self.get_axis_number(axis)
         index = []
         for i, dim in enumerate(self.shape):
@@ -467,7 +490,7 @@ class AbstractNode(ABC):
                 index.append(slice(0, dim))
 
         if size < self.shape[axis_num]:
-            index_in_memory = self._tensor[1]
+            index_in_memory = self._tensor_info[1]
             assert len(index_in_memory) >= len(index)
             if len(index_in_memory) > len(index):
                 # First indices correspond to stack indices
@@ -482,18 +505,18 @@ class AbstractNode(ABC):
                 # TODO: si no es una pila, este solo podr'ia ser el caso only_tensor=True
                 new_index_in_memory = index_in_memory
 
-            if torch.equal(self.network._memory[self._tensor[0]], self.tensor):
+            if torch.equal(self.network._memory_nodes[self._tensor_info[0]], self.tensor):
                 # TODO: If memory was used only by this node, maybe could be a flag
                 self._save_in_memory(tensor=self.tensor[index],
                                      only_tensor=True)
             else:
                 new_tensor_in_memory = self.make_tensor(self.shape, padding_method, **kwargs)
                 new_tensor_in_memory[index] = self.tensor[index]
-                new_tensor_in_memory = self.set_tensor_format(new_tensor_in_memory)
+                new_tensor_in_memory = self._set_tensor_format(new_tensor_in_memory)
                 self._save_in_memory(tensor=new_tensor_in_memory,
                                      new_index=new_index_in_memory)
         elif size > self.shape[axis_num]:
-            index_in_memory = self._tensor[1]
+            index_in_memory = self._tensor_info[1]
             assert len(index_in_memory) >= len(index)
             if len(index_in_memory) > len(index):
                 # First indices correspond to stack indices
@@ -514,21 +537,21 @@ class AbstractNode(ABC):
             # TODO: Padding can be done with function pad
             new_tensor = self.make_tensor(new_shape, padding_method, **kwargs)
             new_tensor[index] = self.tensor
-            new_tensor = self.set_tensor_format(new_tensor)
-            if torch.equal(self.network._memory[self._tensor[0]], self.tensor):
+            new_tensor = self._set_tensor_format(new_tensor)
+            if torch.equal(self.network._memory_nodes[self._tensor_info[0]], self.tensor):
                 # TODO: el caso new_index_in_memory = index_in_memory ya va a entrar aqu'i, no en el ultimo else
                 # If memory was used only by this node
                 self._save_in_memory(tensor=new_tensor,
                                      only_tensor=True)
             else:
                 if new_index_in_memory != index_in_memory:
-                    old_tensor_in_memory = self.network._memory[self._tensor[0]]
+                    old_tensor_in_memory = self.network._memory_nodes[self._tensor_info[0]]
                     new_tensor_in_memory = self.make_tensor(old_tensor_in_memory.shape, padding_method, **kwargs)
 
                     # TODO: Habr'ia que colocar tambi'en todos los dem'as tensores de los otros nodos guardados en
                     #  la misma memoria, teniendo que acceder a todos sus indices (reversed dict en TN)
-                    new_tensor_in_memory[self._tensor[1]] = new_tensor
-                    new_tensor_in_memory = self.set_tensor_format(new_tensor_in_memory)
+                    new_tensor_in_memory[self._tensor_info[1]] = new_tensor
+                    new_tensor_in_memory = self._set_tensor_format(new_tensor_in_memory)
                     self._save_in_memory(new_tensor_in_memory, full_memory_change=True)
                 else:
                     # TODO: En este caso también entraría si el nuevo tensor con 0's cabría en la misma capa donde
@@ -539,7 +562,7 @@ class AbstractNode(ABC):
                     # TODO: Padding can be done with function pad
                     new_tensor_in_memory = self.make_tensor(new_shape, padding_method, **kwargs)
                     new_tensor_in_memory[index] = self.tensor
-                    new_tensor_in_memory = self.set_tensor_format(new_tensor_in_memory)
+                    new_tensor_in_memory = self._set_tensor_format(new_tensor_in_memory)
                     self._save_in_memory(tensor=new_tensor_in_memory,
                                          new_index=new_index_in_memory)
 
@@ -566,12 +589,12 @@ class AbstractNode(ABC):
         axis_num = self.get_axis_number(axis)
         return self.edges[axis_num]
 
-    def add_edge(self,
-                 edge: 'AbstractEdge',
-                 axis: Ax,
-                 override: bool = False,
-                 node1: Optional[bool] = None,
-                 parameterize: bool = False) -> None:
+    def _add_edge(self,
+                  edge: 'AbstractEdge',
+                  axis: Ax,
+                  override: bool = False,
+                  node1: Optional[bool] = None,
+                  parameterize: bool = False) -> None:
         """
         Add an edge to a given axis of the node.
 
@@ -580,17 +603,18 @@ class AbstractNode(ABC):
         edge: edge that is to be attached
         axis: axis to which the edge will be attached
         override: boolean indicating whether `edge` should override
-                  an existing non-dangling edge at `axis`
+            an existing non-dangling edge at `axis`
         node1: boolean indicating if `self` is the node1 or node2 of `edge`
         parameterize: boolean used to indicate if the added edge is a parameterized
-                      version (maybe with different dimension) of the previous edge
-                      in that axis
+            version (maybe with different dimension) of the previous edge in that axis
         """
-        if edge.size() != self.size(axis):
-            raise ValueError(f'Edge size should match node size at axis {axis!r}')
-        if not parameterize:
-            if edge.dim() != self.dim(axis):
-                raise ValueError(f'Edge dimension should match node dimension at axis {axis!r}')
+        # TODO: This cannot happen if add_edge is protected -> _add_edge
+        # if edge.size() != self.size(axis):
+        #     raise ValueError(f'Edge size should match node size at axis {axis!r}')
+        # if not parameterize:
+        #     if edge.dim() != self.dim(axis):
+        #         raise ValueError(f'Edge dimension should match node dimension at axis {axis!r}')
+        # TODO: Maybe this can also not happen, with protection we only have to add the edge to the list of edges
         if node1 is None:
             if edge.node1 == self:
                 node1 = True
@@ -614,10 +638,10 @@ class AbstractNode(ABC):
         Parameters
         ----------
         set_param: boolean indicating whether edges have to be parameterized
-                   (True) or de-parameterized (False)
+            (True) or de-parameterized (False)
         sizes: if edges are parameterized, their dimensions will match the current
-               shape, but a sequence of `sizes` can also be given to expand that
-               shape (in that case, sizes and dimensions will be different)
+            shape, but a sequence of `sizes` can also be given to expand that shape
+            (in that case, sizes and dimensions will be different)
         """
         if set_param is None:
             all_edges = True
@@ -650,6 +674,7 @@ class AbstractNode(ABC):
     def reattach_edges(self,
                        axis: Optional[Ax] = None,
                        override: bool = False) -> None:
+        # TODO: protect with _
         """
         When a node has edges that are a reference to other previously created edges,
         those edges might make no reference to this node. With `reattach_edges`,
@@ -672,7 +697,7 @@ class AbstractNode(ABC):
             for i, edge in edges:
                 new_edge = edge.copy()
                 self._edges.append(new_edge)
-                if self.axes[i].node1:
+                if self.axes[i].is_node1():
                     new_edge._nodes[0] = self
                     new_edge._axes[0] = self.axes[i]
                 else:
@@ -680,7 +705,7 @@ class AbstractNode(ABC):
                     new_edge._axes[1] = self.axes[i]
         else:
             for i, edge in enumerate(self.edges):
-                if self.axes[i].node1:
+                if self.axes[i].is_node1():
                     edge._nodes[0] = self
                     edge._axes[0] = self.axes[i]
                 else:
@@ -759,85 +784,129 @@ class AbstractNode(ABC):
             raise ValueError('Choose a valid `init_method`: "zeros", '
                              '"ones", "copy", "rand", "randn"')
 
+    def _unrestricted_set_tensor(self,
+                                 tensor: Optional[torch.Tensor] = None,
+                                 init_method: Optional[Text] = 'zeros',
+                                 device: Optional[torch.device] = None,
+                                 **kwargs: float) -> None:
+        """
+        Set a new node's tensor or create one with `make_tensor` and set it.
+        To set the tensor it is also used `set_tensor_format`, which depends
+        on the type of node. This can be used in any node, even in non-leaf nodes.
+
+        Parameters
+        ----------
+        tensor: new tensor to be set in the node
+        init_method: if `tensor` is not provided, a new tensor is initialized
+            according to `init_method`
+        device: if `tensor` is not provided, device in which the new tensor
+            should be initialized
+        kwargs: keyword arguments for the initialization method
+        """
+        if tensor is not None:
+            if not isinstance(tensor, torch.Tensor):
+                raise ValueError('`tensor` should be torch.Tensor type')
+            elif not self._compatible_dims(tensor):
+                raise ValueError('`tensor` dimensions should match the '
+                                 'dimension of non-dangling edges')
+            elif device is not None:
+                warnings.warn('`device` was specified but is being ignored. Provide '
+                              'a tensor that is already in the required device')
+            correct_format_tensor = self._set_tensor_format(tensor)
+
+        elif init_method is not None:
+            if device is None:
+                device = self.tensor.device
+            tensor = self.make_tensor(init_method=init_method, device=device, **kwargs)
+            correct_format_tensor = self._set_tensor_format(tensor)
+
+        else:
+            raise ValueError('One of `tensor` or `init_method` must be provided')
+
+        self.network._memory_nodes[self._tensor_info['address']] = correct_format_tensor
+
     def set_tensor(self,
                    tensor: Optional[torch.Tensor] = None,
                    init_method: Optional[Text] = 'zeros',
                    device: Optional[torch.device] = None,
                    **kwargs: float) -> None:
         """
-        Set a new node's tensor or create one with `make_tensor` and set it.
-        To set the tensor it is also used `set_tensor_format`, which depends
-        on the type of node.
+        Set a new node's tensor for leaf nodes.
         """
-        if device is None and self.tensor is not None:
-            device = self.tensor.device
-        if tensor is not None:
-            if not isinstance(tensor, torch.Tensor):
-                raise ValueError('`tensor` should be torch.Tensor type')
-            if tensor.shape != self.shape:
-                raise ValueError('`tensor` shape should match node shape')
-            correct_format_tensor = self.set_tensor_format(tensor)
-            self._save_in_memory(correct_format_tensor)
-            self._empty_tensor = False
-        elif init_method is not None:
-            tensor = self.make_tensor(init_method=init_method, device=device, **kwargs)
-            correct_format_tensor = self.set_tensor_format(tensor)
-            self._save_in_memory(correct_format_tensor)
-            self._empty_tensor = False
+        if self.is_leaf() and not self.network.is_contracting():
+            self._unrestricted_set_tensor(tensor=tensor, init_method=init_method, device=device, **kwargs)
         else:
-            raise ValueError('One of `tensor` or `init_method` must be provided')
+            raise ValueError('Node\'s tensor can only be changed if it is a leaf tensor '
+                             'and the network is not in contracting mode')
 
     def unset_tensor(self, device: torch.device = torch.device('cpu')) -> None:
+        # TODO: maybe this function has no sense
         """
         Change node's tensor by an empty tensor.
         """
         self.tensor = torch.empty(self.shape, device=device)
-        self._empty_tensor = True
 
-    def _save_in_memory(self,
-                        tensor: torch.Tensor,
-                        new_index: Optional[List[slice]] = None,
-                        full_memory_change: bool = False,
-                        only_tensor: bool = False) -> None:
-        # TODO: Actualizar direcci'on de memoria cuando se cambia nombre del nodo, para mantener direcciones 'unicas
-        assert (self._tensor is None) or isinstance(self._tensor, tuple) or isinstance(self._tensor, torch.Tensor)
-        if (not isinstance(self._tensor, tuple)) or only_tensor or self._empty_tensor:
-            # If it is the only tensor, the unique name is used as id, and new idx is created
-            self.network._memory[self.name] = tensor
-            if isinstance(tensor, nn.Parameter):
-                if hasattr(self.network, self.name):
-                    setattr(self.network, self.name + '_param', tensor)
-                else:
-                    self.network.register_parameter(self.name, tensor)
-            idx = []
-            for i in tensor.shape:
-                idx.append(slice(0, i))
-            self._tensor = (self.name, tuple(idx))
-        else:
-            # TODO: change name of _tensor (maybe also _memory)?
-            if full_memory_change:
-                # Address in memory is still the same
-                # Only used to expand tensor, so addresses remain the same
-                # TODO: We have to change the addresses of all the other nodes that have their memory in that slot
-                self.network._memory[self._tensor[0]] = tensor
-            else:
-                old_tensor = self.network._memory[self._tensor[0]]
-                if not (isinstance(old_tensor, nn.Parameter) or isinstance(tensor, nn.Parameter)) and \
-                        (isinstance(old_tensor, torch.Tensor) and isinstance(tensor, torch.Tensor)):
-                    self.network._memory[self._tensor[0]][self._tensor[1]] = tensor
-                elif isinstance(old_tensor, nn.Parameter) and isinstance(tensor, nn.Parameter):
-                    old_tensor = old_tensor.detach()
-                    old_tensor[self._tensor[1]] = tensor
-                    self.network._memory[self._tensor[0]] = nn.Parameter(old_tensor)
-                    if hasattr(self.network, self._tensor[0]):
-                        setattr(self.network, self._tensor[0] + '_param', self.network._memory[self._tensor[0]])
-                    else:
-                        self.network.register_parameter(self._tensor[0], self.network._memory[self._tensor[0]])
-                else:
-                    raise ValueError('Trying to save a tensor with different format than '
-                                     'the one used in the tensor stored in memory')
-                if new_index:
-                    self._tensor = (self._tensor[0], new_index)
+    # def _assign_memory(self,
+    #                    address: Text,
+    #                    full: bool,
+    #                    stack_idx: Optional[Tuple[slice, ...]] = None,
+    #                    index: Optional[Tuple[slice, ...]] = None) -> None:
+    #     "Para cuando cambiamos la memoria desde TN, y tenemos que indicar al nodo que su memoria está en otro lado"
+    #     self._tensor_info = {'address': address,
+    #                          'full': full,
+    #                          'stack_idx': stack_idx,
+    #                          'index': index}
+
+    def _save_in_memory(self, tensor: torch.Tensor) -> None:
+        self.network._memory_nodes[self.name] = tensor
+        if self._tensor_info is None:
+            self._tensor_info = {'address': self.name,  # TODO: address is always name?
+                                 'full': True,
+                                 'stack_idx': None,
+                                 'index': None}
+
+        # # TODO: Actualizar direcci'on de memoria cuando se cambia nombre del nodo, para mantener direcciones 'unicas
+        # assert (self._tensor_info is None) or isinstance(self._tensor_info, tuple) or isinstance(self._tensor_info, torch.Tensor)
+        # if (not isinstance(self._tensor_info, tuple)) or only_tensor or self._empty_tensor:
+        #     # If it is the only tensor, the unique name is used as id, and new idx is created
+        #     self.network._memory_nodes[self.name] = tensor
+        #     if isinstance(tensor, nn.Parameter):
+        #         if hasattr(self.network, self.name):
+        #             setattr(self.network, self.name + '_param', tensor)
+        #         else:
+        #             self.network.register_parameter(self.name, tensor)
+        #     idx = []
+        #     for i in tensor.shape:
+        #         idx.append(slice(0, i))
+        #     self._tensor_info = {'address': self.name,
+        #                          'full': True,
+        #                          'stack_idx': None,
+        #                          'index': None}
+        # else:
+        #     # TODO: change name of _tensor_info (maybe also _memory_nodes)?
+        #     if full_memory_change:
+        #         # Address in memory is still the same
+        #         # Only used to expand tensor, so addresses remain the same
+        #         # TODO: We have to change the addresses of all the other nodes that have their memory in that slot
+        #         self.network._memory_nodes[self._tensor_info[0]] = tensor
+        #     else:
+        #         old_tensor = self.network._memory_nodes[self._tensor_info[0]]
+        #         if not (isinstance(old_tensor, nn.Parameter) or isinstance(tensor, nn.Parameter)) and \
+        #                 (isinstance(old_tensor, torch.Tensor) and isinstance(tensor, torch.Tensor)):
+        #             self.network._memory_nodes[self._tensor_info[0]][self._tensor_info[1]] = tensor
+        #         elif isinstance(old_tensor, nn.Parameter) and isinstance(tensor, nn.Parameter):
+        #             old_tensor = old_tensor.detach()
+        #             old_tensor[self._tensor_info[1]] = tensor
+        #             self.network._memory_nodes[self._tensor_info[0]] = nn.Parameter(old_tensor)
+        #             if hasattr(self.network, self._tensor_info[0]):
+        #                 setattr(self.network, self._tensor_info[0] + '_param', self.network._memory_nodes[self._tensor_info[0]])
+        #             else:
+        #                 self.network.register_parameter(self._tensor_info[0], self.network._memory_nodes[self._tensor_info[0]])
+        #         else:
+        #             raise ValueError('Trying to save a tensor with different format than '
+        #                              'the one used in the tensor stored in memory')
+        #         if new_index:
+        #             self._tensor_info = (self._tensor_info[0], new_index)
 
     def move_to_network(self,
                         network: 'TensorNetwork',
@@ -850,18 +919,15 @@ class AbstractNode(ABC):
         ----------
         network: new network to which the nodes will be moved
         visited: list indicating the nodes that are already moved to the
-                 network, used by this DFS-like algorithm
+            network, used by this DFS-like algorithm
         """
-        tensor = self.tensor
         if network != self.network:
             if visited is None:
                 visited = []
             if self not in visited:
                 if self.network is not None:
-                    self.network.remove_node(self)
+                    self.network._remove_node(self)
                 network._add_node(self)
-                # TODO: tensor format not okay
-                self._save_in_memory(tensor=tensor, only_tensor=True)
                 visited.append(self)
                 for neighbour in self.neighbours():
                     neighbour.move_to_network(network=network, visited=visited)
@@ -917,7 +983,8 @@ class AbstractNode(ABC):
     All operations return a Node, since the nodes resulting from
     tensor network operations should not be parameterized
     """
-    # TODO: all nodes resultant from operations are current_op, not permanent
+
+    # TODO: all nodes resultant from operations are current_op, not _leaf
     # Contraction of all edges connecting two nodes
     def __matmul__(self, other: 'AbstractNode') -> 'Node':
         return contract_between(self, other)
@@ -938,51 +1005,27 @@ class AbstractNode(ABC):
             i += 1
         einsum_string = self_string + ',' + other_string + '->' + self_string + other_string
         new_tensor = opt_einsum.contract(einsum_string, self.tensor, other.tensor)
-        new_node = Node(axes_names=self.axes_names + other.axes_names,
-                        name=f'tprod_{self.name}_{other.name}',
-                        network=self.network,
-                        permanent=False,
-                        current_op=True,
-                        tensor=new_tensor,
-                        edges=self.edges + other.edges,
-                        node1_list=self.node1_list + other.node1_list,
-                        parents={self, other},
-                        operation='tprod')
+        new_node = Node(axes_names=self.axes_names + other.axes_names, name=f'tprod_{self.name}_{other.name}',
+                        network=self.network, tensor=new_tensor, edges=self.edges + other.edges,
+                        node1_list=self.node1_list + other.node1_list, parents={self, other}, operation='tprod',
+                        leaf=False)
         return new_node
 
     # For element-wise operations (not tensor-network-like operations),
     # a new Node with new edges is created
     def __mul__(self, other: 'AbstractNode') -> 'Node':
-        new_node = Node(axes_names=self.axes_names,
-                        name=f'mul_{self.name}_{other.name}',
-                        network=self.network,
-                        permanent=False,
-                        current_op=True,
-                        tensor=self.tensor * other.tensor,
-                        parents={self, other},
-                        operation='mul')
+        new_node = Node(axes_names=self.axes_names, name=f'mul_{self.name}_{other.name}', network=self.network,
+                        tensor=self.tensor * other.tensor, parents={self, other}, operation='mul', leaf=False)
         return new_node
 
     def __add__(self, other: 'AbstractNode') -> 'Node':
-        new_node = Node(axes_names=self.axes_names,
-                        name=f'add_{self.name}_{other.name}',
-                        network=self.network,
-                        permanent=False,
-                        current_op=True,
-                        tensor=self.tensor + other.tensor,
-                        parents={self, other},
-                        operation='add')
+        new_node = Node(axes_names=self.axes_names, name=f'add_{self.name}_{other.name}', network=self.network,
+                        tensor=self.tensor + other.tensor, parents={self, other}, operation='add', leaf=False)
         return new_node
 
     def __sub__(self, other: 'AbstractNode') -> 'Node':
-        new_node = Node(axes_names=self.axes_names,
-                        name=f'sub_{self.name}_{other.name}',
-                        network=self.network,
-                        permanent=False,
-                        current_op=True,
-                        tensor=self.tensor - other.tensor,
-                        parents={self, other},
-                        operation='sub')
+        new_node = Node(axes_names=self.axes_names, name=f'sub_{self.name}_{other.name}', network=self.network,
+                        tensor=self.tensor - other.tensor, parents={self, other}, operation='sub', leaf=False)
         return new_node
 
     def __str__(self) -> Text:
@@ -995,7 +1038,7 @@ class AbstractNode(ABC):
                f'\taxes: {self.axes_names}\n' \
                f'\tedges:\n{tab_string(repr(self.edges), 2)})'
 
-    def foo(self, data):  #other: 'AbstractNode'):
+    def foo(self, data):  # other: 'AbstractNode'):
         # from tentorch.functionals import Foo
         # f = Foo()
         # f.op(self, other)
@@ -1020,7 +1063,7 @@ class Node(AbstractNode):
                 axes_names: Optional[Sequence[Text]] = None,
                 name: Optional[Text] = None,
                 network: Optional['TensorNetwork'] = None,
-                permanent: bool = True,
+                leaf: bool = True,
                 current_op: bool = False,
                 override_node: bool = False,
                 param_edges: bool = False,
@@ -1034,7 +1077,7 @@ class Node(AbstractNode):
 
         # TODO: IMPORTANT! This is a bottleneck, we have to optimize the
         #  way we preserve the nodes and reallocate the new ones
-        if current_op and not permanent:
+        if current_op and not leaf:
             assert (parents is not None) and parents
             assert operation is not None
 
@@ -1048,47 +1091,35 @@ class Node(AbstractNode):
             for succ_dict in parent.successors:
                 if (succ_dict['parents'] == parents) and (succ_dict['operation'] == operation):
                     child = succ_dict['child']
-                    if not child.current_op and not child.permanent:  # TODO: there is no other option
+                    if not child.current_op and not child._leaf:  # TODO: there is no other option
                         if child.shape == tensor.shape:  # TODO: problem after canonical form
                             child.set_tensor(tensor=tensor)
                         else:
-                            return super().__new__(cls,
-                                                   shape=shape,
-                                                   axes_names=axes_names,
-                                                   name=name,
-                                                   permanent=permanent,
+                            return super().__new__(cls, shape=shape, axes_names=axes_names, name=name, leaf=leaf,
                                                    current_op=current_op)
                             # If shape is not the same, it must be a new child
-                            #raise ValueError('Cannot set tensor in node with different shape')
+                            # raise ValueError('Cannot set tensor in node with different shape')
                         child.current_op = True
                         return child
-            return super().__new__(cls,
-                                   shape=shape,
-                                   axes_names=axes_names,
-                                   name=name,
-                                   permanent=permanent,
+            return super().__new__(cls, shape=shape, axes_names=axes_names, name=name, leaf=leaf,
                                    current_op=current_op)
 
             new_instance = True
             if network is not None:
                 for node in network.nodes.values():
-                    if not (node.current_op or node.permanent):
-                        # Asumo que con que exista un nodo no current_op ni permanent,
+                    if not (node.current_op or node._leaf):
+                        # Asumo que con que exista un nodo no current_op ni _leaf,
                         # es que ya estoy en la segunda iteración
                         new_instance = False
                         break
 
             if new_instance:
-                return super().__new__(cls,
-                                       shape=shape,
-                                       axes_names=axes_names,
-                                       name=name,
-                                       permanent=permanent,
+                return super().__new__(cls, shape=shape, axes_names=axes_names, name=name, leaf=leaf,
                                        current_op=current_op)
             else:
                 current_nodes_names = []
                 for node in network.nodes.values():
-                    if node.permanent or node.current_op:
+                    if node._leaf or node.current_op:
                         current_nodes_names.append(node.name)
 
                 erased_enum_name = erase_enum(name)
@@ -1107,17 +1138,17 @@ class Node(AbstractNode):
                     prev_node.current_op = True
                     return prev_node
 
-                    #current_nodes_names = current_nodes_names + [name]
-                    #new_current_nodes_names = enum_repeated_names(current_nodes_names)
-                    #non_current_nodes_names = []
-                    #for node in network.nodes.values():
-                    #    if not (node.permanent or node.current_op):
+                    # current_nodes_names = current_nodes_names + [name]
+                    # new_current_nodes_names = enum_repeated_names(current_nodes_names)
+                    # non_current_nodes_names = []
+                    # for node in network.nodes.values():
+                    #    if not (node._leaf or node.current_op):
                     #        non_current_nodes_names.append(node.name)
-                    #nodes_names = current_nodes_names[:-1] + non_current_nodes_names
-                    #new_nodes_names = new_current_nodes_names[:-1] + non_current_nodes_names
-                    #network._rename_nodes(nodes_names, new_nodes_names)
+                    # nodes_names = current_nodes_names[:-1] + non_current_nodes_names
+                    # new_nodes_names = new_current_nodes_names[:-1] + non_current_nodes_names
+                    # network._rename_nodes(nodes_names, new_nodes_names)
 
-                    #if new_current_nodes_names[-1] in non_current_nodes_names:
+                    # if new_current_nodes_names[-1] in non_current_nodes_names:
                     #    prev_node = network.nodes[new_current_nodes_names[-1]]
                     #    if prev_node.shape == tensor.shape:
                     #        prev_node.set_tensor(tensor=tensor)
@@ -1125,7 +1156,7 @@ class Node(AbstractNode):
                     #        raise ValueError('Cannot set tensor in node with different shape')
                     #    prev_node.current_op = True
                     #    return prev_node
-                    #else:
+                    # else:
                     #    raise ValueError('Non expected error')
 
                 elif erased_enum_name in map(erase_enum, network.nodes_names):
@@ -1150,16 +1181,15 @@ class Node(AbstractNode):
                                    shape=shape,
                                    axes_names=axes_names,
                                    name=name,
-                                   permanent=permanent,
-                                   current_op=current_op)
+                                   network=network,
+                                   leaf=leaf)
 
     def __init__(self,
                  shape: Optional[Shape] = None,
                  axes_names: Optional[Sequence[Text]] = None,
                  name: Optional[Text] = None,
                  network: Optional['TensorNetwork'] = None,
-                 permanent: bool = True,
-                 current_op: bool = False,
+                 leaf: bool = True,
                  override_node: bool = False,
                  param_edges: bool = False,
                  tensor: Optional[torch.Tensor] = None,
@@ -1191,7 +1221,7 @@ class Node(AbstractNode):
         kwargs: keyword arguments for the init_method
         """
 
-        if not self.init:
+        if not self._init:
             # shape and tensor
             if (shape is None) == (tensor is None):
                 if shape is None:
@@ -1199,11 +1229,17 @@ class Node(AbstractNode):
                 else:
                     raise ValueError('Only one of `shape` or `tensor` should be provided')
             elif shape is not None:
-                super().__init__(shape=shape, axes_names=axes_names, name=name,
-                                 permanent=permanent, current_op=current_op)
+                super().__init__(shape=shape,
+                                 axes_names=axes_names,
+                                 name=name,
+                                 network=network,
+                                 leaf=leaf)
             else:
-                super().__init__(shape=tensor.shape, axes_names=axes_names, name=name,
-                                 permanent=permanent, current_op=current_op)
+                super().__init__(shape=tensor.shape,
+                                 axes_names=axes_names,
+                                 name=name,
+                                 network=network,
+                                 leaf=leaf)
 
             # edges
             if edges is None:
@@ -1219,19 +1255,12 @@ class Node(AbstractNode):
             self._edges = edges
 
             # network
-            if network is not None:
-                if not isinstance(network, TensorNetwork):
-                    raise TypeError('`network` should be TensorNetwork type')
-            else:
-                network = TensorNetwork()
-            network._add_node(self, override=override_node)
+            self.network._add_node(self, override=override_node)
 
             if shape is not None:
-                self._save_in_memory(torch.empty(shape))
                 if init_method is not None:
                     self.set_tensor(init_method=init_method, **kwargs)
             else:
-                self._save_in_memory(torch.empty(tensor.shape))
                 self.set_tensor(tensor=tensor)
 
             # parents
@@ -1255,34 +1284,25 @@ class Node(AbstractNode):
     # Methods
     # -------
     @staticmethod
-    def set_tensor_format(tensor: torch.Tensor) -> torch.Tensor:
+    def _set_tensor_format(tensor: torch.Tensor) -> torch.Tensor:
         if isinstance(tensor, nn.Parameter):
             return tensor.data
         return tensor
 
     def parameterize(self, set_param: bool = True) -> Union['Node', 'ParamNode']:
         if set_param:
-            new_node = ParamNode(axes_names=self.axes_names,
-                                 name=self.name,
-                                 network=self.network,
-                                 override_node=True,
-                                 param_edges=self.param_edges(),
-                                 tensor=self.tensor,
-                                 edges=self.edges,
-                                 node1_list=self.node1_list)
+            new_node = ParamNode(axes_names=self.axes_names, name=self.name, network=self.network, override_node=True,
+                                 param_edges=self.param_edges(), tensor=self.tensor, edges=self.edges,
+                                 node1_list=self.is_node1())
             new_node.reattach_edges(override=True)
             return new_node
         else:
             return self
 
     def copy(self) -> 'Node':
-        new_node = Node(axes_names=self.axes_names,
-                        name='copy_' + self.name,
-                        network=self.network,
-                        param_edges=self.param_edges(),
-                        tensor=self.tensor,
-                        edges=self.edges,
-                        node1_list=self.node1_list)
+        new_node = Node(axes_names=self.axes_names, name='copy_' + self.name, network=self.network,
+                        param_edges=self.param_edges(), tensor=self.tensor, edges=self.edges,
+                        node1_list=self.is_node1())
         new_node.reattach_edges(override=False)
         return new_node
 
@@ -1297,13 +1317,10 @@ class Node(AbstractNode):
             raise ValueError('The provided list of axis is not a permutation of the'
                              ' axes of the node')
         else:
-            new_node = Node(axes_names=permute_list(self.axes_names, axes_nums),
-                            name='permute_' + self.name,
-                            network=self.network,
-                            param_edges=self.param_edges(),
-                            tensor=self.tensor.permute(axes_nums),
+            new_node = Node(axes_names=permute_list(self.axes_names, axes_nums), name='permute_' + self.name,
+                            network=self.network, param_edges=self.param_edges(), tensor=self.tensor.permute(axes_nums),
                             edges=permute_list(self.edges, axes_nums),
-                            node1_list=permute_list(self.node1_list, axes_nums))
+                            node1_list=permute_list(self.is_node1(), axes_nums))
             return new_node
 
     def make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
@@ -1325,8 +1342,7 @@ class ParamNode(AbstractNode, nn.Module):
                 axes_names: Optional[Sequence[Text]] = None,
                 name: Optional[Text] = None,
                 network: Optional['TensorNetwork'] = None,
-                permanent: bool = True,
-                current_op: bool = False,
+                leaf: bool = True,
                 override_node: bool = False,
                 param_edges: bool = False,
                 tensor: Optional[torch.Tensor] = None,
@@ -1338,16 +1354,15 @@ class ParamNode(AbstractNode, nn.Module):
                                shape=shape,
                                axes_names=axes_names,
                                name=name,
-                               permanent=permanent,
-                               current_op=current_op)
+                               network=network,
+                               leaf=leaf)
 
     def __init__(self,
                  shape: Optional[Shape] = None,
                  axes_names: Optional[Sequence[Text]] = None,
                  name: Optional[Text] = None,
                  network: Optional['TensorNetwork'] = None,
-                 permanent: bool = True,
-                 current_op: bool = False,
+                 leaf: bool = True,
                  override_node: bool = False,
                  param_edges: bool = False,
                  tensor: Optional[torch.Tensor] = None,
@@ -1360,6 +1375,7 @@ class ParamNode(AbstractNode, nn.Module):
         ----------
 
         network: tensor network to which the node belongs
+        # TODO: Esto de override no sirve pa na, sinceramente. Creamos siempre nodos nuevos o si no se modifica el antiguo
         override_node: boolean used if network is not None. If node name
                        overrides an existing node name in the network, and
                        override_node is set to True, the existing node is
@@ -1383,11 +1399,19 @@ class ParamNode(AbstractNode, nn.Module):
             else:
                 raise ValueError('Only one of `shape` or `tensor` should be provided')
         elif shape is not None:
-            AbstractNode.__init__(self, shape=shape, axes_names=axes_names, name=name,
-                                  permanent=permanent, current_op=current_op)
+            AbstractNode.__init__(self,
+                                  shape=shape,
+                                  axes_names=axes_names,
+                                  name=name,
+                                  network=network,
+                                  leaf=leaf)
         else:
-            AbstractNode.__init__(self, shape=tensor.shape, axes_names=axes_names, name=name,
-                                  permanent=permanent, current_op=current_op)
+            AbstractNode.__init__(self,
+                                  shape=tensor.shape,
+                                  axes_names=axes_names,
+                                  name=name,
+                                  network=network,
+                                  leaf=leaf)
 
         # edges
         if edges is None:
@@ -1403,19 +1427,12 @@ class ParamNode(AbstractNode, nn.Module):
         self._edges = edges
 
         # network
-        if network is not None:
-            if not isinstance(network, TensorNetwork):
-                raise TypeError('`network` should be TensorNetwork type')
-        else:
-            network = TensorNetwork()
-        network._add_node(self, override=override_node)
+        self.network._add_node(self, override=override_node)
 
         if shape is not None:
-            self._save_in_memory(torch.empty(shape))
             if init_method is not None:
                 self.set_tensor(init_method=init_method, **kwargs)
         else:
-            self._save_in_memory(torch.empty(tensor.shape))
             self.set_tensor(tensor=tensor)
 
     # ----------
@@ -1423,11 +1440,13 @@ class ParamNode(AbstractNode, nn.Module):
     # ----------
     @property
     def grad(self) -> Optional[torch.Tensor]:
-        aux_grad = self.network._memory[self._tensor[0]].grad
+        aux_grad = self.network._memory_nodes[self._tensor_info['address']].grad
         if aux_grad is None:
             return aux_grad
         elif isinstance(aux_grad, torch.Tensor):
-            return aux_grad[self._tensor[1]]
+            if self._tensor_info['full']:
+                return aux_grad
+            return aux_grad[self._tensor_info['index']]
         else:
             raise ValueError('This cannot happen')
 
@@ -1435,7 +1454,7 @@ class ParamNode(AbstractNode, nn.Module):
     # Methods
     # -------
     @staticmethod
-    def set_tensor_format(tensor: torch.Tensor) -> nn.Parameter:
+    def _set_tensor_format(tensor: torch.Tensor) -> nn.Parameter:
         """
         If a nn.Parameter is provided, the ParamNode will use such parameter
         instead of creating a new nn.Parameter object, thus creating a dependence
@@ -1446,26 +1465,17 @@ class ParamNode(AbstractNode, nn.Module):
 
     def parameterize(self, set_param: bool = True) -> Union['Node', 'ParamNode']:
         if not set_param:
-            new_node = Node(axes_names=self.axes_names,
-                            name=self.name,
-                            network=self.network,
-                            override_node=True,
-                            param_edges=self.param_edges(),
-                            tensor=self.tensor,
-                            edges=self.edges,
-                            node1_list=self.node1_list)
+            new_node = Node(axes_names=self.axes_names, name=self.name, network=self.network, override_node=True,
+                            param_edges=self.param_edges(), tensor=self.tensor, edges=self.edges,
+                            node1_list=self.is_node1())
             new_node.reattach_edges(override=True)
             return new_node
         else:
             return self
 
     def copy(self) -> 'ParamNode':
-        new_node = ParamNode(axes_names=self.axes_names,
-                             name='copy_' + self.name,
-                             network=self.network,
-                             param_edges=self.param_edges(),
-                             tensor=self.tensor,
-                             edges=self.edges,
+        new_node = ParamNode(axes_names=self.axes_names, name='copy_' + self.name, network=self.network,
+                             param_edges=self.param_edges(), tensor=self.tensor, edges=self.edges,
                              node1_list=self.node1_list)
         new_node.reattach_edges(override=False)
         return new_node
@@ -1481,12 +1491,9 @@ class ParamNode(AbstractNode, nn.Module):
             raise ValueError('The provided list of axis is not a permutation of the'
                              ' axes of the node')
         else:
-            new_node = ParamNode(axes_names=permute_list(self.axes_names, axes_nums),
-                                 name='permute_' + self.name,
-                                 network=self.network,
-                                 param_edges=self.param_edges(),
-                                 tensor=self.tensor.permute(axes_nums),
-                                 edges=permute_list(self.edges, axes_nums),
+            new_node = ParamNode(axes_names=permute_list(self.axes_names, axes_nums), name='permute_' + self.name,
+                                 network=self.network, param_edges=self.param_edges(),
+                                 tensor=self.tensor.permute(axes_nums), edges=permute_list(self.edges, axes_nums),
                                  node1_list=permute_list(self.node1_list, axes_nums))
             return new_node
 
@@ -1642,10 +1649,8 @@ class AbstractEdge(ABC):
     def is_dangling(self) -> bool:
         return self.node2 is None
 
-    def is_batch(self) -> bool:
-        if self.is_dangling():
-            return self.axis1.batch
-        return False
+    def is_batch(self, batch: Optional[bool] = None) -> bool:
+        return self.axis1.is_batch(batch)  # TODO: Gestionar al conectar el edge y demás
 
     def is_attached_to(self, node: AbstractNode) -> bool:
         return (self.node1 == node) or (self.node2 == node)
@@ -1660,7 +1665,7 @@ class AbstractEdge(ABC):
             side='left',
             rank: Optional[int] = None,
             cum_percentage: Optional[float] = None) -> None:
-
+        # TODO: problema del futuro xd
         contracted_node = self.contract()
 
         lst_permute_all = []
@@ -1686,8 +1691,8 @@ class AbstractEdge(ABC):
                 lst_reshape_edges2.append(edge.size())
                 idx += 1
 
-        contracted_tensor = contracted_node.tensor.\
-            permute(*lst_permute_all).\
+        contracted_tensor = contracted_node.tensor. \
+            permute(*lst_permute_all). \
             reshape(*(lst_batches +
                       [torch.tensor(lst_reshape_edges1).prod().item()] +
                       [torch.tensor(lst_reshape_edges2).prod().item()]))
@@ -1807,10 +1812,8 @@ class Edge(AbstractEdge):
                                  dim=min(dim, self.size()),
                                  node2=self.node2, axis2=self.axis2)
             if not self.is_dangling():
-                self.node2.add_edge(new_edge, self.axis2,
-                                    override=True, parameterize=True)
-            self.node1.add_edge(new_edge, self.axis1,
-                                override=True, parameterize=True)
+                self.node2._add_edge(new_edge, self.axis2, override=True, parameterize=True)
+            self.node1._add_edge(new_edge, self.axis1, override=True, parameterize=True)
             if self.node1.network is not None:
                 self.node1.network._add_param(new_edge)
                 if self.is_dangling():
@@ -1863,12 +1866,12 @@ class ParamEdge(AbstractEdge, nn.Module):
         AbstractEdge.__init__(self, node1, axis1, node2, axis2)
 
         # batch
-        if axis1.batch:
+        if axis1.is_batch():
             warnings.warn('`axis1` is for a batch index. Batch edges should '
                           'not be parameterized. De-parameterize it before'
                           ' usage')
         if axis2 is not None:
-            if axis2.batch:
+            if axis2.is_batch():
                 warnings.warn('`axis2` is for a batch index. Batch edges should '
                               'not be parameterized. De-parameterize it before'
                               ' usage')
@@ -1914,7 +1917,7 @@ class ParamEdge(AbstractEdge, nn.Module):
 
     @property
     def matrix(self) -> torch.Tensor:
-        #if self.is_updated():
+        # if self.is_updated():
         #    return self._matrix
         self.set_matrix()
         return self._matrix
@@ -1961,28 +1964,28 @@ class ParamEdge(AbstractEdge, nn.Module):
         if shift is not None:
             if isinstance(shift, int):
                 shift = float(shift)
-                self._shift = nn.Parameter(torch.tensor(shift))#.cuda().detach().requires_grad_()
+                self._shift = nn.Parameter(torch.tensor(shift))  # .cuda().detach().requires_grad_()
                 self._prev_shift = shift
             elif isinstance(shift, float):
-                self._shift = nn.Parameter(torch.tensor(shift))#.cuda().detach().requires_grad_()
+                self._shift = nn.Parameter(torch.tensor(shift))  # .cuda().detach().requires_grad_()
                 self._prev_shift = shift
-            elif isinstance(shift, nn.Parameter):  #(nn.Parameter, torch.Tensor)):
+            elif isinstance(shift, nn.Parameter):  # (nn.Parameter, torch.Tensor)):
                 # TODO: eligible device (previous to sending TN to device)
-                self._shift = shift#.cuda().detach().requires_grad_()
+                self._shift = shift  # .cuda().detach().requires_grad_()
                 self._prev_shift = shift.item()
             else:
                 raise TypeError('`shift` should be int, float or nn.Parameter type')
         if slope is not None:
             if isinstance(slope, int):
                 slope = float(slope)
-                self._slope = nn.Parameter(torch.tensor(slope))#.cuda().detach().requires_grad_()
+                self._slope = nn.Parameter(torch.tensor(slope))  # .cuda().detach().requires_grad_()
                 self._prev_slope = slope
             elif isinstance(slope, float):
-                self._slope = nn.Parameter(torch.tensor(slope))#.cuda().detach().requires_grad_()
+                self._slope = nn.Parameter(torch.tensor(slope))  # .cuda().detach().requires_grad_()
                 self._prev_slope = slope
-            elif isinstance(slope, nn.Parameter):  #(nn.Parameter, torch.Tensor)):
+            elif isinstance(slope, nn.Parameter):  # (nn.Parameter, torch.Tensor)):
                 # TODO: eligible device
-                self._slope = slope#.cuda().detach().requires_grad_()
+                self._slope = slope  # .cuda().detach().requires_grad_()
                 self._prev_slope = slope.item()
             else:
                 raise TypeError('`slope` should be int, float or nn.Parameter type')
@@ -2009,8 +2012,8 @@ class ParamEdge(AbstractEdge, nn.Module):
         size is equal to the matrix size)
         """
         # TODO: eligible device (several errors in tests)
-        matrix = torch.zeros((self.size(), self.size()), device=self.shift.device)#.cuda().detach()
-        i = torch.arange(self.size(), device=self.shift.device)#.cuda().detach()
+        matrix = torch.zeros((self.size(), self.size()), device=self.shift.device)  # .cuda().detach()
+        i = torch.arange(self.size(), device=self.shift.device)  # .cuda().detach()
         matrix[(i, i)] = self.sigmoid(self.slope * (i - self.shift))
         return matrix
 
@@ -2052,10 +2055,8 @@ class ParamEdge(AbstractEdge, nn.Module):
             new_edge = Edge(node1=self.node1, axis1=self.axis1,
                             node2=self.node2, axis2=self.axis2)
             if not self.is_dangling():
-                self.node2.add_edge(new_edge, self.axis2,
-                                    override=True, parameterize=True)
-            self.node1.add_edge(new_edge, self.axis1,
-                                override=True, parameterize=True)
+                self.node2._add_edge(new_edge, self.axis2, override=True, parameterize=True)
+            self.node1._add_edge(new_edge, self.axis1, override=True, parameterize=True)
             if self.node1.network is not None:
                 self.node1.network._remove_param(self)
                 if self.is_dangling():
@@ -2110,10 +2111,17 @@ class TensorNetwork(nn.Module):
         if name is None:
             name = 'net'
         self.name = name
+
         self._nodes = dict()
-        self._memory = dict()
+        self._memory_nodes = dict()
+        self._repeated_nodes_names = dict()
+
         self._data_nodes = dict()
+        self._memory_data_nodes = None
+
         self._edges = []
+
+        self._contracting = False  # Flag to indicate whether the TN has optimized memory to perform contraction
 
     @property
     def nodes(self) -> Dict[Text, AbstractNode]:
@@ -2153,156 +2161,190 @@ class TensorNetwork(nn.Module):
                   node have to override the second one. If not, the names are changed
                   to avoid conflicts
         """
-        if node.network == self:
-            warnings.warn('`node` is already in the network')
-        else:
-            # TODO: I think I never use this :(
-            if override:
-                # when overriding nodes, we do not take care of its edges
-                # we suppose they have already been handled
-                if node.name not in self.nodes_names:
-                    raise ValueError('Cannot override with a node whose name is not in the network')
-                prev_node = self.nodes[node.name]
-                if isinstance(prev_node, ParamNode):
-                    self._remove_param(prev_node)
-                self._nodes[node.name] = node
-                if isinstance(node, ParamNode):
-                    self._add_param(node)
+        self._assign_node_name(node, node.name, True)
 
-                node._network = self
-                self._edges += [edge for edge in node.edges if
-                                (edge.is_dangling() and not edge.is_batch()
-                                 and edge not in self.edges)]
-                # TODO: can the edge be already in the network?
-                #  (Yes, if it is connected to another node already in the network)
-
+        if isinstance(node, ParamNode):
+            if not hasattr(self, node.name):
+                # TODO: cuidado con que haya algun atributo de la TN que coincida con el nombre de un nodo
+                setattr(self, node.name, self._memory_nodes[node.name])
             else:
-                # Original case
-                if erase_enum(node.name) in map(erase_enum, self.nodes_names):
-                    nodes_names = self.nodes_names + [node.name]
-                    new_nodes_names = enum_repeated_names(nodes_names)
-                    self._rename_nodes(nodes_names[:-1], new_nodes_names[:-1])
-                    node._name = new_nodes_names[-1]
-                self._nodes[node.name] = node
-                if isinstance(node, ParamNode):
-                    self._add_param(node)
-                for edge in node.edges:
-                    if isinstance(edge, ParamEdge):
-                        self._add_param(edge)
+                # Nodes names are never repeated, so it is likely that this case will never occur
+                raise ValueError(f'Network already has attribute named {node.name}. '
+                                 f'This error should not happen')
 
-                node._network = self
-                self._edges += [edge for edge in node.edges if
-                                (edge.is_dangling() and not edge.is_batch()
-                                 and edge not in self.edges)]
+        for edge in node.edges:
+            self._add_edge(edge)
 
-                # if node.current_op:
-                #     # TODO: only used in first iteration
-                #     print('hola1')
-                #     current_nodes_names = []
-                #     for n in self.nodes.values():
-                #         if n.permanent or n.current_op:
-                #             current_nodes_names.append(n.name)
-                #
-                #     if erase_enum(node.name) in map(erase_enum, current_nodes_names):
-                #         print('hola2')
-                #         current_nodes_names = current_nodes_names + [node.name]
-                #         new_current_nodes_names = enum_repeated_names(current_nodes_names)
-                #         non_current_nodes_names = []
-                #         for n in self.nodes.values():
-                #             if not (n.permanent or n.current_op):
-                #                 non_current_nodes_names.append(n.name)
-                #         nodes_names = current_nodes_names[:-1] + non_current_nodes_names
-                #         new_nodes_names = new_current_nodes_names[:-1] + non_current_nodes_names
-                #         self._rename_nodes(nodes_names, new_nodes_names)
-                #
-                #         if new_current_nodes_names[-1] in non_current_nodes_names:
-                #             print('hola3')
-                #             prev_node = self.nodes[new_current_nodes_names[-1]]
-                #             if prev_node.shape == node.shape:
-                #                 prev_node.set_tensor(tensor=node.tensor)
-                #             else:
-                #                 raise ValueError('Cannot set tensor in node with different shape')
-                #             prev_node.current_op = True
-                #         else:
-                #             print('hola4')
-                #             node._name = new_current_nodes_names[-1]
-                #             self._nodes[node.name] = node
-                #             if isinstance(node, ParamNode):
-                #                 self._add_param(node)
-                #             for edge in node.edges:
-                #                 if isinstance(edge, ParamEdge):
-                #                     self._add_param(edge)
-                #
-                #             node._network = self
-                #             self._edges += [edge for edge in node.edges if
-                #                             (edge.is_dangling() and not edge.is_batch()
-                #                              and edge not in self.edges)]
-                #
-                #     elif erase_enum(node.name) in map(erase_enum, self.nodes_names):
-                #         print('hola5')
-                #         prev_node = self.nodes[node.name + '_0']
-                #         if prev_node.shape == node.shape:
-                #             prev_node.set_tensor(tensor=node.tensor)
-                #         else:
-                #             raise ValueError('Cannot set tensor in node with different shape')
-                #         prev_node.current_op = True
-                #
-                #     else:
-                #         print('hola6')
-                #         self._nodes[node.name] = node
-                #         if isinstance(node, ParamNode):
-                #             self._add_param(node)
-                #         for edge in node.edges:
-                #             if isinstance(edge, ParamEdge):
-                #                 self._add_param(edge)
-                #
-                #         node._network = self
-                #         self._edges += [edge for edge in node.edges if
-                #                         (edge.is_dangling() and not edge.is_batch()
-                #                          and edge not in self.edges)]
-                #
-                # elif node.permanent and not node.current_op:
-                #     # Original case
-                #     if erase_enum(node.name) in map(erase_enum, self.nodes_names):
-                #         nodes_names = self.nodes_names + [node.name]
-                #         new_nodes_names = enum_repeated_names(nodes_names)
-                #         self._rename_nodes(nodes_names[:-1], new_nodes_names[:-1])
-                #         node._name = new_nodes_names[-1]
-                #     self._nodes[node.name] = node
-                #     if isinstance(node, ParamNode):
-                #         self._add_param(node)
-                #     for edge in node.edges:
-                #         if isinstance(edge, ParamEdge):
-                #             self._add_param(edge)
-                #
-                #     node._network = self
-                #     self._edges += [edge for edge in node.edges if
-                #                     (edge.is_dangling() and not edge.is_batch()
-                #                      and edge not in self.edges)]
-                # else:
-                #     raise ValueError('This case was not supposed to happen')
+        node._network = self  # TODO: esto solo cuando cambiamos de network
+
+        # # TODO: esto no pasa
+        # if node.network == self:
+        #     warnings.warn('`node` is already in the network')
+        # else:
+        #     # TODO: I think I never use this :(
+        #     if override:
+        #         # when overriding nodes, we do not take care of its edges
+        #         # we suppose they have already been handled
+        #         if node.name not in self.nodes_names:
+        #             raise ValueError('Cannot override with a node whose name is not in the network')
+        #         prev_node = self.nodes[node.name]
+        #         if isinstance(prev_node, ParamNode):
+        #             self._remove_param(prev_node)
+        #         self._nodes[node.name] = node
+        #         if isinstance(node, ParamNode):
+        #             self._add_param(node)
+        #
+        #         node._network = self
+        #         self._edges += [edge for edge in node.edges if
+        #                         (edge.is_dangling() and not edge.is_batch()
+        #                          and edge not in self.edges)]
+        #         # TODO: can the edge be already in the network?
+        #         #  (Yes, if it is connected to another node already in the network)
+        #
+        #     else:
+        #         # TODO: nos quedamos con esto
+        #         # Original case
+        #         if erase_enum(node.name) in map(erase_enum, self.nodes_names):
+        #             # TODO: Esto parece bastante costoso...
+        #             #  Si sabemos que no se van a repetir los nombres nos lo podemos ahorrar
+        #             nodes_names = self.nodes_names + [node.name]
+        #             new_nodes_names = enum_repeated_names(nodes_names)
+        #             self._rename_nodes(nodes_names[:-1], new_nodes_names[:-1])
+        #             node._name = new_nodes_names[-1]
+        #         self._nodes[node.name] = node
+        #         if isinstance(node, ParamNode):  # TODO: Esto ya no
+        #             self._add_param(node)
+        #         for edge in node.edges:
+        #             if isinstance(edge, ParamEdge):
+        #                 self._add_param(edge)
+        #
+        #         node._network = self  # TODO: esto solo cuando cambiamos de network
+        #         self._edges += [edge for edge in node.edges if
+        #                         (edge.is_dangling() and not edge.is_batch()
+        #                          and edge not in self.edges)]
+
+        # if node.current_op:
+        #     # TODO: only used in first iteration
+        #     print('hola1')
+        #     current_nodes_names = []
+        #     for n in self.nodes.values():
+        #         if n._leaf or n.current_op:
+        #             current_nodes_names.append(n.name)
+        #
+        #     if erase_enum(node.name) in map(erase_enum, current_nodes_names):
+        #         print('hola2')
+        #         current_nodes_names = current_nodes_names + [node.name]
+        #         new_current_nodes_names = enum_repeated_names(current_nodes_names)
+        #         non_current_nodes_names = []
+        #         for n in self.nodes.values():
+        #             if not (n._leaf or n.current_op):
+        #                 non_current_nodes_names.append(n.name)
+        #         nodes_names = current_nodes_names[:-1] + non_current_nodes_names
+        #         new_nodes_names = new_current_nodes_names[:-1] + non_current_nodes_names
+        #         self._rename_nodes(nodes_names, new_nodes_names)
+        #
+        #         if new_current_nodes_names[-1] in non_current_nodes_names:
+        #             print('hola3')
+        #             prev_node = self.nodes[new_current_nodes_names[-1]]
+        #             if prev_node.shape == node.shape:
+        #                 prev_node.set_tensor(tensor=node.tensor)
+        #             else:
+        #                 raise ValueError('Cannot set tensor in node with different shape')
+        #             prev_node.current_op = True
+        #         else:
+        #             print('hola4')
+        #             node._name = new_current_nodes_names[-1]
+        #             self._nodes[node.name] = node
+        #             if isinstance(node, ParamNode):
+        #                 self._add_param(node)
+        #             for edge in node.edges:
+        #                 if isinstance(edge, ParamEdge):
+        #                     self._add_param(edge)
+        #
+        #             node._network = self
+        #             self._edges += [edge for edge in node.edges if
+        #                             (edge.is_dangling() and not edge.is_batch()
+        #                              and edge not in self.edges)]
+        #
+        #     elif erase_enum(node.name) in map(erase_enum, self.nodes_names):
+        #         print('hola5')
+        #         prev_node = self.nodes[node.name + '_0']
+        #         if prev_node.shape == node.shape:
+        #             prev_node.set_tensor(tensor=node.tensor)
+        #         else:
+        #             raise ValueError('Cannot set tensor in node with different shape')
+        #         prev_node.current_op = True
+        #
+        #     else:
+        #         print('hola6')
+        #         self._nodes[node.name] = node
+        #         if isinstance(node, ParamNode):
+        #             self._add_param(node)
+        #         for edge in node.edges:
+        #             if isinstance(edge, ParamEdge):
+        #                 self._add_param(edge)
+        #
+        #         node._network = self
+        #         self._edges += [edge for edge in node.edges if
+        #                         (edge.is_dangling() and not edge.is_batch()
+        #                          and edge not in self.edges)]
+        #
+        # elif node._leaf and not node.current_op:
+        #     # Original case
+        #     if erase_enum(node.name) in map(erase_enum, self.nodes_names):
+        #         nodes_names = self.nodes_names + [node.name]
+        #         new_nodes_names = enum_repeated_names(nodes_names)
+        #         self._rename_nodes(nodes_names[:-1], new_nodes_names[:-1])
+        #         node._name = new_nodes_names[-1]
+        #     self._nodes[node.name] = node
+        #     if isinstance(node, ParamNode):
+        #         self._add_param(node)
+        #     for edge in node.edges:
+        #         if isinstance(edge, ParamEdge):
+        #             self._add_param(edge)
+        #
+        #     node._network = self
+        #     self._edges += [edge for edge in node.edges if
+        #                     (edge.is_dangling() and not edge.is_batch()
+        #                      and edge not in self.edges)]
+        # else:
+        #     raise ValueError('This case was not supposed to happen')
 
     def add_nodes_from(self, nodes_list: Sequence[AbstractNode]):
         for name, node in nodes_list:
             self._add_node(node)
 
-    def remove_node(self, node: AbstractNode) -> None:
+    def _add_edge(self, edge: AbstractEdge) -> None:
+        if isinstance(edge, ParamEdge):
+            if not hasattr(self, edge.module_name):
+                # If ParamEdge is already a submodule, it is the case in which we are
+                # adding a node that "inherits" edges from previous nodes
+                self.add_module(edge.module_name, edge)
+        if edge.is_dangling() and not edge.is_batch() and (edge not in self.edges):
+            self._edges.append(edge)
+
+    def _remove_edge(self, edge: AbstractEdge) -> None:
+        if isinstance(edge, ParamEdge):
+            delattr(self, edge.module_name)
+        if edge in self.edges:
+            self._edges.remove(edge)
+
+    def _remove_node(self, node: AbstractNode) -> None:
         """
         This function only removes the reference to the node, and the reference
         to the TN that is kept by the node. To completely get rid of the node,
         it should be disconnected from any other node of the TN and removed from
         the TN
         """
-        del self.nodes[node.name]
+        node._temp_tensor = node.tensor
         node._network = None
-        if erase_enum(node.name) != node.name:
-            nodes_names = self.nodes_names
-            new_nodes_names = enum_repeated_names(nodes_names)
-            self._rename_nodes(nodes_names, new_nodes_names)
+
+        del self._nodes[node.name]
+        del self._memory_nodes[node.name]
+        self._unassign_node_name(node)
+
         for edge in node.edges:
-            if edge.is_attached_to(node):
-                if edge.is_dangling() and not edge.is_batch():
-                    self._edges.remove(edge)
+            self._remove_edge(edge)
 
     def delete_node(self, node: AbstractNode) -> None:
         """
@@ -2310,7 +2352,7 @@ class TensorNetwork(nn.Module):
         removes it from the TN
         """
         node.disconnect_edges()
-        self.remove_node(node)
+        self._remove_node(node)
 
     def _add_param(self, param: Union[ParamNode, ParamEdge]) -> None:
         """
@@ -2349,7 +2391,8 @@ class TensorNetwork(nn.Module):
         """
         # TODO: I am not controlling the case in which one of the new names is
         #  the same as other name that i am not changing. We can force to only
-        #  use lists with the length of the number of nodes, that is, change all names
+        #  use lists with the length of the number of nodes, that is, change all names -> Creo que
+        #  siempre cambio el nombre a TODOS los nodos
         # TODO: It is implicit that all names in new_names are distinct,
         #  but this could/should be controlled
         if len(prev_names) != len(new_names):
@@ -2377,11 +2420,11 @@ class TensorNetwork(nn.Module):
 
                 # non_current_nodes_names = []
                 # for n in self.nodes.values():
-                #     if not (n.permanent or n.current_op):
+                #     if not (n._leaf or n.current_op):
                 #         non_current_nodes_names.append(n.name)
                 #
                 # new_node = self.nodes[prev_name]
-                # if (new_name in non_current_nodes_names) and (not new_node.permanent and new_node.current_op):
+                # if (new_name in non_current_nodes_names) and (not new_node._leaf and new_node.current_op):
                 #     prev_node = self.nodes[new_name]
                 #     if prev_node.shape == new_node.shape:
                 #         prev_node.set_tensor(tensor=new_node.tensor)
@@ -2405,22 +2448,94 @@ class TensorNetwork(nn.Module):
                 #         if isinstance(edge, ParamEdge):
                 #             self._add_param(edge)
 
+    def _update_dicts(self, node: AbstractNode, prev_name: Text, new_name: Text) -> None:
+        if new_name in self._nodes:
+            aux_node = self._nodes[new_name]
+            aux_node._temp_tensor = aux_node.tensor
+
+        if self._nodes[prev_name] == node:
+            self._nodes[new_name] = self._nodes.pop(prev_name)
+            self._memory_nodes[new_name] = self._memory_nodes.pop(prev_name)
+            node._tensor_info['address'] = new_name
+        else:
+            self._nodes[new_name] = node
+            self._memory_nodes[new_name] = node._temp_tensor
+            node._temp_tensor = None
+            node._tensor_info['address'] = new_name
+
+    def _assign_node_name(self, node: AbstractNode, name: Text, first_time: bool = False) -> None:
+        """
+        Used to assign a new name to a node in the network
+        """
+        non_enum_prev_name = erase_enum(name)
+        if non_enum_prev_name in self._repeated_nodes_names:
+            count = self._repeated_nodes_names[non_enum_prev_name]
+            if count == 1:
+                aux_node = self.nodes[non_enum_prev_name]
+                aux_new_name = non_enum_prev_name + '_0'
+                self._update_dicts(aux_node, aux_node.name, aux_new_name)
+                aux_node._name = aux_new_name
+            new_name = non_enum_prev_name + '_' + str(count)
+        else:
+            new_name = non_enum_prev_name
+            self._repeated_nodes_names[non_enum_prev_name] = 0
+
+        if first_time:
+            self._nodes[new_name] = node
+            self._memory_nodes[new_name] = node._temp_tensor
+            node._tensor_info = {'address': new_name,
+                                 'full': True,
+                                 'stack_idx': None,
+                                 'index': None}
+            node._temp_tensor = None
+
+        node._name = new_name
+        self._repeated_nodes_names[non_enum_prev_name] += 1
+
+    def _unassign_node_name(self, node: AbstractNode):
+        """
+        Modify remaining nodes names when we remove one node
+        """
+        non_enum_prev_name = erase_enum(node.name)
+        count = self._repeated_nodes_names[non_enum_prev_name]
+        if count > 1:
+            enum = int(node.name.split('_')[-1])
+            for i in range(enum + 1, count):
+                aux_prev_name = non_enum_prev_name + '_' + str(i)
+                aux_new_name = non_enum_prev_name + '_' + str(i - 1)
+                aux_node = self.nodes[aux_prev_name]
+
+                self._update_dicts(aux_node, aux_prev_name, aux_new_name)
+                aux_node._name = aux_new_name
+
+        self._repeated_nodes_names[non_enum_prev_name] -= 1
+
     def _change_node_name(self, node: AbstractNode, name: Text) -> None:
         """
         Used to change the name of a node. If a node belongs to a network,
-        we have to take care of repeated names in the network
+        we have to take care of repeated names in the network. This entails
+        assigning a new name to the node, and removing the previous name
+        (with subsequent changes)
         """
+        # TODO: Esto no pasa, est'a protegida, solo la llamo cuando quiero
         if node.network != self:
             raise ValueError('Cannot change the name of a node that does '
                              'not belong to the network')
+
         if name != node.name:
-            nodes_names = self.nodes_names[:]
-            for i, node_name in enumerate(nodes_names):
-                if node_name == node.name:
-                    nodes_names[i] = name
-                    break
-            new_nodes_names = enum_repeated_names(nodes_names)
-            self._rename_nodes(self.nodes_names, new_nodes_names)
+            self._unassign_node_name(node)
+
+            prev_name = node.name
+            self._assign_node_name(node, name)
+            self._update_dicts(node, prev_name, node.name)
+
+            # nodes_names = self.nodes_names[:]
+            # for i, node_name in enumerate(nodes_names):
+            #     if node_name == node.name:
+            #         nodes_names[i] = name
+            #         break
+            # new_nodes_names = enum_repeated_names(nodes_names)
+            # self._rename_nodes(self.nodes_names, new_nodes_names)
 
     def parameterize(self,
                      set_param: bool = True,
@@ -2482,11 +2597,8 @@ class TensorNetwork(nn.Module):
                     raise ValueError(f'Edge {edge!r} should be a dangling edge of the Tensor Network')
             else:
                 raise TypeError('`input_edges` should be List[int] or List[AbstractEdge] type')
-            node = Node(shape=(*batch_sizes, edge.size()),
-                        axes_names=(*[f'batch_{j}' for j in range(len(batch_sizes))],
-                                    'feature'),
-                        name=f'data_{i}',
-                        network=self)
+            node = Node(shape=(*batch_sizes, edge.size()), axes_names=(*[f'batch_{j}' for j in range(len(batch_sizes))],
+                                                                       'feature'), name=f'data_{i}', network=self)
             node['feature'] ^ edge
             self._data_nodes[node.name] = node
 
@@ -2514,6 +2626,19 @@ class TensorNetwork(nn.Module):
                                  f'not match data node shape {node.shape}')
             node.tensor = data[i]
 
+    def is_contracting(self, contracting: Optional[bool] = None) -> Optional[bool]:
+        # TODO:
+        if contracting is None:
+            return self._contracting
+
+        if self._contracting and not contracting:
+            pass
+            # TODO: separar las memorias, una para cada nodo de nuevo
+        elif not self._contracting and contracting:
+            pass
+            # TODO: igual aqu'i nada
+        self._contracting = contracting
+
     def contract(self) -> torch.Tensor:
         """
         Contract tensor network
@@ -2526,6 +2651,7 @@ class TensorNetwork(nn.Module):
         Contract Tensor Network with input data with shape batch x n_features x feature.
         """
         raise NotImplementedError('Forward method not implemented for generic TensorNetwork class')
+
     # TODO: add_data, wrap(contract), where we only define the way in which data is fed to the TN and TN
     #  is contracted; `wrap` is used to manage memory and creation of nodes in the first epoch, feeding
     #  data (zeros only batch_size=1) with torch.no_grad()
@@ -2575,6 +2701,7 @@ def connect(edge1: AbstractEdge,
                       be overridden with network of node1, in case both
                       nodes are already in a network. If only one node
                       is in a network, the other is moved to that network
+                      # TODO: siempre sobreviven los datos de node1, self, nodo izquierdo
     """
     for edge in [edge1, edge2]:
         if not edge.is_dangling():
@@ -2647,8 +2774,8 @@ def connect(edge1: AbstractEdge,
         if net is not None:
             net._add_param(new_edge)
 
-    node1.add_edge(new_edge, axis1)
-    node2.add_edge(new_edge, axis2)
+    node1._add_edge(new_edge, axis1)
+    node2._add_edge(new_edge, axis2)
     return new_edge
 
 
@@ -2683,8 +2810,8 @@ def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
             net._add_param(new_edge2)
             net._edges += [new_edge1, new_edge2]
 
-    node1.add_edge(new_edge1, axis1, override=True)
-    node2.add_edge(new_edge2, axis2, override=True)
+    node1._add_edge(new_edge1, axis1, override=True)
+    node2._add_edge(new_edge2, axis2, override=True)
     return new_edge1, new_edge2
 
 
@@ -2819,17 +2946,9 @@ def contract_edges(edges: List[AbstractEdge],
     # If nodes were connected, we can assume that both are in the same network
     if operation is None:
         operation = f'contract_edge_{edges}'
-    new_node = Node(axes_names=axes_names,
-                    name=new_name,
-                    network=used_nodes[0].network,
-                    permanent=False,
-                    current_op=True,
-                    param_edges=False,
-                    tensor=new_tensor,
-                    edges=edges,
-                    node1_list=node1_list,
-                    parents={node1, node2},
-                    operation=operation)
+    new_node = Node(axes_names=axes_names, name=new_name, network=used_nodes[0].network, param_edges=False,
+                    tensor=new_tensor, edges=edges, node1_list=node1_list, parents={node1, node2}, operation=operation,
+                    leaf=False)
     return new_node
 
 
@@ -2852,7 +2971,6 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
         raise ValueError(f'No batch edges neither shared edges between '
                          f'nodes {node1!s} and {node2!s} found')
     return contract_edges(edges, node1, node2, 'contract')
-
 
 # class mod_user:
 #

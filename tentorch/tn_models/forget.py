@@ -182,7 +182,7 @@ print(f'Inverted image: {preds[0]}, {new_label[0]}, {acc}')
 
 n_params = 0
 # TODO: mps.nodes is a dict but mps.permanent_nodes is a list
-# TODO: problem updating permanent_nodes, nodes resultant from operations are becoming permanent (still problem??)
+# TODO: problem updating permanent_nodes, nodes resultant from operations are becoming _leaf (still problem??)
 #for node in mps.mps.permanent_nodes:
 for node in ([mps.mps.left_node] +
              mps.mps.left_env +

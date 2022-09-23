@@ -102,6 +102,24 @@ def is_permutation(lst: List, permuted_lst: List) -> bool:
     return True
 
 
+def inverse_permutation(dims: Sequence[int]):
+    """
+    Given a permutation of indices (to permute the elements of a list, tensor, etc.),
+    returns the inverse permutation of indices needed to recover the original object
+    (in the original order).
+
+    Parameters
+    ----------
+    dims: permutation of indices. It can be complete if all numbers in range(len(dims))
+        appear in dims (e.g. (2, 0, 1) -> (1, 2, 0)), or incomplete if after permutation
+        some elements were removed (e.g. (3, 0, 2) -> (1, 2, 0), removed element in position 1).
+    """
+    inverse_dims = [-1] * (max(dims) + 1)
+    for i, j in enumerate(dims):
+        inverse_dims[j] = i
+    return list(filter(lambda x: x != -1, inverse_dims))
+
+
 def fact(n: int) -> int:
     if n < 0:
         raise ValueError('Argument should be greater than zero')

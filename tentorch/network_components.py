@@ -24,7 +24,8 @@ This script contains:
 """
 
 from typing import (overload, Union, Optional, Dict,
-                    Sequence, Text, List, Tuple, Set)
+                    Sequence, Text, List, Tuple, Set,
+                    Callable, Any)
 from abc import ABC, abstractmethod
 import warnings
 import copy
@@ -35,7 +36,8 @@ import opt_einsum
 
 from tentorch.utils import (tab_string, check_name_style,
                             erase_enum, enum_repeated_names,
-                            permute_list, is_permutation)
+                            permute_list, is_permutation,
+                            inverse_permutation)
 
 # from tentorch.functionals import Foo
 import tentorch.functionals as F
@@ -1296,21 +1298,21 @@ class Node(AbstractNode):
                 self._unrestricted_set_tensor(tensor=tensor)
 
             # parents
-            if (parents is not None) and parents:
-                binary_op = ['tprod', 'mul', 'add', 'sub', 'contract', 'einsum', 'stack']
-                if operation not in binary_op and \
-                        not operation.startswith('contract_edge_') and \
-                        not operation.startswith('unbind_'):
-                    raise ValueError('Not a valid operation string')
-
-                for parent in parents:
-                    for succ_dict in parent.successors:
-                        # TODO: bucle un poco redundante
-                        if (succ_dict['parents'] == parents) and \
-                                (succ_dict['operation'] == operation) and (succ_dict['child'] == self):
-                            raise ValueError('Repeated operations without replacing previous node,'
-                                             'this should not happen')
-                    parent.successors.append({'parents': parents, 'operation': operation, 'child': self})
+            # if (parents is not None) and parents:
+            #     binary_op = ['tprod', 'mul', 'add', 'sub', 'contract', 'einsum', 'stack']
+            #     if operation not in binary_op and \
+            #             not operation.startswith('contract_edge_') and \
+            #             not operation.startswith('unbind_'):
+            #         raise ValueError('Not a valid operation string')
+            #
+            #     for parent in parents:
+            #         for succ_dict in parent.successors:
+            #             # TODO: bucle un poco redundante
+            #             if (succ_dict['parents'] == parents) and \
+            #                     (succ_dict['operation'] == operation) and (succ_dict['child'] == self):
+            #                 raise ValueError('Repeated operations without replacing previous node,'
+            #                                  'this should not happen')
+            #         parent.successors.append({'parents': parents, 'operation': operation, 'child': self})
 
     # -------
     # Methods
@@ -1361,7 +1363,7 @@ class Node(AbstractNode):
         return Edge(node1=self, axis1=axis)
 
 
-class ParamNode(AbstractNode, nn.Module):
+class ParamNode(AbstractNode):
     """
     Class for trainable nodes. Subclass of PyTorch nn.Module.
     Should be subclassed by any new class of trainable nodes.
@@ -1419,9 +1421,6 @@ class ParamNode(AbstractNode, nn.Module):
             it is not provided
         kwargs: keyword arguments for the init_method
         """
-
-        # TODO: ya no module
-        nn.Module.__init__(self)
 
         # shape and tensor
         if (shape is None) == (tensor is None):
@@ -1534,17 +1533,17 @@ class ParamNode(AbstractNode, nn.Module):
             return ParamEdge(node1=self, axis1=axis)
         return Edge(node1=self, axis1=axis)
 
-    def __setattr__(self, name: Text, value: Union[torch.Tensor, nn.Module]) -> None:
-        # TODO: si ParamNode deja de ser un Module, se acabó el problema
-        if name == '_network':
-            # This is done in order to not having the network as submodule
-            ABC.__setattr__(self, name, value)
-        elif name == 'network':
-            # This is done in order to not having the network as submodule
-            AbstractNode.__setattr__(self, name, value)
-        else:
-            # TODO: problem with node.tensor = new_tensor -> I think there si no problem
-            nn.Module.__setattr__(self, name, value)
+    # def __setattr__(self, name: Text, value: Union[torch.Tensor, nn.Module]) -> None:
+    #     # TODO: si ParamNode deja de ser un Module, se acabó el problema
+    #     if name == '_network':
+    #         # This is done in order to not having the network as submodule
+    #         ABC.__setattr__(self, name, value)
+    #     elif name == 'network':
+    #         # This is done in order to not having the network as submodule
+    #         AbstractNode.__setattr__(self, name, value)
+    #     else:
+    #         # TODO: problem with node.tensor = new_tensor -> I think there si no problem
+    #         nn.Module.__setattr__(self, name, value)
 
 
 ################################################
@@ -2712,7 +2711,8 @@ class TensorNetwork(nn.Module):
             # TODO: separar las memorias, una para cada nodo de nuevo
         elif not self._contracting and contracting:
             pass
-            # TODO: igual aqu'i nada
+            # TODO: esto no se puede cambiar aq'i, se cambia cuando se
+            #  contrae la red por primera vez. raise ValueError
         self._contracting = contracting
 
     def contract(self) -> torch.Tensor:
@@ -2726,7 +2726,18 @@ class TensorNetwork(nn.Module):
         """
         Contract Tensor Network with input data with shape batch x n_features x feature.
         """
-        raise NotImplementedError('Forward method not implemented for generic TensorNetwork class')
+        # TODO: algo as'i, en la primera epoca se meten datos con batch 1, solo
+        #  para ir creando todos los nodos intermedio necesarios r'apidamente,
+        #  luego ya se contrae la red haciendo operaciones de tensores
+        if not self.is_contracting():
+            # First contraction
+            aux_data = torch.zeros([1] * (len(data.shape) - 1) + [data.shape[-1]])
+            self._add_data(aux_data)
+            self.contract()
+
+        self._add_data(data)
+        self.contract()
+        #raise NotImplementedError('Forward method not implemented for generic TensorNetwork class')
 
     # TODO: add_data, wrap(contract), where we only define the way in which data is fed to the TN and TN
     #  is contracted; `wrap` is used to manage memory and creation of nodes in the first epoch, feeding
@@ -2755,9 +2766,6 @@ class TensorNetwork(nn.Module):
     # TODO: Function to build instructions and reallocate memory, optimized for a function
     #  (se deben reasignar los par'ametros)
     # TODO: Function to allocate one memory tensor for each node, like old mode
-    # TODO: Problem! Ahora meto los nodos en la TN como submodules, pero ellos no tienen parametros,
-    #  y los parametros se guardan como parametros de la TN (guardo lo mismo dos veces)
-    # TODO: funciones de añadir edge o quitar edge (casos añadir y quitar módulos)
 
 
 ################################################
@@ -2884,6 +2892,29 @@ def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
     return new_edge1, new_edge2
 
 
+# TODO: otra opcion: successors tuplas (kwargs, operation), si los nodos padres
+#  coinciden en kwargs (ya sucedio la operacion), operation guarda el objeto
+#  operacion optimizada para tensores
+class Operation:
+
+    def __init__(self, check_first, func1, func2):
+        assert isinstance(check_first, Callable)
+        assert isinstance(func1, Callable)
+        assert isinstance(func2, Callable)
+        self.func1 = func1
+        self.func2 = func2
+        self.check_first = check_first
+        self.additional_info = None
+
+    def __call__(self, **kwargs):
+        if self.check_first(self, **kwargs):
+            result, additional_info = self.func1(**kwargs)
+            self.additional_info = additional_info
+            return result
+        else:
+            return self.func2(self.additional_info, **kwargs)
+
+
 def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
     """
     Obtain list of edges shared between two nodes
@@ -2895,6 +2926,7 @@ def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractE
     return edges
 
 
+# TODO: method of nodes
 def get_batch_edges(node: AbstractNode) -> List[AbstractEdge]:
     """
     Obtain list of batch edges shared between two nodes
@@ -2906,128 +2938,270 @@ def get_batch_edges(node: AbstractNode) -> List[AbstractEdge]:
     return edges
 
 
+def _check_first_contract_edges(operation: Operation,
+                                edges: List[AbstractEdge],
+                                node1: AbstractNode,
+                                node2: AbstractNode) -> bool:
+    kwargs = {'operation': operation,
+              'edges': edges,
+              'node1': node1,
+              'node2': node2}
+    for succ in node1.successors:
+        if succ == kwargs:
+            return True
+    return False
+
+
 def contract_edges(edges: List[AbstractEdge],
-                   node1: AbstractNode,
-                   node2: AbstractNode,
-                   operation: Optional[Text] = None) -> Node:
+                          node1: AbstractNode,
+                          node2: AbstractNode) -> Tuple[Node, Any]:
+    # _contract_edges_first
     """
     Contract edges between two nodes.
 
     Parameters
     ----------
     edges: list of edges that are to be contracted. They can be edges shared
-           between `node1` and `node2`, or batch edges that are in both nodes
+        between `node1` and `node2`, or batch edges that are in both nodes
     node1: first node of the contraction
     node2: second node of the contraction
-    operation: operation string referencing the operation form which
-               `contract_between` is called
 
     Returns
     -------
     new_node: Node resultant from the contraction
     """
-    all_shared_edges = get_shared_edges(node1, node2)
-    shared_edges = []
+
+    if node1 == node2:
+        # TODO: hacer esto
+        raise ValueError('Trace not implemented')
+
+    nodes = [node1, node2]
+    tensors = [node1.tensor, node2.tensor]
+    non_contract_edges = [dict(), dict()]
     batch_edges = dict()
-    for edge in edges:
-        if edge in all_shared_edges:
-            shared_edges.append(edge)
-        elif edge.is_batch():
-            if edge.axis1.name in batch_edges:
-                batch_edges[edge.axis1.name] += 1
-            else:
-                batch_edges[edge.axis1.name] = 1
-        else:
-            raise ValueError('All edges in `edges` should be non-dangling, '
-                             'shared edges between `node1` and `node2`, or batch edges')
+    contract_edges = dict()
 
-    n_shared = len(shared_edges)
-    n_batch = len(batch_edges)
-    shared_subscripts = dict(zip(shared_edges,
-                                 [opt_einsum.get_symbol(i) for i in range(n_shared)]))
-    batch_subscripts = dict(zip(batch_edges,
-                                [opt_einsum.get_symbol(i)
-                                 for i in range(n_shared, n_shared + n_batch)]))
-
-    index = n_shared + n_batch
-    input_strings = []
-    used_nodes = []
-    output_string = ''
-    matrices = []
-    matrices_strings = []
-    for i, node in enumerate([node1, node2]):
-        if (i == 1) and (node1 == node2):
-            break
-        string = ''
-        for edge in node.edges:
-            if edge in shared_edges:
-                string += shared_subscripts[edge]
-                if isinstance(edge, ParamEdge):
-                    in_matrices = False
-                    for mat in matrices:
-                        if torch.equal(edge.matrix, mat):
-                            in_matrices = True
-                            break
-                    if not in_matrices:
-                        matrices_strings.append(2 * shared_subscripts[edge])
-                        matrices.append(edge.matrix)
-            elif edge.is_batch():
-                if batch_edges[edge.axis1.name] == 2:
-                    # Only perform batch contraction if the batch edge appears
-                    # with the same name in both nodes
-                    string += batch_subscripts[edge.axis1.name]
+    for i in range(2):
+        for j, edge in enumerate(nodes[i].edges):
+            if edge in edges:
+                if (edge in node2.edges) and (not edge.is_dangling()):
                     if i == 0:
-                        output_string += batch_subscripts[edge.axis1.name]
+                        if isinstance(edge, ParamEdge):
+                            # Obtain permutations
+                            permutation_dims = [k if k < j else k + 1
+                                                for k in range(len(tensors[i].shape) - 1)] + [j]
+                            inv_permutation_dims = inverse_permutation(permutation_dims)
+
+                            # Send multiplication dimension to the end, multiply, recover original shape
+                            tensors[i] = tensors[i].permute(permutation_dims)
+                            tensors[i] = tensors[i] @ edge.matrix
+                            tensors[i] = tensors[i].permute(inv_permutation_dims)
+
+                        contract_edges[edge] = [nodes[i].shape[j]]
+
+                    contract_edges[edge].append(j)
+
                 else:
-                    string += opt_einsum.get_symbol(index)
-                    output_string += opt_einsum.get_symbol(index)
-                    index += 1
+                    raise ValueError('All edges in `edges` should be non-dangling, '
+                                     'shared edges between `node1` and `node2`, or batch edges')
+
+            elif edge.is_batch():
+                if i == 0:
+                    batch_in_node2 = False
+                    for aux_edge in node2.edges:
+                        if aux_edge.is_batch() and (edge.name == aux_edge.name):
+                            batch_edges[edge] = [node1.shape[j], j]
+                            batch_in_node2 = True
+                            break
+
+                    if not batch_in_node2:
+                        non_contract_edges[i][edge] = [nodes[i].shape[j], j]
+
+                else:
+                    if edge in batch_edges:
+                        batch_edges[edge].append(j)
+                    else:
+                        non_contract_edges[i][edge] = [nodes[i].shape[j], j]
+
             else:
-                string += opt_einsum.get_symbol(index)
-                output_string += opt_einsum.get_symbol(index)
-                index += 1
-        input_strings.append(string)
-        used_nodes.append(node)
+                non_contract_edges[i][edge] = [nodes[i].shape[j], j]
 
-    input_string = ','.join(input_strings + matrices_strings)
-    einsum_string = input_string + '->' + output_string
-    tensors = list(map(lambda n: n.tensor, used_nodes))
-    names = '_'.join(map(lambda n: n.name, used_nodes))
-    new_tensor = opt_einsum.contract(einsum_string, *(tensors + matrices))
-    new_name = f'contract_{names}'
+    # TODO: esto seguro que se puede hacer mejor
+    permutation_dims = [None, None]
+    permutation_dims[0] = list(map(lambda l: l[1], batch_edges.values())) + \
+                          list(map(lambda l: l[1], non_contract_edges[0].values())) + \
+                          list(map(lambda l: l[1], contract_edges.values()))
+    permutation_dims[1] = list(map(lambda l: l[2], batch_edges.values())) + \
+                          list(map(lambda l: l[2], contract_edges.values())) + \
+                          list(map(lambda l: l[1], non_contract_edges[1].values()))
 
-    axes_names = []
-    edges = []
-    node1_list = []
-    i, j, k = 0, 0, 0
-    while (i < len(output_string)) and \
-            (j < len(input_strings)):
-        if output_string[i] == input_strings[j][k]:
-            axes_names.append(used_nodes[j].axes[k].name)
-            edges.append(used_nodes[j][k])
-            node1_list.append(used_nodes[j].axes[k].is_node1())
-            i += 1
-        k += 1
-        if k == len(input_strings[j]):
-            k = 0
-            j += 1
+    aux_permutation = inverse_permutation(list(map(lambda l: l[1], batch_edges.values())) +
+                                          list(map(lambda l: l[1], non_contract_edges[0].values())))
+    aux_permutation2 = inverse_permutation(list(map(lambda l: l[1], non_contract_edges[1].values())))
+    final_inv_permutation_dims = aux_permutation + list(map(lambda x: x+len(aux_permutation), aux_permutation2))
 
-    # If nodes were connected, we can assume that both are in the same network
-    if operation is None:
-        operation = f'contract_edge_{edges}'
-    new_node = Node(axes_names=axes_names, name=new_name, network=used_nodes[0].network, param_edges=False,
-                    tensor=new_tensor, edges=edges, node1_list=node1_list, parents={node1, node2}, operation=operation,
+    new_shape = [None, None]
+    new_shape[0] = (torch.tensor(list(map(lambda l: l[0], batch_edges.values()))).prod().long().item(),
+                    torch.tensor(list(map(lambda l: l[0], non_contract_edges[0].values()))).prod().long().item(),
+                    torch.tensor(list(map(lambda l: l[0], contract_edges.values()))).prod().long().item())
+
+    new_shape[1] = (torch.tensor(list(map(lambda l: l[0], batch_edges.values()))).prod().long().item(),
+                    torch.tensor(list(map(lambda l: l[0], contract_edges.values()))).prod().long().item(),
+                    torch.tensor(list(map(lambda l: l[0], non_contract_edges[1].values()))).prod().long().item())
+
+    final_shape = list(map(lambda l: l[0], batch_edges.values())) + \
+                  list(map(lambda l: l[0], non_contract_edges[0].values())) + \
+                  list(map(lambda l: l[0], non_contract_edges[1].values()))
+
+    for i in range(2):
+        tensors[i] = tensors[i].permute(permutation_dims[i])
+        tensors[i] = tensors[i].reshape(new_shape[i])
+
+    result = tensors[0] @ tensors[1]
+    result = result.view(final_shape).permute(final_inv_permutation_dims)
+
+    indices_node1 = permute_list(list(map(lambda l: l[1], batch_edges.values())) +
+                                 list(map(lambda l: l[1], non_contract_edges[0].values())),
+                                 aux_permutation)
+    indices_node2 = list(map(lambda l: l[1], non_contract_edges[1].values()))
+    indices = [indices_node1, indices_node2]
+    final_edges = []
+    final_axes = []
+    final_node1 = []
+    for i in range(2):
+        for idx in indices[i]:
+            final_edges.append(nodes[i][idx])
+            final_axes.append(nodes[i].axes_names[idx])
+            final_node1.append(nodes[i].axes[idx].is_node1())
+
+    new_node = Node(axes_names=final_axes, name=f'contract_{node1.name}_{node2.name}',
+                    network=nodes[0].network, param_edges=False,
+                    tensor=result, edges=final_edges, node1_list=final_node1,
+                    parents={node1, node2}, operation=None,
                     leaf=False)
-    return new_node
+    return new_node  #, None  # TODO: additional info
+
+
+# def contract_edges(edges: List[AbstractEdge],
+#                    node1: AbstractNode,
+#                    node2: AbstractNode,
+#                    operation: Optional[Text] = None) -> Node:
+#     """
+#     Contract edges between two nodes.
+#
+#     Parameters
+#     ----------
+#     edges: list of edges that are to be contracted. They can be edges shared
+#         between `node1` and `node2`, or batch edges that are in both nodes
+#     node1: first node of the contraction
+#     node2: second node of the contraction
+#     operation: operation string referencing the operation form which
+#         `contract_between` is called
+#
+#     Returns
+#     -------
+#     new_node: Node resultant from the contraction
+#     """
+#     all_shared_edges = get_shared_edges(node1, node2)
+#     shared_edges = []
+#     batch_edges = dict()
+#     for edge in edges:
+#         if edge in all_shared_edges:
+#             shared_edges.append(edge)
+#         elif edge.is_batch():
+#             if edge.axis1.name in batch_edges:
+#                 batch_edges[edge.axis1.name] += 1
+#             else:
+#                 batch_edges[edge.axis1.name] = 1
+#         else:
+#             raise ValueError('All edges in `edges` should be non-dangling, '
+#                              'shared edges between `node1` and `node2`, or batch edges')
+#
+#     n_shared = len(shared_edges)
+#     n_batch = len(batch_edges)
+#     shared_subscripts = dict(zip(shared_edges,
+#                                  [opt_einsum.get_symbol(i) for i in range(n_shared)]))
+#     batch_subscripts = dict(zip(batch_edges,
+#                                 [opt_einsum.get_symbol(i)
+#                                  for i in range(n_shared, n_shared + n_batch)]))
+#
+#     index = n_shared + n_batch
+#     input_strings = []
+#     used_nodes = []
+#     output_string = ''
+#     matrices = []
+#     matrices_strings = []
+#     for i, node in enumerate([node1, node2]):
+#         if (i == 1) and (node1 == node2):
+#             break
+#         string = ''
+#         for edge in node.edges:
+#             if edge in shared_edges:
+#                 string += shared_subscripts[edge]
+#                 if isinstance(edge, ParamEdge):
+#                     in_matrices = False
+#                     for mat in matrices:
+#                         if torch.equal(edge.matrix, mat):
+#                             in_matrices = True
+#                             break
+#                     if not in_matrices:
+#                         matrices_strings.append(2 * shared_subscripts[edge])
+#                         matrices.append(edge.matrix)
+#             elif edge.is_batch():
+#                 if batch_edges[edge.axis1.name] == 2:
+#                     # Only perform batch contraction if the batch edge appears
+#                     # with the same name in both nodes
+#                     string += batch_subscripts[edge.axis1.name]
+#                     if i == 0:
+#                         output_string += batch_subscripts[edge.axis1.name]
+#                 else:
+#                     string += opt_einsum.get_symbol(index)
+#                     output_string += opt_einsum.get_symbol(index)
+#                     index += 1
+#             else:
+#                 string += opt_einsum.get_symbol(index)
+#                 output_string += opt_einsum.get_symbol(index)
+#                 index += 1
+#         input_strings.append(string)
+#         used_nodes.append(node)
+#
+#     input_string = ','.join(input_strings + matrices_strings)
+#     einsum_string = input_string + '->' + output_string
+#     tensors = list(map(lambda n: n.tensor, used_nodes))
+#     names = '_'.join(map(lambda n: n.name, used_nodes))
+#     new_tensor = opt_einsum.contract(einsum_string, *(tensors + matrices))
+#     new_name = f'contract_{names}'
+#
+#     axes_names = []
+#     edges = []
+#     node1_list = []
+#     i, j, k = 0, 0, 0
+#     while (i < len(output_string)) and \
+#             (j < len(input_strings)):
+#         if output_string[i] == input_strings[j][k]:
+#             axes_names.append(used_nodes[j].axes[k].name)
+#             edges.append(used_nodes[j][k])
+#             node1_list.append(used_nodes[j].axes[k].is_node1())
+#             i += 1
+#         k += 1
+#         if k == len(input_strings[j]):
+#             k = 0
+#             j += 1
+#
+#     # If nodes were connected, we can assume that both are in the same network
+#     if operation is None:
+#         operation = f'contract_edge_{edges}'
+#     new_node = Node(axes_names=axes_names, name=new_name, network=used_nodes[0].network, param_edges=False,
+#                     tensor=new_tensor, edges=edges, node1_list=node1_list, parents={node1, node2}, operation=operation,
+#                     leaf=False)
+#     return new_node
 
 
 def contract(edge: AbstractEdge) -> Node:
     """
     Contract only one edge
     """
-    return contract_edges([edge] + get_batch_edges(edge.node1) + get_batch_edges(edge.node2),
-                          edge.node1,
-                          edge.node2)
+    return contract_edges([edge] + get_batch_edges(edge.node1) + get_batch_edges(edge.node2), edge.node1, edge.node2)
 
 
 def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
@@ -3039,7 +3213,7 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
     if not edges:
         raise ValueError(f'No batch edges neither shared edges between '
                          f'nodes {node1!s} and {node2!s} found')
-    return contract_edges(edges, node1, node2, 'contract')
+    return contract_edges(edges, node1, node2)
 
 # class mod_user:
 #

@@ -242,7 +242,7 @@ def test_param_edges():
     assert isinstance(node[0], tn.ParamEdge)
     assert node[0].dim() == node.shape[0]
 
-
+# TODO: ------------>
 def test_copy_node():
     node = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node', init_method='randn')
     copy = node.copy()

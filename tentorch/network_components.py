@@ -2513,8 +2513,8 @@ class TensorNetwork(nn.Module):
 
         if self._nodes[prev_name] == node:
             self._nodes[new_name] = self._nodes.pop(prev_name)
+            # TODO: A lo mejor esto solo si address is not None
             self._memory_nodes[new_name] = self._memory_nodes.pop(prev_name)
-            # TODO: Do this with function, stack has to update its nodes addresses
             node._assign_memory(address=new_name)
             #node._tensor_info['address'] = new_name
         else:

@@ -133,8 +133,22 @@ def test_time_contraction_methods():
     start = time.time()
     node3 = node1 @ node2
     print(time.time() - start)
-    # Prev contraction method: 0.02809619903564453
-    # New contraction method: 0.005245685577392578
+    # Prev contraction method: 0.03
+    # New contraction method: 0.0045
+    # Mucho mejor el nuevo
+
+    node1 = tn.Node(shape=(100, 10, 100, 10), init_method='randn', name='node1')
+    node2 = tn.Node(shape=(100, 10, 100, 10), init_method='randn', name='node2')
+    node1[0] ^ node2[0]
+    node1[2] ^ node2[2]
+
+    print()
+    start = time.time()
+    node3 = node1 @ node2
+    print(time.time() - start)
+    # Prev contraction method: 0.0015
+    # New contraction method: 0.0015
+    # Prácticamente iguales
 
 
 def test_init_node():

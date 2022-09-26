@@ -16,7 +16,7 @@ This script contains:
 """
 # split, svd, qr, rq, etc. -> using einsum-like strings, useful
 
-from typing import Union, Optional, Text, List, Dict
+from typing import Union, Optional, Text, List, Dict, Tuple
 from abc import abstractmethod
 
 import torch
@@ -25,7 +25,7 @@ import opt_einsum
 from tentorch.network_components import Axis
 from tentorch.network_components import AbstractNode, Node
 from tentorch.network_components import AbstractEdge, Edge, ParamEdge
-from tentorch.network_components import connect
+from tentorch.network_components import connect, Operation
 
 # TODO:
 import time
@@ -162,6 +162,7 @@ class StackNode(Node):
                  override_node: bool = False) -> None:
 
         if not self._init:
+            # TODO: Y en la misma TN todos
             for i in range(len(nodes[:-1])):
                 if not isinstance(nodes[i], type(nodes[i + 1])):
                     raise TypeError('Cannot stack nodes of different types. Nodes '
@@ -185,6 +186,7 @@ class StackNode(Node):
                     else:
                         edges_dict[axis.name] += [edge]
             self._edges_dict = edges_dict
+            self.nodes = nodes
 
             stacked_tensor = torch.stack([node.tensor for node in nodes])
             super().__init__(axes_names=['stack'] + nodes[0].axes_names, name=name, network=nodes[0].network,
@@ -203,6 +205,31 @@ class StackNode(Node):
             return StackEdge(self.edges_dict[axis.name], node1=self, axis1=axis)
         elif isinstance(self.edges_dict[axis.name][0], ParamEdge):
             return ParamStackEdge(self.edges_dict[axis.name], node1=self, axis1=axis)
+
+    def _assign_memory(self,
+                       address: Optional[Text] = None,
+                       node_ref: Optional[AbstractNode] = None,
+                       full: Optional[bool] = None,
+                       stack_idx: Optional[Tuple[slice, ...]] = None,
+                       index: Optional[Tuple[slice, ...]] = None) -> None:
+        "Para cuando cambiamos la memoria desde TN, y tenemos que indicar al nodo que su memoria está en otro lado"
+        for node in self.nodes:
+            # TODO: Para cuando cambiamos de nombre la stack
+            node._assign_memory(address=address)
+        # self._tensor_info = {'address': address,
+        #                      'full': full,
+        #                      'stack_idx': stack_idx,
+        #                      'index': index}
+        if address is not None:
+            self._tensor_info['address'] = address
+        if node_ref is not None:
+            self._tensor_info['node_ref'] = node_ref
+        if full is not None:
+            self._tensor_info['full'] = full
+        if stack_idx is not None:
+            self._tensor_info['stack_idx'] = stack_idx
+        if index is not None:
+            self._tensor_info['index'] = index
 
 
 class AbstractStackEdge(AbstractEdge):
@@ -295,14 +322,76 @@ def connect_stack(edge1: AbstractStackEdge,
                    override_network=override_network)
 
 
-def stack(nodes: List[AbstractNode], name: Optional[Text] = None) -> StackNode:
+def _check_first_stack(nodes: List[AbstractNode], name: Optional[Text] = None) -> bool:
+    kwargs = {'nodes': set(nodes)}
+    if 'stack' in nodes[0].successors:
+        for t in nodes[0].successors['stack']:
+            if t[0] == kwargs:
+                return False
+    return True
+
+
+def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> StackNode:
     """
-    Stack nodes into a StackNode. The stack dimension will be the
-    first one in the resultant node
-    """
-    # TODO: override_node = True para solo cambiar el tensor
-    self = StackNode(nodes, name=name)
-    return self
+        Stack nodes into a StackNode. The stack dimension will be the
+        first one in the resultant node
+        """
+    all_leaf = True
+    for node in nodes:
+        if not node.is_leaf():
+            all_leaf = False
+            break
+
+    stack_node = StackNode(nodes, name=name)
+
+    if all_leaf:
+        net = nodes[0].network
+        for i, node in enumerate(nodes):
+            shape = node.shape
+            del net._memory_nodes[node._tensor_info['address']]
+            node._tensor_info['address'] = None
+            node._tensor_info['node_ref'] = stack_node
+            node._tensor_info['full'] = False
+            node._tensor_info['stack_idx'] = i
+            index = [i]
+            for s in shape:
+                index.append(slice(0, s))
+            node._tensor_info['index'] = index
+
+    return stack_node
+
+
+def _stack_next(nodes: List[AbstractNode], name: Optional[Text] = None) -> StackNode:
+    all_leaf = True
+    for node in nodes:
+        if not node.is_leaf():
+            all_leaf = False
+            break
+
+    kwargs = {'nodes': set(nodes)}
+    for t in nodes[0]._successors['contract_edges']:
+        if t[0] == kwargs:
+            child = t[1]
+            break
+
+    if all_leaf:
+        return child
+
+    child.tensor = torch.stack([node.tensor for node in nodes])
+    return child
+
+
+stack = Operation(_check_first_stack, _stack_first, _stack_next)
+
+
+# def stack(nodes: List[AbstractNode], name: Optional[Text] = None) -> StackNode:
+#     """
+#     Stack nodes into a StackNode. The stack dimension will be the
+#     first one in the resultant node
+#     """
+#     # TODO: override_node = True para solo cambiar el tensor
+#     self = StackNode(nodes, name=name)
+#     return self
 
 
 def unbind(node: AbstractNode) -> List[Node]:

@@ -271,9 +271,15 @@ class AbstractNode(ABC):
     def tensor(self) -> Union[torch.Tensor, nn.Parameter]:
         if self._tensor_info is None:
             return self._temp_tensor
+
+        if self._tensor_info['address'] is None:
+            node = self._tensor_info['node_ref']
+        else:
+            node = self
+
         if self._tensor_info['full']:
-            return self.network._memory_nodes[self._tensor_info['address']]
-        return self.network._memory_nodes[self._tensor_info['address']][self._tensor_info['index']]
+            return self.network._memory_nodes[node._tensor_info['address']]
+        return self.network._memory_nodes[node._tensor_info['address']][self._tensor_info['index']]
 
     @tensor.setter
     def tensor(self, tensor: torch.Tensor) -> None:
@@ -870,16 +876,27 @@ class AbstractNode(ABC):
         """
         self.tensor = torch.empty(self.shape, device=device)
 
-    # def _assign_memory(self,
-    #                    address: Text,
-    #                    full: bool,
-    #                    stack_idx: Optional[Tuple[slice, ...]] = None,
-    #                    index: Optional[Tuple[slice, ...]] = None) -> None:
-    #     "Para cuando cambiamos la memoria desde TN, y tenemos que indicar al nodo que su memoria está en otro lado"
-    #     self._tensor_info = {'address': address,
-    #                          'full': full,
-    #                          'stack_idx': stack_idx,
-    #                          'index': index}
+    def _assign_memory(self,
+                       address: Optional[Text] = None,
+                       node_ref: Optional['AbstractNode'] = None,
+                       full: Optional[bool] = None,
+                       stack_idx: Optional[Tuple[slice, ...]] = None,
+                       index: Optional[Tuple[slice, ...]] = None) -> None:
+        "Para cuando cambiamos la memoria desde TN, y tenemos que indicar al nodo que su memoria está en otro lado"
+        # self._tensor_info = {'address': address,
+        #                      'full': full,
+        #                      'stack_idx': stack_idx,
+        #                      'index': index}
+        if address is not None:
+            self._tensor_info['address'] = address
+        if node_ref is not None:
+            self._tensor_info['node_ref'] = node_ref
+        if full is not None:
+            self._tensor_info['full'] = full
+        if stack_idx is not None:
+            self._tensor_info['stack_idx'] = stack_idx
+        if index is not None:
+            self._tensor_info['index'] = index
 
     def _save_in_network(self, tensor: Union[torch.Tensor, nn.Parameter]) -> None:
         self.network._memory_nodes[self._tensor_info['address']] = tensor
@@ -1471,7 +1488,12 @@ class ParamNode(AbstractNode):
     # ----------
     @property
     def grad(self) -> Optional[torch.Tensor]:
-        aux_grad = self.network._memory_nodes[self._tensor_info['address']].grad
+        if self._tensor_info['address'] is None:
+            aux_node = self._tensor_info['node_ref']
+            aux_grad = aux_node.network._memory_nodes[aux_node._tensor_info['address']].grad
+        else:
+            aux_grad = self.network._memory_nodes[self._tensor_info['address']].grad
+
         if aux_grad is None:
             return aux_grad
         elif isinstance(aux_grad, torch.Tensor):
@@ -2492,12 +2514,15 @@ class TensorNetwork(nn.Module):
         if self._nodes[prev_name] == node:
             self._nodes[new_name] = self._nodes.pop(prev_name)
             self._memory_nodes[new_name] = self._memory_nodes.pop(prev_name)
-            node._tensor_info['address'] = new_name
+            # TODO: Do this with function, stack has to update its nodes addresses
+            node._assign_memory(address=new_name)
+            #node._tensor_info['address'] = new_name
         else:
             self._nodes[new_name] = node
             self._memory_nodes[new_name] = node._temp_tensor
             node._temp_tensor = None
-            node._tensor_info['address'] = new_name
+            node._assign_memory(address=new_name)
+            #node._tensor_info['address'] = new_name
 
     def _update_node_name(self, node: AbstractNode, new_name: Text) -> None:
         if isinstance(node.tensor, nn.Parameter):
@@ -2538,6 +2563,7 @@ class TensorNetwork(nn.Module):
             self._nodes[new_name] = node
             self._memory_nodes[new_name] = node._temp_tensor
             node._tensor_info = {'address': new_name,
+                                 'node_ref': None,
                                  'full': True,
                                  'stack_idx': None,
                                  'index': None}
@@ -2733,6 +2759,7 @@ class TensorNetwork(nn.Module):
             # First contraction
             aux_data = torch.zeros([1] * (len(data.shape) - 1) + [data.shape[-1]])
             self._add_data(aux_data)
+            self.is_contracting(True)
             self.contract()
 
         self._add_data(data)
@@ -2942,8 +2969,8 @@ def _check_first_contract_edges(edges: List[AbstractEdge],
               'node1': node1,
               'node2': node2}
     if 'contract_edges' in node1.successors:
-        for succ in node1.successors['contract_edges']:
-            if succ == kwargs:
+        for t in node1.successors['contract_edges']:
+            if t[0] == kwargs:
                 return False
     return True
 
@@ -3004,8 +3031,8 @@ def _contract_edges_first(edges: List[AbstractEdge],
                 if i == 0:
                     batch_in_node2 = False
                     for aux_edge in node2.edges:
-                        if aux_edge.is_batch() and (edge.name == aux_edge.name):
-                            batch_edges[edge] = [node1.shape[j], j]
+                        if aux_edge.is_batch() and (edge.axis1.name == aux_edge.axis1.name):
+                            batch_edges[edge.axis1.name] = [node1.shape[j], j]
                             batch_in_node2 = True
                             break
 
@@ -3013,8 +3040,8 @@ def _contract_edges_first(edges: List[AbstractEdge],
                         non_contract_edges[i][edge] = [nodes[i].shape[j], j]
 
                 else:
-                    if edge in batch_edges:
-                        batch_edges[edge].append(j)
+                    if edge.axis1.name in batch_edges:
+                        batch_edges[edge.axis1.name].append(j)
                     else:
                         non_contract_edges[i][edge] = [nodes[i].shape[j], j]
 
@@ -3341,7 +3368,7 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
     Contract all shared edges between two nodes, also performing batch contraction
     between batch edges that share name in both nodes
     """
-    edges = get_shared_edges(node1, node2) + get_batch_edges(node1) + get_batch_edges(node2)
+    edges = get_shared_edges(node1, node2) #+ get_batch_edges(node1) + get_batch_edges(node2)
     if not edges:
         raise ValueError(f'No batch edges neither shared edges between '
                          f'nodes {node1!s} and {node2!s} found')

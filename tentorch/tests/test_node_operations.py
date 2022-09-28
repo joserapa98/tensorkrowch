@@ -9,6 +9,160 @@ import torch.nn as nn
 import tentorch as tn
 
 
+def test_contract_between():
+    node1 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1')
+    node2 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node2')
+    node1['left'] ^ node2['left']
+    node1['right'] ^ node2['right']
+    node3 = node1 @ node2
+    assert node3.shape == (5, 5)
+    assert node3.axes_names == ['input_0', 'input_1']
+
+    node1 = tn.Node(shape=(2, 5, 5, 2), axes_names=('left', 'input', 'input', 'right'), name='node1')
+    node1['left'] ^ node1['right']
+    node1['input_0'] ^ node1['input_1']
+    # TODO: implement trace
+    # node2 = node1 @ node1
+    # assert node2.shape == ()
+    # assert len(node2.edges) == 0
+
+    node1 = tn.ParamNode(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1', param_edges=True)
+    node2 = tn.ParamNode(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node2', param_edges=True)
+    node1['left'] ^ node2['left']
+    node1['right'] ^ node2['right']
+    node3 = node1 @ node2
+    assert node3.shape == (5, 5)
+    assert node3.axes_names == ['input_0', 'input_1']
+
+    node1 = tn.ParamNode(shape=(2, 5, 5, 2), axes_names=('left', 'input', 'input', 'right'), name='node1',
+                         param_edges=True)
+    node1['left'] ^ node1['right']
+    node1['input_0'] ^ node1['input_1']
+    # node2 = node1 @ node1
+    # assert node2.shape == ()
+    # assert len(node2.edges) == 0
+
+
+def test_contract_edge():
+    node1 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1')
+    node2 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node2')
+    edge = node1[2] ^ node2[0]
+    node3 = edge.contract()
+    assert node3['left'] == node1['left']
+    assert node3['right'] == node2['right']
+
+    with pytest.raises(ValueError):
+        tn.contract_edges([node1[0]], node1, node2)
+
+    node1 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1')
+    edge = node1[2] ^ node1[0]
+    node2 = edge.contract()
+    assert len(node2.edges) == 1
+    assert node2[0].axis1.name == 'input'
+
+    node1 = tn.ParamNode(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1', param_edges=True)
+    node2 = tn.ParamNode(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node2', param_edges=True)
+    edge = node1[2] ^ node2[0]
+    node3 = edge.contract()
+    assert node3['left'] == node1['left']
+    assert node3['right'] == node2['right']
+
+    node1 = tn.ParamNode(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1', param_edges=True)
+    edge = node1[2] ^ node1[0]
+    node2 = edge.contract()
+    assert len(node2.edges) == 1
+    assert node2[0].axis1.name == 'input'
+
+
+def test_tensor_product():
+    node1 = tn.Node(shape=(2, 3), axes_names=('left', 'right'), name='node1', init_method='randn')
+    node2 = tn.Node(shape=(4, 5), axes_names=('left', 'right'), name='node2', init_method='randn')
+
+    node3 = node1 % node2
+    assert node3.shape == (2, 3, 4, 5)
+    assert node3.edges == node1.edges + node2.edges
+
+    node1 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1', init_method='randn')
+    node2 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node2', init_method='randn')
+    node1[2] ^ node2[0]
+    # TODO: tensor product not performed between connected nodes
+    # node3 = node1 % node2
+    # assert node3.shape == (2, 5, 2, 2, 5, 2)
+    # assert node3.edges == node1.edges + node2.edges
+
+
+def test_mul_add_sub():
+    node1 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1', init_method='randn')
+    node2 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node2', init_method='randn')
+
+    node_mul = node1 * node2
+    assert node_mul.shape == (2, 5, 2)
+    assert torch.equal(node_mul.tensor, node1.tensor * node2.tensor)
+
+    node_add = node1 + node2
+    assert node_add.shape == (2, 5, 2)
+    assert torch.equal(node_add.tensor, node1.tensor + node2.tensor)
+
+    node_sub = node1 - node2
+    assert node_sub.shape == (2, 5, 2)
+    assert torch.equal(node_sub.tensor, node1.tensor - node2.tensor)
+
+
+def test_compute_grad():
+    net = tn.TensorNetwork(name='net')
+    node1 = tn.ParamNode(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1', network=net,
+                         param_edges=True, init_method='randn')
+    node2 = tn.ParamNode(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node2', network=net,
+                         param_edges=True, init_method='randn')
+
+    node_tprod = node1 % node2
+    node_tprod.tensor.sum().backward()
+    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
+    net.zero_grad()
+    assert torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert torch.equal(node2.grad, torch.zeros(node2.shape))
+
+    node_mul = node1 * node2
+    node_mul.tensor.sum().backward()
+    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
+    net.zero_grad()
+    assert torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert torch.equal(node2.grad, torch.zeros(node2.shape))
+
+    node_add = node1 + node2
+    node_add.tensor.sum().backward()
+    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
+    net.zero_grad()
+    assert torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert torch.equal(node2.grad, torch.zeros(node2.shape))
+
+    node_sub = node1 - node2
+    node_sub.tensor.sum().backward()
+    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
+    net.zero_grad()
+    assert torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert torch.equal(node2.grad, torch.zeros(node2.shape))
+
+    node1[2] ^ node2[0]
+    node3 = node1 @ node2
+    node3.tensor.sum().backward()
+    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert node1[2].grad != (None, None)
+    assert node1[2].grad != (torch.zeros(1), torch.zeros(1))
+    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
+    assert node2[0].grad != (None, None)
+    assert node2[0].grad != (torch.zeros(1), torch.zeros(1))
+    net.zero_grad()
+    assert torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert node1[2].grad == (torch.zeros(1), torch.zeros(1))
+    assert torch.equal(node2.grad, torch.zeros(node2.shape))
+    assert node2[0].grad == (torch.zeros(1), torch.zeros(1))
+
+
 def test_einsum():
     net = tn.TensorNetwork(name='net')
     node = tn.Node(shape=(5, 5, 5, 5, 2), axes_names=('input', 'input', 'input', 'input', 'output'), network=net,
@@ -313,3 +467,10 @@ def test_stacked_einsum():
 
     # TODO: parecen iguales pero da False, un poco raro
     #assert torch.equal(node1.tensor, node2.tensor)
+
+
+# TODO: definir contraccion para traza
+# TODO: en stack y unbind, si los datos estaban guardados antes en una pila y se
+#  pueden ahorrar algunos calculos, podemos llevar despues de la primera epoca una pista de lo que hay que hacer
+#  (e.g. hacemos unbind de una pila y despu'es volvemos a hacer stack de un subconjunto; como siguen guardados
+#  originalmente en la pila, en realidad solo hay que indexar la pila)

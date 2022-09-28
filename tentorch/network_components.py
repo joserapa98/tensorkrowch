@@ -1528,13 +1528,13 @@ class ParamEdge(AbstractEdge, nn.Module):
         nn.Module.__init__(self)
         AbstractEdge.__init__(self, node1, axis1, node2, axis2)
 
-        # batch
-        if axis1.is_batch():
+        # check batch
+        if axis1._batch:
             warnings.warn('`axis1` is for a batch index. Batch edges should '
                           'not be parameterized. De-parameterize it before'
                           ' usage')
         if axis2 is not None:
-            if axis2.is_batch():
+            if axis2._batch:
                 warnings.warn('`axis2` is for a batch index. Batch edges should '
                               'not be parameterized. De-parameterize it before'
                               ' usage')
@@ -1543,7 +1543,7 @@ class ParamEdge(AbstractEdge, nn.Module):
         if dim is not None:
             if (shift is not None) or (slope is not None):
                 warnings.warn('`shift` and/or `slope` might have been ignored '
-                              'when initializing the edge')
+                              'when initializing the edge, since dim was provided')
             shift, slope = self.compute_parameters(node1.size(axis1), dim)
         else:
             if shift is None:
@@ -1580,8 +1580,6 @@ class ParamEdge(AbstractEdge, nn.Module):
 
     @property
     def matrix(self) -> Tensor:
-        # if self.is_updated():
-        #    return self._matrix
         self.set_matrix()
         return self._matrix
 
@@ -1596,9 +1594,9 @@ class ParamEdge(AbstractEdge, nn.Module):
         a tensor network
         """
         if self.is_dangling():
-            return f'edge_{self.node1.name}_{self.axis1.name}'
-        return f'edge_{self.node1.name}_{self.axis1.name}_' \
-               f'{self.node2.name}_{self.axis2.name}'
+            return f'edge_{self.node1._name}_{self.axis1._name}'
+        return f'edge_{self.node1._name}_{self.axis1._name}_' \
+               f'{self.node2._name}_{self.axis2._name}'
 
     # -------
     # Methods
@@ -1627,28 +1625,27 @@ class ParamEdge(AbstractEdge, nn.Module):
         if shift is not None:
             if isinstance(shift, int):
                 shift = float(shift)
-                self._shift = Parameter(torch.tensor(shift))  # .cuda().detach().requires_grad_()
+                self._shift = Parameter(torch.tensor(shift))
                 self._prev_shift = shift
             elif isinstance(shift, float):
-                self._shift = Parameter(torch.tensor(shift))  # .cuda().detach().requires_grad_()
+                self._shift = Parameter(torch.tensor(shift))
                 self._prev_shift = shift
-            elif isinstance(shift, Parameter):  # (nn.Parameter, torch.Tensor)):
-                # TODO: eligible device (previous to sending TN to device)
-                self._shift = shift  # .cuda().detach().requires_grad_()
+            elif isinstance(shift, Parameter):
+                self._shift = shift
                 self._prev_shift = shift.item()
             else:
                 raise TypeError('`shift` should be int, float or Parameter type')
         if slope is not None:
             if isinstance(slope, int):
                 slope = float(slope)
-                self._slope = Parameter(torch.tensor(slope))  # .cuda().detach().requires_grad_()
+                self._slope = Parameter(torch.tensor(slope))
                 self._prev_slope = slope
             elif isinstance(slope, float):
-                self._slope = Parameter(torch.tensor(slope))  # .cuda().detach().requires_grad_()
+                self._slope = Parameter(torch.tensor(slope))
                 self._prev_slope = slope
-            elif isinstance(slope, Parameter):  # (nn.Parameter, torch.Tensor)):
+            elif isinstance(slope, Parameter):
                 # TODO: eligible device
-                self._slope = slope  # .cuda().detach().requires_grad_()
+                self._slope = slope
                 self._prev_slope = slope.item()
             else:
                 raise TypeError('`slope` should be int, float or Parameter type')
@@ -1674,9 +1671,8 @@ class ParamEdge(AbstractEdge, nn.Module):
         positions of the diagonal (dimension is equal to number of 1's, while
         size is equal to the matrix size)
         """
-        # TODO: eligible device (several errors in tests)
-        matrix = torch.zeros((self.size(), self.size()), device=self.shift.device)  # .cuda().detach()
-        i = torch.arange(self.size(), device=self.shift.device)  # .cuda().detach()
+        matrix = torch.zeros((self.size(), self.size()), device=self.shift.device)
+        i = torch.arange(self.size(), device=self.shift.device)
         matrix[(i, i)] = self.sigmoid(self.slope * (i - self.shift))
         return matrix
 
@@ -1720,11 +1716,9 @@ class ParamEdge(AbstractEdge, nn.Module):
             if not self.is_dangling():
                 self.node2._add_edge(new_edge, self.axis2, False)
             self.node1._add_edge(new_edge, self.axis1, True)
-            if self.node1.network is not None:
-                self.node1.network._remove_param(self)
-                if self.is_dangling():
-                    self.node1.network._edges.remove(self)
-                    self.node1.network._edges += [new_edge]
+
+            self.node1._network._remove_edge(self)
+            self.node1._network._add_edge(new_edge)
             return new_edge
         else:
             return self

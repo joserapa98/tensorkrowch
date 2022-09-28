@@ -368,7 +368,7 @@ class AbstractNode(ABC):
         axis_num = self.get_axis_number(axis)
         return self.shape[axis_num]
 
-    def dims(self, axis: Optional[Ax] = None) -> Union[Size, int]:
+    def dim(self, axis: Optional[Ax] = None) -> Union[Size, int]:
         """
         Similar to `size`, but if a ParamEdge is attached to an axis,
         it is returned its dimension (number of 1's in the diagonal of
@@ -522,16 +522,21 @@ class AbstractNode(ABC):
         sizes: if edges are parameterized, their dimensions will match the current
             shape, but a sequence of `sizes` can also be given to expand that shape
             (in that case, sizes and dimensions will be different)
+
+        Returns
+        -------
+        Returns True if all edges are parametric edges, False if all edges are
+        non-parametric edges, and None if there are some edges of each type
         """
         if set_param is None:
             all_edges = True
             all_param_edges = True
-            for edge in self.edges:
+            for edge in self._edges:
                 if isinstance(edge, ParamEdge):
                     all_edges = False
                 elif isinstance(edge, Edge):
                     all_param_edges = False
-            # TODO: simplify
+
             if all_edges:
                 return False
             elif all_param_edges:
@@ -543,53 +548,32 @@ class AbstractNode(ABC):
             if set_param:
                 if not sizes:
                     sizes = self.shape
-                elif len(sizes) != len(self.edges):
+                elif len(sizes) != len(self._edges):
                     raise ValueError('`sizes` length should match the number of node\'s axes')
-                for i, edge in enumerate(self.edges):
+                for i, edge in enumerate(self._edges):
                     edge.parameterize(True, size=sizes[i])
             else:
-                for param_edge in self.edges:
+                for param_edge in self._edges:
                     param_edge.parameterize(False)
 
-    def _reattach_edges(self,
-                        axis: Optional[Ax] = None,
-                        override: bool = False) -> None:
+    def _reattach_edges(self, override: bool = False) -> None:
         """
         When a node has edges that are a reference to other previously created edges,
-        those edges might make no reference to this node. With `reattach_edges`,
-        `node1` or `node2` of all/one of the edges is redirected to the node, according
+        those edges might have no reference to this node. With `reattach_edges`,
+        `node1` or `node2` of all the edges is redirected to the node, according
         to each axis `node1` attribute.
 
         Parameters
         ----------
-        axis: which edge is to be reattached. If None, all edges are reattached
         override: if True, node1/node2 is changed in the original edge, otherwise
             the edge will be copied and reattached
         """
-        if axis is None:
-            edges = enumerate(self.edges)
-        else:
-            axis_num = self.get_axis_number(axis)
-            edges = [(axis_num, self.edges[axis_num])]
-        if not override:
-            self._edges = []
-            for i, edge in edges:
-                new_edge = edge.copy()
-                self._edges.append(new_edge)
-                if self.axes[i].is_node1():
-                    new_edge._nodes[0] = self
-                    new_edge._axes[0] = self.axes[i]
-                else:
-                    new_edge._nodes[1] = self
-                    new_edge._axes[1] = self.axes[i]
-        else:
-            for i, edge in enumerate(self.edges):
-                if self.axes[i].is_node1():
-                    edge._nodes[0] = self
-                    edge._axes[0] = self.axes[i]
-                else:
-                    edge._nodes[1] = self
-                    edge._axes[1] = self.axes[i]
+        for i, (edge, node1) in enumerate(zip(self._edges, self.is_node1())):
+            if not override:
+                edge = edge.copy()
+            self._edges[i] = edge
+            edge._nodes[1 - node1] = self
+            edge._axes[1 - node1] = self._axes[i]
 
     def disconnect_edges(self, axis: Optional[Ax] = None) -> None:
         """
@@ -952,7 +936,7 @@ class Node(AbstractNode):
                 if not isinstance(node1_list[i], bool):
                     raise TypeError('`node1_list` should be List[bool] type')
                 axis._node1 = node1_list[i]
-            self._edges = edges
+            self._edges = edges[:]
             if self.is_leaf() and not self.network.is_contracting():
                 # TODO: parameterize, permute, copy, etc.
                 self._reattach_edges(override=False)
@@ -1085,7 +1069,7 @@ class ParamNode(AbstractNode):
                 if not isinstance(node1_list[i], bool):
                     raise TypeError('`node1_list` should be List[bool] type')
                 axis._node1 = node1_list[i]
-            self._edges = edges
+            self._edges = edges[:]
             if self.is_leaf() and not self.network.is_contracting():
                 self._reattach_edges(override=False)
 

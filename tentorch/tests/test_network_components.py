@@ -258,7 +258,7 @@ def test_parameterize():
     node['left'].parameterize(set_param=True, size=4)
     assert isinstance(node['left'], tn.ParamEdge)
     assert node.shape == (4, 5, 2)
-    assert node.dims() == (3, 5, 2)
+    assert node.dim() == (3, 5, 2)
 
     assert prev_edge not in net.edges
     assert node['left'] in net.edges
@@ -266,15 +266,15 @@ def test_parameterize():
     node['left'].parameterize(set_param=False)
     assert isinstance(node['left'], tn.Edge)
     assert node.shape == (3, 5, 2)
-    assert node.dims() == (3, 5, 2)
+    assert node.dim() == (3, 5, 2)
 
     node['left'].parameterize(set_param=True, size=2)
     assert node.shape == (2, 5, 2)
-    assert node.dims() == (2, 5, 2)
+    assert node.dim() == (2, 5, 2)
 
     node['left'].parameterize(set_param=False)
     assert node.shape == (2, 5, 2)
-    assert node.dims() == (2, 5, 2)
+    assert node.dim() == (2, 5, 2)
 
 
 def test_param_edges():
@@ -339,19 +339,19 @@ def test_param_edge():
     assert param_edge.size() == 4
     assert param_edge.node1.size() == (4, 5, 2)
     assert param_edge.dim() == 2
-    assert param_edge.node1.dims() == (2, 5, 2)
+    assert param_edge.node1.dim() == (2, 5, 2)
 
     param_edge.change_dim(dim=3)
     assert param_edge.size() == 4
     assert param_edge.node1.size() == (4, 5, 2)
     assert param_edge.dim() == 3
-    assert param_edge.node1.dims() == (3, 5, 2)
+    assert param_edge.node1.dim() == (3, 5, 2)
 
     param_edge.change_size(size=2)
     assert param_edge.size() == 2
     assert param_edge.node1.size() == (2, 5, 2)
     assert param_edge.dim() == 2
-    assert param_edge.node1.dims() == (2, 5, 2)
+    assert param_edge.node1.dim() == (2, 5, 2)
 
 
 def test_is_updated():

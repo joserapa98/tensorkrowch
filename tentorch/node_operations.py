@@ -29,18 +29,12 @@ from tentorch.utils import permute_list, inverse_permutation
 
 import tentorch.network_components as nc
 
+import time
+
 AbstractNode, Node, ParamNode = Any, Any, Any
 AbstractEdge, Edge, ParamEdge = Any, Any, Any
 StackNode = Any
 AbstractStackEdge, StackEdge, ParamStackEdge = Any, Any, Any
-
-# from tentorch.network_components import Axis
-# from tentorch.network_components import AbstractNode, Node
-# from tentorch.network_components import AbstractEdge, Edge, ParamEdge
-# from tentorch.network_components import connect, Operation
-
-# TODO:
-import time
 
 
 ################################################

@@ -830,21 +830,13 @@ class AbstractNode(ABC):
         return nop.contract_between(self, other)
 
     # Tensor product of two nodes
-    # TODO: cannot be performed between connected nodes
-    # TODO: podríamos usar torch.outer()
     def __mod__(self, other: 'AbstractNode') -> 'Node':
-        # TODO: torch.outer(a.flatten(), b.flatten()).view(*(list(a.shape) + list(b.shape)))
-        i = 0
-        self_string = ''
-        for _ in self.axes:
-            self_string += opt_einsum.get_symbol(i)
-            i += 1
-        other_string = ''
-        for _ in other.axes:
-            other_string += opt_einsum.get_symbol(i)
-            i += 1
-        einsum_string = self_string + ',' + other_string + '->' + self_string + other_string
-        new_tensor = opt_einsum.contract(einsum_string, self.tensor, other.tensor)
+        if other in self.neighbours():
+            raise ValueError('Tensor product cannot be performed between connected nodes')
+
+        new_tensor = torch.outer(self.tensor.flatten(),
+                                 other.tensor.flatten()).view(*(list(self.shape) +
+                                                                list(other.shape)))
         new_node = Node(axes_names=self.axes_names + other.axes_names, name=f'tprod_{self.name}_{other.name}',
                         network=self.network, leaf=False, tensor=new_tensor, edges=self.edges + other.edges,
                         node1_list=self.is_node1() + other.is_node1())
@@ -903,19 +895,16 @@ class Node(AbstractNode):
         """
         Parameters
         ----------
-
-        network: tensor network to which the node belongs
-        override_node: boolean used if network is not None. If node name
-                       overrides an existing node name in the network, and
-                       override_node is set to True, the existing node is
-                       substituted by the new one
-        param_edges: boolean indicating whether node's edges
-                     are parameterized (trainable) or not
+        override_node: boolean indicating whether the node should override
+            a node in the network with the same name (e.g. if we parameterize
+            a node, we want to replace it in the network)
+        param_edges: boolean indicating whether node's edges are parameterized
+            (trainable) or not
         tensor: tensor "contained" in the node
-        edges: list of edges to attach to the node
-        node1_list: list of node1 boolean values to attach to each axis
-        init_method: method to use to initialize the
-                     node's tensor when it is not provided
+        edges: list of edges to be attached to the node
+        node1_list: list of node1 boolean values corresponding to each axis
+        init_method: method to use to initialize the node's tensor when it
+            is not provided
         kwargs: keyword arguments for the init_method
         """
 
@@ -949,12 +938,12 @@ class Node(AbstractNode):
                     raise TypeError('`node1_list` should be List[bool] type')
                 axis._node1 = node1_list[i]
             self._edges = edges[:]
-            if self.is_leaf() and not self.network.is_contracting():
+            if self._leaf and not self._network._contracting:
                 # TODO: parameterize, permute, copy, etc.
                 self._reattach_edges(override=False)
 
         # network
-        self.network._add_node(self, override=override_node)
+        self._network._add_node(self, override=override_node)
 
         if shape is not None:
             if init_method is not None:
@@ -968,13 +957,18 @@ class Node(AbstractNode):
     @staticmethod
     def _set_tensor_format(tensor: Tensor) -> Tensor:
         if isinstance(tensor, Parameter):
-            return tensor.data
+            return tensor.detach()
         return tensor
 
     def parameterize(self, set_param: bool = True) -> Union['Node', 'ParamNode']:
         if set_param:
-            new_node = ParamNode(axes_names=self.axes_names, name=self.name, network=self.network, override_node=True,
-                                 param_edges=self.param_edges(), tensor=self.tensor, edges=self.edges,
+            new_node = ParamNode(axes_names=self.axes_names,
+                                 name=self._name,
+                                 network=self._network,
+                                 override_node=True,
+                                 param_edges=self.param_edges(),
+                                 tensor=self.tensor,
+                                 edges=self._edges,
                                  node1_list=self.is_node1())
             # new_node._reattach_edges(override=True)
             return new_node
@@ -982,8 +976,12 @@ class Node(AbstractNode):
             return self
 
     def copy(self) -> 'Node':
-        new_node = Node(axes_names=self.axes_names, name='copy_' + self.name, network=self.network,
-                        param_edges=self.param_edges(), tensor=self.tensor, edges=self.edges,
+        new_node = Node(axes_names=self.axes_names,
+                        name='copy_' + self._name,
+                        network=self._network,
+                        param_edges=self.param_edges(),
+                        tensor=self.tensor,
+                        edges=self._edges,
                         node1_list=self.is_node1())
         # new_node._reattach_edges(override=False)
         return new_node
@@ -995,13 +993,17 @@ class Node(AbstractNode):
         axes_nums = []
         for axis in axes:
             axes_nums.append(self.get_axis_number(axis))
+
         if not is_permutation(list(range(len(axes_nums))), axes_nums):
             raise ValueError('The provided list of axis is not a permutation of the'
                              ' axes of the node')
         else:
-            new_node = Node(axes_names=permute_list(self.axes_names, axes_nums), name='permute_' + self.name,
-                            network=self.network, param_edges=self.param_edges(), tensor=self.tensor.permute(axes_nums),
-                            edges=permute_list(self.edges, axes_nums),
+            new_node = Node(axes_names=permute_list(self.axes_names, axes_nums),
+                            name='permute_' + self._name,
+                            network=self._network,
+                            param_edges=self.param_edges(),
+                            tensor=self.tensor.permute(axes_nums),
+                            edges=permute_list(self._edges, axes_nums),
                             node1_list=permute_list(self.is_node1(), axes_nums))
             return new_node
 
@@ -1035,18 +1037,16 @@ class ParamNode(AbstractNode):
         """
         Parameters
         ----------
-
-        network: tensor network to which the node belongs
-        override_node: boolean used if network is not None. If node name
-            overrides an existing node name in the network, and override_node
-            is set to True, the existing node is substituted by the new one
+        override_node: boolean indicating whether the node should override
+            a node in the network with the same name (e.g. if we parameterize
+            a node, we want to replace it in the network)
         param_edges: boolean indicating whether node's edges are parameterized
             (trainable) or not
         tensor: tensor "contained" in the node
-        edges: list of edges to attach to the node
-        node1_list: list of node1 boolean values to attach to each axis
-        init_method: method to use to initialize the node's tensor when
-            it is not provided
+        edges: list of edges to be attached to the node
+        node1_list: list of node1 boolean values corresponding to each axis
+        init_method: method to use to initialize the node's tensor when it
+            is not provided
         kwargs: keyword arguments for the init_method
         """
 
@@ -1082,7 +1082,8 @@ class ParamNode(AbstractNode):
                     raise TypeError('`node1_list` should be List[bool] type')
                 axis._node1 = node1_list[i]
             self._edges = edges[:]
-            if self.is_leaf() and not self.network.is_contracting():
+            if self._leaf and not self.network._contracting:
+                # TODO: sure?
                 self._reattach_edges(override=False)
 
         # network
@@ -1101,18 +1102,16 @@ class ParamNode(AbstractNode):
     def grad(self) -> Optional[Tensor]:
         if self._tensor_info['address'] is None:
             aux_node = self._tensor_info['node_ref']
-            aux_grad = aux_node.network._memory_nodes[aux_node._tensor_info['address']].grad
+            aux_grad = aux_node._network._memory_nodes[aux_node._tensor_info['address']].grad
         else:
-            aux_grad = self.network._memory_nodes[self._tensor_info['address']].grad
+            aux_grad = self._network._memory_nodes[self._tensor_info['address']].grad
 
         if aux_grad is None:
             return aux_grad
-        elif isinstance(aux_grad, Tensor):
+        else:
             if self._tensor_info['full']:
                 return aux_grad
             return aux_grad[self._tensor_info['index']]
-        else:
-            raise ValueError('This cannot happen')
 
     # -------
     # Methods
@@ -1129,8 +1128,13 @@ class ParamNode(AbstractNode):
 
     def parameterize(self, set_param: bool = True) -> Union['Node', 'ParamNode']:
         if not set_param:
-            new_node = Node(axes_names=self.axes_names, name=self.name, network=self.network, override_node=True,
-                            param_edges=self.param_edges(), tensor=self.tensor, edges=self.edges,
+            new_node = Node(axes_names=self.axes_names,
+                            name=self._name,
+                            network=self._network,
+                            override_node=True,
+                            param_edges=self.param_edges(),
+                            tensor=self.tensor,
+                            edges=self._edges,
                             node1_list=self.is_node1())
             # new_node._reattach_edges(override=True)
             return new_node
@@ -1138,8 +1142,12 @@ class ParamNode(AbstractNode):
             return self
 
     def copy(self) -> 'ParamNode':
-        new_node = ParamNode(axes_names=self.axes_names, name='copy_' + self.name, network=self.network,
-                             param_edges=self.param_edges(), tensor=self.tensor, edges=self.edges,
+        new_node = ParamNode(axes_names=self.axes_names,
+                             name='copy_' + self._name,
+                             network=self._network,
+                             param_edges=self.param_edges(),
+                             tensor=self.tensor,
+                             edges=self._edges,
                              node1_list=self.is_node1())
         # new_node._reattach_edges(override=False)
         return new_node
@@ -1151,13 +1159,17 @@ class ParamNode(AbstractNode):
         axes_nums = []
         for axis in axes:
             axes_nums.append(self.get_axis_number(axis))
+
         if not is_permutation(list(range(len(axes_nums))), axes_nums):
             raise ValueError('The provided list of axis is not a permutation of the'
                              ' axes of the node')
         else:
-            new_node = ParamNode(axes_names=permute_list(self.axes_names, axes_nums), name='permute_' + self.name,
-                                 network=self.network, param_edges=self.param_edges(),
-                                 tensor=self.tensor.permute(axes_nums), edges=permute_list(self.edges, axes_nums),
+            new_node = ParamNode(axes_names=permute_list(self.axes_names, axes_nums),
+                                 name='permute_' + self._name,
+                                 network=self._network,
+                                 param_edges=self.param_edges(),
+                                 tensor=self.tensor.permute(axes_nums),
+                                 edges=permute_list(self._edges, axes_nums),
                                  node1_list=permute_list(self.is_node1(), axes_nums))
             return new_node
 
@@ -1947,7 +1959,7 @@ class TensorNetwork(nn.Module):
         return self._edges
 
     @property
-    def successors(self) -> dict:
+    def successors(self) -> dict:  # TODO: Dict[]:
         """
         Successors list can only be modified with append() or list operations,
         but cannot be substituted by another list

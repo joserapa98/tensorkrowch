@@ -708,9 +708,7 @@ class AbstractNode(ABC):
         Change node's tensor by an empty tensor.
         """
         if self._leaf and not self._network._contracting:
-            self._temp_tensor = torch.empty(self.shape, device=device)
-            del self._network._memory_nodes[self._tensor_info['address']]
-            self._tensor_info = None
+            self.tensor = torch.empty(self.shape, device=device)
 
     def _assign_memory(self,
                        address: Optional[Text] = None,
@@ -736,11 +734,6 @@ class AbstractNode(ABC):
         """
         Save new node's tensor in the network storage
         """
-        if self._tensor_info is None:
-            self._tensor_info = dict()
-            self._temp_tensor = None
-            self._assign_memory(address=self._name, full=True)
-
         self._network._memory_nodes[self._tensor_info['address']] = tensor
         if isinstance(tensor, Parameter):
             if not hasattr(self, self._tensor_info['address']):
@@ -970,7 +963,6 @@ class Node(AbstractNode):
                                  tensor=self.tensor,
                                  edges=self._edges,
                                  node1_list=self.is_node1())
-            # new_node._reattach_edges(override=True)
             return new_node
         else:
             return self
@@ -983,7 +975,6 @@ class Node(AbstractNode):
                         tensor=self.tensor,
                         edges=self._edges,
                         node1_list=self.is_node1())
-        # new_node._reattach_edges(override=False)
         return new_node
 
     def permute(self, axes: Sequence[Ax]) -> 'Node':
@@ -1082,8 +1073,7 @@ class ParamNode(AbstractNode):
                     raise TypeError('`node1_list` should be List[bool] type')
                 axis._node1 = node1_list[i]
             self._edges = edges[:]
-            if self._leaf and not self.network._contracting:
-                # TODO: sure?
+            if self._leaf and not self._network._contracting:
                 self._reattach_edges(override=False)
 
         # network
@@ -1136,7 +1126,6 @@ class ParamNode(AbstractNode):
                             tensor=self.tensor,
                             edges=self._edges,
                             node1_list=self.is_node1())
-            # new_node._reattach_edges(override=True)
             return new_node
         else:
             return self
@@ -1149,7 +1138,6 @@ class ParamNode(AbstractNode):
                              tensor=self.tensor,
                              edges=self._edges,
                              node1_list=self.is_node1())
-        # new_node._reattach_edges(override=False)
         return new_node
 
     def permute(self, axes: Sequence[Ax]) -> 'ParamNode':
@@ -1651,7 +1639,7 @@ class ParamEdge(AbstractEdge, nn.Module):
                 raise TypeError('`slope` should be int, float or Parameter type')
         self.set_matrix()
 
-    def is_updated(self) -> bool:
+    def is_updated(self) -> bool:  # TODO: creo que esto no sirve para nada, lo podemos borrar
         """
         Track if shift and slope have changed during training, in order
         to set the new corresponding matrix
@@ -1758,37 +1746,36 @@ class StackNode(Node):
                  name: Optional[Text] = None,
                  override_node: bool = False) -> None:
 
-        if True:
-            # TODO: Y en la misma TN todos
-            for i in range(len(nodes[:-1])):
-                if not isinstance(nodes[i], type(nodes[i + 1])):
-                    raise TypeError('Cannot stack nodes of different types. Nodes '
-                                    'must be either all Node or all ParamNode type')
-                if nodes[i].shape != nodes[i + 1].shape:
-                    raise ValueError('Cannot stack nodes with different shapes')
-                if nodes[i].axes_names != nodes[i + 1].axes_names:
-                    raise ValueError('Stacked nodes must have the same name for each axis')
-                for edge1, edge2 in zip(nodes[i].edges, nodes[i + 1].edges):
-                    if not isinstance(edge1, type(edge2)):
-                        raise TypeError('Cannot stack nodes with edges of different types. '
-                                        'The edges that are attached to the same axis in '
-                                        'each node must be either all Edge or all ParamEdge type')
+        # TODO: Y en la misma TN todos
+        for i in range(len(nodes[:-1])):
+            if not isinstance(nodes[i], type(nodes[i + 1])):
+                raise TypeError('Cannot stack nodes of different types. Nodes '
+                                'must be either all Node or all ParamNode type')
+            if nodes[i].shape != nodes[i + 1].shape:
+                raise ValueError('Cannot stack nodes with different shapes')
+            if nodes[i].axes_names != nodes[i + 1].axes_names:
+                raise ValueError('Stacked nodes must have the same name for each axis')
+            for edge1, edge2 in zip(nodes[i].edges, nodes[i + 1].edges):
+                if not isinstance(edge1, type(edge2)):
+                    raise TypeError('Cannot stack nodes with edges of different types. '
+                                    'The edges that are attached to the same axis in '
+                                    'each node must be either all Edge or all ParamEdge type')
 
-            edges_dict = dict()
-            for node in nodes:
-                for axis in node.axes:
-                    edge = node[axis]
-                    if axis.name not in edges_dict:
-                        edges_dict[axis.name] = [edge]
-                    else:
-                        edges_dict[axis.name] += [edge]
-            self._edges_dict = edges_dict
-            self.nodes = nodes
+        edges_dict = dict()
+        for node in nodes:
+            for axis in node.axes:
+                edge = node[axis]
+                if axis.name not in edges_dict:
+                    edges_dict[axis.name] = [edge]
+                else:
+                    edges_dict[axis.name] += [edge]
+        self._edges_dict = edges_dict
+        self.nodes = nodes
 
-            stacked_tensor = torch.stack([node.tensor for node in nodes])
-            # TODO: usar el stack de MPS, donde podemos apilar con diferentes dimensiones
-            super().__init__(axes_names=['stack'] + nodes[0].axes_names, name=name, network=nodes[0].network,
-                             leaf=False, override_node=override_node, tensor=stacked_tensor)
+        stacked_tensor = torch.stack([node.tensor for node in nodes])
+        # TODO: usar el stack de MPS, donde podemos apilar con diferentes dimensiones
+        super().__init__(axes_names=['stack'] + nodes[0].axes_names, name=name, network=nodes[0].network,
+                         leaf=False, override_node=override_node, tensor=stacked_tensor)
 
     @property
     def edges_dict(self) -> Dict[Text, Union[List[Edge], List[ParamEdge]]]:

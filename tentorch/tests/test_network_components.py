@@ -13,12 +13,8 @@ import opt_einsum
 import dis
 
 
-# TODO: remove test
-def test_foo():
-    a = tn.Node(tensor=torch.randn(2, 3))
-    a.foo(0)
-    with tn.tn_mode():
-        a.foo(0)
+# TODO: nuevos tests
+#
 
 
 # TODO: remove test - check times if using bmm instead of einsum
@@ -124,8 +120,8 @@ def test_define_class():
 
 # TODO: remove later
 def test_time_contraction_methods():
-    node1 = tn.Node(shape=(100, 10, 100, 10), init_method='randn', name='node1', param_edges=True)
-    node2 = tn.Node(shape=(100, 10, 100, 10), init_method='randn', name='node2', param_edges=True)
+    node1 = tn.Node(shape=(100, 10, 100, 10), name='node1', param_edges=True, init_method='randn')
+    node2 = tn.Node(shape=(100, 10, 100, 10), name='node2', param_edges=True, init_method='randn')
     node1[0] ^ node2[0]
     node1[2] ^ node2[2]
 
@@ -137,8 +133,8 @@ def test_time_contraction_methods():
     # New contraction method: 0.0045
     # Mucho mejor el nuevo
 
-    node1 = tn.Node(shape=(100, 10, 100, 10), init_method='randn', name='node1')
-    node2 = tn.Node(shape=(100, 10, 100, 10), init_method='randn', name='node2')
+    node1 = tn.Node(shape=(100, 10, 100, 10), name='node1', init_method='randn')
+    node2 = tn.Node(shape=(100, 10, 100, 10), name='node2', init_method='randn')
     node1[0] ^ node2[0]
     node1[2] ^ node2[2]
 

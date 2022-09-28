@@ -287,11 +287,8 @@ def _contract_edges_first(edges: List[AbstractEdge],
             final_axes.append(nodes[i].axes_names[idx])
             final_node1.append(nodes[i].axes[idx].is_node1())
 
-    new_node = nc.Node(axes_names=final_axes, name=f'contract_{node1.name}_{node2.name}',
-                    network=nodes[0].network, param_edges=False,
-                    tensor=result, edges=final_edges, node1_list=final_node1,
-                    parents={node1, node2}, operation=None,
-                    leaf=False)
+    new_node = nc.Node(axes_names=final_axes, name=f'contract_{node1.name}_{node2.name}', network=nodes[0].network,
+                       leaf=False, param_edges=False, tensor=result, edges=final_edges, node1_list=final_node1)
 
     for node in nodes:
         if 'contract_edges' in node._successors:

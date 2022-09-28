@@ -1,3 +1,16 @@
+"""
+This script contains:
+
+    * tab_string
+    * check_name_style
+    * erase_enum
+    * enum_repeated_names
+    * permute_list
+    * is_permutation
+    * inverse_permutation
+    * fact
+    * comb_num
+"""
 
 from typing import List, Sequence, Text
 
@@ -114,7 +127,7 @@ def inverse_permutation(dims: Sequence[int]):
         appear in dims (e.g. (2, 0, 1) -> (1, 2, 0)), or incomplete if after permutation
         some elements were removed (e.g. (3, 0, 2) -> (1, 2, 0), removed element in position 1).
     """
-    if dims != []:
+    if dims:
         inverse_dims = [-1] * (max(dims) + 1)
         for i, j in enumerate(dims):
             inverse_dims[j] = i

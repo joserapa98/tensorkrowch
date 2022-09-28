@@ -1218,13 +1218,13 @@ class AbstractEdge(ABC):
 
         super().__init__()
 
-        # node1 and axis1
+        # check node1 and axis1
         if not isinstance(node1, AbstractNode):
             raise TypeError('`node1` should be AbstractNode type')
         if not isinstance(axis1, Axis):
             raise TypeError('`axis1` should be Axis type')
 
-        # node2 and axis2
+        # check node2 and axis2
         if (node2 is None) != (axis2 is None):
             raise ValueError('`node2` and `axis2` must either be both None or both not be None')
         if node2 is not None:
@@ -1258,9 +1258,9 @@ class AbstractEdge(ABC):
     @property
     def name(self) -> Text:
         if self.is_dangling():
-            return f'{self.node1.name}[{self.axis1.name}] <-> None'
-        return f'{self.node1.name}[{self.axis1.name}] <-> ' \
-               f'{self.node2.name}[{self.axis2.name}]'
+            return f'{self.node1._name}[{self.axis1._name}] <-> None'
+        return f'{self.node1._name}[{self.axis1._name}] <-> ' \
+               f'{self.node2._name}[{self.axis2._name}]'
 
     # ----------------
     # Abstract methods
@@ -1270,7 +1270,7 @@ class AbstractEdge(ABC):
         pass
 
     @abstractmethod
-    def change_size(self, size: int, padding_method: Text = 'zeros', **kwargs) -> None:
+    def change_size(self, size: int) -> None:
         """
         Change size of edge, thus changing sizes of adjacent nodes (node1 and node2)
         at axis1 and axis2, respectively
@@ -1458,7 +1458,7 @@ class Edge(AbstractEdge):
     def dim(self) -> int:
         return self.size()
 
-    def change_size(self, size: int, padding_method: Text = 'zeros', **kwargs) -> None:
+    def change_size(self, size: int) -> None:
         if not isinstance(size, int):
             TypeError('`size` should be int type')
         if not self.is_dangling():
@@ -1479,13 +1479,14 @@ class Edge(AbstractEdge):
                 self.node2._add_edge(new_edge, self.axis2, False)
             self.node1._add_edge(new_edge, self.axis1, True)
 
-            self.node1.network._remove_edge(self)
-            self.node1.network._add_edge(new_edge)
+            self.node1._network._remove_edge(self)
+            self.node1._network._add_edge(new_edge)
             return new_edge
         else:
             return self
 
     def copy(self) -> 'Edge':
+        # TODO: cuando copiams edge tenemos que añadirlo a la TN?
         new_edge = Edge(node1=self.node1, axis1=self.axis1,
                         node2=self.node2, axis2=self.axis2)
         return new_edge
@@ -1699,7 +1700,7 @@ class ParamEdge(AbstractEdge, nn.Module):
             shift, slope = self.compute_parameters(self.size(), dim)
             self.set_parameters(shift, slope)
 
-    def change_size(self, size: int, padding_method: Text = 'zeros', **kwargs) -> None:
+    def change_size(self, size: int) -> None:
         if not isinstance(size, int):
             TypeError('`size` should be int type')
         if not self.is_dangling():

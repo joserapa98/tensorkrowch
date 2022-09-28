@@ -575,7 +575,7 @@ class AbstractNode(ABC):
             edge._nodes[1 - node1] = self
             edge._axes[1 - node1] = self._axes[i]
 
-    def disconnect_edges(self, axis: Optional[Ax] = None) -> None:
+    def disconnect(self, axis: Optional[Ax] = None) -> None:
         """
         Disconnect specified edges of the node if they were connected to other nodes
 
@@ -586,14 +586,15 @@ class AbstractNode(ABC):
         if axis is not None:
             edges = [self[axis]]
         else:
-            edges = self.edges
+            edges = self._edges
+
         for edge in edges:
-            if edge.is_attached_to(self):  # TODO: necessary?
+            if edge.is_attached_to(self):
                 if not edge.is_dangling():
                     edge | edge
 
-    @staticmethod  # TODO: make copy node class, operation composed by indexing in diagonal and matrix multiplication
-    def _make_copy_tensor(shape: Shape, device: torch.device) -> Tensor:
+    @staticmethod
+    def _make_copy_tensor(shape: Shape, device: torch.device = torch.device('cpu')) -> Tensor:
         copy_tensor = torch.zeros(shape, device=device)
         rank = len(shape)
         i = torch.arange(min(shape), device=device)
@@ -671,7 +672,7 @@ class AbstractNode(ABC):
                 raise ValueError('`tensor` should be Tensor type')
             elif not self._compatible_dims(tensor):
                 raise ValueError('`tensor` dimensions should match the '
-                                 'dimension of non-dangling edges')
+                                 'dimensions of non-dangling edges')
             elif device is not None:
                 warnings.warn('`device` was specified but is being ignored. Provide '
                               'a tensor that is already in the required device')
@@ -696,18 +697,20 @@ class AbstractNode(ABC):
         """
         Set a new node's tensor for leaf nodes.
         """
-        if self.is_leaf() and not self.network.is_contracting():
+        if self._leaf and not self._network._contracting:
             self._unrestricted_set_tensor(tensor=tensor, init_method=init_method, device=device, **kwargs)
         else:
             raise ValueError('Node\'s tensor can only be changed if it is a leaf tensor '
                              'and the network is not in contracting mode')
 
     def unset_tensor(self, device: torch.device = torch.device('cpu')) -> None:
-        # TODO: maybe this function has no sense
         """
         Change node's tensor by an empty tensor.
         """
-        self.tensor = torch.empty(self.shape, device=device)
+        if self._leaf and not self._network._contracting:
+            self._temp_tensor = torch.empty(self.shape, device=device)
+            del self._network._memory_nodes[self._tensor_info['address']]
+            self._tensor_info = None
 
     def _assign_memory(self,
                        address: Optional[Text] = None,
@@ -715,7 +718,9 @@ class AbstractNode(ABC):
                        full: Optional[bool] = None,
                        stack_idx: Optional[Tuple[slice, ...]] = None,
                        index: Optional[Tuple[slice, ...]] = None) -> None:
-        "Para cuando cambiamos la memoria desde TN, y tenemos que indicar al nodo que su memoria está en otro lado"
+        """
+        Change information about tensor storage when we are changing memory management
+        """
         if address is not None:
             self._tensor_info['address'] = address
         if node_ref is not None:
@@ -728,12 +733,19 @@ class AbstractNode(ABC):
             self._tensor_info['index'] = index
 
     def _save_in_network(self, tensor: Union[Tensor, Parameter]) -> None:
-        self.network._memory_nodes[self._tensor_info['address']] = tensor
+        """
+        Save new node's tensor in the network storage
+        """
+        if self._tensor_info is None:
+            self._tensor_info = dict()
+            self._temp_tensor = None
+            self._assign_memory(address=self._name, full=True)
+
+        self._network._memory_nodes[self._tensor_info['address']] = tensor
         if isinstance(tensor, Parameter):
             if not hasattr(self, self._tensor_info['address']):
                 self._network.register_parameter(self._tensor_info['address'], tensor)
             else:
-                # Nodes names are never repeated, so it is likely that this case will never occur
                 raise ValueError(f'Network already has attribute named {self._tensor_info["address"]}')
 
     def move_to_network(self,
@@ -749,12 +761,12 @@ class AbstractNode(ABC):
         visited: list indicating the nodes that are already moved to the
             network, used by this DFS-like algorithm
         """
-        if network != self.network:
+        if network != self._network:
             if visited is None:
                 visited = []
             if self not in visited:
-                if self.network is not None:
-                    self.network._remove_node(self)
+                if self._network is not None:
+                    self._network._remove_node(self)
                 network._add_node(self)
                 visited.append(self)
                 for neighbour in self.neighbours():
@@ -770,7 +782,7 @@ class AbstractNode(ABC):
 
     def __getitem__(self, key: Union[slice, Ax]) -> Union[List['AbstractEdge'], 'AbstractEdge']:
         if isinstance(key, slice):
-            return self.edges[key]
+            return self._edges[key]
         return self.get_edge(key)
 
     # -----------------
@@ -2003,7 +2015,7 @@ class TensorNetwork(nn.Module):
         This function disconnects the node from its neighbours and
         removes it from the TN
         """
-        node.disconnect_edges()
+        node.disconnect()
         self._remove_node(node)
 
     def _add_param(self, param: Union[ParamNode, ParamEdge]) -> None:

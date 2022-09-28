@@ -205,7 +205,7 @@ def test_stack():
                        batch_sizes=[10])
     data = torch.randn(10, 3, 2 * 5)
     net._add_data(data.unbind(2))
-    net['data_0'].disconnect_edges()
+    net['data_0'].disconnect()
 
     stack_node = tn.stack(nodes, name='stack_node')
     stack_input_0 = tn.stack([net['data_0']] + [node.neighbours('input_0') for node in nodes][1:],

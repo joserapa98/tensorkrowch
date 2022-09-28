@@ -14,7 +14,8 @@ import dis
 
 
 # TODO: nuevos tests
-#
+# TODO: shape y dim iguales o no? Veremos para pilas
+# TODO: si pasamos lista de edges al hijo, hacemos siempre reattach?
 
 
 # TODO: remove test - check times if using bmm instead of einsum

@@ -147,6 +147,22 @@ def test_time_contraction_methods():
     # Prácticamente iguales
 
 
+# TODO: time padding
+def test_time_padding():
+    t = torch.randn(100, 100)
+    print()
+
+    start = time.time()
+    t2 = torch.zeros(200, 200)
+    t2[100:, 100:] = t
+    print(time.time() - start)
+
+    start = time.time()
+    t2 = nn.functional.pad(t, (100, 0, 100, 0))
+    print(time.time() - start)
+    # Padding m'as r'apido claramente (un orden de magnitud aprox.)
+
+
 def test_init_node():
     node = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node')
 

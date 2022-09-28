@@ -144,24 +144,12 @@ def einsum(string: Text, *nodes: AbstractNode) -> Node:
 
 class StackNode(Node):
 
-    def __new__(cls,
-                nodes: List[AbstractNode],
-                name: Optional[Text] = None,
-                override_node: bool = False) -> AbstractNode:
-        # Me obligo a poner primero el nombre para que vaya bien el orden de usar __new__ e __init__
-        # También tengo que crear el tensor antes de __init__
-        stacked_tensor = torch.stack([node.tensor for node in nodes])
-        self = super().__new__(cls, name='stacknode', network=nodes[0].network, leaf=False,
-                               override_node=override_node, tensor=stacked_tensor, parents=set(nodes),
-                               operation='stack')
-        return self
-
     def __init__(self,
                  nodes: List[AbstractNode],
                  name: Optional[Text] = None,
                  override_node: bool = False) -> None:
 
-        if not self._init:
+        if True:
             # TODO: Y en la misma TN todos
             for i in range(len(nodes[:-1])):
                 if not isinstance(nodes[i], type(nodes[i + 1])):

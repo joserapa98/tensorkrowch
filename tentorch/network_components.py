@@ -179,16 +179,6 @@ class AbstractNode(ABC):
     other nodes.
     """
 
-    def __new__(cls,
-                shape: Shape,
-                axes_names: Optional[Sequence[Text]] = None,
-                name: Optional[Text] = None,
-                network: Optional['TensorNetwork'] = None,
-                leaf: bool = True) -> 'AbstractNode':
-        self = super().__new__(cls)
-        self._init = False
-        return self
-
     def __init__(self,
                  shape: Shape,
                  axes_names: Optional[Sequence[Text]] = None,
@@ -1110,130 +1100,6 @@ class Node(AbstractNode):
     derived nodes resulting from operations between other nodes.
     """
 
-    def __new__(cls,
-                shape: Optional[Shape] = None,
-                axes_names: Optional[Sequence[Text]] = None,
-                name: Optional[Text] = None,
-                network: Optional['TensorNetwork'] = None,
-                leaf: bool = True,
-                current_op: bool = False,
-                override_node: bool = False,
-                param_edges: bool = False,
-                tensor: Optional[torch.Tensor] = None,
-                edges: Optional[List['AbstractEdge']] = None,
-                node1_list: Optional[List[bool]] = None,
-                parents: Optional[Set[AbstractNode]] = None,
-                operation: Optional[Text] = None,
-                init_method: Optional[Text] = None,
-                **kwargs: float) -> AbstractNode:
-
-        # TODO: IMPORTANT! This is a bottleneck, we have to optimize the
-        #  way we preserve the nodes and reallocate the new ones
-        if current_op and not leaf:
-            assert (parents is not None) and parents
-            assert operation is not None
-
-            binary_op = ['tprod', 'mul', 'add', 'sub', 'contract', 'einsum', 'stack']
-            if operation not in binary_op and \
-                    not operation.startswith('contract_edge_') and \
-                    not operation.startswith('unbind_'):
-                raise ValueError('Not a valid operation string')
-
-            parent = list(parents)[0]
-            for succ_dict in parent.successors:
-                if (succ_dict['parents'] == parents) and (succ_dict['operation'] == operation):
-                    child = succ_dict['child']
-                    if not child.current_op and not child._leaf:  # TODO: there is no other option
-                        if child.shape == tensor.shape:  # TODO: problem after canonical form
-                            child._unrestricted_set_tensor(tensor=tensor)
-                        else:
-                            return super().__new__(cls, shape=shape, axes_names=axes_names, name=name, leaf=leaf)
-                            # If shape is not the same, it must be a new child
-                            # raise ValueError('Cannot set tensor in node with different shape')
-                        child.current_op = True
-                        return child
-            return super().__new__(cls, shape=shape, axes_names=axes_names, name=name, leaf=leaf)
-
-            # new_instance = True
-            # if network is not None:
-            #     for node in network.nodes.values():
-            #         if not (node.current_op or node._leaf):
-            #             # Asumo que con que exista un nodo no current_op ni _leaf,
-            #             # es que ya estoy en la segunda iteración
-            #             new_instance = False
-            #             break
-            #
-            # if new_instance:
-            #     return super().__new__(cls, shape=shape, axes_names=axes_names, name=name, leaf=leaf,
-            #                            current_op=current_op)
-            # else:
-            #     current_nodes_names = []
-            #     for node in network.nodes.values():
-            #         if node._leaf or node.current_op:
-            #             current_nodes_names.append(node.name)
-            #
-            #     erased_enum_name = erase_enum(name)
-            #     erased_enum_nodes_names = list(map(erase_enum, current_nodes_names))
-            #     if erased_enum_name in erased_enum_nodes_names:
-            #         count = 0
-            #         for aux_name in erased_enum_nodes_names:
-            #             if erased_enum_name == aux_name:
-            #                 count += 1
-            #
-            #         prev_node = network.nodes[f'{name}_{count}']
-            #         if prev_node.shape == tensor.shape:
-            #             prev_node.set_tensor(tensor=tensor)
-            #         else:
-            #             raise ValueError('Cannot set tensor in node with different shape')
-            #         prev_node.current_op = True
-            #         return prev_node
-
-                    # current_nodes_names = current_nodes_names + [name]
-                    # new_current_nodes_names = enum_repeated_names(current_nodes_names)
-                    # non_current_nodes_names = []
-                    # for node in network.nodes.values():
-                    #    if not (node._leaf or node.current_op):
-                    #        non_current_nodes_names.append(node.name)
-                    # nodes_names = current_nodes_names[:-1] + non_current_nodes_names
-                    # new_nodes_names = new_current_nodes_names[:-1] + non_current_nodes_names
-                    # network._rename_nodes(nodes_names, new_nodes_names)
-
-                    # if new_current_nodes_names[-1] in non_current_nodes_names:
-                    #    prev_node = network.nodes[new_current_nodes_names[-1]]
-                    #    if prev_node.shape == tensor.shape:
-                    #        prev_node.set_tensor(tensor=tensor)
-                    #    else:
-                    #        raise ValueError('Cannot set tensor in node with different shape')
-                    #    prev_node.current_op = True
-                    #    return prev_node
-                    # else:
-                    #    raise ValueError('Non expected error')
-
-        #         elif erased_enum_name in map(erase_enum, network.nodes_names):
-        #             count = 0
-        #             for aux_name in list(map(erase_enum, network.nodes_names)):
-        #                 if erased_enum_name == aux_name:
-        #                     count += 1
-        #
-        #             if count > 1:
-        #                 prev_node = network.nodes[name + '_0']
-        #             else:
-        #                 prev_node = network.nodes[name]
-        #             if prev_node.shape == tensor.shape:
-        #                 prev_node.set_tensor(tensor=tensor)
-        #             else:
-        #                 raise ValueError('Cannot set tensor in node with different shape')
-        #             prev_node.current_op = True
-        #             return prev_node
-        #
-        else:
-            return super().__new__(cls,
-                                   shape=shape,
-                                   axes_names=axes_names,
-                                   name=name,
-                                   network=network,
-                                   leaf=leaf)
-
     def __init__(self,
                  shape: Optional[Shape] = None,
                  axes_names: Optional[Sequence[Text]] = None,
@@ -1271,7 +1137,7 @@ class Node(AbstractNode):
         kwargs: keyword arguments for the init_method
         """
 
-        if not self._init:
+        if True:
             # shape and tensor
             if (shape is None) == (tensor is None):
                 if shape is None:
@@ -1387,26 +1253,6 @@ class ParamNode(AbstractNode):
 
     Used as initial nodes of a tensor network that is to be trained.
     """
-
-    def __new__(cls,
-                shape: Optional[Shape] = None,
-                axes_names: Optional[Sequence[Text]] = None,
-                name: Optional[Text] = None,
-                network: Optional['TensorNetwork'] = None,
-                leaf: bool = True,
-                override_node: bool = False,
-                param_edges: bool = False,
-                tensor: Optional[torch.Tensor] = None,
-                edges: Optional[List['AbstractEdge']] = None,
-                node1_list: Optional[List[bool]] = None,
-                init_method: Optional[Text] = None,
-                **kwargs: float) -> AbstractNode:
-        return super().__new__(cls,
-                               shape=shape,
-                               axes_names=axes_names,
-                               name=name,
-                               network=network,
-                               leaf=leaf)
 
     def __init__(self,
                  shape: Optional[Shape] = None,
@@ -2814,6 +2660,8 @@ def connect(edge1: AbstractEdge,
                       is in a network, the other is moved to that network
                       # TODO: siempre sobreviven los datos de node1, self, nodo izquierdo
     """
+    # TODO: no puedo capar el conectar nodos no-leaf, pero no tiene el resultado esperado,
+    #  en realidad estás conectando los nodos originales (leaf)
     for edge in [edge1, edge2]:
         if not edge.is_dangling():
             raise ValueError(f'Edge {edge!s} is not a dangling edge. '
@@ -2997,6 +2845,8 @@ def _contract_edges_first(edges: List[AbstractEdge],
         # TODO: hacer esto
         raise ValueError('Trace not implemented')
 
+    # TODO: si son StackEdge, ver que todos los correspondientes edges están conectados
+
     nodes = [node1, node2]
     tensors = [node1.tensor, node2.tensor]
     non_contract_edges = [dict(), dict()]
@@ -3006,7 +2856,7 @@ def _contract_edges_first(edges: List[AbstractEdge],
     for i in range(2):
         for j, edge in enumerate(nodes[i].edges):
             if edge in edges:
-                if (edge in node2.edges) and (not edge.is_dangling()):
+                if (edge in nodes[1-i].edges) and (not edge.is_dangling()):
                     if i == 0:
                         if isinstance(edge, ParamEdge):
                             # Obtain permutations

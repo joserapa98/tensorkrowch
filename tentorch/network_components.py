@@ -471,33 +471,31 @@ class AbstractNode(ABC):
 
     def get_axis_number(self, axis: Ax) -> int:
         if isinstance(axis, int):
-            for ax in self.axes:
-                if axis == ax.num:
-                    return ax.num
+            for ax in self._axes:
+                if axis == ax._num:
+                    return ax._num
             IndexError(f'Node {self!s} has no axis with index {axis}')
         elif isinstance(axis, str):
-            for ax in self.axes:
-                if axis == ax.name:
-                    return ax.num
+            for ax in self._axes:
+                if axis == ax._name:
+                    return ax._num
             IndexError(f'Node {self!s} has no axis with name {axis}')
         elif isinstance(axis, Axis):
-            for ax in self.axes:
+            for ax in self._axes:
                 if axis == ax:
-                    return ax.num
+                    return ax._num
             IndexError(f'Node {self!s} has no axis {axis!r}')
         else:
             TypeError('`axis` should be int, str or Axis type')
 
     def get_edge(self, axis: Ax) -> 'AbstractEdge':
         axis_num = self.get_axis_number(axis)
-        return self.edges[axis_num]
+        return self._edges[axis_num]
 
     def _add_edge(self,
                   edge: 'AbstractEdge',
                   axis: Ax,
-                  override: bool = False,
-                  node1: Optional[bool] = None,
-                  parameterize: bool = False) -> None:
+                  node1: bool = True) -> None:
         """
         Add an edge to a given axis of the node.
 
@@ -505,24 +503,9 @@ class AbstractNode(ABC):
         ----------
         edge: edge that is to be attached
         axis: axis to which the edge will be attached
-        override: boolean indicating whether `edge` should override
-            an existing non-dangling edge at `axis`
         node1: boolean indicating if `self` is the node1 or node2 of `edge`
-        parameterize: boolean used to indicate if the added edge is a parameterized
-            version (maybe with different dimension) of the previous edge in that axis
         """
-        # TODO: Maybe this can also not happen, with protection we only have to add the edge to the list of edges
-        if node1 is None:
-            if edge.node1 == self:
-                node1 = True
-            elif (edge.node1 != self) and (edge.node2 == self):
-                node1 = False
-            else:
-                raise ValueError(f'If neither node1 nor node2 of `edge` is equal to {self!s}, '
-                                 f'`node1` should be provided. Otherwise `edge` cannot be attached')
         axis_num = self.get_axis_number(axis)
-        if (not self.edges[axis_num].is_dangling()) and (not override):
-            raise ValueError(f'Node {self!s} already has a non-dangling edge for axis {axis!r}')
         self._axes[axis_num]._node1 = node1
         self._edges[axis_num] = edge
 
@@ -1471,8 +1454,8 @@ class Edge(AbstractEdge):
         if not isinstance(size, int):
             TypeError('`size` should be int type')
         if not self.is_dangling():
-            self.node2._change_axis_size(self.axis2, size, padding_method, **kwargs)
-        self.node1._change_axis_size(self.axis1, size, padding_method, **kwargs)
+            self.node2._change_axis_size(self.axis2, size)
+        self.node1._change_axis_size(self.axis1, size)
 
     def parameterize(self,
                      set_param: bool = True,
@@ -1485,8 +1468,8 @@ class Edge(AbstractEdge):
                                  dim=min(dim, self.size()),
                                  node2=self.node2, axis2=self.axis2)
             if not self.is_dangling():
-                self.node2._add_edge(new_edge, self.axis2, override=True, parameterize=True)
-            self.node1._add_edge(new_edge, self.axis1, override=True, parameterize=True)
+                self.node2._add_edge(new_edge, self.axis2, False)
+            self.node1._add_edge(new_edge, self.axis1, True)
 
             self.node1.network._remove_edge(self)
             self.node1.network._add_edge(new_edge)
@@ -1712,8 +1695,8 @@ class ParamEdge(AbstractEdge, nn.Module):
         if not isinstance(size, int):
             TypeError('`size` should be int type')
         if not self.is_dangling():
-            self.node2._change_axis_size(self.axis2, size, padding_method, **kwargs)
-        self.node1._change_axis_size(self.axis1, size, padding_method, **kwargs)
+            self.node2._change_axis_size(self.axis2, size)
+        self.node1._change_axis_size(self.axis1, size)
 
         shift, slope = self.compute_parameters(size, min(size, self.dim()))
         self.set_parameters(shift, slope)
@@ -1726,8 +1709,8 @@ class ParamEdge(AbstractEdge, nn.Module):
             new_edge = Edge(node1=self.node1, axis1=self.axis1,
                             node2=self.node2, axis2=self.axis2)
             if not self.is_dangling():
-                self.node2._add_edge(new_edge, self.axis2, override=True, parameterize=True)
-            self.node1._add_edge(new_edge, self.axis1, override=True, parameterize=True)
+                self.node2._add_edge(new_edge, self.axis2, False)
+            self.node1._add_edge(new_edge, self.axis1, True)
             if self.node1.network is not None:
                 self.node1.network._remove_param(self)
                 if self.is_dangling():

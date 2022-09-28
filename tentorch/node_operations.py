@@ -128,8 +128,8 @@ def connect(edge1: AbstractEdge,
                              node2=node2, axis2=axis2)
         net._add_edge(new_edge)
 
-    node1._add_edge(new_edge, axis1)
-    node2._add_edge(new_edge, axis2)
+    node1._add_edge(new_edge, axis1, True)
+    node2._add_edge(new_edge, axis2, False)
     return new_edge
 
 
@@ -164,8 +164,8 @@ def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
             net._add_param(new_edge2)
             net._edges += [new_edge1, new_edge2]
 
-    node1._add_edge(new_edge1, axis1, override=True)
-    node2._add_edge(new_edge2, axis2, override=True)
+    node1._add_edge(new_edge1, axis1, True)
+    node2._add_edge(new_edge2, axis2, True)
     return new_edge1, new_edge2
 
 

@@ -38,6 +38,7 @@ from tentorch.utils import (tab_string, check_name_style,
                             permute_list, is_permutation)
 import tentorch.node_operations as nop
 
+
 # Tensor = torch.Tensor
 # Parameter = nn.Parameter
 # Size = torch.Size
@@ -254,7 +255,6 @@ class AbstractNode(ABC):
         self._edges = []
         self._name = name
         self._network = network
-        # self._successors = dict()
         self._leaf = leaf
 
     # ----------
@@ -296,7 +296,7 @@ class AbstractNode(ABC):
 
     @property
     def axes_names(self) -> List[Text]:
-        return list(map(lambda axis: axis.name, self.axes))
+        return list(map(lambda axis: axis._name, self._axes))
 
     @property
     def edges(self) -> List['AbstractEdge']:
@@ -312,7 +312,7 @@ class AbstractNode(ABC):
             raise TypeError('`name` should be str type')
         elif not check_name_style(name):
             raise ValueError('Names can only contain letters, numbers and underscores')
-        self.network._change_node_name(self, name)
+        self._network._change_node_name(self, name)
 
     @property
     def network(self) -> 'TensorNetwork':
@@ -322,14 +322,6 @@ class AbstractNode(ABC):
     def network(self, network: 'TensorNetwork') -> None:
         self.move_to_network(network)
 
-    @property
-    def successors(self) -> dict:
-        """
-        Successors list can only be modified with append() or list operations,
-        but cannot be substituted by another list
-        """
-        return self._successors
-
     # ----------------
     # Abstract methods
     # ----------------
@@ -338,7 +330,7 @@ class AbstractNode(ABC):
     def _set_tensor_format(tensor: torch.Tensor) -> Union[torch.Tensor, Parameter]:
         """
         Set the tensor format for each type of node. For normal nodes the format
-        is just a torch.Tensor, but for parameterized nodes it should be a Parameter
+        is just a Tensor, but for parameterized nodes it should be a Parameter
         """
         pass
 
@@ -403,9 +395,9 @@ class AbstractNode(ABC):
 
     def is_node1(self, axis: Optional[Ax] = None) -> Union[bool, List[bool]]:
         if axis is None:
-            return list(map(lambda ax: ax.is_node1(), self.axes))
+            return list(map(lambda ax: ax._node1, self._axes))
         axis_num = self.get_axis_number(axis)
-        return self.axes[axis_num].is_node1()
+        return self.axes[axis_num]._node1
 
     def neighbours(self, axis: Optional[Ax] = None) -> Union[Optional['AbstractNode'],
                                                              List['AbstractNode']]:
@@ -417,7 +409,7 @@ class AbstractNode(ABC):
             node2 = self[axis]._nodes[node1_list[self.get_axis_number(axis)]]
             return node2
         neighbours = set()
-        for i, edge in enumerate(self.edges):
+        for i, edge in enumerate(self._edges):
             if not edge.is_dangling():
                 node2 = edge._nodes[node1_list[i]]
                 neighbours.add(node2)
@@ -430,58 +422,52 @@ class AbstractNode(ABC):
         to be assigned to the axis is already set for another axis, we change
         those names by an enumerated version of them
         """
-        if axis.node != self:
+        if axis._node != self:
             raise ValueError('Cannot change the name of an axis that does '
                              'not belong to the node')
-        if name != axis.name:
+        if name != axis._name:
             axes_names = self.axes_names[:]
             for i, axis_name in enumerate(axes_names):
-                if axis_name == axis.name:
+                if axis_name == axis._name:
                     axes_names[i] = name
                     break
             new_axes_names = enum_repeated_names(axes_names)
-            for axis, axis_name in zip(self.axes, new_axes_names):
+            for axis, axis_name in zip(self._axes, new_axes_names):
                 axis._name = axis_name
 
-    def _change_axis_size(self,
-                          axis: Ax,
-                          size: int,
-                          padding_method: Text = 'zeros',
-                          **kwargs: float) -> None:
+    def _change_axis_size(self, axis: Ax, size: int) -> None:
         """
         Change axis size, that is, change size of node's tensor and corresponding edges
         at a certain axis.
-
-        Parameters
-        ----------
-        axis: axis where the size is changed
-        size: new size to set
-        padding_method: if new size is greater than the older one, the method used to
-            pad the new positions of the node's tensor. Available methods are the same
-            used in `make_tensor`
-        kwargs: keyword arguments used in `make_tensor`
         """
         if size <= 0:
             raise ValueError('new `size` should be greater than zero')
         axis_num = self.get_axis_number(axis)
-        index = []
-        for i, dim in enumerate(self.shape):
-            if i == axis_num:
-                if size > dim:
-                    index.append(slice(size - dim, size))
-                else:
-                    index.append(slice(dim - size, dim))
-            else:
-                index.append(slice(0, dim))
 
         if size < self.shape[axis_num]:
+            index = []
+            for i, dim in enumerate(self.shape):
+                if i == axis_num:
+                    if size > dim:
+                        index.append(slice(size - dim, size))
+                    else:
+                        index.append(slice(dim - size, dim))
+                else:
+                    index.append(slice(0, dim))
             self.tensor = self.tensor[index]
+
         elif size > self.shape[axis_num]:
-            new_shape = list(self.shape)
-            new_shape[axis_num] = size
-            new_tensor = self.make_tensor(new_shape, padding_method, **kwargs)
-            new_tensor[index] = self.tensor
-            self.tensor = new_tensor
+            pad = []
+            for i, dim in enumerate(self.shape):
+                if i == axis_num:
+                    if size > dim:
+                        pad += [size - dim, 0]
+                    else:
+                        pad += [0, 0]
+                else:
+                    pad += [0, 0]
+            pad.reverse()
+            self.tensor = nn.functional.pad(self.tensor, pad)
 
     def get_axis_number(self, axis: Ax) -> int:
         if isinstance(axis, int):
@@ -1011,7 +997,7 @@ class Node(AbstractNode):
             new_node = ParamNode(axes_names=self.axes_names, name=self.name, network=self.network, override_node=True,
                                  param_edges=self.param_edges(), tensor=self.tensor, edges=self.edges,
                                  node1_list=self.is_node1())
-            #new_node._reattach_edges(override=True)
+            # new_node._reattach_edges(override=True)
             return new_node
         else:
             return self
@@ -1020,7 +1006,7 @@ class Node(AbstractNode):
         new_node = Node(axes_names=self.axes_names, name='copy_' + self.name, network=self.network,
                         param_edges=self.param_edges(), tensor=self.tensor, edges=self.edges,
                         node1_list=self.is_node1())
-        #new_node._reattach_edges(override=False)
+        # new_node._reattach_edges(override=False)
         return new_node
 
     def permute(self, axes: Sequence[Ax]) -> 'Node':
@@ -1167,7 +1153,7 @@ class ParamNode(AbstractNode):
             new_node = Node(axes_names=self.axes_names, name=self.name, network=self.network, override_node=True,
                             param_edges=self.param_edges(), tensor=self.tensor, edges=self.edges,
                             node1_list=self.is_node1())
-            #new_node._reattach_edges(override=True)
+            # new_node._reattach_edges(override=True)
             return new_node
         else:
             return self
@@ -1176,7 +1162,7 @@ class ParamNode(AbstractNode):
         new_node = ParamNode(axes_names=self.axes_names, name='copy_' + self.name, network=self.network,
                              param_edges=self.param_edges(), tensor=self.tensor, edges=self.edges,
                              node1_list=self.is_node1())
-        #new_node._reattach_edges(override=False)
+        # new_node._reattach_edges(override=False)
         return new_node
 
     def permute(self, axes: Sequence[Ax]) -> 'ParamNode':
@@ -1861,6 +1847,7 @@ class AbstractStackEdge(AbstractEdge):
     """
     Abstract class for stack edges
     """
+
     @property
     @abstractmethod
     def edges(self) -> List[AbstractEdge]:
@@ -1872,13 +1859,13 @@ class StackEdge(AbstractStackEdge, Edge):
     Base class for stacks of non-trainable edges.
     Used for stacked contractions
     """
+
     def __init__(self,
                  edges: List[Edge],
                  node1: StackNode,
                  axis1: Axis,
                  node2: Optional[StackNode] = None,
                  axis2: Optional[Axis] = None) -> None:
-
         self._edges = edges
         Edge.__init__(self,
                       node1=node1, axis1=axis1,
@@ -1897,13 +1884,13 @@ class ParamStackEdge(AbstractStackEdge, ParamEdge):
     Base class for stacks of trainable edges.
     Used for stacked contractions
     """
+
     def __init__(self,
                  edges: List[ParamEdge],
                  node1: StackNode,
                  axis1: Axis,
                  node2: Optional[StackNode] = None,
                  axis2: Optional[Axis] = None) -> None:
-
         self._edges = edges
         ParamEdge.__init__(self,
                            node1=node1, axis1=axis1,
@@ -1979,6 +1966,14 @@ class TensorNetwork(nn.Module):
         List of dangling, non-batch edges of the network
         """
         return self._edges
+
+    @property
+    def successors(self) -> dict:
+        """
+        Successors list can only be modified with append() or list operations,
+        but cannot be substituted by another list
+        """
+        return self._successors
 
     def _add_node(self, node: AbstractNode, override: bool = False) -> None:
         """
@@ -2087,13 +2082,13 @@ class TensorNetwork(nn.Module):
             # TODO: A lo mejor esto solo si address is not None
             self._memory_nodes[new_name] = self._memory_nodes.pop(prev_name)
             node._assign_memory(address=new_name)
-            #node._tensor_info['address'] = new_name
+            # node._tensor_info['address'] = new_name
         else:
             self._nodes[new_name] = node
             self._memory_nodes[new_name] = node._temp_tensor
             node._temp_tensor = None
             node._assign_memory(address=new_name)
-            #node._tensor_info['address'] = new_name
+            # node._tensor_info['address'] = new_name
 
     def _update_node_name(self, node: AbstractNode, new_name: Text) -> None:
         if isinstance(node.tensor, Parameter):
@@ -2326,7 +2321,7 @@ class TensorNetwork(nn.Module):
 
         self._add_data(data)
         self.contract()
-        #raise NotImplementedError('Forward method not implemented for generic TensorNetwork class')
+        # raise NotImplementedError('Forward method not implemented for generic TensorNetwork class')
 
     # TODO: add_data, wrap(contract), where we only define the way in which data is fed to the TN and TN
     #  is contracted; `wrap` is used to manage memory and creation of nodes in the first epoch, feeding
@@ -2355,7 +2350,6 @@ class TensorNetwork(nn.Module):
     # TODO: Function to build instructions and reallocate memory, optimized for a function
     #  (se deben reasignar los par'ametros)
     # TODO: Function to allocate one memory tensor for each node, like old mode
-
 
 # ################################################
 # #                  OPERATIONS                  #

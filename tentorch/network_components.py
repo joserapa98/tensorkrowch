@@ -10,42 +10,37 @@ This script contains:
             +Edge
             +ParamEdge
 
+    Classes for stacks:
+        *StackNode
+        *AbstractStackEdge:
+            +StackEdge
+            +ParamStackEdge
+
     Class for Tensor Networks:
         *TensorNetwork
-
-    Operations:
-        *connect
-        *disconnect
-        *get_shared_edges
-        *get_batch_edges
-        *contract_edges
-        *contract
-        *contract_between
 """
 
 from typing import (overload, Union, Optional, Dict,
-                    Sequence, Text, List, Tuple, Set,
-                    Callable, Any)
+                    Sequence, Text, List, Tuple)
 from abc import ABC, abstractmethod
 import warnings
 import copy
 
 import torch
+from torch import Tensor, Size
 import torch.nn as nn
+from torch.nn import Parameter
+
 import opt_einsum
 
 from tentorch.utils import (tab_string, check_name_style,
                             erase_enum, enum_repeated_names,
-                            permute_list, is_permutation,
-                            inverse_permutation)
-
+                            permute_list, is_permutation)
 import tentorch.node_operations as nop
 
-# from tentorch.functionals import Foo
-# import tentorch.functionals as F
-
-Tensor = torch.Tensor
-Parameter = nn.Parameter
+# Tensor = torch.Tensor
+# Parameter = nn.Parameter
+# Size = torch.Size
 
 
 ################################################
@@ -61,7 +56,7 @@ class Axis:
                  name: Text,
                  node: Optional['AbstractNode'] = None,
                  node1: bool = True,
-                 batch: bool = False) -> None:
+                 batch: Optional[bool] = None) -> None:
         """
         Create an axis for a node.
 
@@ -97,18 +92,22 @@ class Axis:
         if not isinstance(node1, bool):
             raise TypeError('`node1` should be bool type')
 
-        if not isinstance(batch, bool):
-            raise TypeError('`batch` should be bool type')
+        if batch is not None:
+            if not isinstance(batch, bool):
+                raise TypeError('`batch` should be bool type')
 
         # Set attributes
         self._num = num
         self._name = name
         self._node = node
         self._node1 = node1
-        if ('batch' in name) or ('stack' in name) or batch:
-            self._batch = True
+        if batch is None:
+            if ('batch' in name) or ('stack' in name):
+                self._batch = True
+            else:
+                self._batch = False
         else:
-            self._batch = False
+            self._batch = batch
 
     # properties
     @property
@@ -123,14 +122,14 @@ class Axis:
     def name(self, name: Text) -> None:
         """
         Set axis name. Should not contain blank spaces
-        if it is intended to be used as name of submodules.
+        since it is intended to be used as name of submodules.
         """
         if not isinstance(name, str):
             raise TypeError('`name` should be str type')
         if not check_name_style(name):
             raise ValueError('Names can only contain letters, numbers and underscores')
-        elif self.node is not None:
-            self.node._change_axis_name(self, name)
+        elif self._node is not None:
+            self._node._change_axis_name(self, name)
         else:
             self._name = name
 
@@ -147,34 +146,34 @@ class Axis:
             return self._batch
 
         if batch != self._batch:
-            if self.node is not None:
-                edge = self.node[self]
+            if self._node is not None:
+                edge = self._node[self]
                 if edge.is_dangling():
                     if batch:
-                        self.node.network._remove_edge(edge)
+                        self._node._network._remove_edge(edge)
                     else:
-                        self.node.network._add_edge(edge)
+                        self._node._network._add_edge(edge)
                 else:
                     raise ValueError('Cannot change `batch` attribute of non-dangling edges')
             self._batch = batch
 
     def __int__(self) -> int:
-        return self.num
+        return self._num
 
     def __str__(self) -> Text:
-        return self.name
+        return self._name
 
     def __repr__(self) -> Text:
-        return f'{self.__class__.__name__}( {self.name} ({self.num}) )'
+        return f'{self.__class__.__name__}( {self._name} ({self._num}) )'
 
 
 ################################################
 #                   NODES                      #
 ################################################
 Ax = Union[int, Text, Axis]
-Shape = Union[int, Sequence[int], torch.Size]
+Shape = Union[int, Sequence[int], Size]
 
-# TODO: protect with __ some attributes?
+
 class AbstractNode(ABC):
     """
     Abstract class for nodes. Should be subclassed.
@@ -198,7 +197,7 @@ class AbstractNode(ABC):
         ----------
         shape: node shape (the shape of its tensor, it is always provided)
         axes_names: list of names for each of the node's axes
-        name: node name
+        name: node's name
         network: tensor network to which the node belongs
         leaf: indicates if the node is a leaf node in the network
 
@@ -212,8 +211,8 @@ class AbstractNode(ABC):
 
         # check shape
         if shape is not None:
-            if not isinstance(shape, (int, tuple, list, torch.Size)):
-                raise TypeError('`shape` should be int, tuple[int, ...], list[int, ...] or torch.Size type')
+            if not isinstance(shape, (int, tuple, list, Size)):
+                raise TypeError('`shape` should be int, tuple[int, ...], list[int, ...] or Size type')
             if isinstance(shape, (tuple, list)):
                 for i in shape:
                     if not isinstance(i, int):
@@ -255,14 +254,14 @@ class AbstractNode(ABC):
         self._edges = []
         self._name = name
         self._network = network
-        self._successors = dict()
+        # self._successors = dict()
         self._leaf = leaf
 
     # ----------
     # Properties
     # ----------
     @property
-    def tensor(self) -> Union[torch.Tensor, nn.Parameter]:
+    def tensor(self) -> Union[torch.Tensor, Parameter]:
         if self._tensor_info is None:
             return self._temp_tensor
 
@@ -280,7 +279,7 @@ class AbstractNode(ABC):
         self.set_tensor(tensor)
 
     @property
-    def shape(self) -> torch.Size:
+    def shape(self) -> Size:
         return self.tensor.shape
 
     @property
@@ -336,10 +335,10 @@ class AbstractNode(ABC):
     # ----------------
     @staticmethod
     @abstractmethod
-    def _set_tensor_format(tensor: torch.Tensor) -> Union[torch.Tensor, nn.Parameter]:
+    def _set_tensor_format(tensor: torch.Tensor) -> Union[torch.Tensor, Parameter]:
         """
         Set the tensor format for each type of node. For normal nodes the format
-        is just a torch.Tensor, but for parameterized nodes it should be a nn.Parameter
+        is just a torch.Tensor, but for parameterized nodes it should be a Parameter
         """
         pass
 
@@ -371,13 +370,13 @@ class AbstractNode(ABC):
     def is_leaf(self) -> bool:
         return self._leaf
 
-    def size(self, axis: Optional[Ax] = None) -> Union[torch.Size, int]:
+    def size(self, axis: Optional[Ax] = None) -> Union[Size, int]:
         if axis is None:
             return self.shape
         axis_num = self.get_axis_number(axis)
         return self.shape[axis_num]
 
-    def dims(self, axis: Optional[Ax] = None) -> Union[torch.Size, int]:
+    def dims(self, axis: Optional[Ax] = None) -> Union[Size, int]:
         """
         Similar to `size`, but if a ParamEdge is attached to an axis,
         it is returned its dimension (number of 1's in the diagonal of
@@ -385,11 +384,11 @@ class AbstractNode(ABC):
         in the diagonal of the matrix)
         """
         if axis is None:
-            return torch.Size(map(lambda edge: edge.dim(), self.edges))
+            return Size(map(lambda edge: edge.dim(), self.edges))
         axis_num = self.get_axis_number(axis)
         return self.edges[axis_num].dim()
 
-    def _compatible_dims(self, tensor: torch.Tensor) -> bool:
+    def _compatible_dims(self, tensor: Tensor) -> bool:
         """
         Check if a tensor has a shape that is compatible with the dimensions
         of the current node in order to set it as the new tensor
@@ -641,7 +640,7 @@ class AbstractNode(ABC):
                     edge | edge
 
     @staticmethod  # TODO: make copy node class, operation composed by indexing in diagonal and matrix multiplication
-    def _make_copy_tensor(shape: Shape, device: torch.device) -> torch.Tensor:
+    def _make_copy_tensor(shape: Shape, device: torch.device) -> Tensor:
         copy_tensor = torch.zeros(shape, device=device)
         rank = len(shape)
         i = torch.arange(min(shape), device=device)
@@ -652,7 +651,7 @@ class AbstractNode(ABC):
     def _make_rand_tensor(shape: Shape,
                           low: float = 0.,
                           high: float = 1.,
-                          device: torch.device = torch.device('cpu')) -> torch.Tensor:
+                          device: torch.device = torch.device('cpu')) -> Tensor:
         if not isinstance(low, float):
             raise TypeError('`low` should be float type')
         if not isinstance(high, float):
@@ -665,7 +664,7 @@ class AbstractNode(ABC):
     def _make_randn_tensor(shape: Shape,
                            mean: float = 0.,
                            std: float = 1.,
-                           device: torch.device = torch.device('cpu')) -> torch.Tensor:
+                           device: torch.device = torch.device('cpu')) -> Tensor:
         if not isinstance(mean, float):
             raise TypeError('`mean` should be float type')
         if not isinstance(std, float):
@@ -678,7 +677,7 @@ class AbstractNode(ABC):
                     shape: Optional[Shape] = None,
                     init_method: Text = 'zeros',
                     device: torch.device = torch.device('cpu'),
-                    **kwargs: float) -> torch.Tensor:
+                    **kwargs: float) -> Tensor:
         if shape is None:
             shape = self.shape
         if init_method == 'zeros':
@@ -696,7 +695,7 @@ class AbstractNode(ABC):
                              '"ones", "copy", "rand", "randn"')
 
     def _unrestricted_set_tensor(self,
-                                 tensor: Optional[torch.Tensor] = None,
+                                 tensor: Optional[Tensor] = None,
                                  init_method: Optional[Text] = 'zeros',
                                  device: Optional[torch.device] = None,
                                  **kwargs: float) -> None:
@@ -715,8 +714,8 @@ class AbstractNode(ABC):
         kwargs: keyword arguments for the initialization method
         """
         if tensor is not None:
-            if not isinstance(tensor, torch.Tensor):
-                raise ValueError('`tensor` should be torch.Tensor type')
+            if not isinstance(tensor, Tensor):
+                raise ValueError('`tensor` should be Tensor type')
             elif not self._compatible_dims(tensor):
                 raise ValueError('`tensor` dimensions should match the '
                                  'dimension of non-dangling edges')
@@ -737,7 +736,7 @@ class AbstractNode(ABC):
         self._save_in_network(correct_format_tensor)
 
     def set_tensor(self,
-                   tensor: Optional[torch.Tensor] = None,
+                   tensor: Optional[Tensor] = None,
                    init_method: Optional[Text] = 'zeros',
                    device: Optional[torch.device] = None,
                    **kwargs: float) -> None:
@@ -775,9 +774,9 @@ class AbstractNode(ABC):
         if index is not None:
             self._tensor_info['index'] = index
 
-    def _save_in_network(self, tensor: Union[torch.Tensor, nn.Parameter]) -> None:
+    def _save_in_network(self, tensor: Union[Tensor, Parameter]) -> None:
         self.network._memory_nodes[self._tensor_info['address']] = tensor
-        if isinstance(tensor, nn.Parameter):
+        if isinstance(tensor, Parameter):
             if not hasattr(self, self._tensor_info['address']):
                 self._network.register_parameter(self._tensor_info['address'], tensor)
             else:
@@ -824,28 +823,28 @@ class AbstractNode(ABC):
     # -----------------
     # Tensor operations
     # -----------------
-    def sum(self, axis: Optional[Sequence[Ax]] = None) -> torch.tensor:
+    def sum(self, axis: Optional[Sequence[Ax]] = None) -> Tensor:
         axis_num = []
         if axis is not None:
             for ax in axis:
                 axis_num.append(self.get_axis_number(ax))
         return self.tensor.sum(dim=axis_num)
 
-    def mean(self, axis: Optional[Sequence[Ax]] = None) -> torch.tensor:
+    def mean(self, axis: Optional[Sequence[Ax]] = None) -> Tensor:
         axis_num = []
         if axis is not None:
             for ax in axis:
                 axis_num.append(self.get_axis_number(ax))
         return self.tensor.mean(dim=axis_num)
 
-    def std(self, axis: Optional[Sequence[Ax]] = None) -> torch.tensor:
+    def std(self, axis: Optional[Sequence[Ax]] = None) -> Tensor:
         axis_num = []
         if axis is not None:
             for ax in axis:
                 axis_num.append(self.get_axis_number(ax))
         return self.tensor.std(dim=axis_num)
 
-    def norm(self, p=2, axis: Optional[Sequence[Ax]] = None) -> torch.tensor:
+    def norm(self, p=2, axis: Optional[Sequence[Ax]] = None) -> Tensor:
         axis_num = []
         if axis is not None:
             for ax in axis:
@@ -931,7 +930,7 @@ class Node(AbstractNode):
                  leaf: bool = True,
                  override_node: bool = False,
                  param_edges: bool = False,
-                 tensor: Optional[torch.Tensor] = None,
+                 tensor: Optional[Tensor] = None,
                  edges: Optional[List['AbstractEdge']] = None,
                  node1_list: Optional[List[bool]] = None,
                  init_method: Optional[Text] = None,
@@ -1002,8 +1001,8 @@ class Node(AbstractNode):
     # Methods
     # -------
     @staticmethod
-    def _set_tensor_format(tensor: torch.Tensor) -> torch.Tensor:
-        if isinstance(tensor, nn.Parameter):
+    def _set_tensor_format(tensor: Tensor) -> Tensor:
+        if isinstance(tensor, Parameter):
             return tensor.data
         return tensor
 
@@ -1063,7 +1062,7 @@ class ParamNode(AbstractNode):
                  leaf: bool = True,
                  override_node: bool = False,
                  param_edges: bool = False,
-                 tensor: Optional[torch.Tensor] = None,
+                 tensor: Optional[Tensor] = None,
                  edges: Optional[List['AbstractEdge']] = None,
                  node1_list: Optional[List[bool]] = None,
                  init_method: Optional[Text] = None,
@@ -1134,7 +1133,7 @@ class ParamNode(AbstractNode):
     # Properties
     # ----------
     @property
-    def grad(self) -> Optional[torch.Tensor]:
+    def grad(self) -> Optional[Tensor]:
         if self._tensor_info['address'] is None:
             aux_node = self._tensor_info['node_ref']
             aux_grad = aux_node.network._memory_nodes[aux_node._tensor_info['address']].grad
@@ -1143,7 +1142,7 @@ class ParamNode(AbstractNode):
 
         if aux_grad is None:
             return aux_grad
-        elif isinstance(aux_grad, torch.Tensor):
+        elif isinstance(aux_grad, Tensor):
             if self._tensor_info['full']:
                 return aux_grad
             return aux_grad[self._tensor_info['index']]
@@ -1154,14 +1153,14 @@ class ParamNode(AbstractNode):
     # Methods
     # -------
     @staticmethod
-    def _set_tensor_format(tensor: torch.Tensor) -> nn.Parameter:
+    def _set_tensor_format(tensor: Tensor) -> Parameter:
         """
-        If a nn.Parameter is provided, the ParamNode will use such parameter
-        instead of creating a new nn.Parameter object, thus creating a dependence
+        If a Parameter is provided, the ParamNode will use such parameter
+        instead of creating a new Parameter object, thus creating a dependence
         """
-        if isinstance(tensor, nn.Parameter):
+        if isinstance(tensor, Parameter):
             return tensor
-        return nn.Parameter(tensor)
+        return Parameter(tensor)
 
     def parameterize(self, set_param: bool = True) -> Union['Node', 'ParamNode']:
         if not set_param:
@@ -1206,7 +1205,7 @@ class ParamNode(AbstractNode):
 ################################################
 #                   EDGES                      #
 ################################################
-EdgeParameter = Union[int, float, nn.Parameter]
+EdgeParameter = Union[int, float, Parameter]
 _DEFAULT_SHIFT = -0.5
 _DEFAULT_SLOPE = 20.
 
@@ -1586,7 +1585,7 @@ class ParamEdge(AbstractEdge, nn.Module):
     # Properties
     # ----------
     @property
-    def shift(self) -> nn.Parameter:
+    def shift(self) -> Parameter:
         return self._shift
 
     @shift.setter
@@ -1594,7 +1593,7 @@ class ParamEdge(AbstractEdge, nn.Module):
         self.set_parameters(shift=shift)
 
     @property
-    def slope(self) -> nn.Parameter:
+    def slope(self) -> Parameter:
         return self._slope
 
     @slope.setter
@@ -1602,14 +1601,14 @@ class ParamEdge(AbstractEdge, nn.Module):
         self.set_parameters(slope=slope)
 
     @property
-    def matrix(self) -> torch.Tensor:
+    def matrix(self) -> Tensor:
         # if self.is_updated():
         #    return self._matrix
         self.set_matrix()
         return self._matrix
 
     @property
-    def grad(self) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+    def grad(self) -> Tuple[Optional[Tensor], Optional[Tensor]]:
         return self.shift.grad, self.slope.grad
 
     @property
@@ -1650,31 +1649,31 @@ class ParamEdge(AbstractEdge, nn.Module):
         if shift is not None:
             if isinstance(shift, int):
                 shift = float(shift)
-                self._shift = nn.Parameter(torch.tensor(shift))  # .cuda().detach().requires_grad_()
+                self._shift = Parameter(torch.tensor(shift))  # .cuda().detach().requires_grad_()
                 self._prev_shift = shift
             elif isinstance(shift, float):
-                self._shift = nn.Parameter(torch.tensor(shift))  # .cuda().detach().requires_grad_()
+                self._shift = Parameter(torch.tensor(shift))  # .cuda().detach().requires_grad_()
                 self._prev_shift = shift
-            elif isinstance(shift, nn.Parameter):  # (nn.Parameter, torch.Tensor)):
+            elif isinstance(shift, Parameter):  # (nn.Parameter, torch.Tensor)):
                 # TODO: eligible device (previous to sending TN to device)
                 self._shift = shift  # .cuda().detach().requires_grad_()
                 self._prev_shift = shift.item()
             else:
-                raise TypeError('`shift` should be int, float or nn.Parameter type')
+                raise TypeError('`shift` should be int, float or Parameter type')
         if slope is not None:
             if isinstance(slope, int):
                 slope = float(slope)
-                self._slope = nn.Parameter(torch.tensor(slope))  # .cuda().detach().requires_grad_()
+                self._slope = Parameter(torch.tensor(slope))  # .cuda().detach().requires_grad_()
                 self._prev_slope = slope
             elif isinstance(slope, float):
-                self._slope = nn.Parameter(torch.tensor(slope))  # .cuda().detach().requires_grad_()
+                self._slope = Parameter(torch.tensor(slope))  # .cuda().detach().requires_grad_()
                 self._prev_slope = slope
-            elif isinstance(slope, nn.Parameter):  # (nn.Parameter, torch.Tensor)):
+            elif isinstance(slope, Parameter):  # (nn.Parameter, torch.Tensor)):
                 # TODO: eligible device
                 self._slope = slope  # .cuda().detach().requires_grad_()
                 self._prev_slope = slope.item()
             else:
-                raise TypeError('`slope` should be int, float or nn.Parameter type')
+                raise TypeError('`slope` should be int, float or Parameter type')
         self.set_matrix()
 
     def is_updated(self) -> bool:
@@ -1687,10 +1686,10 @@ class ParamEdge(AbstractEdge, nn.Module):
             return True
         return False
 
-    def sigmoid(self, x: torch.Tensor) -> torch.Tensor:
+    def sigmoid(self, x: Tensor) -> Tensor:
         return self._sigmoid(x)
 
-    def make_matrix(self) -> torch.Tensor:
+    def make_matrix(self) -> Tensor:
         """
         Create the matrix depending on shift and slope. The matrix is
         near the identity, although it might have some zeros in the first
@@ -1954,6 +1953,8 @@ class TensorNetwork(nn.Module):
 
         self._contracting = False  # Flag to indicate whether the TN has optimized memory to perform contraction
 
+        self._successors = dict()
+
     @property
     def nodes(self) -> Dict[Text, AbstractNode]:
         """
@@ -2095,7 +2096,7 @@ class TensorNetwork(nn.Module):
             #node._tensor_info['address'] = new_name
 
     def _update_node_name(self, node: AbstractNode, new_name: Text) -> None:
-        if isinstance(node.tensor, nn.Parameter):
+        if isinstance(node.tensor, Parameter):
             delattr(self, node._name)
         for edge in node.edges:
             self._remove_edge(edge)
@@ -2103,7 +2104,7 @@ class TensorNetwork(nn.Module):
         self._update_node_info(node, new_name)
         node._name = new_name
 
-        if isinstance(node.tensor, nn.Parameter):
+        if isinstance(node.tensor, Parameter):
             if not hasattr(self, node.name):
                 self.register_parameter(node._name, self._memory_nodes[node._name])
             else:
@@ -2144,7 +2145,7 @@ class TensorNetwork(nn.Module):
             self._update_node_info(node, new_name)
             node._name = new_name
 
-        if isinstance(node.tensor, nn.Parameter):
+        if isinstance(node.tensor, Parameter):
             if not hasattr(self, node.name):
                 self.register_parameter(node._name, self._memory_nodes[node._name])
             else:
@@ -2157,7 +2158,7 @@ class TensorNetwork(nn.Module):
         """
         Modify remaining nodes names when we remove one node
         """
-        if isinstance(node.tensor, nn.Parameter):
+        if isinstance(node.tensor, Parameter):
             delattr(self, node._name)
         for edge in node.edges:
             self._remove_edge(edge)
@@ -2270,7 +2271,7 @@ class TensorNetwork(nn.Module):
                 self.delete_node(node)
             self._data_nodes = dict()
 
-    def _add_data(self, data: Sequence[torch.Tensor]) -> None:  # TODO: data should be stored as one stacked tensor
+    def _add_data(self, data: Sequence[Tensor]) -> None:  # TODO: data should be stored as one stacked tensor
         """
         Add data to data nodes, that is, change their tensors by new data tensors given a new data set.
         
@@ -2302,14 +2303,14 @@ class TensorNetwork(nn.Module):
             #  contrae la red por primera vez. raise ValueError
         self._contracting = contracting
 
-    def contract(self) -> torch.Tensor:
+    def contract(self) -> Tensor:
         """
         Contract tensor network
         """
         # Custom, optimized contraction methods should be defined for each new subclass of TensorNetwork
         raise NotImplementedError('Contraction methods not implemented for generic TensorNetwork class')
 
-    def forward(self, data: torch.Tensor) -> torch.Tensor:
+    def forward(self, data: Tensor) -> Tensor:
         """
         Contract Tensor Network with input data with shape batch x n_features x feature.
         """

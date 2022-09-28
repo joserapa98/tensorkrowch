@@ -1,18 +1,21 @@
 """
 This script contains:
 
+    Operations:
+        *connect
+        *disconnect
+        *get_shared_edges
+        *get_batch_edges
+        *contract_edges
+        *contract
+        *contract_between
+
     Node operations:
         *einsum
         *connect_stack
         *stack
         *unbind
         *stacked_einsum
-
-    Classes for stacks:
-        *StackNode
-        *AbstractStackEdge:
-            +StackEdge
-            +ParamStackEdge
 """
 # split, svd, qr, rq, etc. -> using einsum-like strings, useful
 
@@ -215,8 +218,8 @@ def _check_first_contract_edges(edges: List[AbstractEdge],
     kwargs = {'edges': edges,
               'node1': node1,
               'node2': node2}
-    if 'contract_edges' in node1.successors:
-        for t in node1.successors['contract_edges']:
+    if 'contract_edges' in node1.network._successors:
+        for t in node1.network._successors['contract_edges']:
             if t[0] == kwargs:
                 return False
     return True
@@ -348,17 +351,17 @@ def _contract_edges_first(edges: List[AbstractEdge],
     new_node = nc.Node(axes_names=final_axes, name=f'contract_{node1.name}_{node2.name}', network=nodes[0].network,
                     leaf=False, param_edges=False, tensor=result, edges=final_edges, node1_list=final_node1)
 
-    for node in nodes:
-        if 'contract_edges' in node._successors:
-            node._successors['contract_edges'].append(({'edges': edges,
-                                                        'node1': node1,
-                                                        'node2': node2},
-                                                       new_node))
-        else:
-            node._successors['contract_edges'] = [({'edges': edges,
-                                                    'node1': node1,
-                                                    'node2': node2},
-                                                   new_node)]
+    net = nodes[0]._network
+    if 'contract_edges' in net._successors:
+        net._successors['contract_edges'].append(({'edges': edges,
+                                                   'node1': node1,
+                                                   'node2': node2},
+                                                  new_node))
+    else:
+        net._successors['contract_edges'] = [({'edges': edges,
+                                               'node1': node1,
+                                               'node2': node2},
+                                              new_node)]
 
     return new_node
 
@@ -473,7 +476,7 @@ def _contract_edges_next(edges: List[AbstractEdge],
     kwargs = {'edges': edges,
               'node1': node1,
               'node2': node2}
-    for t in node1._successors['contract_edges']:
+    for t in node1._network._successors['contract_edges']:
         if t[0] == kwargs:
             child = t[1]
             break
@@ -650,8 +653,8 @@ def connect_stack(edge1: AbstractStackEdge,
 
 def _check_first_stack(nodes: List[AbstractNode], name: Optional[Text] = None) -> bool:
     kwargs = {'nodes': set(nodes)}
-    if 'stack' in nodes[0].successors:
-        for t in nodes[0].successors['stack']:
+    if 'stack' in nodes[0].network._successors:
+        for t in nodes[0].network._successors['stack']:
             if t[0] == kwargs:
                 return False
     return True
@@ -687,10 +690,10 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
                 index.append(slice(0, s))
             node._tensor_info['index'] = index
 
-            if 'stack' not in node.successors:
-                node.successors['stack'] = ({'nodes': nodes}, stack_node)
+            if 'stack' not in node.network._successors:
+                node.network._successors['stack'] = [({'nodes': nodes}, stack_node)]
             else:
-                node.successors['stack'].append(({'nodes': nodes}, stack_node))
+                node.network._successors['stack'].append(({'nodes': nodes}, stack_node))
 
     return stack_node
 
@@ -703,7 +706,7 @@ def _stack_next(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stack
             break
 
     kwargs = {'nodes': set(nodes)}
-    for t in nodes[0]._successors['stack']:
+    for t in nodes[0]._network._successors['stack']:
         if t[0] == kwargs:
             child = t[1]
             break
@@ -720,8 +723,8 @@ stack = Operation(_check_first_stack, _stack_first, _stack_next)
 
 def _check_first_unbind(node: AbstractNode) -> bool:
     kwargs = {'node': node}
-    if 'unbind' in node.successors:
-        for t in node.successors['unbind']:
+    if 'unbind' in node._network._successors:
+        for t in node._network._successors['unbind']:
             if t[0] == kwargs:
                 return False
     return True
@@ -769,17 +772,17 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
             index.append(slice(0, s))
         new_node._tensor_info['index'] = index
 
-    if 'unbind' not in node.successors:
-        node.successors['unbind'] = ({'nodes': nodes}, nodes)
+    if 'unbind' not in node.network._successors:
+        node.network._successors['unbind'] = [({'nodes': nodes}, nodes)]
     else:
-        node.successors['unbind'].append(({'nodes': nodes}, nodes))
+        node.network._successors['unbind'].append(({'nodes': nodes}, nodes))
 
     return nodes
 
 
 def _unbind_next(node: AbstractNode) -> List[Node]:
     kwargs = {'node': node}
-    for t in node._successors['unbind']:
+    for t in node.network._successors['unbind']:
         if t[0] == kwargs:
             return t[1]  # TODO: No tenemos que hacer nada si ya hicimos unbind antes
 

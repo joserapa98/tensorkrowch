@@ -717,7 +717,7 @@ class AbstractNode(ABC):
                        stack_idx: Optional[Tuple[slice, ...]] = None,
                        index: Optional[Tuple[slice, ...]] = None) -> None:
         """
-        Change information about tensor storage when we are changing memory management
+        Change information about tensor storage when we are changing memory management.
         """
         if address is not None:
             self._tensor_info['address'] = address
@@ -1723,14 +1723,20 @@ class ParamEdge(AbstractEdge, nn.Module):
 ################################################
 #                    STACKS                    #
 ################################################
-# TODO: hacer privado, solo podemos crearlo usando stack()
-# TODO: no privado, pero solo desde stack (y en general operaciones) es como se optimiza
-#  y se lleva registro de hijos y demás
+# TODO: hacer privados
+# TODO: queda comprobar stacks
+# TODO: ver si se puede reestructurar, igual un AbstractStackNode que aglutine
+#  ambas clases y luego hacer subclases de Node y Paramnode
 class StackNode(Node):
+    """
+    Class for stacked nodes. This is a node that stores the information
+    of a list of nodes that are stacked in order to perform some operation
+    """
 
     def __init__(self,
                  nodes: List[AbstractNode],
                  name: Optional[Text] = None,
+                 tensor: Optional[Tensor] = None,
                  override_node: bool = False) -> None:
 
         # TODO: Y en la misma TN todos
@@ -1749,33 +1755,48 @@ class StackNode(Node):
                                     'each node must be either all Edge or all ParamEdge type')
 
         edges_dict = dict()
+        node1_list_dict = dict()
         for node in nodes:
-            for axis in node.axes:
+            for axis in node._axes:
                 edge = node[axis]
                 if axis.name not in edges_dict:
-                    edges_dict[axis.name] = [edge]
+                    edges_dict[axis._name] = [edge]
+                    node1_list_dict[axis._name] = [axis._node1]
                 else:
-                    edges_dict[axis.name] += [edge]
+                    edges_dict[axis._name].append(edge)
+                    node1_list_dict[axis._name].append(axis._node1)
+
         self._edges_dict = edges_dict
+        self._node1_list_dict = node1_list_dict
         self.nodes = nodes
 
-        stacked_tensor = torch.stack([node.tensor for node in nodes])
-        # TODO: usar el stack de MPS, donde podemos apilar con diferentes dimensiones
-        super().__init__(axes_names=['stack'] + nodes[0].axes_names, name=name, network=nodes[0].network,
-                         leaf=False, override_node=override_node, tensor=stacked_tensor)
+        # stacked_tensor = torch.stack([node.tensor for node in nodes])
+        if tensor is None:
+            tensor = nop.stack_unequal_tensors([node.tensor for node in nodes])  # TODO: not sure if this is necessary
+        super().__init__(axes_names=['stack'] + nodes[0].axes_names,
+                         name=name,
+                         network=nodes[0]._network,
+                         leaf=False,
+                         override_node=override_node,
+                         tensor=tensor)
 
     @property
-    def edges_dict(self) -> Dict[Text, Union[List[Edge], List[ParamEdge]]]:
+    def edges_dict(self) -> Dict[Text, List[AbstractEdge]]:
         return self._edges_dict
+
+    @property
+    def node1_list_dict(self) -> Dict[Text, List[bool]]:
+        return self._node1_list_dict
 
     def make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
         # TODO: param_edges not used here
         if axis.num == 0:
+            # Stack axis
             return Edge(node1=self, axis1=axis)
-        if isinstance(self.edges_dict[axis.name][0], Edge):
-            return StackEdge(self.edges_dict[axis.name], node1=self, axis1=axis)
-        elif isinstance(self.edges_dict[axis.name][0], ParamEdge):
-            return ParamStackEdge(self.edges_dict[axis.name], node1=self, axis1=axis)
+        elif isinstance(self._edges_dict[axis._name][0], Edge):
+            return StackEdge(self._edges_dict[axis._name], node1=self, axis1=axis)
+        elif isinstance(self._edges_dict[axis._name][0], ParamEdge):
+            return ParamStackEdge(self._edges_dict[axis._name], node1=self, axis1=axis)
 
     def _assign_memory(self,
                        address: Optional[Text] = None,
@@ -1783,10 +1804,13 @@ class StackNode(Node):
                        full: Optional[bool] = None,
                        stack_idx: Optional[Tuple[slice, ...]] = None,
                        index: Optional[Tuple[slice, ...]] = None) -> None:
-        "Para cuando cambiamos la memoria desde TN, y tenemos que indicar al nodo que su memoria está en otro lado"
-        for node in self.nodes:
-            # TODO: Para cuando cambiamos de nombre la stack
-            node._assign_memory(address=address)
+        """
+        Change information about tensor storage when we are changing memory management.
+        """
+        # TODO: creo que ya no necesito esto
+        # for node in self.nodes:
+        #     # TODO: Para cuando cambiamos de nombre la stack
+        #     node._assign_memory(address=address)
         # self._tensor_info = {'address': address,
         #                      'full': full,
         #                      'stack_idx': stack_idx,
@@ -1801,6 +1825,83 @@ class StackNode(Node):
             self._tensor_info['stack_idx'] = stack_idx
         if index is not None:
             self._tensor_info['index'] = index
+
+
+class ParamStackNode(ParamNode):
+    """
+    Class for parametric stacked nodes. This is a node that stores the information
+    of a list of parametric nodes that are stacked in order to perform some operation
+    """
+
+    def __init__(self,
+                 nodes: List[AbstractNode],
+                 name: Optional[Text] = None,
+                 tensor: Optional[Tensor] = None,
+                 override_node: bool = False) -> None:
+
+        # TODO: Y en la misma TN todos
+        for i in range(len(nodes[:-1])):
+            if not isinstance(nodes[i], type(nodes[i + 1])):
+                raise TypeError('Cannot stack nodes of different types. Nodes '
+                                'must be either all Node or all ParamNode type')
+            if nodes[i].shape != nodes[i + 1].shape:
+                raise ValueError('Cannot stack nodes with different shapes')
+            if nodes[i].axes_names != nodes[i + 1].axes_names:
+                raise ValueError('Stacked nodes must have the same name for each axis')
+            for edge1, edge2 in zip(nodes[i].edges, nodes[i + 1].edges):
+                if not isinstance(edge1, type(edge2)):
+                    raise TypeError('Cannot stack nodes with edges of different types. '
+                                    'The edges that are attached to the same axis in '
+                                    'each node must be either all Edge or all ParamEdge type')
+
+        edges_dict = dict()
+        node1_lists_dict = dict()
+        for node in nodes:
+            for axis in node._axes:
+                edge = node[axis]
+                if axis.name not in edges_dict:
+                    edges_dict[axis._name] = [edge]
+                    node1_lists_dict[axis._name] = [axis._node1]
+                else:
+                    edges_dict[axis._name].append(edge)
+                    node1_lists_dict[axis._name].append(axis._node1)
+
+        self._edges_dict = edges_dict
+        self._node1_lists_dict = node1_lists_dict
+        self.nodes = nodes
+
+        # stacked_tensor = torch.stack([node.tensor for node in nodes])
+        if tensor is None:
+            tensor = nop.stack_unequal_tensors([node.tensor for node in nodes])
+        super().__init__(axes_names=['stack'] + nodes[0].axes_names,
+                         name=name,
+                         network=nodes[0]._network,
+                         leaf=False,
+                         override_node=override_node,
+                         tensor=tensor)
+
+    @property
+    def edges_dict(self) -> Dict[Text, List[AbstractEdge]]:
+        return self._edges_dict
+
+    @property
+    def node1_lists_dict(self) -> Dict[Text, List[bool]]:
+        return self._node1_lists_dict
+
+    def make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
+        # TODO: param_edges not used here
+        if axis.num == 0:
+            # Stack axis
+            return Edge(node1=self, axis1=axis)
+        elif isinstance(self._edges_dict[axis._name][0], Edge):
+            return StackEdge(self._edges_dict[axis._name],
+                             self._node1_lists_dict[axis._name],
+                             node1=self, axis1=axis)
+        elif isinstance(self._edges_dict[axis._name][0], ParamEdge):
+            return ParamStackEdge(self._edges_dict[axis._name],
+                                  self._node1_lists_dict[axis._name],
+                                  node1=self,
+                                  axis1=axis)
 
 
 class AbstractStackEdge(AbstractEdge):
@@ -1822,11 +1923,13 @@ class StackEdge(AbstractStackEdge, Edge):
 
     def __init__(self,
                  edges: List[Edge],
-                 node1: StackNode,
+                 node1_lists: List[bool],
+                 node1: Union[StackNode, ParamStackNode],
                  axis1: Axis,
-                 node2: Optional[StackNode] = None,
+                 node2: Optional[Union[StackNode, ParamStackNode]] = None,
                  axis2: Optional[Axis] = None) -> None:
         self._edges = edges
+        self._node1_lists = node1_lists
         Edge.__init__(self,
                       node1=node1, axis1=axis1,
                       node2=node2, axis2=axis2)
@@ -1834,6 +1937,10 @@ class StackEdge(AbstractStackEdge, Edge):
     @property
     def edges(self) -> List[Edge]:
         return self._edges
+
+    @property
+    def node1_lists(self) -> List[bool]:
+        return self._node1_lists
 
     def __xor__(self, other: 'StackEdge') -> Edge:
         return nop.connect_stack(self, other)
@@ -1847,11 +1954,13 @@ class ParamStackEdge(AbstractStackEdge, ParamEdge):
 
     def __init__(self,
                  edges: List[ParamEdge],
-                 node1: StackNode,
+                 node1_lists: List[bool],
+                 node1: Union[StackNode, ParamStackNode],
                  axis1: Axis,
-                 node2: Optional[StackNode] = None,
+                 node2: Optional[Union[StackNode, ParamStackNode]] = None,
                  axis2: Optional[Axis] = None) -> None:
         self._edges = edges
+        self._node1_lists = node1_lists
         ParamEdge.__init__(self,
                            node1=node1, axis1=axis1,
                            shift=self._edges[0].shift,
@@ -1861,6 +1970,10 @@ class ParamStackEdge(AbstractStackEdge, ParamEdge):
     @property
     def edges(self) -> List[ParamEdge]:
         return self._edges
+
+    @property
+    def node1_lists(self) -> List[bool]:
+        return self._node1_lists
 
     def __xor__(self, other: 'ParamStackEdge') -> ParamEdge:
         return nop.connect_stack(self, other)
@@ -1880,7 +1993,7 @@ class Successor:
 
     def __init__(self,
                  kwargs: Dict[Text, Any],
-                 child: AbstractNode,
+                 child: Union[AbstractNode, List[AbstractNode]],
                  contracting: Optional[bool] = None,
                  hints: Optional[Any] = None) -> None:
         """

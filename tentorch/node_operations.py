@@ -23,6 +23,7 @@ from typing import Union, Optional, Text, List, Dict, Tuple, Any, Callable
 from abc import abstractmethod
 
 import torch
+import torch.nn as nn
 import opt_einsum
 
 from tentorch.utils import permute_list, inverse_permutation
@@ -36,6 +37,7 @@ AbstractEdge, Edge, ParamEdge = Any, Any, Any
 StackNode = Any
 AbstractStackEdge, StackEdge, ParamStackEdge = Any, Any, Any
 Successor = Any
+# TODO: hacer import Tensor, Parameter?
 
 
 ################################################
@@ -104,9 +106,7 @@ def connect(edge1: AbstractEdge, edge2: AbstractEdge) -> Union[Edge, ParamEdge]:
     return new_edge
 
 
-def connect_stack(edge1: AbstractStackEdge,
-                  edge2: AbstractStackEdge,
-                  override_network: bool = False):
+def connect_stack(edge1: AbstractStackEdge, edge2: AbstractStackEdge):
     """
     Connect stack edges only if their lists of edges are the same
     (coming from already connected edges)
@@ -119,14 +119,13 @@ def connect_stack(edge1: AbstractStackEdge,
     if isinstance(edge1.edges[0], nc.ParamEdge):
         shift = edge1.edges[0].shift
         slope = edge1.edges[0].slope
-        params_dict = dict()
         # When connecting stacked edges, parameters have to be
         # shared among all edges in the same ParamStackEdge
         for i, _ in enumerate(edge1.edges[:-1]):
             if edge1.edges[i].dim() != edge1.edges[i + 1].dim():
                 raise ValueError('Cannot connect stacked edges with lists of edges '
                                  'of different dimensions')
-            edge1.edges[i + 1].set_parameters(shift=shift, slope=slope)
+            edge1.edges[i + 1].set_parameters(shift=shift, slope=slope)  # TODO: sure? We want this? Share parameters?
 
     return connect(edge1=edge1, edge2=edge2)
 
@@ -690,29 +689,22 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
 ###################   STACK   ##################
 def stack_unequal_tensors(lst_tensors: List[torch.Tensor]) -> torch.Tensor:
     if lst_tensors:
-        same_dims_all = True
+        same_dims = True
         max_shape = list(lst_tensors[0].shape)
         for tensor in lst_tensors[1:]:
-            same_dims = True
             for idx, dim in enumerate(tensor.shape):
+                if (dim != max_shape[idx]) and same_dims:
+                    same_dims = False
                 if dim > max_shape[idx]:
                     max_shape[idx] = dim
-                    same_dims = False
-                elif dim < max_shape[idx]:
-                    same_dims = False
-            if not same_dims:
-                same_dims_all = False
 
-        if not same_dims_all:
+        if not same_dims:
             for idx, tensor in enumerate(lst_tensors):
                 if tensor.shape != max_shape:
-                    aux_zeros = torch.zeros(max_shape, device=tensor.device)  # TODO: replace with pad
-                    replace_slice = []
-                    for dim in tensor.shape:
-                        replace_slice.append(slice(0, dim))
-                    replace_slice = tuple(replace_slice)
-                    aux_zeros[replace_slice] = tensor
-                    lst_tensors[idx] = aux_zeros
+                    pad = []
+                    for max_dim, dim in zip(max_shape, tensor.shape):
+                        pad += [max_dim - dim, 0]
+                    lst_tensors[idx] = nn.functional.pad(tensor, pad)
         return torch.stack(lst_tensors)
 
 
@@ -725,70 +717,114 @@ def _check_first_stack(nodes: List[AbstractNode], name: Optional[Text] = None) -
     return None
 
 
+# TODO: hacer optimizacion: si todos los nodos tienen memoria que hace referencia a un nodo
+#  (sus memorias estaban guardadas en la misma pila), entonces no hay que crear nueva stack,
+#  solo indexar en la previa
 def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> StackNode:
     """
-    Stack nodes into a StackNode. The stack dimension will be the
+    Stack nodes into a StackNode or ParamStackNode. The stack dimension will be the
     first one in the resultant node.
     """
-    all_leaf = True
-    all_non_param = True
-    all_param = True
+    # Check if all the nodes have the same type, and/or are leaf nodes
+    all_leaf = True       # Check if all the nodes are leaf
+    all_non_param = True  # Check if all the nodes are non-parametric
+    all_param = True      # Check if all the nodes are parametric
+    all_same_ref = True   # Check if all the nodes' memory is stored in the same reference node's memory
+    node_ref = None       # In the case above, the reference node
+    stack_indices = []    # In the case above, stack indices of each node in the reference node's memory
+    indices = []          # In the case above, indices of each node in the reference node's memory
     for node in nodes:
         if not node._leaf:
             all_leaf = False
+
         if isinstance(node, nc.ParamNode):
             all_non_param = False
         else:
             all_param = False
+
+        if node._tensor_info['address'] is None:
+            if node_ref is None:
+                node_ref = node._tensor_info['node_ref']
+            else:
+                if node._tensor_info['node_ref'] != node_ref:
+                    all_same_ref = False
+            stack_indices.append(node._tensor_info['stack_ix'])
+            indices.append(node._tensor_info['index'])
+        else:
+            all_same_ref = False
 
     if all_param:
         stack_node = nc.ParamStackNode(nodes, name=name)
     else:
         stack_node = nc.StackNode(nodes, name=name)
 
-    # TODO: Crear ParamStackNode, para cuando todos son leaf y
-    #  guardamos los parámetros en la pila de la que leemos cada tensor
+    net = nodes[0]._network
+    if all_same_ref:
+        # This memory management can happen always, even not in contracting mode
+        del net._memory_nodes[stack_node._tensor_info['address']]
+        stack_node._tensor_info['address'] = None
+        stack_node._tensor_info['node_ref'] = node_ref
+        stack_node._tensor_info['full'] = False
+        stack_node._tensor_info['stack_idx'] = stack_indices
+        stack_node._tensor_info['index'] = list(zip(indices))
 
-    if all_leaf:
-        net = nodes[0].network
+    else:
+        if all_leaf and (all_param or all_non_param) and net._contracting:
+            # This memory management can only happen for leaf nodes,
+            # all having the same type, in contracting mode
+            for i, node in enumerate(nodes):
+                shape = node.shape
+                if node._tensor_info['address'] is not None:
+                    del net._memory_nodes[node._tensor_info['address']]
+                node._tensor_info['address'] = None
+                node._tensor_info['node_ref'] = stack_node
+                node._tensor_info['full'] = False
+                node._tensor_info['stack_idx'] = i
+                index = [i]
+                for max_dim, dim in zip(stack_node.shape, shape):
+                    index.append(slice(max_dim - dim, max_dim))
+                node._tensor_info['index'] = index
+
+    successor = nc.Successor(kwargs={'nodes': set(nodes)},
+                             child=stack_node,
+                             contracting=net._contracting,
+                             hints=all_leaf and (all_param or all_non_param))
+    if 'stack' in net._successors:
+        net._successors['stack'].append(successor)
+    else:
+        net._successors['stack'] = [successor]
+
+    return stack_node
+
+
+def _stack_next(successor: Successor,
+                nodes: List[AbstractNode],
+                name: Optional[Text] = None) -> StackNode:
+    child = successor.child
+    if successor.hint and successor.contracting:
+        return child
+
+    stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])
+    child._unrestricted_set_tensor(stack_tensor)
+
+    # If contracting turns True, but stack operation had been already performed
+    net = nodes[0]._network
+    if successor.hint and net._contracting:
         for i, node in enumerate(nodes):
             shape = node.shape
             if node._tensor_info['address'] is not None:
                 del net._memory_nodes[node._tensor_info['address']]
             node._tensor_info['address'] = None
-            node._tensor_info['node_ref'] = stack_node
+            node._tensor_info['node_ref'] = child
             node._tensor_info['full'] = False
             node._tensor_info['stack_idx'] = i
             index = [i]
-            for s in shape:
-                index.append(slice(0, s))
+            for max_dim, dim in zip(stack_tensor.shape, shape):
+                index.append(slice(max_dim - dim, max_dim))
             node._tensor_info['index'] = index
 
-            if 'stack' not in node.network._successors:
-                node.network._successors['stack'] = [({'nodes': nodes}, stack_node)]
-            else:
-                node.network._successors['stack'].append(({'nodes': nodes}, stack_node))
+        successor.contracting = True
 
-    return stack_node
-
-
-def _stack_next(nodes: List[AbstractNode], name: Optional[Text] = None) -> StackNode:
-    all_leaf = True
-    for node in nodes:
-        if not node.is_leaf():
-            all_leaf = False
-            break
-
-    kwargs = {'nodes': set(nodes)}
-    for t in nodes[0]._network._successors['stack']:
-        if t[0] == kwargs:
-            child = t[1]
-            break
-
-    if all_leaf:
-        return child
-
-    child.tensor = torch.stack([node.tensor for node in nodes])
     return child
 
 
@@ -796,45 +832,51 @@ stack = Operation(_check_first_stack, _stack_first, _stack_next)
 
 
 ##################   UNBIND   ##################
-def _check_first_unbind(node: AbstractNode) -> bool:
+def _check_first_unbind(node: AbstractNode) -> Optional[Successor]:
     kwargs = {'node': node}
     if 'unbind' in node._network._successors:
-        for t in node._network._successors['unbind']:
-            if t[0] == kwargs:
-                return False
-    return True
+        for succ in node._network._successors['unbind']:
+            if succ.kwargs == kwargs:
+                return succ
+    return None
 
 
+# TODO: se puede optimizar, hace falta hacer el torch.unbind realmente?
 def _unbind_first(node: AbstractNode) -> List[Node]:
     """
     Unbind stacked node. It is assumed that the stacked dimension
-    is the first one
+    is the first one.
     """
-    tensors_list = torch.unbind(node.tensor)
+    tensors = torch.unbind(node.tensor)
     nodes = []
-    start = time.time()
-    lst_times = []
 
-    # Invert structure of node.edges
-    # TODO: just 1 sec faster per epoch
-    is_stack_edge = list(map(lambda e: isinstance(e, nc.AbstractStackEdge), node.edges[1:]))
-    edges_to_zip = []
+    # Invert structure of node.edges_lists
+    # is_stack_edge = list(map(lambda e: isinstance(e, nc.AbstractStackEdge), node.edges_lists[1:]))
+    edges_lists = []
+    node1_lists = []
     for i, edge in enumerate(node.edges[1:]):
-        if is_stack_edge[i]:
-            edges_to_zip.append(edge.edges)
+        # if is_stack_edge[i]:
+        if isinstance(edge, nc.AbstractStackEdge):
+            edges_lists.append(edge._edges)
+            node1_lists.append(edge._node1_lists)
         else:
-            edges_to_zip.append([edge] * len(tensors_list))
+            # TODO: caso edges_lists que designan el indice de pila?? node1 siempre True?
+            edges_lists.append([edge] * len(tensors))
+            node1_lists.append([True] * len(tensors))
+    lst = list(zip(tensors, edges_lists, node1_lists))
 
-    lst = list(zip(*([tensors_list, list(zip(*edges_to_zip))])))
-
-    for i, (tensor, edges) in enumerate(lst):
-        start2 = time.time()
-        new_node = nc.Node(axes_names=node.axes_names[1:], name='unbind_node', network=node.network, leaf=False,
-                        tensor=tensor, edges=list(edges), node1_list=node.is_node1()[1:])
-        # TODO: arreglar node1_list, deber'iamos lllevarlo guardado tambi'en en el StackNode
+    net = node._network
+    for i, (tensor, edges, node1_list) in enumerate(lst):
+        new_node = nc.Node(axes_names=node.axes_names[1:],
+                           name='unbind_node',
+                           network=net,
+                           leaf=False,
+                           tensor=tensor,
+                           edges=list(edges),
+                           node1_list=node1_list)
         nodes.append(new_node)
-        lst_times.append(time.time() - start2)
 
+    # This memory management can happen always, even not in contracting mode
     for i, new_node in enumerate(nodes):
         shape = new_node.shape
         if new_node._tensor_info['address'] is not None:
@@ -844,23 +886,25 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
         new_node._tensor_info['full'] = False
         new_node._tensor_info['stack_idx'] = i
         index = [i]
-        for s in shape:
-            index.append(slice(0, s))
+        for max_dim, dim in zip(node.shape, shape):
+            index.append(slice(max_dim - dim, max_dim))
         new_node._tensor_info['index'] = index
 
-    if 'unbind' not in node.network._successors:
-        node.network._successors['unbind'] = [({'nodes': nodes}, nodes)]
+    successor = nc.Successor(kwargs={'node': node},
+                             child=nodes)
+    if 'unbind' in net._successors:
+        net._successors['unbind'].append(successor)
     else:
-        node.network._successors['unbind'].append(({'nodes': nodes}, nodes))
+        net._successors['unbind'] = [successor]
 
     return nodes
 
 
-def _unbind_next(node: AbstractNode) -> List[Node]:
-    kwargs = {'node': node}
-    for t in node.network._successors['unbind']:
-        if t[0] == kwargs:
-            return t[1]  # TODO: No tenemos que hacer nada si ya hicimos unbind antes
+def _unbind_next(successor: Successor, node: AbstractNode) -> List[Node]:
+    # torch.unbind gives a reference to the stacked tensor, it doesn't create a new tensor
+    # Thus if we have already created the unbinded nodes with their reference to where their
+    # memory is stored, the next times we don't have to compute anything
+    return successor.child
 
 
 unbind = Operation(_check_first_unbind, _unbind_first, _unbind_next)

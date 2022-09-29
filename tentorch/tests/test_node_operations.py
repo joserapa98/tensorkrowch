@@ -11,6 +11,131 @@ import tentorch as tn
 import time
 
 
+def test_tensor_product():
+    node1 = tn.Node(shape=(2, 3),
+                    axes_names=('left', 'right'),
+                    name='node1',
+                    init_method='randn')
+    node2 = tn.Node(shape=(4, 5),
+                    axes_names=('left', 'right'),
+                    name='node2',
+                    init_method='randn')
+    node3 = node1 % node2
+    assert node3.shape == (2, 3, 4, 5)
+    assert node3.edges == node1.edges + node2.edges
+
+    # Second time
+    node3 = node1 % node2
+
+    node1 = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node1',
+                    init_method='randn')
+    node2 = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node2',
+                    init_method='randn')
+    node1[2] ^ node2[0]
+    # Tensor product cannot be performed between connected nodes
+    with pytest.raises(ValueError):
+        node3 = node1 % node2
+
+
+def test_mul_add_sub():
+    node1 = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node1',
+                    init_method='randn')
+    node2 = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node2',
+                    init_method='randn')
+
+    node_mul = node1 * node2
+    assert node_mul.shape == (2, 5, 2)
+    assert torch.equal(node_mul.tensor, node1.tensor * node2.tensor)
+
+    # Second time
+    node_mul = node1 * node2
+
+    node_add = node1 + node2
+    assert node_add.shape == (2, 5, 2)
+    assert torch.equal(node_add.tensor, node1.tensor + node2.tensor)
+
+    # Second time
+    node_add = node1 + node2
+
+    node_sub = node1 - node2
+    assert node_sub.shape == (2, 5, 2)
+    assert torch.equal(node_sub.tensor, node1.tensor - node2.tensor)
+
+    # Second time
+    node_sub = node1 - node2
+
+
+def test_compute_grad():
+    net = tn.TensorNetwork(name='net')
+    node1 = tn.ParamNode(shape=(2, 5, 2),
+                         axes_names=('left', 'input', 'right'),
+                         name='node1',
+                         network=net,
+                         param_edges=True,
+                         init_method='randn')
+    node2 = tn.ParamNode(shape=(2, 5, 2),
+                         axes_names=('left', 'input', 'right'),
+                         name='node2',
+                         network=net,
+                         param_edges=True,
+                         init_method='randn')
+
+    node_tprod = node1 % node2
+    node_tprod.sum().backward()
+    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
+    net.zero_grad()
+    assert torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert torch.equal(node2.grad, torch.zeros(node2.shape))
+
+    node_mul = node1 * node2
+    node_mul.sum().backward()
+    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
+    net.zero_grad()
+    assert torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert torch.equal(node2.grad, torch.zeros(node2.shape))
+
+    node_add = node1 + node2
+    node_add.sum().backward()
+    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
+    net.zero_grad()
+    assert torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert torch.equal(node2.grad, torch.zeros(node2.shape))
+
+    node_sub = node1 - node2
+    node_sub.sum().backward()
+    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
+    net.zero_grad()
+    assert torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert torch.equal(node2.grad, torch.zeros(node2.shape))
+
+    node1[2] ^ node2[0]
+    node3 = node1 @ node2
+    node3.sum().backward()
+    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert node1[2].grad != (None, None)
+    assert node1[2].grad != (torch.zeros(1), torch.zeros(1))
+    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
+    assert node2[0].grad != (None, None)
+    assert node2[0].grad != (torch.zeros(1), torch.zeros(1))
+    net.zero_grad()
+    assert torch.equal(node1.grad, torch.zeros(node1.shape))
+    assert node1[2].grad == (torch.zeros(1), torch.zeros(1))
+    assert torch.equal(node2.grad, torch.zeros(node2.shape))
+    assert node2[0].grad == (torch.zeros(1), torch.zeros(1))
+
+
 def test_contract_between():
     print()
 
@@ -159,141 +284,30 @@ def test_contract_edge():
     assert node2[0].axis1.name == 'input'
 
 
-def test_tensor_product():
-    node1 = tn.Node(shape=(2, 3), axes_names=('left', 'right'), name='node1', init_method='randn')
-    node2 = tn.Node(shape=(4, 5), axes_names=('left', 'right'), name='node2', init_method='randn')
-
-    node3 = node1 % node2
-    assert node3.shape == (2, 3, 4, 5)
-    assert node3.edges == node1.edges + node2.edges
-
-    node1 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1', init_method='randn')
-    node2 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node2', init_method='randn')
-    node1[2] ^ node2[0]
-    # TODO: tensor product not performed between connected nodes
-    # node3 = node1 % node2
-    # assert node3.shape == (2, 5, 2, 2, 5, 2)
-    # assert node3.edges == node1.edges + node2.edges
-
-
-def test_mul_add_sub():
-    node1 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1', init_method='randn')
-    node2 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node2', init_method='randn')
-
-    node_mul = node1 * node2
-    assert node_mul.shape == (2, 5, 2)
-    assert torch.equal(node_mul.tensor, node1.tensor * node2.tensor)
-
-    node_add = node1 + node2
-    assert node_add.shape == (2, 5, 2)
-    assert torch.equal(node_add.tensor, node1.tensor + node2.tensor)
-
-    node_sub = node1 - node2
-    assert node_sub.shape == (2, 5, 2)
-    assert torch.equal(node_sub.tensor, node1.tensor - node2.tensor)
-
-
-def test_compute_grad():
-    net = tn.TensorNetwork(name='net')
-    node1 = tn.ParamNode(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1', network=net,
-                         param_edges=True, init_method='randn')
-    node2 = tn.ParamNode(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node2', network=net,
-                         param_edges=True, init_method='randn')
-
-    node_tprod = node1 % node2
-    node_tprod.tensor.sum().backward()
-    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
-    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
-    net.zero_grad()
-    assert torch.equal(node1.grad, torch.zeros(node1.shape))
-    assert torch.equal(node2.grad, torch.zeros(node2.shape))
-
-    node_mul = node1 * node2
-    node_mul.tensor.sum().backward()
-    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
-    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
-    net.zero_grad()
-    assert torch.equal(node1.grad, torch.zeros(node1.shape))
-    assert torch.equal(node2.grad, torch.zeros(node2.shape))
-
-    node_add = node1 + node2
-    node_add.tensor.sum().backward()
-    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
-    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
-    net.zero_grad()
-    assert torch.equal(node1.grad, torch.zeros(node1.shape))
-    assert torch.equal(node2.grad, torch.zeros(node2.shape))
-
-    node_sub = node1 - node2
-    node_sub.tensor.sum().backward()
-    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
-    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
-    net.zero_grad()
-    assert torch.equal(node1.grad, torch.zeros(node1.shape))
-    assert torch.equal(node2.grad, torch.zeros(node2.shape))
-
-    node1[2] ^ node2[0]
-    node3 = node1 @ node2
-    node3.tensor.sum().backward()
-    assert not torch.equal(node1.grad, torch.zeros(node1.shape))
-    assert node1[2].grad != (None, None)
-    assert node1[2].grad != (torch.zeros(1), torch.zeros(1))
-    assert not torch.equal(node2.grad, torch.zeros(node2.shape))
-    assert node2[0].grad != (None, None)
-    assert node2[0].grad != (torch.zeros(1), torch.zeros(1))
-    net.zero_grad()
-    assert torch.equal(node1.grad, torch.zeros(node1.shape))
-    assert node1[2].grad == (torch.zeros(1), torch.zeros(1))
-    assert torch.equal(node2.grad, torch.zeros(node2.shape))
-    assert node2[0].grad == (torch.zeros(1), torch.zeros(1))
-
-
-def test_einsum():
-    net = tn.TensorNetwork(name='net')
-    node = tn.Node(shape=(5, 5, 5, 5, 2), axes_names=('input', 'input', 'input', 'input', 'output'), network=net,
-                   init_method='randn')
-    net.set_data_nodes(node.edges[:-1], [10])
-    data = torch.randn(10, 5, 4)
-    net._add_data(data.unbind(2))
-
-    out_node = tn.einsum('ijklm,bi,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
-    assert out_node.shape == (10, 2)
-    with pytest.raises(ValueError):
-        out_node = tn.einsum('ijklm,bi,bj,bk,bl->bm', *(list(net.data_nodes.values())))
-    with pytest.raises(ValueError):
-        out_node = tn.einsum('ijklm,bi,bj,bk,bl->b', *([node] + list(net.data_nodes.values())))
-    with pytest.raises(ValueError):
-        out_node = tn.einsum('ijklm,b,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
-
-    net = tn.TensorNetwork(name='net')
-    node = tn.ParamNode(shape=(5, 5, 5, 5, 2), axes_names=('input', 'input', 'input', 'input', 'output'), network=net,
-                        param_edges=True, init_method='randn')
-    net.set_data_nodes(node.edges[:-1], [10])
-    data = torch.randn(10, 5, 4)
-    net._add_data(data.unbind(2))
-
-    out_node = tn.einsum('ijklm,bi,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
-    assert out_node.shape == (10, 2)
-    with pytest.raises(ValueError):
-        out_node = tn.einsum('ijklm,bi,bj,bk,bl->bm', *(list(net.data_nodes.values())))
-    with pytest.raises(ValueError):
-        out_node = tn.einsum('ijklm,bi,bj,bk,bl->b', *([node] + list(net.data_nodes.values())))
-    with pytest.raises(ValueError):
-        out_node = tn.einsum('ijklm,b,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
-
-
 def test_batched_contract_between():
-    node1 = tn.Node(shape=(10, 2, 3), axes_names=('batch', 'left', 'right'), name='node1', init_method='randn')
-    node2 = tn.Node(shape=(10, 2, 3), axes_names=('batch', 'left', 'right'), name='node2', init_method='randn')
+    node1 = tn.Node(shape=(10, 2, 3),
+                    axes_names=('batch', 'left', 'right'),
+                    name='node1',
+                    init_method='randn')
+    node2 = tn.Node(shape=(10, 2, 3),
+                    axes_names=('batch', 'left', 'right'),
+                    name='node2',
+                    init_method='randn')
     node1['left'] ^ node2['left']
     node1['right'] ^ node2['right']
     node3 = node1 @ node2
     assert node3.shape == (10,)
 
-    node1 = tn.ParamNode(shape=(10, 2, 3), axes_names=('batch', 'left', 'right'), name='node1', init_method='randn')
+    node1 = tn.ParamNode(shape=(10, 2, 3),
+                         axes_names=('batch', 'left', 'right'),
+                         name='node1',
+                         init_method='randn')
     node1['left'].parameterize(True)
     node1['right'].parameterize(True)
-    node2 = tn.ParamNode(shape=(10, 2, 3), axes_names=('batch', 'left', 'right'), name='node2', init_method='randn')
+    node2 = tn.ParamNode(shape=(10, 2, 3),
+                         axes_names=('batch', 'left', 'right'),
+                         name='node2',
+                         init_method='randn')
     node2['left'].parameterize(True)
     node2['right'].parameterize(True)
     node1['left'] ^ node2['left']
@@ -313,9 +327,9 @@ def test_stack():
         input_edges += [node['input_0'], node['input_1']]
     net.set_data_nodes(input_edges=input_edges,
                        batch_sizes=[10])
-    data = torch.randn(10, 3, 2*5)
+    data = torch.randn(10, 3, 2 * 5)
     net._add_data(data.unbind(2))
-    
+
     stack_node = tn.stack(nodes, name='stack_node')
     stack_input_0 = tn.stack([node.neighbours('input_0') for node in nodes],
                              name='stack_input_0')
@@ -467,6 +481,40 @@ def test_stack():
     # Try to stack edges of different types
     with pytest.raises(TypeError):
         stack_node = tn.stack(nodes, name='stack_node')
+
+
+def test_einsum():
+    net = tn.TensorNetwork(name='net')
+    node = tn.Node(shape=(5, 5, 5, 5, 2), axes_names=('input', 'input', 'input', 'input', 'output'), network=net,
+                   init_method='randn')
+    net.set_data_nodes(node.edges[:-1], [10])
+    data = torch.randn(10, 5, 4)
+    net._add_data(data.unbind(2))
+
+    out_node = tn.einsum('ijklm,bi,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
+    assert out_node.shape == (10, 2)
+    with pytest.raises(ValueError):
+        out_node = tn.einsum('ijklm,bi,bj,bk,bl->bm', *(list(net.data_nodes.values())))
+    with pytest.raises(ValueError):
+        out_node = tn.einsum('ijklm,bi,bj,bk,bl->b', *([node] + list(net.data_nodes.values())))
+    with pytest.raises(ValueError):
+        out_node = tn.einsum('ijklm,b,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
+
+    net = tn.TensorNetwork(name='net')
+    node = tn.ParamNode(shape=(5, 5, 5, 5, 2), axes_names=('input', 'input', 'input', 'input', 'output'), network=net,
+                        param_edges=True, init_method='randn')
+    net.set_data_nodes(node.edges[:-1], [10])
+    data = torch.randn(10, 5, 4)
+    net._add_data(data.unbind(2))
+
+    out_node = tn.einsum('ijklm,bi,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
+    assert out_node.shape == (10, 2)
+    with pytest.raises(ValueError):
+        out_node = tn.einsum('ijklm,bi,bj,bk,bl->bm', *(list(net.data_nodes.values())))
+    with pytest.raises(ValueError):
+        out_node = tn.einsum('ijklm,bi,bj,bk,bl->b', *([node] + list(net.data_nodes.values())))
+    with pytest.raises(ValueError):
+        out_node = tn.einsum('ijklm,b,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
 
 
 def test_stacked_einsum():

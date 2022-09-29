@@ -78,14 +78,14 @@ def test_time_unbind():
     even = s[0:1000:2]
     odd = s[1:1000:2]
     result = even @ odd
-    print('Indexing stack:', time.time() - start)
+    print('Index stack:', time.time() - start)
 
     start = time.time()
     lst = s.unbind(0)
     even = torch.stack(lst[0:1000:2])
     odd = torch.stack(lst[1:1000:2])
     result = even @ odd
-    print('Unbinding stack:', time.time() - start)
+    print('Unbind stack, index list, create new stacks:', time.time() - start)
     # Efectivamente, caca
 
     idx1 = torch.arange(0, 1000, 2)
@@ -95,7 +95,7 @@ def test_time_unbind():
     even = s[idx1]
     odd = s[idx2]
     result = even @ odd
-    print('Indexing stack:', time.time() - start)
+    print('Create index (not slice), index stack:', time.time() - start)
     # Tarda m'as que usando slice
 
     start = time.time()
@@ -109,7 +109,7 @@ def test_time_unbind():
         aux_lst.append(lst[i])
     odd = torch.stack(aux_lst)
     result = even @ odd
-    print('Unbinding stack:', time.time() - start)
+    print('Create index, unbind stack, select from list, create stack:', time.time() - start)
     # Tarda lo mismo que usando slice
 
 

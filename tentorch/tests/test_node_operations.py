@@ -354,9 +354,31 @@ def test_stack():
     stack_result = tn.einsum('sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
     assert stack_result.shape == (5, 10, 2)
 
+    unbinded_nodes = tn.unbind(stack_result)
+    assert len(unbinded_nodes) == 5
+    assert unbinded_nodes[0].shape == (10, 2)
+
+    second_stack = tn.stack(unbinded_nodes[0::2], name='second_stack')
+    assert second_stack.shape == (3, 10, 2)
+
+    # Repeat operations second time
+    stack_node = tn.stack(nodes, name='stack_node')
+    stack_input_0 = tn.stack([node.neighbours('input_0') for node in nodes],
+                             name='stack_input_0')
+    stack_input_1 = tn.stack([node.neighbours('input_1') for node in nodes],
+                             name='stack_input_1')
+    stack_node['input_0'] ^ stack_input_0['feature']
+    stack_node['input_1'] ^ stack_input_1['feature']
+
+    stack_result = tn.einsum('sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
+    assert stack_result.shape == (5, 10, 2)
+
     nodes = tn.unbind(stack_result)
     assert len(nodes) == 5
     assert nodes[0].shape == (10, 2)
+
+    second_stack = tn.stack(unbinded_nodes[0::2], name='second_stack')
+    assert second_stack.shape == (3, 10, 2)
 
     # Param
     net = tn.TensorNetwork()
@@ -372,6 +394,26 @@ def test_stack():
     data = torch.randn(10, 3, 2 * 5)
     net._add_data(data.unbind(2))
 
+    net._contracting = True
+    stack_node = tn.stack(nodes, name='stack_node')
+    stack_input_0 = tn.stack([node.neighbours('input_0') for node in nodes],
+                             name='stack_input_0')
+    stack_input_1 = tn.stack([node.neighbours('input_1') for node in nodes],
+                             name='stack_input_1')
+    stack_node['input_0'] ^ stack_input_0['feature']  # TODO: estos no son StackEdge, se añadena la Tn si o si
+    stack_node['input_1'] ^ stack_input_1['feature']
+
+    stack_result = tn.einsum('sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
+    assert stack_result.shape == (5, 10, 2)
+
+    unbinded_nodes = tn.unbind(stack_result)
+    assert len(unbinded_nodes) == 5
+    assert unbinded_nodes[0].shape == (10, 2)
+
+    second_stack = tn.stack(unbinded_nodes[0::2], name='second_stack')
+    assert second_stack.shape == (3, 10, 2)
+
+    # Repeat operations second time
     stack_node = tn.stack(nodes, name='stack_node')
     stack_input_0 = tn.stack([node.neighbours('input_0') for node in nodes],
                              name='stack_input_0')
@@ -382,6 +424,13 @@ def test_stack():
 
     stack_result = tn.einsum('sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
     assert stack_result.shape == (5, 10, 2)
+
+    nodes = tn.unbind(stack_result)
+    assert len(nodes) == 5
+    assert nodes[0].shape == (10, 2)
+
+    second_stack = tn.stack(unbinded_nodes[0::2], name='second_stack')
+    assert second_stack.shape == (3, 10, 2)
 
     # Dimensions
     net = tn.TensorNetwork()

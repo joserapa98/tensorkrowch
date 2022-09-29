@@ -49,14 +49,17 @@ def connect(edge1: AbstractEdge, edge2: AbstractEdge) -> Union[Edge, ParamEdge]:
     """
     # TODO: no puedo capar el conectar nodos no-leaf, pero no tiene el resultado esperado,
     #  en realidad estás conectando los nodos originales (leaf)
+    if edge1 == edge2:
+        return edge1
+
     for edge in [edge1, edge2]:
         if not edge.is_dangling():
             raise ValueError(f'Edge {edge!s} is not a dangling edge. '
                              f'This edge points to nodes: {edge.node1!s} and {edge.node2!s}')
         if edge.is_batch():
             raise ValueError(f'Edge {edge!s} is a batch edge')
-    if edge1 == edge2:
-        raise ValueError(f'Cannot connect edge {edge1!s} to itself')
+    # if edge1 == edge2:
+    #     raise ValueError(f'Cannot connect edge {edge1!s} to itself')
     if edge1.dim() != edge2.dim():
         raise ValueError(f'Cannot connect edges of unequal dimension. '
                          f'Dimension of edge {edge1!s}: {edge1.dim()}. '
@@ -748,7 +751,7 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
             else:
                 if node._tensor_info['node_ref'] != node_ref:
                     all_same_ref = False
-            stack_indices.append(node._tensor_info['stack_ix'])
+            stack_indices.append(node._tensor_info['stack_idx'])
             indices.append(node._tensor_info['index'])
         else:
             all_same_ref = False
@@ -766,7 +769,7 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
         stack_node._tensor_info['node_ref'] = node_ref
         stack_node._tensor_info['full'] = False
         stack_node._tensor_info['stack_idx'] = stack_indices
-        stack_node._tensor_info['index'] = list(zip(indices))
+        stack_node._tensor_info['index'] = stack_indices  #list(zip(*indices))
 
     else:
         if all_leaf and (all_param or all_non_param) and net._contracting:
@@ -781,9 +784,12 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
                 node._tensor_info['full'] = False
                 node._tensor_info['stack_idx'] = i
                 index = [i]
-                for max_dim, dim in zip(stack_node.shape, shape):
+                for max_dim, dim in zip(stack_node.shape[1:], shape):
                     index.append(slice(max_dim - dim, max_dim))
                 node._tensor_info['index'] = index
+
+                if all_param:
+                    delattr(net, node._name)
 
     successor = nc.Successor(kwargs={'nodes': set(nodes)},
                              child=stack_node,
@@ -801,7 +807,7 @@ def _stack_next(successor: Successor,
                 nodes: List[AbstractNode],
                 name: Optional[Text] = None) -> StackNode:
     child = successor.child
-    if successor.hint and successor.contracting:
+    if successor.hints and successor.contracting:
         return child
 
     stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])
@@ -809,7 +815,7 @@ def _stack_next(successor: Successor,
 
     # If contracting turns True, but stack operation had been already performed
     net = nodes[0]._network
-    if successor.hint and net._contracting:
+    if successor.hints and net._contracting:
         for i, node in enumerate(nodes):
             shape = node.shape
             if node._tensor_info['address'] is not None:
@@ -819,7 +825,7 @@ def _stack_next(successor: Successor,
             node._tensor_info['full'] = False
             node._tensor_info['stack_idx'] = i
             index = [i]
-            for max_dim, dim in zip(stack_tensor.shape, shape):
+            for max_dim, dim in zip(stack_tensor.shape[1:], shape):
                 index.append(slice(max_dim - dim, max_dim))
             node._tensor_info['index'] = index
 
@@ -863,7 +869,7 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
             # TODO: caso edges_lists que designan el indice de pila?? node1 siempre True?
             edges_lists.append([edge] * len(tensors))
             node1_lists.append([True] * len(tensors))
-    lst = list(zip(tensors, edges_lists, node1_lists))
+    lst = list(zip(tensors, list(zip(*edges_lists)), list(zip(*node1_lists))))
 
     net = node._network
     for i, (tensor, edges, node1_list) in enumerate(lst):
@@ -873,7 +879,7 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
                            leaf=False,
                            tensor=tensor,
                            edges=list(edges),
-                           node1_list=node1_list)
+                           node1_list=list(node1_list))
         nodes.append(new_node)
 
     # This memory management can happen always, even not in contracting mode
@@ -886,7 +892,7 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
         new_node._tensor_info['full'] = False
         new_node._tensor_info['stack_idx'] = i
         index = [i]
-        for max_dim, dim in zip(node.shape, shape):
+        for max_dim, dim in zip(node.shape[1:], shape):
             index.append(slice(max_dim - dim, max_dim))
         new_node._tensor_info['index'] = index
 
@@ -1019,8 +1025,8 @@ def einsum(string: Text, *nodes: AbstractNode) -> Node:
 
     # We assume all nodes belong to the same network
     new_node = nc.Node(axes_names=list(axes_names.values()), name='einsum_node', network=nodes[0].network, leaf=False,
-                    param_edges=False, tensor=new_tensor, edges=list(edges.values()),
-                    node1_list=list(node1_list.values()))
+                       param_edges=False, tensor=new_tensor, edges=list(edges.values()),
+                       node1_list=list(node1_list.values()))
     return new_node
 
 

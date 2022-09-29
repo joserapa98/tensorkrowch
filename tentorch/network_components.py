@@ -1755,19 +1755,19 @@ class StackNode(Node):
                                     'each node must be either all Edge or all ParamEdge type')
 
         edges_dict = dict()
-        node1_list_dict = dict()
+        node1_lists_dict = dict()
         for node in nodes:
             for axis in node._axes:
                 edge = node[axis]
                 if axis.name not in edges_dict:
                     edges_dict[axis._name] = [edge]
-                    node1_list_dict[axis._name] = [axis._node1]
+                    node1_lists_dict[axis._name] = [axis._node1]
                 else:
                     edges_dict[axis._name].append(edge)
-                    node1_list_dict[axis._name].append(axis._node1)
+                    node1_lists_dict[axis._name].append(axis._node1)
 
         self._edges_dict = edges_dict
-        self._node1_list_dict = node1_list_dict
+        self._node1_lists_dict = node1_lists_dict
         self.nodes = nodes
 
         # stacked_tensor = torch.stack([node.tensor for node in nodes])
@@ -1785,8 +1785,8 @@ class StackNode(Node):
         return self._edges_dict
 
     @property
-    def node1_list_dict(self) -> Dict[Text, List[bool]]:
-        return self._node1_list_dict
+    def node1_lists_dict(self) -> Dict[Text, List[bool]]:
+        return self._node1_lists_dict
 
     def make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
         # TODO: param_edges not used here
@@ -1794,9 +1794,14 @@ class StackNode(Node):
             # Stack axis
             return Edge(node1=self, axis1=axis)
         elif isinstance(self._edges_dict[axis._name][0], Edge):
-            return StackEdge(self._edges_dict[axis._name], node1=self, axis1=axis)
+            return StackEdge(self._edges_dict[axis._name],
+                             self._node1_lists_dict[axis._name],
+                             node1=self, axis1=axis)
         elif isinstance(self._edges_dict[axis._name][0], ParamEdge):
-            return ParamStackEdge(self._edges_dict[axis._name], node1=self, axis1=axis)
+            return ParamStackEdge(self._edges_dict[axis._name],
+                                  self._node1_lists_dict[axis._name],
+                                  node1=self,
+                                  axis1=axis)
 
     def _assign_memory(self,
                        address: Optional[Text] = None,
@@ -2102,19 +2107,21 @@ class TensorNetwork(nn.Module):
             self._add_node(node)
 
     def _add_edge(self, edge: AbstractEdge) -> None:
-        if isinstance(edge, ParamEdge):
-            if not hasattr(self, edge.module_name):
-                # If ParamEdge is already a submodule, it is the case in which we are
-                # adding a node that "inherits" edges from previous nodes
-                self.add_module(edge.module_name, edge)
-        if edge.is_dangling() and not edge.is_batch() and (edge not in self.edges):
-            self._edges.append(edge)
+        if not isinstance(edge, AbstractStackEdge):  # TODO: evitar añadir los edges de los stacks a la TN
+            if isinstance(edge, ParamEdge):
+                if not hasattr(self, edge.module_name):
+                    # If ParamEdge is already a submodule, it is the case in which we are
+                    # adding a node that "inherits" edges from previous nodes
+                    self.add_module(edge.module_name, edge)
+            if edge.is_dangling() and not edge.is_batch() and (edge not in self.edges):
+                self._edges.append(edge)
 
     def _remove_edge(self, edge: AbstractEdge) -> None:
-        if isinstance(edge, ParamEdge):
-            delattr(self, edge.module_name)
-        if edge in self.edges:
-            self._edges.remove(edge)
+        if not isinstance(edge, AbstractStackEdge):  # TODO: evitar añadir los edges de los stacks a la TN
+            if isinstance(edge, ParamEdge):
+                delattr(self, edge.module_name)
+            if edge in self.edges:
+                self._edges.remove(edge)
 
     def _remove_node(self, node: AbstractNode) -> None:
         """
@@ -2183,9 +2190,9 @@ class TensorNetwork(nn.Module):
         if self._nodes[prev_name] == node:
             self._nodes[new_name] = self._nodes.pop(prev_name)
             # TODO: A lo mejor esto solo si address is not None
-            self._memory_nodes[new_name] = self._memory_nodes.pop(prev_name)
-            node._assign_memory(address=new_name)
-            # node._tensor_info['address'] = new_name
+            if node._tensor_info['address'] is not None:  # TODO: caso se est'a usando la memoria de otro nodo
+                self._memory_nodes[new_name] = self._memory_nodes.pop(prev_name)
+                node._assign_memory(address=new_name)
         else:
             self._nodes[new_name] = node
             self._memory_nodes[new_name] = node._temp_tensor

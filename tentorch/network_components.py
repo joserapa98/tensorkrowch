@@ -21,7 +21,7 @@ This script contains:
 """
 
 from typing import (overload, Union, Optional, Dict,
-                    Sequence, Text, List, Tuple)
+                    Sequence, Text, List, Tuple, Any)
 from abc import ABC, abstractmethod
 import warnings
 import copy
@@ -1884,6 +1884,37 @@ class ParamStackEdge(AbstractStackEdge, ParamEdge):
 ################################################
 #                TENSOR NETWORK                #
 ################################################
+class Successor:
+    """
+    Class for successors. Object that stores information about
+    the already computed operations in the network, in order to
+    compute them faster next time.
+    """
+
+    def __init__(self,
+                 kwargs: Dict[Text, Any],
+                 child: AbstractNode,
+                 contracting: bool,
+                 hints: Optional[Any] = None) -> None:
+        """
+        Parameters
+        ----------
+        kwargs: keyword arguments used in the operation
+        child: node resultant from the operation
+        contracting: boolean indicating whether the first time
+            the operation was computed was in contracting mode
+            (i.e. optimizing memory management) or not
+        hints: hints created the first time the computation was
+            performed, so that next times we can avoid calculating
+            auxiliary information needed for the computation
+        """
+
+        self.kwargs = kwargs
+        self.child = child
+        self.contracting = contracting
+        self.hints = hints
+
+
 class TensorNetwork(nn.Module):
     """
     General class for Tensor Networks. Subclass of PyTorch nn.Module.
@@ -1941,10 +1972,9 @@ class TensorNetwork(nn.Module):
         return self._edges
 
     @property
-    def successors(self) -> dict:  # TODO: Dict[]:
+    def successors(self) -> Dict[Text, Successor]:
         """
-        Successors list can only be modified with append() or list operations,
-        but cannot be substituted by another list
+        Dictionary with operations' names as keys, and list of successors as values
         """
         return self._successors
 

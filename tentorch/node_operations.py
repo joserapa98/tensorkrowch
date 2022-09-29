@@ -488,6 +488,34 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
 
 
 ###################   STACK   ##################
+def stack_unequal_tensors(lst_tensors: List[torch.Tensor]) -> torch.Tensor:
+    if lst_tensors:
+        same_dims_all = True
+        max_shape = list(lst_tensors[0].shape)
+        for tensor in lst_tensors[1:]:
+            same_dims = True
+            for idx, dim in enumerate(tensor.shape):
+                if dim > max_shape[idx]:
+                    max_shape[idx] = dim
+                    same_dims = False
+                elif dim < max_shape[idx]:
+                    same_dims = False
+            if not same_dims:
+                same_dims_all = False
+
+        if not same_dims_all:
+            for idx, tensor in enumerate(lst_tensors):
+                if tensor.shape != max_shape:
+                    aux_zeros = torch.zeros(max_shape, device=tensor.device)  # TODO: replace with pad
+                    replace_slice = []
+                    for dim in tensor.shape:
+                        replace_slice.append(slice(0, dim))
+                    replace_slice = tuple(replace_slice)
+                    aux_zeros[replace_slice] = tensor
+                    lst_tensors[idx] = aux_zeros
+        return torch.stack(lst_tensors)
+
+
 def _check_first_stack(nodes: List[AbstractNode], name: Optional[Text] = None) -> bool:
     kwargs = {'nodes': set(nodes)}
     if 'stack' in nodes[0].network._successors:

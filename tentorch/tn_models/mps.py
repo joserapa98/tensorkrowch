@@ -14,6 +14,8 @@ from tentorch.network_components import TensorNetwork
 
 from tentorch.node_operations import einsum, stacked_einsum
 
+import tentorch as tn
+
 import opt_einsum
 
 import time
@@ -581,7 +583,13 @@ class MPS(TensorNetwork):
                 env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
                 #print('\t\tFind data:', time.time() - start)
                 #start = time.time()
-                result = stacked_einsum('lir,bi->lbr', self.left_env + self.right_env, env_data)
+                stack = tn.stack(self.left_env + self.right_env)
+                stack_data = tn.stack(env_data)
+                stack['input'] ^ stack_data['feature']
+                result = stack @ stack_data
+                result = tn.unbind(result.permute((0, 1, 3, 2)))
+                # TODO: mismo problema, cada permute da un nodo nuevo, no reusamos, permute tiene que ser operation
+                #result = stacked_einsum('lir,bi->lbr', self.left_env + self.right_env, env_data)
                 #print('\t\tResult:', time.time() - start)
                 left_result = result[:len(self.left_env)]
                 right_result = result[len(self.left_env):]

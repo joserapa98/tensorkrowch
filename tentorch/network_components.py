@@ -2389,10 +2389,11 @@ class TensorNetwork(nn.Module):
             raise IndexError(f'Number of data nodes does not match number of features '
                              f'for input data with {len(data)} features')
         for i, node in enumerate(self.data_nodes.values()):
-            if data[i].shape != node.shape:
-                raise ValueError(f'Input data tensor with shape {data[i].shape} does '
-                                 f'not match data node shape {node.shape}')
-            node.tensor = data[i]
+            # TODO: mientras coincidan los edges conectados, bien. Los de batch pueden ser distintos
+            # if data[i].shape != node.shape:
+            #     raise ValueError(f'Input data tensor with shape {data[i].shape} does '
+            #                      f'not match data node shape {node.shape}')
+            node._unrestricted_set_tensor(data[i])
 
     def is_contracting(self, contracting: Optional[bool] = None) -> Optional[bool]:
         # TODO:

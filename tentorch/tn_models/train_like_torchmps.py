@@ -22,7 +22,6 @@ import PIL.ImageOps
 
 # Miscellaneous initialization
 torch.manual_seed(0)
-start_time = time.time()
 
 # MPS parameters
 # bond_dim = 10
@@ -33,7 +32,7 @@ start_time = time.time()
 num_train = 6000
 num_test = 1000
 batch_size = 100
-image_size = (7, 7)
+image_size = (28, 28)
 num_epochs = 10
 learn_rate = 1e-4
 l2_reg = 0.0
@@ -215,6 +214,11 @@ if l2_reg > 0:
 print()
 
 # Let's start training!
+mps.mps._contracting = True
+with torch.no_grad():
+    mps(torch.zeros(1, 3, image_size[0] * image_size[1]).to(device))
+
+start_time = time.time()
 for epoch_num in range(1, num_epochs + 1):
     running_loss = 0.0
     running_acc = 0.0

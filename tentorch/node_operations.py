@@ -622,29 +622,108 @@ def _contract_edges_next(successor: Successor,
     else:
         # TODO: si son StackEdge, ver que todos los correspondientes edges están conectados
 
+        # TODO: Bien, pero cuidad con la shape del batch al meterla en hints, hay que dejar libertad en ese hueco
+        # nodes = [node1, node2]
+        # tensors = [node1.tensor, node2.tensor]
+        #
+        # for j, edge in enumerate(nodes[0]._edges):
+        #     if edge in edges:
+        #         if isinstance(edge, nc.ParamEdge):
+        #             # Obtain permutations
+        #             permutation_dims = [k if k < j else k + 1
+        #                                 for k in range(nodes[0].rank - 1)] + [j]
+        #             inv_permutation_dims = inverse_permutation(permutation_dims)
+        #
+        #             # Send multiplication dimension to the end, multiply, recover original shape
+        #             tensors[0] = tensors[0].permute(permutation_dims)
+        #             tensors[0] = tensors[0] @ edge.matrix
+        #             tensors[0] = tensors[0].permute(inv_permutation_dims)
+        #
+        # hints = successor.hints
+        # for i in [0, 1]:
+        #     tensors[i] = tensors[i].permute(hints['permutation_dims'][i])
+        #     tensors[i] = tensors[i].reshape(hints['aux_shape'][i])
+
         nodes = [node1, node2]
         tensors = [node1.tensor, node2.tensor]
+        non_contract_edges = [dict(), dict()]
+        batch_edges = dict()
+        contract_edges = dict()
 
-        for j, edge in enumerate(nodes[0]._edges):
-            if edge in edges:
-                if isinstance(edge, nc.ParamEdge):
-                    # Obtain permutations
-                    permutation_dims = [k if k < j else k + 1
-                                        for k in range(nodes[0].rank - 1)] + [j]
-                    inv_permutation_dims = inverse_permutation(permutation_dims)
-
-                    # Send multiplication dimension to the end, multiply, recover original shape
-                    tensors[0] = tensors[0].permute(permutation_dims)
-                    tensors[0] = tensors[0] @ edge.matrix
-                    tensors[0] = tensors[0].permute(inv_permutation_dims)
-
-        hints = successor.hints
         for i in [0, 1]:
-            tensors[i] = tensors[i].permute(hints['permutation_dims'][i])
-            tensors[i] = tensors[i].reshape(hints['aux_shape'][i])
+            for j, edge in enumerate(nodes[i]._edges):
+                if edge in edges:
+                    if i == 0:
+                        if isinstance(edge, nc.ParamEdge):
+                            # Obtain permutations
+                            permutation_dims = [k if k < j else k + 1
+                                                for k in range(nodes[i].rank - 1)] + [j]
+                            inv_permutation_dims = inverse_permutation(permutation_dims)
+
+                            # Send multiplication dimension to the end, multiply, recover original shape
+                            tensors[i] = tensors[i].permute(permutation_dims)
+                            tensors[i] = tensors[i] @ edge.matrix
+                            tensors[i] = tensors[i].permute(inv_permutation_dims)
+
+                        contract_edges[edge] = [tensors[i].shape[j]]
+
+                    contract_edges[edge].append(j)
+
+                elif edge.is_batch():
+                    if i == 0:
+                        batch_in_node2 = False
+                        for aux_edge in nodes[1]._edges:
+                            if aux_edge.is_batch() and (edge.axis1._name == aux_edge.axis1._name):
+                                batch_edges[edge.axis1._name] = [tensors[0].shape[j], j]
+                                batch_in_node2 = True
+                                break
+
+                        if not batch_in_node2:
+                            non_contract_edges[i][edge] = [tensors[i].shape[j], j]
+
+                    else:
+                        if edge.axis1._name in batch_edges:
+                            batch_edges[edge.axis1._name].append(j)
+                        else:
+                            non_contract_edges[i][edge] = [tensors[i].shape[j], j]
+
+                else:
+                    non_contract_edges[i][edge] = [tensors[i].shape[j], j]
+
+        # TODO: esto seguro que se puede hacer mejor
+        permutation_dims = [None, None]
+        permutation_dims[0] = list(map(lambda l: l[1], batch_edges.values())) + \
+                              list(map(lambda l: l[1], non_contract_edges[0].values())) + \
+                              list(map(lambda l: l[1], contract_edges.values()))
+        permutation_dims[1] = list(map(lambda l: l[2], batch_edges.values())) + \
+                              list(map(lambda l: l[2], contract_edges.values())) + \
+                              list(map(lambda l: l[1], non_contract_edges[1].values()))
+
+        aux_permutation = inverse_permutation(list(map(lambda l: l[1], batch_edges.values())) +
+                                              list(map(lambda l: l[1], non_contract_edges[0].values())))
+        aux_permutation2 = inverse_permutation(list(map(lambda l: l[1], non_contract_edges[1].values())))
+        inv_permutation_dims = aux_permutation + list(map(lambda x: x + len(aux_permutation), aux_permutation2))
+
+        aux_shape = [None, None]
+        aux_shape[0] = (torch.tensor(list(map(lambda l: l[0], batch_edges.values()))).prod().long().item(),
+                        torch.tensor(list(map(lambda l: l[0], non_contract_edges[0].values()))).prod().long().item(),
+                        torch.tensor(list(map(lambda l: l[0], contract_edges.values()))).prod().long().item())
+
+        aux_shape[1] = (torch.tensor(list(map(lambda l: l[0], batch_edges.values()))).prod().long().item(),
+                        torch.tensor(list(map(lambda l: l[0], contract_edges.values()))).prod().long().item(),
+                        torch.tensor(list(map(lambda l: l[0], non_contract_edges[1].values()))).prod().long().item())
+
+        new_shape = list(map(lambda l: l[0], batch_edges.values())) + \
+                    list(map(lambda l: l[0], non_contract_edges[0].values())) + \
+                    list(map(lambda l: l[0], non_contract_edges[1].values()))
+
+        for i in [0, 1]:
+            tensors[i] = tensors[i].permute(permutation_dims[i])
+            tensors[i] = tensors[i].reshape(aux_shape[i])
 
         result = tensors[0] @ tensors[1]
-        result = result.view(hints['new_shape']).permute(hints['inv_permutation_dims'])
+        # result = result.view(hints['new_shape']).permute(hints['inv_permutation_dims'])
+        result = result.view(new_shape).permute(inv_permutation_dims)
 
     child = successor.child
     child._unrestricted_set_tensor(result)
@@ -772,7 +851,9 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
         stack_node._tensor_info['index'] = stack_indices  #list(zip(*indices))
 
     else:
-        if all_leaf and (all_param or all_non_param) and net._contracting:
+        # TODO: quitamos todos non-param por lo de la stack de data nodes, hay que controlar eso
+        # if all_leaf and (all_param or all_non_param) and net._contracting:
+        if all_leaf and all_param and net._contracting:
             # This memory management can only happen for leaf nodes,
             # all having the same type, in contracting mode
             for i, node in enumerate(nodes):
@@ -794,7 +875,7 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
     successor = nc.Successor(kwargs={'nodes': set(nodes)},
                              child=stack_node,
                              contracting=net._contracting,
-                             hints=all_leaf and (all_param or all_non_param))
+                             hints=all_leaf and all_param)  #all_leaf and (all_param or all_non_param))
     if 'stack' in net._successors:
         net._successors['stack'].append(successor)
     else:
@@ -1071,6 +1152,7 @@ def stacked_einsum(string: Text, *nodes_lists: List[AbstractNode]) -> List[Node]
     string = input_string + '->' + output_string
 
     start = time.time()
+    # TODO: no adaptado a'un, creamos nodos nuevos cada vez, y a su vez con unbind
     result = einsum(string, *stacks_list)
     #print('\t\t\tEinsum:', time.time() - start)
     start = time.time()

@@ -191,7 +191,7 @@ class Operation:
 
 
 #################   BASIC OP   #################
-def _check_first_tprod(node1: AbstractNode, node2: AbstractNode) -> Node:
+def _check_first_tprod(node1: AbstractNode, node2: AbstractNode) -> Optional[Successor]:
     kwargs = {'node1': node1,
               'node2': node2}
     if 'tprod' in node1._network._successors:
@@ -215,13 +215,20 @@ def _tprod_first(node1: AbstractNode, node2: AbstractNode) -> Node:
                        tensor=new_tensor,
                        edges=node1._edges + node2._edges,
                        node1_list=node1.is_node1() + node2.is_node1())
+
+    net = node1._network
+    successor = nc.Successor(kwargs={'node1': node1,
+                                     'node2': node2},
+                             child=new_node)
+    if 'tprod' in net._successors:
+        net._successors['tprod'].append(successor)
+    else:
+        net._successors['tprod'] = [successor]
+
     return new_node
 
 
 def _tprod_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) -> Node:
-    if node2 in node1.neighbours():
-        raise ValueError('Tensor product cannot be performed between connected nodes')
-
     new_tensor = torch.outer(node1.tensor.flatten(),
                              node2.tensor.flatten()).view(*(list(node1.shape) +
                                                             list(node2.shape)))
@@ -230,7 +237,7 @@ def _tprod_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) 
     return child
 
 
-def _check_first_mul(node1: AbstractNode, node2: AbstractNode) -> Node:
+def _check_first_mul(node1: AbstractNode, node2: AbstractNode) -> Optional[Successor]:
     kwargs = {'node1': node1,
               'node2': node2}
     if 'mul' in node1._network._successors:
@@ -247,6 +254,16 @@ def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
                        network=node1._network,
                        leaf=False,
                        tensor=new_tensor)
+
+    net = node1._network
+    successor = nc.Successor(kwargs={'node1': node1,
+                                     'node2': node2},
+                             child=new_node)
+    if 'mul' in net._successors:
+        net._successors['mul'].append(successor)
+    else:
+        net._successors['mul'] = [successor]
+
     return new_node
 
 
@@ -257,7 +274,7 @@ def _mul_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) ->
     return child
 
 
-def _check_first_add(node1: AbstractNode, node2: AbstractNode) -> Node:
+def _check_first_add(node1: AbstractNode, node2: AbstractNode) -> Optional[Successor]:
     kwargs = {'node1': node1,
               'node2': node2}
     if 'add' in node1._network._successors:
@@ -274,6 +291,16 @@ def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
                        network=node1._network,
                        leaf=False,
                        tensor=new_tensor)
+
+    net = node1._network
+    successor = nc.Successor(kwargs={'node1': node1,
+                                     'node2': node2},
+                             child=new_node)
+    if 'add' in net._successors:
+        net._successors['add'].append(successor)
+    else:
+        net._successors['add'] = [successor]
+
     return new_node
 
 
@@ -284,7 +311,7 @@ def _add_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) ->
     return child
 
 
-def _check_first_sub(node1: AbstractNode, node2: AbstractNode) -> Node:
+def _check_first_sub(node1: AbstractNode, node2: AbstractNode) -> Optional[Successor]:
     kwargs = {'node1': node1,
               'node2': node2}
     if 'sub' in node1._network._successors:
@@ -301,6 +328,16 @@ def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
                        network=node1._network,
                        leaf=False,
                        tensor=new_tensor)
+
+    net = node1._network
+    successor = nc.Successor(kwargs={'node1': node1,
+                                     'node2': node2},
+                             child=new_node)
+    if 'sub' in net._successors:
+        net._successors['sub'].append(successor)
+    else:
+        net._successors['sub'] = [successor]
+
     return new_node
 
 
@@ -671,27 +708,36 @@ def stack_unequal_tensors(lst_tensors: List[torch.Tensor]) -> torch.Tensor:
         return torch.stack(lst_tensors)
 
 
-def _check_first_stack(nodes: List[AbstractNode], name: Optional[Text] = None) -> bool:
+def _check_first_stack(nodes: List[AbstractNode], name: Optional[Text] = None) -> Optional[Successor]:
     kwargs = {'nodes': set(nodes)}
     if 'stack' in nodes[0].network._successors:
-        for t in nodes[0].network._successors['stack']:
-            if t[0] == kwargs:
-                return False
-    return True
+        for succ in nodes[0].network._successors['stack']:
+            if succ.kwargs == kwargs:
+                return succ
+    return None
 
 
 def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> StackNode:
     """
-        Stack nodes into a StackNode. The stack dimension will be the
-        first one in the resultant node
-        """
+    Stack nodes into a StackNode. The stack dimension will be the
+    first one in the resultant node.
+    """
     all_leaf = True
+    all_non_param = True
+    all_param = True
     for node in nodes:
-        if not node.is_leaf():
+        if not node._leaf:
             all_leaf = False
-            break
+        if isinstance(node, nc.ParamNode):
+            all_non_param = False
+        else:
+            all_param = False
 
-    stack_node = nc.StackNode(nodes, name=name)
+    if all_param:
+        stack_node = nc.ParamStackNode(nodes, name=name)
+    else:
+        stack_node = nc.StackNode(nodes, name=name)
+
     # TODO: Crear ParamStackNode, para cuando todos son leaf y
     #  guardamos los parámetros en la pila de la que leemos cada tensor
 

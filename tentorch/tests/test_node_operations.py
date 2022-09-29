@@ -8,44 +8,114 @@ import torch
 import torch.nn as nn
 import tentorch as tn
 
+import time
+
 
 def test_contract_between():
-    node1 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1')
-    node2 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node2')
+    print()
+
+    # Contract two nodes
+    node1 = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node1',
+                    init_method='randn')
+    node2 = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node2',
+                    init_method='randn')
     node1['left'] ^ node2['left']
     node1['right'] ^ node2['right']
+    start = time.time()
     node3 = node1 @ node2
+    print('First contraction node1, node2:', time.time() - start)
     assert node3.shape == (5, 5)
     assert node3.axes_names == ['input_0', 'input_1']
 
-    node1 = tn.Node(shape=(2, 5, 5, 2), axes_names=('left', 'input', 'input', 'right'), name='node1')
+    # Repeat contraction
+    start = time.time()
+    node4 = node1 @ node2
+    print('Second contraction node1, node2', time.time() - start)
+    assert node3 == node4
+    assert torch.equal(node3.tensor, node4.tensor)
+
+    # Compute traces
+    node1 = tn.Node(shape=(2, 5, 5, 2),
+                    axes_names=('left', 'input', 'input', 'right'),
+                    name='node1',
+                    init_method='randn')
     node1['left'] ^ node1['right']
     node1['input_0'] ^ node1['input_1']
-    # TODO: implement trace
-    # node2 = node1 @ node1
-    # assert node2.shape == ()
-    # assert len(node2.edges) == 0
+    start = time.time()
+    node2 = node1 @ node1
+    print('First trace:', time.time() - start)
+    assert node2.shape == ()
+    assert len(node2.edges) == 0
 
-    node1 = tn.ParamNode(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1', param_edges=True)
-    node2 = tn.ParamNode(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node2', param_edges=True)
+    # Repeat traces
+    start = time.time()
+    node3 = node1 @ node1
+    print('Second trace:', time.time() - start)
+    assert node2 == node3
+    assert torch.equal(node2.tensor, node3.tensor)
+
+    print()
+    # Contract two parametric nodes
+    node1 = tn.ParamNode(shape=(2, 5, 2),
+                         axes_names=('left', 'input', 'right'),
+                         name='node1',
+                         param_edges=True,
+                         init_method='randn')
+    node2 = tn.ParamNode(shape=(2, 5, 2),
+                         axes_names=('left', 'input', 'right'),
+                         name='node2',
+                         param_edges=True,
+                         init_method='randn')
     node1['left'] ^ node2['left']
     node1['right'] ^ node2['right']
+    start = time.time()
     node3 = node1 @ node2
+    print('First contraction param node1, node2:', time.time() - start)
     assert node3.shape == (5, 5)
     assert node3.axes_names == ['input_0', 'input_1']
 
-    node1 = tn.ParamNode(shape=(2, 5, 5, 2), axes_names=('left', 'input', 'input', 'right'), name='node1',
-                         param_edges=True)
+    # Repeat contraction
+    start = time.time()
+    node4 = node1 @ node2
+    print('Second contraction param node1, node2', time.time() - start)
+    assert node3 == node4
+    assert torch.equal(node3.tensor, node4.tensor)
+
+    # Compute traces
+    node1 = tn.ParamNode(shape=(2, 5, 5, 2),
+                         axes_names=('left', 'input', 'input', 'right'),
+                         name='node1',
+                         param_edges=True,
+                         init_method='randn')
     node1['left'] ^ node1['right']
     node1['input_0'] ^ node1['input_1']
-    # node2 = node1 @ node1
-    # assert node2.shape == ()
-    # assert len(node2.edges) == 0
+    start = time.time()
+    node2 = node1 @ node1
+    print('First param trace:', time.time() - start)
+    assert node2.shape == ()
+    assert len(node2.edges) == 0
+
+    # Repeat traces
+    start = time.time()
+    node3 = node1 @ node1
+    print('Second param trace:', time.time() - start)
+    assert node2 == node3
+    assert torch.equal(node2.tensor, node3.tensor)
 
 
 def test_contract_edge():
-    node1 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1')
-    node2 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node2')
+    node1 = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node1',
+                    init_method='randn')
+    node2 = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node2',
+                    init_method='randn')
     edge = node1[2] ^ node2[0]
     node3 = edge.contract()
     assert node3['left'] == node1['left']
@@ -54,20 +124,35 @@ def test_contract_edge():
     with pytest.raises(ValueError):
         tn.contract_edges([node1[0]], node1, node2)
 
-    node1 = tn.Node(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1')
+    node1 = tn.Node(shape=(2, 5, 2),
+                    axes_names=('left', 'input', 'right'),
+                    name='node1',
+                    init_method='randn')
     edge = node1[2] ^ node1[0]
     node2 = edge.contract()
     assert len(node2.edges) == 1
     assert node2[0].axis1.name == 'input'
 
-    node1 = tn.ParamNode(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1', param_edges=True)
-    node2 = tn.ParamNode(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node2', param_edges=True)
+    node1 = tn.ParamNode(shape=(2, 5, 2),
+                         axes_names=('left', 'input', 'right'),
+                         name='node1',
+                         param_edges=True,
+                         init_method='randn')
+    node2 = tn.ParamNode(shape=(2, 5, 2),
+                         axes_names=('left', 'input', 'right'),
+                         name='node2',
+                         param_edges=True,
+                         init_method='randn')
     edge = node1[2] ^ node2[0]
     node3 = edge.contract()
     assert node3['left'] == node1['left']
     assert node3['right'] == node2['right']
 
-    node1 = tn.ParamNode(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node1', param_edges=True)
+    node1 = tn.ParamNode(shape=(2, 5, 2),
+                         axes_names=('left', 'input', 'right'),
+                         name='node1',
+                         param_edges=True,
+                         init_method='randn')
     edge = node1[2] ^ node1[0]
     node2 = edge.contract()
     assert len(node2.edges) == 1

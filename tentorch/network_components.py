@@ -736,8 +736,8 @@ class AbstractNode(ABC):
         """
         self._network._memory_nodes[self._tensor_info['address']] = tensor
         if isinstance(tensor, Parameter):
-            if not hasattr(self, self._tensor_info['address']):
-                self._network.register_parameter(self._tensor_info['address'], tensor)
+            if not hasattr(self, 'param_' + self._tensor_info['address']):
+                self._network.register_parameter('param_' + self._tensor_info['address'], tensor)
             else:
                 raise ValueError(f'Network already has attribute named {self._tensor_info["address"]}')
 
@@ -2165,20 +2165,20 @@ class TensorNetwork(nn.Module):
             # If ParamEdge is already a submodule, it is the case in which we are
             # adding a node that "inherits" edges from previous nodes
 
-    def _remove_param(self, param: Union[ParamNode, ParamEdge]) -> None:
-        """
-        Remove parameters of ParamNode or ParamEdge from the TN
-        """
-        if isinstance(param, ParamNode):
-            if hasattr(self, param.name):
-                delattr(self, param.name)
-            else:
-                warnings.warn('Cannot remove a parameter that is not in the network')
-        elif isinstance(param, ParamEdge):
-            if hasattr(self, param.module_name):
-                delattr(self, param.module_name)
-            else:
-                warnings.warn('Cannot remove a parameter that is not in the network')
+    # def _remove_param(self, param: Union[ParamNode, ParamEdge]) -> None:
+    #     """
+    #     Remove parameters of ParamNode or ParamEdge from the TN
+    #     """
+    #     if isinstance(param, ParamNode):
+    #         if hasattr(self, param.name):
+    #             delattr(self, param.name)
+    #         else:
+    #             warnings.warn('Cannot remove a parameter that is not in the network')
+    #     elif isinstance(param, ParamEdge):
+    #         if hasattr(self, param.module_name):
+    #             delattr(self, param.module_name)
+    #         else:
+    #             warnings.warn('Cannot remove a parameter that is not in the network')
 
     def _update_node_info(self, node: AbstractNode, new_name: Text) -> None:
         prev_name = node._name
@@ -2202,7 +2202,7 @@ class TensorNetwork(nn.Module):
 
     def _update_node_name(self, node: AbstractNode, new_name: Text) -> None:
         if isinstance(node.tensor, Parameter):
-            delattr(self, node._name)
+            delattr(self, 'param_' + node._name)
         for edge in node.edges:
             self._remove_edge(edge)
 
@@ -2210,8 +2210,8 @@ class TensorNetwork(nn.Module):
         node._name = new_name
 
         if isinstance(node.tensor, Parameter):
-            if not hasattr(self, node.name):
-                self.register_parameter(node._name, self._memory_nodes[node._name])
+            if not hasattr(self, 'param_' + node.name):
+                self.register_parameter('param_' + node._name, self._memory_nodes[node._name])
             else:
                 # Nodes names are never repeated, so it is likely that this case will never occur
                 raise ValueError(f'Network already has attribute named {node._name}')
@@ -2251,8 +2251,8 @@ class TensorNetwork(nn.Module):
             node._name = new_name
 
         if isinstance(node.tensor, Parameter):
-            if not hasattr(self, node.name):
-                self.register_parameter(node._name, self._memory_nodes[node._name])
+            if not hasattr(self, 'param_' + node.name):
+                self.register_parameter('param_' + node._name, self._memory_nodes[node._name])
             else:
                 # Nodes names are never repeated, so it is likely that this case will never occur
                 raise ValueError(f'Network already has attribute named {node._name}')
@@ -2264,7 +2264,7 @@ class TensorNetwork(nn.Module):
         Modify remaining nodes names when we remove one node
         """
         if isinstance(node.tensor, Parameter):
-            delattr(self, node._name)
+            delattr(self, 'param_' + node._name)
         for edge in node.edges:
             self._remove_edge(edge)
 

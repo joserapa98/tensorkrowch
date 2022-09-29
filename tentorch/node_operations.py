@@ -789,7 +789,7 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
                 node._tensor_info['index'] = index
 
                 if all_param:
-                    delattr(net, node._name)
+                    delattr(net, 'param_' + node._name)
 
     successor = nc.Successor(kwargs={'nodes': set(nodes)},
                              child=stack_node,

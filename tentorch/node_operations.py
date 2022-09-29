@@ -190,6 +190,133 @@ class Operation:
             return self.func2(*args, **kwargs)
 
 
+#################   BASIC OP   #################
+def _check_first_tprod(node1: AbstractNode, node2: AbstractNode) -> Node:
+    kwargs = {'node1': node1,
+              'node2': node2}
+    if 'tprod' in node1._network._successors:
+        for succ in node1.network._successors['tprod']:
+            if succ.kwargs == kwargs:
+                return succ
+    return None
+
+
+def _tprod_first(node1: AbstractNode, node2: AbstractNode) -> Node:
+    if node2 in node1.neighbours():
+        raise ValueError('Tensor product cannot be performed between connected nodes')
+
+    new_tensor = torch.outer(node1.tensor.flatten(),
+                             node2.tensor.flatten()).view(*(list(node1.shape) +
+                                                            list(node2.shape)))
+    new_node = nc.Node(axes_names=node1.axes_names + node2.axes_names,
+                       name=f'tprod_{node1._name}_{node2._name}',
+                       network=node1._network,
+                       leaf=False,
+                       tensor=new_tensor,
+                       edges=node1._edges + node2._edges,
+                       node1_list=node1.is_node1() + node2.is_node1())
+    return new_node
+
+
+def _tprod_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) -> Node:
+    if node2 in node1.neighbours():
+        raise ValueError('Tensor product cannot be performed between connected nodes')
+
+    new_tensor = torch.outer(node1.tensor.flatten(),
+                             node2.tensor.flatten()).view(*(list(node1.shape) +
+                                                            list(node2.shape)))
+    child = successor.child
+    child._unrestricted_set_tensor(new_tensor)
+    return child
+
+
+def _check_first_mul(node1: AbstractNode, node2: AbstractNode) -> Node:
+    kwargs = {'node1': node1,
+              'node2': node2}
+    if 'mul' in node1._network._successors:
+        for succ in node1.network._successors['mul']:
+            if succ.kwargs == kwargs:
+                return succ
+    return None
+
+
+def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
+    new_tensor = node1.tensor * node2.tensor
+    new_node = nc.Node(axes_names=node1.axes_names,
+                       name=f'mul_{node1._name}_{node2._name}',
+                       network=node1._network,
+                       leaf=False,
+                       tensor=new_tensor)
+    return new_node
+
+
+def _mul_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) -> Node:
+    new_tensor = node1.tensor * node2.tensor
+    child = successor.child
+    child._unrestricted_set_tensor(new_tensor)
+    return child
+
+
+def _check_first_add(node1: AbstractNode, node2: AbstractNode) -> Node:
+    kwargs = {'node1': node1,
+              'node2': node2}
+    if 'add' in node1._network._successors:
+        for succ in node1.network._successors['add']:
+            if succ.kwargs == kwargs:
+                return succ
+    return None
+
+
+def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
+    new_tensor = node1.tensor + node2.tensor
+    new_node = nc.Node(axes_names=node1.axes_names,
+                       name=f'add_{node1._name}_{node2._name}',
+                       network=node1._network,
+                       leaf=False,
+                       tensor=new_tensor)
+    return new_node
+
+
+def _add_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) -> Node:
+    new_tensor = node1.tensor + node2.tensor
+    child = successor.child
+    child._unrestricted_set_tensor(new_tensor)
+    return child
+
+
+def _check_first_sub(node1: AbstractNode, node2: AbstractNode) -> Node:
+    kwargs = {'node1': node1,
+              'node2': node2}
+    if 'sub' in node1._network._successors:
+        for succ in node1.network._successors['sub']:
+            if succ.kwargs == kwargs:
+                return succ
+    return None
+
+
+def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
+    new_tensor = node1.tensor - node2.tensor
+    new_node = nc.Node(axes_names=node1.axes_names,
+                       name=f'sub_{node1._name}_{node2._name}',
+                       network=node1._network,
+                       leaf=False,
+                       tensor=new_tensor)
+    return new_node
+
+
+def _sub_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) -> Node:
+    new_tensor = node1.tensor * node2.tensor
+    child = successor.child
+    child._unrestricted_set_tensor(new_tensor)
+    return child
+
+
+tprod = Operation(_check_first_tprod, _tprod_first, _tprod_next)
+mul = Operation(_check_first_mul, _mul_first, _mul_next)
+add = Operation(_check_first_add, _add_first, _add_next)
+sub = Operation(_check_first_sub, _sub_first, _sub_next)
+
+
 #################   CONTRACT   #################
 def _check_first_contract_edges(edges: List[AbstractEdge],
                                 node1: AbstractNode,

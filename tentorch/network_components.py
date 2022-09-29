@@ -817,50 +817,34 @@ class AbstractNode(ABC):
     tensor network operations should not be parameterized
     """
 
-    # TODO: all nodes resultant from operations are current_op, not _leaf
     # Contraction of all edges connecting two nodes
     def __matmul__(self, other: 'AbstractNode') -> 'Node':
         return nop.contract_between(self, other)
 
     # Tensor product of two nodes
     def __mod__(self, other: 'AbstractNode') -> 'Node':
-        if other in self.neighbours():
-            raise ValueError('Tensor product cannot be performed between connected nodes')
-
-        new_tensor = torch.outer(self.tensor.flatten(),
-                                 other.tensor.flatten()).view(*(list(self.shape) +
-                                                                list(other.shape)))
-        new_node = Node(axes_names=self.axes_names + other.axes_names, name=f'tprod_{self.name}_{other.name}',
-                        network=self.network, leaf=False, tensor=new_tensor, edges=self.edges + other.edges,
-                        node1_list=self.is_node1() + other.is_node1())
-        return new_node
+        return nop.tprod(self, other)
 
     # For element-wise operations (not tensor-network-like operations),
     # a new Node with new edges is created
     def __mul__(self, other: 'AbstractNode') -> 'Node':
-        new_node = Node(axes_names=self.axes_names, name=f'mul_{self.name}_{other.name}', network=self.network,
-                        leaf=False, tensor=self.tensor * other.tensor)
-        return new_node
+        return nop.mul(self, other)
 
     def __add__(self, other: 'AbstractNode') -> 'Node':
-        new_node = Node(axes_names=self.axes_names, name=f'add_{self.name}_{other.name}', network=self.network,
-                        leaf=False, tensor=self.tensor + other.tensor)
-        return new_node
+        return nop.add(self, other)
 
     def __sub__(self, other: 'AbstractNode') -> 'Node':
-        new_node = Node(axes_names=self.axes_names, name=f'sub_{self.name}_{other.name}', network=self.network,
-                        leaf=False, tensor=self.tensor - other.tensor)
-        return new_node
+        return nop.sub(self, other)
 
     def __str__(self) -> Text:
         return self.name
 
     def __repr__(self) -> Text:
         return f'{self.__class__.__name__}(\n ' \
-               f'\tname: {self.name}\n' \
+               f'\tname: {self._name}\n' \
                f'\ttensor:\n{tab_string(repr(self.tensor.data), 2)}\n' \
                f'\taxes: {self.axes_names}\n' \
-               f'\tedges:\n{tab_string(repr(self.edges), 2)})'
+               f'\tedges:\n{tab_string(repr(self._edges), 2)})'
 
 
 class Node(AbstractNode):

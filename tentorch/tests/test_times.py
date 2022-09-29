@@ -86,7 +86,31 @@ def test_time_unbind():
     odd = torch.stack(lst[1:1000:2])
     result = even @ odd
     print('Unbinding stack:', time.time() - start)
-    # Efectivamente, caca, como el triple de tiempo
+    # Efectivamente, caca
+
+    idx1 = torch.arange(0, 1000, 2)
+    idx2 = torch.arange(1, 1000, 2)
+
+    start = time.time()
+    even = s[idx1]
+    odd = s[idx2]
+    result = even @ odd
+    print('Indexing stack:', time.time() - start)
+    # Tarda m'as que usando slice
+
+    start = time.time()
+    lst = s.unbind(0)
+    aux_lst = []
+    for i in idx1:
+        aux_lst.append(lst[i])
+    even = torch.stack(aux_lst)
+    aux_lst = []
+    for i in idx2:
+        aux_lst.append(lst[i])
+    odd = torch.stack(aux_lst)
+    result = even @ odd
+    print('Unbinding stack:', time.time() - start)
+    # Tarda lo mismo que usando slice
 
 
 # TODO: remove later

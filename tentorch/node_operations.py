@@ -186,7 +186,8 @@ class Operation:
         if successor is None:
             return self.func1(*args, **kwargs)
         else:
-            return self.func2(successor=successor, *args, **kwargs)
+            args = [successor] + list(args)
+            return self.func2(*args, **kwargs)
 
 
 #################   CONTRACT   #################
@@ -230,6 +231,19 @@ def _contract_edges_first(edges: List[AbstractEdge],
 
     if node1 == node2:
         result = node1.tensor
+        for j, edge in enumerate(node1._edges):
+            if edge in edges:
+                if isinstance(edge, nc.ParamEdge):
+                    # Obtain permutations
+                    permutation_dims = [k if k < j else k + 1
+                                        for k in range(node1.rank - 1)] + [j]
+                    inv_permutation_dims = inverse_permutation(permutation_dims)
+
+                    # Send multiplication dimension to the end, multiply, recover original shape
+                    result = result.permute(permutation_dims)
+                    result = result @ edge.matrix
+                    result = result.permute(inv_permutation_dims)
+
         axes_nums = dict(zip(range(node1.rank), range(node1.rank)))
         for edge in edges:
             result = torch.diagonal(result,
@@ -398,6 +412,19 @@ def _contract_edges_next(successor: Successor,
 
     if node1 == node2:
         result = node1.tensor
+        for j, edge in enumerate(node1._edges):
+            if edge in edges:
+                if isinstance(edge, nc.ParamEdge):
+                    # Obtain permutations
+                    permutation_dims = [k if k < j else k + 1
+                                        for k in range(node1.rank - 1)] + [j]
+                    inv_permutation_dims = inverse_permutation(permutation_dims)
+
+                    # Send multiplication dimension to the end, multiply, recover original shape
+                    result = result.permute(permutation_dims)
+                    result = result @ edge.matrix
+                    result = result.permute(inv_permutation_dims)
+
         axes_nums = dict(zip(range(node1.rank), range(node1.rank)))
         for edge in edges:
             result = torch.diagonal(result,
@@ -424,17 +451,18 @@ def _contract_edges_next(successor: Successor,
         nodes = [node1, node2]
         tensors = [node1.tensor, node2.tensor]
 
-        for i, edge in enumerate(edges):
-            if isinstance(edge, nc.ParamEdge):
-                # Obtain permutations
-                permutation_dims = [k if k < i else k + 1
-                                    for k in range(nodes[0].rank - 1)] + [i]
-                inv_permutation_dims = inverse_permutation(permutation_dims)
+        for j, edge in enumerate(nodes[0]._edges):
+            if edge in edges:
+                if isinstance(edge, nc.ParamEdge):
+                    # Obtain permutations
+                    permutation_dims = [k if k < j else k + 1
+                                        for k in range(nodes[0].rank - 1)] + [j]
+                    inv_permutation_dims = inverse_permutation(permutation_dims)
 
-                # Send multiplication dimension to the end, multiply, recover original shape
-                tensors[0] = tensors[0].permute(permutation_dims)
-                tensors[0] = tensors[0] @ edge.matrix
-                tensors[0] = tensors[0].permute(inv_permutation_dims)
+                    # Send multiplication dimension to the end, multiply, recover original shape
+                    tensors[0] = tensors[0].permute(permutation_dims)
+                    tensors[0] = tensors[0] @ edge.matrix
+                    tensors[0] = tensors[0].permute(inv_permutation_dims)
 
         hints = successor.hints
         for i in [0, 1]:
@@ -445,7 +473,7 @@ def _contract_edges_next(successor: Successor,
         result = result.view(hints['new_shape']).permute(hints['inv_permutation_dims'])
 
     child = successor.child
-    child.tensor = result
+    child._unrestricted_set_tensor(result)
 
     return child
 

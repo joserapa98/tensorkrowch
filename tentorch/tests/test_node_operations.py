@@ -20,6 +20,13 @@ def test_tensor_product():
                     axes_names=('left', 'right'),
                     name='node2',
                     init_method='randn')
+    # Tensor product cannot be performed between nodes in different networks
+    with pytest.raises(ValueError):
+        node3 = node1 % node2
+
+    net = tn.TensorNetwork()
+    node1.network = net
+    node2.network = net
     node3 = node1 % node2
     assert node3.shape == (2, 3, 4, 5)
     assert node3.edges == node1.edges + node2.edges
@@ -27,13 +34,16 @@ def test_tensor_product():
     # Second time
     node3 = node1 % node2
 
+    net2 = tn.TensorNetwork()
     node1 = tn.Node(shape=(2, 5, 2),
                     axes_names=('left', 'input', 'right'),
                     name='node1',
+                    network=net2,
                     init_method='randn')
     node2 = tn.Node(shape=(2, 5, 2),
                     axes_names=('left', 'input', 'right'),
                     name='node2',
+                    network=net2,
                     init_method='randn')
     node1[2] ^ node2[0]
     # Tensor product cannot be performed between connected nodes
@@ -42,13 +52,16 @@ def test_tensor_product():
 
 
 def test_mul_add_sub():
+    net = tn.TensorNetwork()
     node1 = tn.Node(shape=(2, 5, 2),
                     axes_names=('left', 'input', 'right'),
                     name='node1',
+                    network=net,
                     init_method='randn')
     node2 = tn.Node(shape=(2, 5, 2),
                     axes_names=('left', 'input', 'right'),
                     name='node2',
+                    network=net,
                     init_method='randn')
 
     node_mul = node1 * node2

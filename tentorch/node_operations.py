@@ -168,9 +168,6 @@ def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
 ################################################
 #               NODE OPERATIONS                #
 ################################################
-# TODO: otra opcion: successors tuplas (kwargs, operation), si los nodos padres
-#  coinciden en kwargs (ya sucedio la operacion), operation guarda el objeto
-#  operacion optimizada para tensores
 class Operation:
 
     def __init__(self, check_first, func1, func2):
@@ -202,6 +199,8 @@ def _check_first_tprod(node1: AbstractNode, node2: AbstractNode) -> Optional[Suc
 
 
 def _tprod_first(node1: AbstractNode, node2: AbstractNode) -> Node:
+    if node1._network != node2._network:
+        raise ValueError('Nodes must be in the same network')
     if node2 in node1.neighbours():
         raise ValueError('Tensor product cannot be performed between connected nodes')
 
@@ -248,6 +247,9 @@ def _check_first_mul(node1: AbstractNode, node2: AbstractNode) -> Optional[Succe
 
 
 def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
+    if node1._network != node2._network:
+        raise ValueError('Nodes must be in the same network')
+
     new_tensor = node1.tensor * node2.tensor
     new_node = nc.Node(axes_names=node1.axes_names,
                        name=f'mul_{node1._name}_{node2._name}',
@@ -285,6 +287,9 @@ def _check_first_add(node1: AbstractNode, node2: AbstractNode) -> Optional[Succe
 
 
 def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
+    if node1._network != node2._network:
+        raise ValueError('Nodes must be in the same network')
+
     new_tensor = node1.tensor + node2.tensor
     new_node = nc.Node(axes_names=node1.axes_names,
                        name=f'add_{node1._name}_{node2._name}',
@@ -322,6 +327,9 @@ def _check_first_sub(node1: AbstractNode, node2: AbstractNode) -> Optional[Succe
 
 
 def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
+    if node1._network != node2._network:
+        raise ValueError('Nodes must be in the same network')
+
     new_tensor = node1.tensor - node2.tensor
     new_node = nc.Node(axes_names=node1.axes_names,
                        name=f'sub_{node1._name}_{node2._name}',

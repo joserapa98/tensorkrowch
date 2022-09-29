@@ -1736,6 +1736,9 @@ class ParamEdge(AbstractEdge, nn.Module):
                              'Edge should be disconnected from itself')
 
 
+################################################
+#                    STACKS                    #
+################################################
 # TODO: hacer privado, solo podemos crearlo usando stack()
 # TODO: no privado, pero solo desde stack (y en general operaciones) es como se optimiza
 #  y se lleva registro de hijos y demás
@@ -1894,7 +1897,7 @@ class Successor:
     def __init__(self,
                  kwargs: Dict[Text, Any],
                  child: AbstractNode,
-                 contracting: bool,
+                 contracting: Optional[bool] = None,
                  hints: Optional[Any] = None) -> None:
         """
         Parameters

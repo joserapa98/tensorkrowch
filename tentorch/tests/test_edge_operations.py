@@ -57,7 +57,7 @@ def test_connect():
     # TODO: Problem! Does not raise error because override is True when using ^
     #with pytest.raises(ValueError):
     #    node1[2] ^ node2[0]
-    tn.connect(node1[2], node2[0], override_network=True)  # TODO: a lo mejor override=True siempre
+    tn.connect(node1[2], node2[0])
     assert node1.network == net1
     assert node2.network == net1
 

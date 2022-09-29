@@ -1488,7 +1488,7 @@ class Edge(AbstractEdge):
         pass
 
     def __xor__(self, other: Union['Edge', 'ParamEdge']) -> Union['Edge', 'ParamEdge']:
-        return nop.connect(self, other, True)
+        return nop.connect(self, other)
 
     def __or__(self, other: 'Edge') -> Tuple['Edge', 'Edge']:
         if other == self:
@@ -1726,7 +1726,7 @@ class ParamEdge(AbstractEdge, nn.Module):
         pass
 
     def __xor__(self, other: Union['Edge', 'ParamEdge']) -> 'ParamEdge':
-        return nop.connect(self, other, True)
+        return nop.connect(self, other)
 
     def __or__(self, other: 'ParamEdge') -> Tuple['ParamEdge', 'ParamEdge']:
         if other == self:

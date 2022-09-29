@@ -40,21 +40,9 @@ AbstractStackEdge, StackEdge, ParamStackEdge = Any, Any, Any
 ################################################
 #                  OPERATIONS                  #
 ################################################
-def connect(edge1: AbstractEdge,
-            edge2: AbstractEdge,
-            override_network: bool = False) -> Union[Edge, ParamEdge]:
+def connect(edge1: AbstractEdge, edge2: AbstractEdge) -> Union[Edge, ParamEdge]:
     """
     Connect two dangling, non-batch edges.
-
-    Parameters
-    ----------
-    edge1: first edge to be connected
-    edge2: second edge to be connected
-    override_network: boolean indicating whether network of node2 should
-                      be overridden with network of node1, in case both
-                      nodes are already in a network. If only one node
-                      is in a network, the other is moved to that network
-                      # TODO: siempre sobreviven los datos de node1, self, nodo izquierdo
     """
     # TODO: no puedo capar el conectar nodos no-leaf, pero no tiene el resultado esperado,
     #  en realidad estás conectando los nodos originales (leaf)
@@ -79,37 +67,25 @@ def connect(edge1: AbstractEdge,
 
     node1, axis1 = edge1.node1, edge1.axis1
     node2, axis2 = edge2.node1, edge2.axis1
-    net1, net2 = node1.network, node2.network
+    net1, net2 = node1._network, node2._network
 
-    # TODO: siempre sobreescribir con la net1
-    if net1 is not None:
-        if net1 != net2:
-            if (net2 is not None) and not override_network:
-                raise ValueError(f'Cannot connect edges from nodes in different networks. '
-                                 f'Set `override` to True if you want to override {net2!s} '
-                                 f'with {net1!s} in {node1!s} and its neighbours.')
-            node2.move_to_network(net1)
-        net1._remove_edge(edge1)
-        net1._remove_edge(edge2)
-        net = net1
-    else:
-        if net2 is not None:
-            node1.move_to_network(net2)
-            net2._remove_edge(edge1)
-            net2._remove_edge(edge2)
-        net = net2
+    if net1 != net2:
+        node2.move_to_network(net1)
+    net1._remove_edge(edge1)
+    net1._remove_edge(edge2)
+    net = net1
 
     if isinstance(edge1, nc.ParamEdge) == isinstance(edge2, nc.ParamEdge):
         if isinstance(edge1, nc.ParamEdge):
             shift = edge1.shift
             slope = edge1.slope
             new_edge = nc.ParamEdge(node1=node1, axis1=axis1,
-                                 shift=shift, slope=slope,
-                                 node2=node2, axis2=axis2)
+                                    shift=shift, slope=slope,
+                                    node2=node2, axis2=axis2)
             net._add_edge(new_edge)
         else:
             new_edge = nc.Edge(node1=node1, axis1=axis1,
-                            node2=node2, axis2=axis2)
+                               node2=node2, axis2=axis2)
     else:
         if isinstance(edge1, nc.ParamEdge):
             shift = edge1.shift
@@ -118,8 +94,8 @@ def connect(edge1: AbstractEdge,
             shift = edge2.shift
             slope = edge2.slope
         new_edge = nc.ParamEdge(node1=node1, axis1=axis1,
-                             shift=shift, slope=slope,
-                             node2=node2, axis2=axis2)
+                                shift=shift, slope=slope,
+                                node2=node2, axis2=axis2)
         net._add_edge(new_edge)
 
     node1._add_edge(new_edge, axis1, True)
@@ -140,23 +116,21 @@ def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
     if isinstance(edge, nc.Edge):
         new_edge1 = nc.Edge(node1=node1, axis1=axis1)
         new_edge2 = nc.Edge(node1=node2, axis1=axis2)
-        net = edge.node1.network
-        if net is not None:
-            net._edges += [new_edge1, new_edge2]
+        net = edge.node1._network
+        net._add_edge(new_edge1)
+        net._add_edge(new_edge2)
     else:
         assert isinstance(edge, nc.ParamEdge)
         shift = edge.shift
         slope = edge.slope
         new_edge1 = nc.ParamEdge(node1=node1, axis1=axis1,
-                              shift=shift, slope=slope)
+                                 shift=shift, slope=slope)
         new_edge2 = nc.ParamEdge(node1=node2, axis1=axis2,
-                              shift=shift, slope=slope)
-        net = edge.node1.network
-        if net is not None:
-            net._remove_param(edge)
-            net._add_param(new_edge1)
-            net._add_param(new_edge2)
-            net._edges += [new_edge1, new_edge2]
+                                 shift=shift, slope=slope)
+        net = edge.node1._network
+        net._remove_edge(edge)
+        net._add_edge(new_edge1)
+        net._add_edge(new_edge2)
 
     node1._add_edge(new_edge1, axis1, True)
     node2._add_edge(new_edge2, axis2, True)
@@ -181,29 +155,6 @@ class Operation:
             return self.func1(*args, **kwargs)
         else:
             return self.func2(*args, **kwargs)
-
-
-def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
-    """
-    Obtain list of edges shared between two nodes
-    """
-    edges = []
-    for edge in node1.edges:
-        if (edge in node2.edges):  # and (not edge.is_dangling()):  # TODO: why I had this?
-            edges.append(edge)
-    return edges
-
-
-# TODO: method of nodes
-def get_batch_edges(node: AbstractNode) -> List[AbstractEdge]:
-    """
-    Obtain list of batch edges shared between two nodes
-    """
-    edges = []
-    for edge in node.edges:
-        if edge.is_batch():
-            edges.append(edge)
-    return edges
 
 
 def _check_first_contract_edges(edges: List[AbstractEdge],
@@ -488,7 +439,20 @@ def contract(edge: AbstractEdge) -> Node:
     """
     Contract only one edge
     """
-    return contract_edges([edge] + get_batch_edges(edge.node1) + get_batch_edges(edge.node2), edge.node1, edge.node2)
+    return contract_edges([edge], edge.node1, edge.node2)
+
+
+def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
+    """
+    Obtain list of edges shared between two nodes
+    """
+    edges = []
+    for i1, edge1 in enumerate(node1.edges):
+        for i2, edge2 in enumerate(node2.edges):
+            if (edge1 == edge2) and not edge1.is_dangling():
+                if node1.is_node1(i1) != node2.is_node1(i2):
+                    edges.append(edge1)
+    return edges
 
 
 def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
@@ -496,7 +460,7 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
     Contract all shared edges between two nodes, also performing batch contraction
     between batch edges that share name in both nodes
     """
-    edges = get_shared_edges(node1, node2) #+ get_batch_edges(node1) + get_batch_edges(node2)
+    edges = get_shared_edges(node1, node2)
     if not edges:
         raise ValueError(f'No batch edges neither shared edges between '
                          f'nodes {node1!s} and {node2!s} found')
@@ -641,8 +605,7 @@ def connect_stack(edge1: AbstractStackEdge,
                                  'of different dimensions')
             edge1.edges[i + 1].set_parameters(shift=shift, slope=slope)
 
-    return connect(edge1=edge1, edge2=edge2,
-                   override_network=override_network)
+    return connect(edge1=edge1, edge2=edge2)
 
 
 def _check_first_stack(nodes: List[AbstractNode], name: Optional[Text] = None) -> bool:

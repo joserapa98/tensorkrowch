@@ -6,7 +6,8 @@ from tentorch.node_operations import (connect, disconnect, get_shared_edges,
                                       contract_edges, contract,
                                       contract_between)
 
-from tentorch.node_operations import einsum, stack, unbind, stacked_einsum
+from tentorch.node_operations import (permute, tprod, mul, add, sub,
+                                      einsum, stack, unbind, stacked_einsum)
 
 from tentorch.initializers import zeros, ones, copy, rand, randn
 

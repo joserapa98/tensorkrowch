@@ -19,18 +19,21 @@ This script contains:
 """
 # split, svd, qr, rq, etc. -> using einsum-like strings, useful
 
-from typing import Union, Optional, Text, List, Dict, Tuple, Any, Callable
+from typing import Union, Optional, Text, List, Dict, Tuple, Any, Callable, Sequence
 from abc import abstractmethod
 
 import torch
 import torch.nn as nn
 import opt_einsum
 
-from tentorch.utils import permute_list, inverse_permutation
+from tentorch.utils import is_permutation, permute_list, inverse_permutation
 
 import tentorch.network_components as nc
 
 import time
+
+Axis = Any
+Ax = Union[int, Text, Axis]
 
 AbstractNode, Node, ParamNode = Any, Any, Any
 AbstractEdge, Edge, ParamEdge = Any, Any, Any
@@ -190,6 +193,53 @@ class Operation:
 
 
 #################   BASIC OP   #################
+def _check_first_permute(node: AbstractNode, axes: Sequence[Ax]) -> Optional[Successor]:
+    kwargs = {'node': node,
+              'axes': axes}
+    if 'permute' in node._network._successors:
+        for succ in node.network._successors['permute']:
+            if succ.kwargs == kwargs:
+                return succ
+    return None
+
+
+def _permute_first(node: AbstractNode, axes: Sequence[Ax]) -> Node:
+    axes_nums = []
+    for axis in axes:
+        axes_nums.append(node.get_axis_number(axis))
+
+    if not is_permutation(list(range(len(axes_nums))), axes_nums):
+        raise ValueError('The provided list of axis is not a permutation of the'
+                         ' axes of the node')
+    else:
+        new_node = nc.Node(axes_names=permute_list(node.axes_names, axes_nums),
+                           name='permute_' + node._name,
+                           network=node._network,
+                           param_edges=node.param_edges(),
+                           tensor=node.tensor.permute(axes_nums),
+                           edges=permute_list(node._edges, axes_nums),
+                           node1_list=permute_list(node.is_node1(), axes_nums))
+
+    net = node._network
+    successor = nc.Successor(kwargs={'node': node,
+                                     'axes': axes},
+                             child=new_node,
+                             hints=axes_nums)
+    if 'permute' in net._successors:
+        net._successors['permute'].append(successor)
+    else:
+        net._successors['permute'] = [successor]
+
+    return new_node
+
+
+def _permute_next(successor: Successor, node: AbstractNode, axes: Sequence[Ax]) -> Node:
+    new_tensor = node.tensor.permute(successor.hints)
+    child = successor.child
+    child._unrestricted_set_tensor(new_tensor)
+    return child
+
+
 def _check_first_tprod(node1: AbstractNode, node2: AbstractNode) -> Optional[Successor]:
     kwargs = {'node1': node1,
               'node2': node2}
@@ -358,6 +408,7 @@ def _sub_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) ->
     return child
 
 
+permute = Operation(_check_first_permute, _permute_first, _permute_next)
 tprod = Operation(_check_first_tprod, _tprod_first, _tprod_next)
 mul = Operation(_check_first_mul, _mul_first, _mul_next)
 add = Operation(_check_first_add, _add_first, _add_next)
@@ -483,18 +534,27 @@ def _contract_edges_first(edges: List[AbstractEdge],
                         batch_in_node2 = False
                         for aux_edge in nodes[1]._edges:
                             if aux_edge.is_batch() and (edge.axis1._name == aux_edge.axis1._name):
-                                batch_edges[edge.axis1._name] = [tensors[0].shape[j], j]
+                                if 'batch' in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!
+                                    batch_edges[edge.axis1._name] = [-1, j]
+                                else:
+                                    batch_edges[edge.axis1._name] = [tensors[0].shape[j], j]
                                 batch_in_node2 = True
                                 break
 
                         if not batch_in_node2:
-                            non_contract_edges[i][edge] = [tensors[i].shape[j], j]
+                            if 'batch' in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!
+                                non_contract_edges[i][edge] = [-1, j]
+                            else:
+                                non_contract_edges[i][edge] = [tensors[i].shape[j], j]
 
                     else:
                         if edge.axis1._name in batch_edges:
                             batch_edges[edge.axis1._name].append(j)
                         else:
-                            non_contract_edges[i][edge] = [tensors[i].shape[j], j]
+                            if 'batch' in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!
+                                non_contract_edges[i][edge] = [-1, j]
+                            else:
+                                non_contract_edges[i][edge] = [tensors[i].shape[j], j]
 
                 else:
                     non_contract_edges[i][edge] = [tensors[i].shape[j], j]
@@ -514,13 +574,17 @@ def _contract_edges_first(edges: List[AbstractEdge],
         inv_permutation_dims = aux_permutation + list(map(lambda x: x + len(aux_permutation), aux_permutation2))
 
         aux_shape = [None, None]
-        aux_shape[0] = (torch.tensor(list(map(lambda l: l[0], batch_edges.values()))).prod().long().item(),
+        aux_shape[0] = [torch.tensor(list(map(lambda l: l[0], batch_edges.values()))).prod().long().item(),
                         torch.tensor(list(map(lambda l: l[0], non_contract_edges[0].values()))).prod().long().item(),
-                        torch.tensor(list(map(lambda l: l[0], contract_edges.values()))).prod().long().item())
+                        torch.tensor(list(map(lambda l: l[0], contract_edges.values()))).prod().long().item()]
 
-        aux_shape[1] = (torch.tensor(list(map(lambda l: l[0], batch_edges.values()))).prod().long().item(),
+        aux_shape[1] = [torch.tensor(list(map(lambda l: l[0], batch_edges.values()))).prod().long().item(),
                         torch.tensor(list(map(lambda l: l[0], contract_edges.values()))).prod().long().item(),
-                        torch.tensor(list(map(lambda l: l[0], non_contract_edges[1].values()))).prod().long().item())
+                        torch.tensor(list(map(lambda l: l[0], non_contract_edges[1].values()))).prod().long().item()]
+        for i in [0, 1]:
+            for j in [0, 1, 2]:
+                if aux_shape[i][j] < 0:
+                    aux_shape[i][j] = -1  # Por si hemos hecho producto de -1 por otra dim
 
         new_shape = list(map(lambda l: l[0], batch_edges.values())) + \
                     list(map(lambda l: l[0], non_contract_edges[0].values())) + \
@@ -623,107 +687,41 @@ def _contract_edges_next(successor: Successor,
         # TODO: si son StackEdge, ver que todos los correspondientes edges están conectados
 
         # TODO: Bien, pero cuidad con la shape del batch al meterla en hints, hay que dejar libertad en ese hueco
-        # nodes = [node1, node2]
-        # tensors = [node1.tensor, node2.tensor]
-        #
-        # for j, edge in enumerate(nodes[0]._edges):
-        #     if edge in edges:
-        #         if isinstance(edge, nc.ParamEdge):
-        #             # Obtain permutations
-        #             permutation_dims = [k if k < j else k + 1
-        #                                 for k in range(nodes[0].rank - 1)] + [j]
-        #             inv_permutation_dims = inverse_permutation(permutation_dims)
-        #
-        #             # Send multiplication dimension to the end, multiply, recover original shape
-        #             tensors[0] = tensors[0].permute(permutation_dims)
-        #             tensors[0] = tensors[0] @ edge.matrix
-        #             tensors[0] = tensors[0].permute(inv_permutation_dims)
-        #
-        # hints = successor.hints
-        # for i in [0, 1]:
-        #     tensors[i] = tensors[i].permute(hints['permutation_dims'][i])
-        #     tensors[i] = tensors[i].reshape(hints['aux_shape'][i])
-
         nodes = [node1, node2]
         tensors = [node1.tensor, node2.tensor]
-        non_contract_edges = [dict(), dict()]
-        batch_edges = dict()
-        contract_edges = dict()
+
+        for j, edge in enumerate(nodes[0]._edges):
+            if edge in edges:
+                if isinstance(edge, nc.ParamEdge):
+                    # Obtain permutations
+                    permutation_dims = [k if k < j else k + 1
+                                        for k in range(nodes[0].rank - 1)] + [j]
+                    inv_permutation_dims = inverse_permutation(permutation_dims)
+
+                    # Send multiplication dimension to the end, multiply, recover original shape
+                    tensors[0] = tensors[0].permute(permutation_dims)
+                    tensors[0] = tensors[0] @ edge.matrix
+                    tensors[0] = tensors[0].permute(inv_permutation_dims)
+
+        hints = successor.hints
+        # batch_idx = hints['batch_idx']
+        # batch_shapes = []
+        # for idx in batch_idx:
+        #     batch_shapes.append(tensors[0].shape[idx])
+        #
+        # new_shape = hints['new_shape']
+        # new_shape[:len(batch_shapes)] = batch_shapes
+        #
+        # aux_shape = hints['aux_shape']
+        # aux_shape[0][0] = torch.tensor(batch_shapes).prod().long().item()
+        # aux_shape[1][0] = torch.tensor(batch_shapes).prod().long().item()
 
         for i in [0, 1]:
-            for j, edge in enumerate(nodes[i]._edges):
-                if edge in edges:
-                    if i == 0:
-                        if isinstance(edge, nc.ParamEdge):
-                            # Obtain permutations
-                            permutation_dims = [k if k < j else k + 1
-                                                for k in range(nodes[i].rank - 1)] + [j]
-                            inv_permutation_dims = inverse_permutation(permutation_dims)
-
-                            # Send multiplication dimension to the end, multiply, recover original shape
-                            tensors[i] = tensors[i].permute(permutation_dims)
-                            tensors[i] = tensors[i] @ edge.matrix
-                            tensors[i] = tensors[i].permute(inv_permutation_dims)
-
-                        contract_edges[edge] = [tensors[i].shape[j]]
-
-                    contract_edges[edge].append(j)
-
-                elif edge.is_batch():
-                    if i == 0:
-                        batch_in_node2 = False
-                        for aux_edge in nodes[1]._edges:
-                            if aux_edge.is_batch() and (edge.axis1._name == aux_edge.axis1._name):
-                                batch_edges[edge.axis1._name] = [tensors[0].shape[j], j]
-                                batch_in_node2 = True
-                                break
-
-                        if not batch_in_node2:
-                            non_contract_edges[i][edge] = [tensors[i].shape[j], j]
-
-                    else:
-                        if edge.axis1._name in batch_edges:
-                            batch_edges[edge.axis1._name].append(j)
-                        else:
-                            non_contract_edges[i][edge] = [tensors[i].shape[j], j]
-
-                else:
-                    non_contract_edges[i][edge] = [tensors[i].shape[j], j]
-
-        # TODO: esto seguro que se puede hacer mejor
-        permutation_dims = [None, None]
-        permutation_dims[0] = list(map(lambda l: l[1], batch_edges.values())) + \
-                              list(map(lambda l: l[1], non_contract_edges[0].values())) + \
-                              list(map(lambda l: l[1], contract_edges.values()))
-        permutation_dims[1] = list(map(lambda l: l[2], batch_edges.values())) + \
-                              list(map(lambda l: l[2], contract_edges.values())) + \
-                              list(map(lambda l: l[1], non_contract_edges[1].values()))
-
-        aux_permutation = inverse_permutation(list(map(lambda l: l[1], batch_edges.values())) +
-                                              list(map(lambda l: l[1], non_contract_edges[0].values())))
-        aux_permutation2 = inverse_permutation(list(map(lambda l: l[1], non_contract_edges[1].values())))
-        inv_permutation_dims = aux_permutation + list(map(lambda x: x + len(aux_permutation), aux_permutation2))
-
-        aux_shape = [None, None]
-        aux_shape[0] = (torch.tensor(list(map(lambda l: l[0], batch_edges.values()))).prod().long().item(),
-                        torch.tensor(list(map(lambda l: l[0], non_contract_edges[0].values()))).prod().long().item(),
-                        torch.tensor(list(map(lambda l: l[0], contract_edges.values()))).prod().long().item())
-
-        aux_shape[1] = (torch.tensor(list(map(lambda l: l[0], batch_edges.values()))).prod().long().item(),
-                        torch.tensor(list(map(lambda l: l[0], contract_edges.values()))).prod().long().item(),
-                        torch.tensor(list(map(lambda l: l[0], non_contract_edges[1].values()))).prod().long().item())
-
-        new_shape = list(map(lambda l: l[0], batch_edges.values())) + \
-                    list(map(lambda l: l[0], non_contract_edges[0].values())) + \
-                    list(map(lambda l: l[0], non_contract_edges[1].values()))
-
-        for i in [0, 1]:
-            tensors[i] = tensors[i].permute(permutation_dims[i])
-            tensors[i] = tensors[i].reshape(aux_shape[i])
+            tensors[i] = tensors[i].permute(hints['permutation_dims'][i])
+            tensors[i] = tensors[i].reshape(hints['aux_shape'][i])
 
         result = tensors[0] @ tensors[1]
-        # result = result.view(hints['new_shape']).permute(hints['inv_permutation_dims'])
-        result = result.view(new_shape).permute(inv_permutation_dims)
+        result = result.view(hints['new_shape']).permute(hints['inv_permutation_dims'])
 
     child = successor.child
     child._unrestricted_set_tensor(result)
@@ -941,13 +939,16 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
     # is_stack_edge = list(map(lambda e: isinstance(e, nc.AbstractStackEdge), node.edges_lists[1:]))
     edges_lists = []
     node1_lists = []
-    for i, edge in enumerate(node.edges[1:]):
+    batch_idx = None
+    for i, edge in enumerate(node._edges[1:]):
         # if is_stack_edge[i]:
         if isinstance(edge, nc.AbstractStackEdge):
             edges_lists.append(edge._edges)
             node1_lists.append(edge._node1_lists)
+            if edge._edges[0].is_batch() and 'batch' in edge._edges[0].axis1._name:
+                batch_idx = i  # TODO: caso batch edge que puede cambiar
         else:
-            # TODO: caso edges_lists que designan el indice de pila?? node1 siempre True?
+            # TODO: caso edges_lists que designan el indice de pila?? node1 siempre True? para que este caso?
             edges_lists.append([edge] * len(tensors))
             node1_lists.append([True] * len(tensors))
     lst = list(zip(tensors, list(zip(*edges_lists)), list(zip(*node1_lists))))
@@ -973,12 +974,13 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
         new_node._tensor_info['full'] = False
         new_node._tensor_info['stack_idx'] = i
         index = [i]
-        for max_dim, dim in zip(node.shape[1:], shape):
+        for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo
             index.append(slice(max_dim - dim, max_dim))
         new_node._tensor_info['index'] = index
 
     successor = nc.Successor(kwargs={'node': node},
-                             child=nodes)
+                             child=nodes,
+                             hints=batch_idx)
     if 'unbind' in net._successors:
         net._successors['unbind'].append(successor)
     else:
@@ -991,7 +993,19 @@ def _unbind_next(successor: Successor, node: AbstractNode) -> List[Node]:
     # torch.unbind gives a reference to the stacked tensor, it doesn't create a new tensor
     # Thus if we have already created the unbinded nodes with their reference to where their
     # memory is stored, the next times we don't have to compute anything
-    return successor.child
+
+    batch_idx = successor.hints
+    children = successor.child
+    new_dim = node.shape[batch_idx + 1]
+    child_dim = children[0].shape[batch_idx]
+
+    if new_dim == child_dim:
+        return children
+
+    for i, child in enumerate(children):
+        child._tensor_info['index'][batch_idx + 1] = slice(0, new_dim)
+
+    return successor.child  # TODO: cambia el tamaño del batch
 
 
 unbind = Operation(_check_first_unbind, _unbind_first, _unbind_next)

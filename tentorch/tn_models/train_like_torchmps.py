@@ -22,6 +22,7 @@ import PIL.ImageOps
 
 # Miscellaneous initialization
 torch.manual_seed(0)
+start_time = time.time()
 
 # MPS parameters
 # bond_dim = 10
@@ -218,7 +219,6 @@ mps.mps._contracting = True
 with torch.no_grad():
     mps(torch.zeros(1, 3, image_size[0] * image_size[1]).to(device))
 
-start_time = time.time()
 for epoch_num in range(1, num_epochs + 1):
     running_loss = 0.0
     running_acc = 0.0

@@ -22,6 +22,7 @@ import PIL.ImageOps
 
 # Miscellaneous initialization
 torch.manual_seed(0)
+start_time = time.time()
 
 # MPS parameters
 # bond_dim = 10
@@ -151,7 +152,7 @@ loss_fun = torch.nn.CrossEntropyLoss()
 #     return loss_fun_aux(results, true_labels) - weight * s
 
 
-optimizer = torch.optim.Adam(mps.parameters(), lr=learn_rate, weight_decay=l2_reg)
+# optimizer = torch.optim.Adam(mps.parameters(), lr=learn_rate, weight_decay=l2_reg)
 
 
 # Get the training and test sets
@@ -217,8 +218,9 @@ print()
 mps.mps._contracting = True
 with torch.no_grad():
     mps(torch.zeros(1, 3, image_size[0] * image_size[1]).to(device))
+optimizer = torch.optim.Adam(mps.parameters(), lr=learn_rate, weight_decay=l2_reg)
+# TODO: hay que añadir optimizer después de cambiar los parámetros del MPS
 
-start_time = time.time()
 for epoch_num in range(1, num_epochs + 1):
     running_loss = 0.0
     running_acc = 0.0

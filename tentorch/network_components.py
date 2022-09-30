@@ -349,12 +349,13 @@ class AbstractNode(ABC):
         """
         pass
 
-    @abstractmethod
+    #@abstractmethod
     def permute(self, axes: Sequence[Ax]) -> 'AbstractNode':
         """
         Extend the permute function of tensors
         """
-        pass
+        #pass
+        return nop.permute(self, axes)
 
     # -------
     # Methods
@@ -961,26 +962,26 @@ class Node(AbstractNode):
                         node1_list=self.is_node1())
         return new_node
 
-    def permute(self, axes: Sequence[Ax]) -> 'Node':
-        """
-        Extend the permute function of tensors
-        """
-        axes_nums = []
-        for axis in axes:
-            axes_nums.append(self.get_axis_number(axis))
-
-        if not is_permutation(list(range(len(axes_nums))), axes_nums):
-            raise ValueError('The provided list of axis is not a permutation of the'
-                             ' axes of the node')
-        else:
-            new_node = Node(axes_names=permute_list(self.axes_names, axes_nums),
-                            name='permute_' + self._name,
-                            network=self._network,
-                            param_edges=self.param_edges(),
-                            tensor=self.tensor.permute(axes_nums),
-                            edges=permute_list(self._edges, axes_nums),
-                            node1_list=permute_list(self.is_node1(), axes_nums))
-            return new_node
+    # def permute(self, axes: Sequence[Ax]) -> 'Node':
+    #     """
+    #     Extend the permute function of tensors
+    #     """
+    #     axes_nums = []
+    #     for axis in axes:
+    #         axes_nums.append(self.get_axis_number(axis))
+    #
+    #     if not is_permutation(list(range(len(axes_nums))), axes_nums):
+    #         raise ValueError('The provided list of axis is not a permutation of the'
+    #                          ' axes of the node')
+    #     else:
+    #         new_node = Node(axes_names=permute_list(self.axes_names, axes_nums),
+    #                         name='permute_' + self._name,
+    #                         network=self._network,
+    #                         param_edges=self.param_edges(),
+    #                         tensor=self.tensor.permute(axes_nums),
+    #                         edges=permute_list(self._edges, axes_nums),
+    #                         node1_list=permute_list(self.is_node1(), axes_nums))
+    #         return new_node
 
     def make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
         if param_edges:
@@ -1124,26 +1125,26 @@ class ParamNode(AbstractNode):
                              node1_list=self.is_node1())
         return new_node
 
-    def permute(self, axes: Sequence[Ax]) -> 'ParamNode':
-        """
-        Extend the permute function of tensors
-        """
-        axes_nums = []
-        for axis in axes:
-            axes_nums.append(self.get_axis_number(axis))
-
-        if not is_permutation(list(range(len(axes_nums))), axes_nums):
-            raise ValueError('The provided list of axis is not a permutation of the'
-                             ' axes of the node')
-        else:
-            new_node = ParamNode(axes_names=permute_list(self.axes_names, axes_nums),
-                                 name='permute_' + self._name,
-                                 network=self._network,
-                                 param_edges=self.param_edges(),
-                                 tensor=self.tensor.permute(axes_nums),
-                                 edges=permute_list(self._edges, axes_nums),
-                                 node1_list=permute_list(self.is_node1(), axes_nums))
-            return new_node
+    # def permute(self, axes: Sequence[Ax]) -> 'ParamNode':
+    #     """
+    #     Extend the permute function of tensors
+    #     """
+    #     axes_nums = []
+    #     for axis in axes:
+    #         axes_nums.append(self.get_axis_number(axis))
+    #
+    #     if not is_permutation(list(range(len(axes_nums))), axes_nums):
+    #         raise ValueError('The provided list of axis is not a permutation of the'
+    #                          ' axes of the node')
+    #     else:
+    #         new_node = ParamNode(axes_names=permute_list(self.axes_names, axes_nums),
+    #                              name='permute_' + self._name,
+    #                              network=self._network,
+    #                              param_edges=self.param_edges(),
+    #                              tensor=self.tensor.permute(axes_nums),
+    #                              edges=permute_list(self._edges, axes_nums),
+    #                              node1_list=permute_list(self.is_node1(), axes_nums))
+    #         return new_node
 
     def make_edge(self, axis: Axis, param_edges: bool) -> Union['ParamEdge', 'Edge']:
         if param_edges:
@@ -1727,6 +1728,7 @@ class ParamEdge(AbstractEdge, nn.Module):
 # TODO: queda comprobar stacks
 # TODO: ver si se puede reestructurar, igual un AbstractStackNode que aglutine
 #  ambas clases y luego hacer subclases de Node y Paramnode
+# TODO: añadir unbind como metodo interno
 class StackNode(Node):
     """
     Class for stacked nodes. This is a node that stores the information

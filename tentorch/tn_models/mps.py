@@ -587,7 +587,8 @@ class MPS(TensorNetwork):
                 stack_data = tn.stack(env_data)
                 stack['input'] ^ stack_data['feature']
                 result = stack @ stack_data
-                result = tn.unbind(result.permute((0, 1, 3, 2)))
+                result = result.permute((0, 1, 3, 2))
+                result = tn.unbind(result)
                 # TODO: mismo problema, cada permute da un nodo nuevo, no reusamos, permute tiene que ser operation
                 #result = stacked_einsum('lir,bi->lbr', self.left_env + self.right_env, env_data)
                 #print('\t\tResult:', time.time() - start)
@@ -655,9 +656,15 @@ class MPS(TensorNetwork):
                 right_odd_nodes = right_nodes[1:nice_length_right:2]
                 right_leftover = right_nodes[nice_length_right:]
 
-                nodes = stacked_einsum('ibj,jbk->ibk',
-                                       left_even_nodes + right_even_nodes,
-                                       left_odd_nodes + right_odd_nodes)
+                stack1 = tn.stack(left_even_nodes + right_even_nodes)
+                stack2 = tn.stack(left_odd_nodes + right_odd_nodes)
+                stack1['right'] ^ stack2['left']
+                nodes = stack1 @ stack2
+                nodes = tn.unbind(nodes)
+
+                # nodes = stacked_einsum('ibj,jbk->ibk',
+                #                        left_even_nodes + right_even_nodes,
+                #                        left_odd_nodes + right_odd_nodes)
 
                 left_nodes = nodes[:half_length_left]
                 left_nodes += left_leftover
@@ -676,9 +683,15 @@ class MPS(TensorNetwork):
                 left_odd_nodes = left_nodes[1:nice_length_left:2]
                 left_leftover = left_nodes[nice_length_left:]
 
-                nodes = stacked_einsum('ibj,jbk->ibk',
-                                       left_even_nodes,
-                                       left_odd_nodes)
+                stack1 = tn.stack(left_even_nodes)
+                stack2 = tn.stack(left_odd_nodes)
+                stack1['right'] ^ stack2['left']
+                nodes = stack1 @ stack2
+                nodes = tn.unbind(nodes)
+
+                # nodes = stacked_einsum('ibj,jbk->ibk',
+                #                        left_even_nodes,
+                #                        left_odd_nodes)
 
                 left_nodes = nodes
                 left_nodes += left_leftover
@@ -693,9 +706,15 @@ class MPS(TensorNetwork):
                 right_odd_nodes = right_nodes[1:nice_length_right:2]
                 right_leftover = right_nodes[nice_length_right:]
 
-                nodes = stacked_einsum('ibj,jbk->ibk',
-                                       right_even_nodes,
-                                       right_odd_nodes)
+                stack1 = tn.stack(right_even_nodes)
+                stack2 = tn.stack(right_odd_nodes)
+                stack1['right'] ^ stack2['left']
+                nodes = stack1 @ stack2
+                nodes = tn.unbind(nodes)
+
+                # nodes = stacked_einsum('ibj,jbk->ibk',
+                #                        right_even_nodes,
+                #                        right_odd_nodes)
 
                 right_nodes = nodes
                 right_nodes += right_leftover
@@ -735,9 +754,11 @@ class MPS(TensorNetwork):
         if self.left_node is not None:
             start = time.time()
             if self.boundary == 'obc':
-                left_node = einsum('ir,bi->br', self.left_node, self.left_node.neighbours('input'))
+                left_node = (self.left_node @ self.left_node.neighbours('input')).permute((1, 0))
+                # left_node = einsum('ir,bi->br', self.left_node, self.left_node.neighbours('input'))
             else:
-                left_node = einsum('lir,bi->lbr', self.left_node, self.left_node.neighbours('input'))
+                left_node = (self.left_node @ self.left_node.neighbours('input')).permute((0, 2, 1))
+                # left_node = einsum('lir,bi->lbr', self.left_node, self.left_node.neighbours('input'))
             left_list.append(left_node)
         if left_env_contracted is not None:
             left_list.append(left_env_contracted)  # new
@@ -766,9 +787,11 @@ class MPS(TensorNetwork):
         if self.right_node is not None:
             start = time.time()
             if self.boundary == 'obc':
-                right_node = einsum('li,bi->lb', self.right_node, self.right_node.neighbours('input'))
+                right_node = self.right_node @ self.right_node.neighbours('input')
+                # right_node = einsum('li,bi->lb', self.right_node, self.right_node.neighbours('input'))
             else:
-                right_node = einsum('lir,bi->lbr', self.right_node, self.right_node.neighbours('input'))
+                right_node = (self.right_node @ self.right_node.neighbours('input')).permute((0, 2, 1))
+                # right_node = einsum('lir,bi->lbr', self.right_node, self.right_node.neighbours('input'))
             right_list.append(right_node)
             #print('\tRight node:', time.time() - start)
 

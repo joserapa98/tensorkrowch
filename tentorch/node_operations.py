@@ -850,8 +850,8 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
 
     else:
         # TODO: quitamos todos non-param por lo de la stack de data nodes, hay que controlar eso
-        # if all_leaf and (all_param or all_non_param) and net._contracting:
-        if all_leaf and all_param and net._contracting:
+        if all_leaf and (all_param or all_non_param) and net._contracting:
+        # if all_leaf and all_param and net._contracting:
             # This memory management can only happen for leaf nodes,
             # all having the same type, in contracting mode
             for i, node in enumerate(nodes):
@@ -873,7 +873,8 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
     successor = nc.Successor(kwargs={'nodes': set(nodes)},
                              child=stack_node,
                              contracting=net._contracting,
-                             hints=all_leaf and all_param)  #all_leaf and (all_param or all_non_param))
+                             hints={'all_leaf': all_leaf and (all_param or all_non_param),
+                                    'all_same_ref': all_same_ref})
     if 'stack' in net._successors:
         net._successors['stack'].append(successor)
     else:
@@ -886,7 +887,7 @@ def _stack_next(successor: Successor,
                 nodes: List[AbstractNode],
                 name: Optional[Text] = None) -> StackNode:
     child = successor.child
-    if successor.hints and successor.contracting:
+    if successor.hints['all_same_ref'] or (successor.hints['all_leaf'] and successor.contracting):
         return child
 
     stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])
@@ -894,7 +895,7 @@ def _stack_next(successor: Successor,
 
     # If contracting turns True, but stack operation had been already performed
     net = nodes[0]._network
-    if successor.hints and net._contracting:
+    if successor.hints['all_leaf'] and net._contracting:
         for i, node in enumerate(nodes):
             shape = node.shape
             if node._tensor_info['address'] is not None:

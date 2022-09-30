@@ -2355,10 +2355,19 @@ class TensorNetwork(nn.Module):
                      contracted with each feature node of the input data_nodes
         batch_sizes: Sequence[int], list of sizes of data nodes' tensors dimensions
                      associated to batch indices. Each data node will have as many
-                     batch edges as elements in `batch_sizes`
+                     batch edges as elements in `batch_sizes`  # TODO: en realidad deberíamos permitir solo un batch
         """
         if self.data_nodes:
             raise ValueError('Tensor network data nodes should be unset in order to set new ones')
+
+        # TODO: Stack data node donde se guardan los datos, se supone que todas las features tienen la misma dim
+        stack_node = Node(shape=(*batch_sizes, len(input_edges), input_edges[0].size()),  # TODO: supongo edge es AbstractEdge
+                          axes_names=('n_features',
+                                      *[f'batch_{j}' for j in range(len(batch_sizes))],
+                                      'feature'),
+                          name=f'stack_data_memory',
+                          network=self)
+
         for i, edge in enumerate(input_edges):
             if isinstance(edge, int):
                 edge = self[edge]
@@ -2367,10 +2376,20 @@ class TensorNetwork(nn.Module):
                     raise ValueError(f'Edge {edge!r} should be a dangling edge of the Tensor Network')
             else:
                 raise TypeError('`input_edges` should be List[int] or List[AbstractEdge] type')
-            node = Node(shape=(*batch_sizes, edge.size()), axes_names=(*[f'batch_{j}' for j in range(len(batch_sizes))],
-                                                                       'feature'), name=f'data_{i}', network=self)
+            node = Node(shape=(*batch_sizes, edge.size()),
+                        axes_names=(*[f'batch_{j}' for j in range(len(batch_sizes))],
+                                    'feature'),
+                        name=f'data_{i}',
+                        network=self,
+                        leaf=False)
             node['feature'] ^ edge
             self._data_nodes[node.name] = node
+
+            node._tensor_info['address'] = None
+            node._tensor_info['node_ref'] = stack_node
+            node._tensor_info['full'] = False
+            node._tensor_info['stack_idx'] = i
+            node._tensor_info['index'] = i
 
     def unset_data_nodes(self) -> None:
         if self.data_nodes:
@@ -2385,17 +2404,24 @@ class TensorNetwork(nn.Module):
         Parameters
         ----------
         data: sequence of tensors, each having the same shape as the corresponding data node,
-              batch_size_{0} x ... x batch_size_{n} x feature_size_{i}
+              batch_size_{0} x ... x batch_size_{n} x feature_size_{i}  # TODO: n_features x batch_size x feature_size
         """
-        if len(data) != len(self.data_nodes):
+        # if len(data) != len(self.data_nodes):
+        #     raise IndexError(f'Number of data nodes does not match number of features '
+        #                      f'for input data with {len(data)} features')
+        # for i, node in enumerate(self.data_nodes.values()):
+        #     # TODO: mientras coincidan los edges conectados, bien. Los de batch pueden ser distintos
+        #     # if data[i].shape != node.shape:
+        #     #     raise ValueError(f'Input data tensor with shape {data[i].shape} does '
+        #     #                      f'not match data node shape {node.shape}')
+        #     node._unrestricted_set_tensor(data[i])
+
+        if data.shape[0] != len(self.data_nodes):
             raise IndexError(f'Number of data nodes does not match number of features '
                              f'for input data with {len(data)} features')
-        for i, node in enumerate(self.data_nodes.values()):
-            # TODO: mientras coincidan los edges conectados, bien. Los de batch pueden ser distintos
-            # if data[i].shape != node.shape:
-            #     raise ValueError(f'Input data tensor with shape {data[i].shape} does '
-            #                      f'not match data node shape {node.shape}')
-            node._unrestricted_set_tensor(data[i])
+
+        stack_node = self['stack_data_memory']
+        stack_node._unrestricted_set_tensor(data)
 
     def is_contracting(self, contracting: Optional[bool] = None) -> Optional[bool]:
         # TODO:

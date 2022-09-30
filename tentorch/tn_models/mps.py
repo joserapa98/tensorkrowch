@@ -119,6 +119,11 @@ class MPS(TensorNetwork):
             permanent_nodes.append(self.right_node)
         self._permanent_nodes = permanent_nodes
 
+        # TODO: esto deber'ia crearse y llevarse como variable,
+        #  y luego ya si eso actualizarse
+        self._same_d_bond = self.same_d_bond()
+        self._same_d_phys = self.same_d_phys()
+
     @property
     def l_position(self) -> int:
         return self._l_position
@@ -185,10 +190,13 @@ class MPS(TensorNetwork):
         Check if bond edges sizes are all equal, in
         order to perform a pairwise contraction
         """
+        start = time.time()
         env_nodes = self.left_env + self.right_env
         for i, _ in enumerate(env_nodes[:-1]):
             if env_nodes[i].size() != env_nodes[i + 1].size():
+                # print('\t\tSame d bond:', time.time() - start)
                 return False
+        # print('\t\tSame d bond:', time.time() - start)
         return True
 
     def _make_nodes(self) -> None:
@@ -577,23 +585,25 @@ class MPS(TensorNetwork):
         #     right_result = stacked_einsum('lir,bi->lbr', self.right_env, right_env_data)
         # return left_result, right_result
 
-        if self.same_d_bond():
-            #start = time.time()
+        if self._same_d_bond:  # TODO: cuidado, era self.same_d_bond()
+            # start = time.time()
             if self.left_env + self.right_env:
-                env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
-                #print('\t\tFind data:', time.time() - start)
-                #start = time.time()
+                # env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
+                # print('\t\tFind data:', time.time() - start)
+                start = time.time()
                 stack = tn.stack(self.left_env + self.right_env)
-                stack_data = tn.stack(env_data)
+                stack_data = tn.stack(self.env_data)
                 stack['input'] ^ stack_data['feature']
                 result = stack @ stack_data
                 result = result.permute((0, 1, 3, 2))
                 result = tn.unbind(result)
                 # TODO: mismo problema, cada permute da un nodo nuevo, no reusamos, permute tiene que ser operation
                 #result = stacked_einsum('lir,bi->lbr', self.left_env + self.right_env, env_data)
-                #print('\t\tResult:', time.time() - start)
+                # print('\t\tResult:', time.time() - start)
+                start = time.time()
                 left_result = result[:len(self.left_env)]
                 right_result = result[len(self.left_env):]
+                # print('\t\tLists:', time.time() - start)
                 return left_result, right_result
             else:
                 return [], []
@@ -735,10 +745,11 @@ class MPS(TensorNetwork):
         # TODO: should be better to use the same bond dimension across "stackable"  operations,
         #  and add function to "simplify" dimensions later
         left_env, right_env = self._input_contraction()
-        #print('\tInput:', time.time() - start)
+        # print('\tInput:', time.time() - start)
 
-
-        if not self.param_bond() and self.same_d_phys() and self.same_d_bond():
+        start = time.time()
+        # TODO: cuidado, era self.same_d_phys() y self.same_d_bond()
+        if not self.param_bond() and self._same_d_phys and self._same_d_bond:
             left_env_contracted, right_env_contracted = self._pairwise_contraction(left_env, right_env)
         else:
             left_env_contracted = None
@@ -747,6 +758,7 @@ class MPS(TensorNetwork):
                 left_env_contracted = self._inline_contraction(left_env)
             if right_env:
                 right_env_contracted = self._inline_contraction(right_env)
+        # print('\tMatrices contraction:', time.time() - start)
 
         
         # Operations of left environment
@@ -762,7 +774,7 @@ class MPS(TensorNetwork):
             left_list.append(left_node)
         if left_env_contracted is not None:
             left_list.append(left_env_contracted)  # new
-            #print('\tLeft node:', time.time() - start)
+            # print('\tLeft node:', time.time() - start)
         # if left_env:
         #     start = time.time()
         #     if not self.param_bond() and self.same_d_phys() and self.same_d_bond():
@@ -793,14 +805,14 @@ class MPS(TensorNetwork):
                 right_node = (self.right_node @ self.right_node.neighbours('input')).permute((0, 2, 1))
                 # right_node = einsum('lir,bi->lbr', self.right_node, self.right_node.neighbours('input'))
             right_list.append(right_node)
-            #print('\tRight node:', time.time() - start)
+            # print('\tRight node:', time.time() - start)
 
         start = time.time()
         result_list = left_list + [self.output_node] + right_list
         result = result_list[0]
         for node in result_list[1:]:
             result @= node
-        #print('\tFinal contraction:', time.time() - start)
+        # print('\tFinal contraction:', time.time() - start)
 
         # Clean intermediate nodes
         #mps_nodes = list(self.nodes.values())
@@ -942,22 +954,26 @@ class MPS(TensorNetwork):
         data: tensor with shape batch x feature x n_features
         """
         if not self.data_nodes:
-            #start = time.time()
+            start = time.time()
             # All data tensors have the same batch size
             self.set_data_nodes(batch_sizes=[data.shape[0]])
-            self._add_data(data=data.unbind(2))
+            if self.left_env + self.right_env:
+                self.env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
+            # self._add_data(data=data.unbind(2))
+            self._add_data(data=data.permute(2, 0, 1))
             self._permanent_nodes = list(self.nodes.values())  # TODO: this does nothing
             #self.initialize2()
-            #print('Add data:', time.time() - start)
+            # print('Add data:', time.time() - start)
         else:
-            #start = time.time()
-            self._add_data(data=data.unbind(2))
+            start = time.time()
+            # self._add_data(data=data.unbind(2))
+            self._add_data(data=data.permute(2, 0, 1))
             end = time.time()
-            #print('Add data:', end - start)
-        #start = time.time()
+            # print('Add data:', end - start)
+        start = time.time()
         output = self.contract().tensor  #self.contract2()
-        #print('Contract:', time.time() - start)
-        #print()
+        # print('Contract:', time.time() - start)
+        # print()
         #self._update_current_op_nodes()
         #self.num_current_op_nodes = []
         return output

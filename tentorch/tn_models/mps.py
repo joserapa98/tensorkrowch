@@ -20,6 +20,8 @@ import opt_einsum
 
 import time
 
+PRINT_MODE = False
+
 
 # TODO: move_l_position -> needs svd and qr to contract and split nodes
 # TODO: change l_position int by just 'start', 'end', 'medium',
@@ -194,9 +196,9 @@ class MPS(TensorNetwork):
         env_nodes = self.left_env + self.right_env
         for i, _ in enumerate(env_nodes[:-1]):
             if env_nodes[i].size() != env_nodes[i + 1].size():
-                # print('\t\tSame d bond:', time.time() - start)
+                if PRINT_MODE: print('\t\tSame d bond:', time.time() - start)
                 return False
-        # print('\t\tSame d bond:', time.time() - start)
+        if PRINT_MODE: print('\t\tSame d bond:', time.time() - start)
         return True
 
     def _make_nodes(self) -> None:
@@ -599,11 +601,11 @@ class MPS(TensorNetwork):
                 result = tn.unbind(result)
                 # TODO: mismo problema, cada permute da un nodo nuevo, no reusamos, permute tiene que ser operation
                 #result = stacked_einsum('lir,bi->lbr', self.left_env + self.right_env, env_data)
-                # print('\t\tResult:', time.time() - start)
+                if PRINT_MODE: print('\t\tResult:', time.time() - start)
                 start = time.time()
                 left_result = result[:len(self.left_env)]
                 right_result = result[len(self.left_env):]
-                # print('\t\tLists:', time.time() - start)
+                if PRINT_MODE: print('\t\tLists:', time.time() - start)
                 return left_result, right_result
             else:
                 return [], []
@@ -745,7 +747,7 @@ class MPS(TensorNetwork):
         # TODO: should be better to use the same bond dimension across "stackable"  operations,
         #  and add function to "simplify" dimensions later
         left_env, right_env = self._input_contraction()
-        # print('\tInput:', time.time() - start)
+        if PRINT_MODE: print('\tInput:', time.time() - start)
 
         start = time.time()
         # TODO: cuidado, era self.same_d_phys() y self.same_d_bond()
@@ -758,7 +760,7 @@ class MPS(TensorNetwork):
                 left_env_contracted = self._inline_contraction(left_env)
             if right_env:
                 right_env_contracted = self._inline_contraction(right_env)
-        # print('\tMatrices contraction:', time.time() - start)
+        if PRINT_MODE: print('\tMatrices contraction:', time.time() - start)
 
         
         # Operations of left environment
@@ -774,7 +776,7 @@ class MPS(TensorNetwork):
             left_list.append(left_node)
         if left_env_contracted is not None:
             left_list.append(left_env_contracted)  # new
-            # print('\tLeft node:', time.time() - start)
+            if PRINT_MODE: print('\tLeft node:', time.time() - start)
         # if left_env:
         #     start = time.time()
         #     if not self.param_bond() and self.same_d_phys() and self.same_d_bond():
@@ -805,14 +807,14 @@ class MPS(TensorNetwork):
                 right_node = (self.right_node @ self.right_node.neighbours('input')).permute((0, 2, 1))
                 # right_node = einsum('lir,bi->lbr', self.right_node, self.right_node.neighbours('input'))
             right_list.append(right_node)
-            # print('\tRight node:', time.time() - start)
+            if PRINT_MODE: print('\tRight node:', time.time() - start)
 
         start = time.time()
         result_list = left_list + [self.output_node] + right_list
         result = result_list[0]
         for node in result_list[1:]:
             result @= node
-        # print('\tFinal contraction:', time.time() - start)
+        if PRINT_MODE: print('\tFinal contraction:', time.time() - start)
 
         # Clean intermediate nodes
         #mps_nodes = list(self.nodes.values())
@@ -947,6 +949,37 @@ class MPS(TensorNetwork):
             if not node._leaf and node.current_op:
                 node.current_op = False
 
+    # def forward(self, data: torch.Tensor) -> torch.Tensor:
+    #     """
+    #     Parameters
+    #     ----------
+    #     data: tensor with shape batch x feature x n_features
+    #     """
+    #     if not self.data_nodes:
+    #         start = time.time()
+    #         # All data tensors have the same batch size
+    #         self.set_data_nodes(batch_sizes=[data.shape[0]])
+    #         if self.left_env + self.right_env:
+    #             self.env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
+    #         # self._add_data(data=data.unbind(2))
+    #         self._add_data(data=data.permute(2, 0, 1))
+    #         self._permanent_nodes = list(self.nodes.values())  # TODO: this does nothing
+    #         #self.initialize2()
+    #         # print('Add data:', time.time() - start)
+    #     else:
+    #         start = time.time()
+    #         # self._add_data(data=data.unbind(2))
+    #         self._add_data(data=data.permute(2, 0, 1))
+    #         end = time.time()
+    #         # print('Add data:', end - start)
+    #     start = time.time()
+    #     output = self.contract().tensor  #self.contract2()
+    #     # print('Contract:', time.time() - start)
+    #     # print()
+    #     #self._update_current_op_nodes()
+    #     #self.num_current_op_nodes = []
+    #     return output
+
     def forward(self, data: torch.Tensor) -> torch.Tensor:
         """
         Parameters
@@ -959,21 +992,67 @@ class MPS(TensorNetwork):
             self.set_data_nodes(batch_sizes=[data.shape[0]])
             if self.left_env + self.right_env:
                 self.env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
-            # self._add_data(data=data.unbind(2))
             self._add_data(data=data.permute(2, 0, 1))
-            self._permanent_nodes = list(self.nodes.values())  # TODO: this does nothing
-            #self.initialize2()
-            # print('Add data:', time.time() - start)
+            if PRINT_MODE: print('Add data:', time.time() - start)
+            start = time.time()
+            output = self.contract().tensor  # self.contract2()
+            if PRINT_MODE: print('Contract:', time.time() - start)
+            if PRINT_MODE: print()
+
+            self._seq_ops = []
+            for op in self._list_ops:
+                self._seq_ops.append((op[0], self._successors[op[0]][op[1]].kwargs))
+
+            return output
         else:
             start = time.time()
-            # self._add_data(data=data.unbind(2))
             self._add_data(data=data.permute(2, 0, 1))
             end = time.time()
-            # print('Add data:', end - start)
-        start = time.time()
-        output = self.contract().tensor  #self.contract2()
-        # print('Contract:', time.time() - start)
-        # print()
-        #self._update_current_op_nodes()
-        #self.num_current_op_nodes = []
-        return output
+            if PRINT_MODE: print('Add data:', end - start)
+
+            # TODO: esta puede ser la forma gen'erica del forward, y solo hay que definir
+            #  add_data y contract (para la primera vez)
+            start = time.time()
+            # operations = self._list_ops
+            # for i, op in enumerate(operations):
+            #     if op[0] == 'permute':
+            #         output = tn.permute(**self._successors['permute'][op[1]].kwargs)
+            #     elif op[0] == 'tprod':
+            #         output = tn.tprod(**self._successors['tprod'][op[1]].kwargs)
+            #     elif op[0] == 'mul':
+            #         output = tn.mul(**self._successors['mul'][op[1]].kwargs)
+            #     elif op[0] == 'add':
+            #         output = tn.add(**self._successors['add'][op[1]].kwargs)
+            #     elif op[0] == 'sub':
+            #         output = tn.sub(**self._successors['sub'][op[1]].kwargs)
+            #     elif op[0] == 'contract_edges':
+            #         output = tn.contract_edges(**self._successors['contract_edges'][op[1]].kwargs)
+            #     elif op[0] == 'stack':
+            #         output = tn.stack(**self._successors['stack'][op[1]].kwargs)
+            #     elif op[0] == 'unbind':
+            #         output = tn.unbind(**self._successors['unbind'][op[1]].kwargs)
+
+            operations = self._seq_ops
+            for i, op in enumerate(operations):
+                if op[0] == 'permute':
+                    output = tn.permute(**op[1])
+                elif op[0] == 'tprod':
+                    output = tn.tprod(**op[1])
+                elif op[0] == 'mul':
+                    output = tn.mul(**op[1])
+                elif op[0] == 'add':
+                    output = tn.add(**op[1])
+                elif op[0] == 'sub':
+                    output = tn.sub(**op[1])
+                elif op[0] == 'contract_edges':
+                    output = tn.contract_edges(**op[1])
+                elif op[0] == 'stack':
+                    output = tn.stack(**op[1])
+                elif op[0] == 'unbind':
+                    output = tn.unbind(**op[1])
+
+            # TODO: Se tarda igual con _list_ops y _seq_ops
+
+            if PRINT_MODE: print('Contract:', time.time() - start)
+            if PRINT_MODE: print()
+            return output.tensor

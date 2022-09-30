@@ -1,20 +1,37 @@
 """
 This script contains:
 
-    Operations:
+    Edge operations:
         *connect
+        *connect_stack
         *disconnect
-        *get_shared_edges
-        *get_batch_edges
-        *contract_edges
-        *contract
-        *contract_between
 
     Node operations:
+        Class for node operations:
+
+            *Operation:
+
+                (Basic operations)
+                +permute
+                +tprod
+                +mul
+                +add
+                +sub
+
+                (Contract)
+                +contract_edges
+            *contract
+            *get_shared_edges
+            *contract_between
+
+                (Stack)
+                +stack
+
+                (Unbind)
+                +unbind
+
+    Other operations:
         *einsum
-        *connect_stack
-        *stack
-        *unbind
         *stacked_einsum
 """
 # split, svd, qr, rq, etc. -> using einsum-like strings, useful
@@ -230,6 +247,8 @@ def _permute_first(node: AbstractNode, axes: Sequence[Ax]) -> Node:
     else:
         net._successors['permute'] = [successor]
 
+    net._list_ops.append(('permute', len(net._successors['permute']) - 1))
+
     return new_node
 
 
@@ -276,6 +295,8 @@ def _tprod_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     else:
         net._successors['tprod'] = [successor]
 
+    net._list_ops.append(('tprod', len(net._successors['tprod']) - 1))
+
     return new_node
 
 
@@ -318,6 +339,8 @@ def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     else:
         net._successors['mul'] = [successor]
 
+    net._list_ops.append(('mul', len(net._successors['mul']) - 1))
+
     return new_node
 
 
@@ -358,6 +381,8 @@ def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     else:
         net._successors['add'] = [successor]
 
+    net._list_ops.append(('add', len(net._successors['add']) - 1))
+
     return new_node
 
 
@@ -397,6 +422,8 @@ def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
         net._successors['sub'].append(successor)
     else:
         net._successors['sub'] = [successor]
+
+    net._list_ops.append(('sub', len(net._successors['sub']) - 1))
 
     return new_node
 
@@ -637,6 +664,8 @@ def _contract_edges_first(edges: List[AbstractEdge],
     else:
         net._successors['contract_edges'] = [successor]
 
+    net._list_ops.append(('contract_edges', len(net._successors['contract_edges']) - 1))
+
     return new_node
 
 
@@ -789,7 +818,7 @@ def stack_unequal_tensors(lst_tensors: List[torch.Tensor]) -> torch.Tensor:
 
 
 def _check_first_stack(nodes: List[AbstractNode], name: Optional[Text] = None) -> Optional[Successor]:
-    kwargs = {'nodes': set(nodes)}
+    kwargs = {'nodes': nodes}  # TODO: mejor si es set(nodes) por si acaso, o llevarlo controlado
     if 'stack' in nodes[0].network._successors:
         for succ in nodes[0].network._successors['stack']:
             if succ.kwargs == kwargs:
@@ -870,7 +899,7 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
                 if all_param:
                     delattr(net, 'param_' + node._name)
 
-    successor = nc.Successor(kwargs={'nodes': set(nodes)},
+    successor = nc.Successor(kwargs={'nodes': nodes},
                              child=stack_node,
                              contracting=net._contracting,
                              hints={'all_leaf': all_leaf and (all_param or all_non_param),
@@ -879,6 +908,8 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
         net._successors['stack'].append(successor)
     else:
         net._successors['stack'] = [successor]
+
+    net._list_ops.append(('stack', len(net._successors['stack']) - 1))
 
     return stack_node
 
@@ -986,6 +1017,8 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
         net._successors['unbind'].append(successor)
     else:
         net._successors['unbind'] = [successor]
+
+    net._list_ops.append(('unbind', len(net._successors['unbind']) - 1))
 
     return nodes
 

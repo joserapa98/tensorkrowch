@@ -2052,6 +2052,7 @@ class TensorNetwork(nn.Module):
         self._contracting = False  # Flag to indicate whether the TN has optimized memory to perform contraction
 
         self._successors = dict()
+        self._list_ops = []
 
     @property
     def nodes(self) -> Dict[Text, AbstractNode]:

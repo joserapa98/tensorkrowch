@@ -1035,21 +1035,44 @@ class MPS(TensorNetwork):
             operations = self._seq_ops
             for i, op in enumerate(operations):
                 if op[0] == 'permute':
+                    start = time.time()
                     output = tn.permute(**op[1])
+                    if PRINT_MODE: print('permute:', time.time() - start)
+
                 elif op[0] == 'tprod':
+                    start = time.time()
                     output = tn.tprod(**op[1])
+                    if PRINT_MODE: print('tprod:', time.time() - start)
+
                 elif op[0] == 'mul':
+                    start = time.time()
                     output = tn.mul(**op[1])
+                    if PRINT_MODE: print('mul:', time.time() - start)
+
                 elif op[0] == 'add':
+                    start = time.time()
                     output = tn.add(**op[1])
+                    if PRINT_MODE: print('add:', time.time() - start)
+
                 elif op[0] == 'sub':
+                    start = time.time()
                     output = tn.sub(**op[1])
+                    if PRINT_MODE: print('sub:', time.time() - start)
+
                 elif op[0] == 'contract_edges':
+                    start = time.time()
                     output = tn.contract_edges(**op[1])
+                    if PRINT_MODE: print('contract_edges:', time.time() - start)
+
                 elif op[0] == 'stack':
+                    start = time.time()
                     output = tn.stack(**op[1])
+                    if PRINT_MODE: print('stack:', time.time() - start)
+
                 elif op[0] == 'unbind':
+                    start = time.time()
                     output = tn.unbind(**op[1])
+                    if PRINT_MODE: print('unbind:', time.time() - start)
 
             # TODO: Se tarda igual con _list_ops y _seq_ops
 

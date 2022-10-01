@@ -651,42 +651,43 @@ class MPS(TensorNetwork):
         length_left = len(left_nodes)
         length_right = len(right_nodes)
         while (length_left > 1) or (length_right > 1):
-            if (length_left > 1) and (length_right > 1):
-                odd_length_left = length_left % 2 == 1
-                half_length_left = length_left // 2
-                nice_length_left = 2 * half_length_left
+            # if (length_left > 1) and (length_right > 1):
+            #     odd_length_left = length_left % 2 == 1
+            #     half_length_left = length_left // 2
+            #     nice_length_left = 2 * half_length_left
+            #
+            #     left_even_nodes = left_nodes[0:nice_length_left:2]
+            #     left_odd_nodes = left_nodes[1:nice_length_left:2]
+            #     left_leftover = left_nodes[nice_length_left:]
+            #
+            #     odd_length_right = length_right % 2 == 1
+            #     half_length_right = length_right // 2
+            #     nice_length_right = 2 * half_length_right
+            #
+            #     right_even_nodes = right_nodes[0:nice_length_right:2]
+            #     right_odd_nodes = right_nodes[1:nice_length_right:2]
+            #     right_leftover = right_nodes[nice_length_right:]
+            #
+            #     stack1 = tn.stack(left_even_nodes + right_even_nodes)
+            #     stack2 = tn.stack(left_odd_nodes + right_odd_nodes)
+            #     stack1['right'] ^ stack2['left']
+            #     nodes = stack1 @ stack2
+            #     nodes = tn.unbind(nodes)
+            #
+            #     # nodes = stacked_einsum('ibj,jbk->ibk',
+            #     #                        left_even_nodes + right_even_nodes,
+            #     #                        left_odd_nodes + right_odd_nodes)
+            #
+            #     left_nodes = nodes[:half_length_left]
+            #     left_nodes += left_leftover
+            #     length_left = half_length_left + int(odd_length_left)
+            #
+            #     right_nodes = nodes[half_length_left:]
+            #     right_nodes += right_leftover
+            #     length_right = half_length_right + int(odd_length_right)
 
-                left_even_nodes = left_nodes[0:nice_length_left:2]
-                left_odd_nodes = left_nodes[1:nice_length_left:2]
-                left_leftover = left_nodes[nice_length_left:]
-
-                odd_length_right = length_right % 2 == 1
-                half_length_right = length_right // 2
-                nice_length_right = 2 * half_length_right
-
-                right_even_nodes = right_nodes[0:nice_length_right:2]
-                right_odd_nodes = right_nodes[1:nice_length_right:2]
-                right_leftover = right_nodes[nice_length_right:]
-
-                stack1 = tn.stack(left_even_nodes + right_even_nodes)
-                stack2 = tn.stack(left_odd_nodes + right_odd_nodes)
-                stack1['right'] ^ stack2['left']
-                nodes = stack1 @ stack2
-                nodes = tn.unbind(nodes)
-
-                # nodes = stacked_einsum('ibj,jbk->ibk',
-                #                        left_even_nodes + right_even_nodes,
-                #                        left_odd_nodes + right_odd_nodes)
-
-                left_nodes = nodes[:half_length_left]
-                left_nodes += left_leftover
-                length_left = half_length_left + int(odd_length_left)
-
-                right_nodes = nodes[half_length_left:]
-                right_nodes += right_leftover
-                length_right = half_length_right + int(odd_length_right)
-
-            elif length_left > 1:
+            # elif length_left > 1:
+            if length_left > 1:
                 odd_length_left = length_left % 2 == 1
                 half_length_left = length_left // 2
                 nice_length_left = 2 * half_length_left
@@ -709,7 +710,8 @@ class MPS(TensorNetwork):
                 left_nodes += left_leftover
                 length_left = half_length_left + int(odd_length_left)
 
-            else:
+            # else:
+            if length_right > 1:
                 odd_length_right = length_right % 2 == 1
                 half_length_right = length_right // 2
                 nice_length_right = 2 * half_length_right
@@ -1012,7 +1014,7 @@ class MPS(TensorNetwork):
 
             # TODO: esta puede ser la forma gen'erica del forward, y solo hay que definir
             #  add_data y contract (para la primera vez)
-            start = time.time()
+            start_contract = time.time()
             # operations = self._list_ops
             # for i, op in enumerate(operations):
             #     if op[0] == 'permute':
@@ -1076,6 +1078,6 @@ class MPS(TensorNetwork):
 
             # TODO: Se tarda igual con _list_ops y _seq_ops
 
-            if PRINT_MODE: print('Contract:', time.time() - start)
+            if PRINT_MODE: print('Contract:', time.time() - start_contract)
             if PRINT_MODE: print()
             return output.tensor

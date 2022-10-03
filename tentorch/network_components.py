@@ -38,6 +38,8 @@ from tentorch.utils import (tab_string, check_name_style,
                             permute_list, is_permutation)
 import tentorch.node_operations as nop
 
+import time
+
 
 # Tensor = torch.Tensor
 # Parameter = nn.Parameter
@@ -260,10 +262,27 @@ class AbstractNode(ABC):
     # ----------
     # Properties
     # ----------
+    # @property
+    # def tensor(self) -> Union[torch.Tensor, Parameter]:
+    #     if self._tensor_info is None:
+    #         return self._temp_tensor
+    #
+    #     if self._tensor_info['address'] is None:
+    #         node = self._tensor_info['node_ref']
+    #     else:
+    #         node = self
+    #
+    #     if self._tensor_info['full']:
+    #         return self._network._memory_nodes[node._tensor_info['address']]
+    #     return self._network._memory_nodes[node._tensor_info['address']][self._tensor_info['index']]
+
     @property
     def tensor(self) -> Union[torch.Tensor, Parameter]:
+        total_time = time.time()
         if self._tensor_info is None:
-            return self._temp_tensor
+            result = self._temp_tensor
+            # print('\t\t\t\t\tTensor info None:', time.time() - total_time)
+            return result
 
         if self._tensor_info['address'] is None:
             node = self._tensor_info['node_ref']
@@ -271,8 +290,28 @@ class AbstractNode(ABC):
             node = self
 
         if self._tensor_info['full']:
-            return self.network._memory_nodes[node._tensor_info['address']]
-        return self.network._memory_nodes[node._tensor_info['address']][self._tensor_info['index']]
+            result = self._network._memory_nodes[node._tensor_info['address']]
+            # print('\t\t\t\t\tFull True:', time.time() - total_time)
+            return result
+        network = self._network
+        # print('\t\t\t\t\t\tNetwork:', time.time() - total_time)
+        memory = network._memory_nodes
+        # print('\t\t\t\t\t\tMemory:', time.time() - total_time)
+        address = node._tensor_info['address']
+        # print('\t\t\t\t\t\tAddress:', time.time() - total_time)
+        tensor = memory[address]
+        # print('\t\t\t\t\t\tTensor:', time.time() - total_time)
+        index = self._tensor_info['index']
+        if isinstance(index, list):
+            if len(index) == 1:
+                result = tensor[index[0]].view(1, *tensor.shape[1:])
+            else:
+                result = tensor[index]
+        else:
+            result = tensor[index]
+        # print('\t\t\t\t\t\tIndex tensor:', time.time() - total_time)
+        # print('\t\t\t\t\tFull False:', time.time() - total_time)
+        return result
 
     @tensor.setter
     def tensor(self, tensor: torch.Tensor) -> None:
@@ -462,7 +501,7 @@ class AbstractNode(ABC):
             for i, dim in enumerate(self.shape):
                 if i == axis_num:
                     if size > dim:
-                        pad += [size - dim, 0]
+                        pad += [0, size - dim]
                     else:
                         pad += [0, 0]
                 else:

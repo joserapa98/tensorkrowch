@@ -2,8 +2,8 @@
 
 import os
 import psutil
-pid = os.getpid()
-python_process = psutil.Process(pid)
+# pid = os.getpid()
+# python_process = psutil.Process(pid)
 
 
 import time
@@ -127,8 +127,8 @@ device = torch.device('cuda')
 #device = torch.device('cpu')
 mps = mps.to(device)
 
-memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
-print('memory use:', memoryUse)
+# memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
+# print('memory use:', memoryUse)
 
 # Set our loss function and optimizer
 loss_fun = torch.nn.CrossEntropyLoss()
@@ -173,8 +173,8 @@ test_set = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
 train_set_aux = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
                                download=True)
 
-memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
-print('memory use:', memoryUse)
+# memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
+# print('memory use:', memoryUse)
 
 # inv_image = transform(PIL.ImageOps.invert(train_set_aux[0][0]))
 # inv_image = inv_image.view(1, 3, -1).cuda()
@@ -182,8 +182,8 @@ print('memory use:', memoryUse)
 # torch.save(inv_image, 'inv_image.pth')
 # torch.save(inv_label, 'inv_label.pth')
 
-rand_image = torch.rand(1, 3, image_size[0]*image_size[1]).to(device)
-rand_label = torch.tensor(3).view(1).to(device)
+# rand_image = torch.rand(1, 3, image_size[0]*image_size[1]).to(device)
+# rand_label = torch.tensor(3).view(1).to(device)
 #torch.save(rand_image, 'rand2_image.pth')
 #torch.save(rand_label, 'rand2_label.pth')
 
@@ -300,8 +300,8 @@ for epoch_num in range(1, num_epochs + 1):
 print('Finished')
 
 
-memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
-print('memory use:', memoryUse)
+# memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
+# print('memory use:', memoryUse)
 
 
 # Increase bond dim

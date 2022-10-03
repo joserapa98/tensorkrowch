@@ -32,7 +32,7 @@ start_time = time.time()
 # Training parameters
 num_train = 6000
 num_test = 1000
-batch_size = 100
+batch_size = 500
 image_size = (28, 28)
 num_epochs = 10
 learn_rate = 1e-4
@@ -158,12 +158,13 @@ loss_fun = torch.nn.CrossEntropyLoss()
 # Get the training and test sets
 def embedding(image: torch.Tensor) -> torch.Tensor:
     #return torch.stack([image, 1 - image], dim=1).squeeze(0)
-    return torch.stack([torch.ones_like(image), image, 1 - image], dim=1).squeeze(0)
+    return torch.stack([torch.ones_like(image), image, 1 - image], dim=1)#.squeeze(0)
 
 
-transform = transforms.Compose([transforms.Resize(image_size),
-                                transforms.ToTensor(),
-                                transforms.Lambda(embedding)])
+# transform = transforms.Compose([transforms.Resize(image_size),
+#                                 transforms.ToTensor(),
+#                                 transforms.Lambda(embedding)])
+transform = transforms.ToTensor()
 train_set = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
                            download=True, transform=transform)
 test_set = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
@@ -217,7 +218,8 @@ print()
 # Let's start training!
 mps.mps._contracting = True
 with torch.no_grad():
-    mps(torch.zeros(1, 3, image_size[0] * image_size[1]).to(device))
+    # mps(torch.zeros(1, 3, image_size[0] * image_size[1]).to(device))
+    mps(torch.zeros(1, image_size[0] * image_size[1]).to(device))
 optimizer = torch.optim.Adam(mps.parameters(), lr=learn_rate, weight_decay=l2_reg)
 # TODO: hay que añadir optimizer después de cambiar los parámetros del MPS
 
@@ -228,20 +230,25 @@ for epoch_num in range(1, num_epochs + 1):
     first = True
 
     for inputs, labels in loaders["train"]:
-        inputs, labels = inputs.view([batch_size, 3, image_size[0] * image_size[1]]), labels.data
+        start = time.time()
+        # inputs, labels = inputs.view([batch_size, 3, image_size[0] * image_size[1]]), labels.data
+        inputs, labels = inputs.view([batch_size, image_size[0] * image_size[1]]), labels.data
         inputs, labels = inputs.to(device), labels.to(device)
+        print(time.time() - start)
 
-        if first:
-            # inputs = torch.cat([inputs[:-1], inv_image], dim=0)
-            # labels = torch.cat([labels[:-1], inv_label], dim=0)
-            # first = False
-
-            inputs = torch.cat([inputs[:-1], rand_image], dim=0)
-            labels = torch.cat([labels[:-1], rand_label], dim=0)
-            first = False
+        # if first:
+        #     # inputs = torch.cat([inputs[:-1], inv_image], dim=0)
+        #     # labels = torch.cat([labels[:-1], inv_label], dim=0)
+        #     # first = False
+        #
+        #     inputs = torch.cat([inputs[:-1], rand_image], dim=0)
+        #     labels = torch.cat([labels[:-1], rand_label], dim=0)
+        #     first = False
 
         # Call our MPS to get logit scores and predictions
+        # start = time.time()
         scores = mps(inputs)
+        # print(time.time() - start)
         _, preds = torch.max(scores, 1)
 
         # Compute the loss and accuracy, add them to the running totals
@@ -255,6 +262,8 @@ for epoch_num in range(1, num_epochs + 1):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+        # print(time.time() - start)
 
     # grads = []
     # for p in list(mps.parameters())[100:]:
@@ -274,7 +283,8 @@ for epoch_num in range(1, num_epochs + 1):
         running_acc = 0.0
 
         for inputs, labels in loaders["test"]:
-            inputs, labels = inputs.view([batch_size, 3, image_size[0] * image_size[1]]), labels.data
+            # inputs, labels = inputs.view([batch_size, 3, image_size[0] * image_size[1]]), labels.data
+            inputs, labels = inputs.view([batch_size, image_size[0] * image_size[1]]), labels.data
             inputs, labels = inputs.to(device), labels.to(device)
 
             # Call our MPS to get logit scores and predictions

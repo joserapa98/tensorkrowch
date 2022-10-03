@@ -663,9 +663,12 @@ class MPS(TensorNetwork):
         more efficient (from jemisjoki/TorchMPS)
         """
         # TODO: rewrite this (simplify)
+        # TODO: hacer algoritmo que encuentre subconjuntos de longitud potencias de 2 donde se vaya
+        #  haciendo la operaciones reutilizando siempre la misma pila, y al final con los que queden
+        #  solo 1 o 2 operaciones que no reutilizan pila (pensar con formula si esto seria ventaja)
         length_left = len(left_nodes)
         length_right = len(right_nodes)
-        while (length_left > 1) or (length_right > 1):
+        # while (length_left > 1) or (length_right > 1):
             # if (length_left > 1) and (length_right > 1):
             #     odd_length_left = length_left % 2 == 1
             #     half_length_left = length_left // 2
@@ -700,54 +703,108 @@ class MPS(TensorNetwork):
             #     right_nodes = nodes[half_length_left:]
             #     right_nodes += right_leftover
             #     length_right = half_length_right + int(odd_length_right)
-
+            #
             # elif length_left > 1:
-            if length_left > 1:
-                odd_length_left = length_left % 2 == 1
-                half_length_left = length_left // 2
-                nice_length_left = 2 * half_length_left
-
-                left_even_nodes = left_nodes[0:nice_length_left:2]
-                left_odd_nodes = left_nodes[1:nice_length_left:2]
-                left_leftover = left_nodes[nice_length_left:]
-
-                stack1 = tn.stack(left_even_nodes)
-                stack2 = tn.stack(left_odd_nodes)
-                stack1['right'] ^ stack2['left']
-                nodes = stack1 @ stack2
-                nodes = tn.unbind(nodes)
-
-                # nodes = stacked_einsum('ibj,jbk->ibk',
-                #                        left_even_nodes,
-                #                        left_odd_nodes)
-
-                left_nodes = nodes
-                left_nodes += left_leftover
-                length_left = half_length_left + int(odd_length_left)
-
+            # if length_left > 1:
+            #     odd_length_left = length_left % 2 == 1
+            #     half_length_left = length_left // 2
+            #     nice_length_left = 2 * half_length_left
+            #
+            #     left_even_nodes = left_nodes[0:nice_length_left:2]
+            #     left_odd_nodes = left_nodes[1:nice_length_left:2]
+            #     left_leftover = left_nodes[nice_length_left:]
+            #
+            #     stack1 = tn.stack(left_even_nodes)
+            #     stack2 = tn.stack(left_odd_nodes)
+            #     stack1['right'] ^ stack2['left']
+            #     nodes = stack1 @ stack2
+            #     nodes = tn.unbind(nodes)
+            #
+            #     # nodes = stacked_einsum('ibj,jbk->ibk',
+            #     #                        left_even_nodes,
+            #     #                        left_odd_nodes)
+            #
+            #     left_nodes = nodes
+            #     left_nodes += left_leftover
+            #     length_left = half_length_left + int(odd_length_left)
+            #
             # else:
-            if length_right > 1:
-                odd_length_right = length_right % 2 == 1
-                half_length_right = length_right // 2
-                nice_length_right = 2 * half_length_right
+            # if length_right > 1:
+            #     odd_length_right = length_right % 2 == 1
+            #     half_length_right = length_right // 2
+            #     nice_length_right = 2 * half_length_right
+            #
+            #     right_even_nodes = right_nodes[0:nice_length_right:2]
+            #     right_odd_nodes = right_nodes[1:nice_length_right:2]
+            #     right_leftover = right_nodes[nice_length_right:]
+            #
+            #     stack1 = tn.stack(right_even_nodes)
+            #     stack2 = tn.stack(right_odd_nodes)
+            #     stack1['right'] ^ stack2['left']
+            #     nodes = stack1 @ stack2
+            #     nodes = tn.unbind(nodes)
+            #
+            #     # nodes = stacked_einsum('ibj,jbk->ibk',
+            #     #                        right_even_nodes,
+            #     #                        right_odd_nodes)
+            #
+            #     right_nodes = nodes
+            #     right_nodes += right_leftover
+            #     length_right = half_length_right + int(odd_length_right)
 
-                right_even_nodes = right_nodes[0:nice_length_right:2]
-                right_odd_nodes = right_nodes[1:nice_length_right:2]
-                right_leftover = right_nodes[nice_length_right:]
+        start_total = time.time()
+        while length_left > 1:
+            odd_length_left = length_left % 2 == 1
+            half_length_left = length_left // 2
+            nice_length_left = 2 * half_length_left
 
-                stack1 = tn.stack(right_even_nodes)
-                stack2 = tn.stack(right_odd_nodes)
-                stack1['right'] ^ stack2['left']
-                nodes = stack1 @ stack2
-                nodes = tn.unbind(nodes)
+            start = time.time()
+            left_even_nodes = left_nodes[0:nice_length_left:2]
+            left_odd_nodes = left_nodes[1:nice_length_left:2]
+            left_leftover = left_nodes[nice_length_left:]
+            if PRINT_MODE: print('\t\t\tSelect nodes:', time.time() - start)
 
-                # nodes = stacked_einsum('ibj,jbk->ibk',
-                #                        right_even_nodes,
-                #                        right_odd_nodes)
+            start = time.time()
+            stack1 = tn.stack(left_even_nodes)
+            if PRINT_MODE: print('\t\t\tStack even nodes:', time.time() - start)
+            start = time.time()
+            stack2 = tn.stack(left_odd_nodes)
+            if PRINT_MODE: print('\t\t\tStack odd nodes:', time.time() - start)
+            start = time.time()
+            stack1['right'] ^ stack2['left']
+            if PRINT_MODE: print('\t\t\tConnect stacks:', time.time() - start)
+            start = time.time()
+            nodes = stack1 @ stack2
+            if PRINT_MODE: print('\t\t\tContract stacks:', time.time() - start)
+            start = time.time()
+            nodes = tn.unbind(nodes)
+            if PRINT_MODE: print('\t\t\tUnbind stacks:', time.time() - start)
 
-                right_nodes = nodes
-                right_nodes += right_leftover
-                length_right = half_length_right + int(odd_length_right)
+            left_nodes = nodes
+            left_nodes += left_leftover
+            length_left = half_length_left + int(odd_length_left)
+        if PRINT_MODE: print('\t\tLeft pairwise contraction:', time.time() - start_total)
+
+        start = time.time()
+        while length_right > 1:
+            odd_length_right = length_right % 2 == 1
+            half_length_right = length_right // 2
+            nice_length_right = 2 * half_length_right
+
+            right_even_nodes = right_nodes[0:nice_length_right:2]
+            right_odd_nodes = right_nodes[1:nice_length_right:2]
+            right_leftover = right_nodes[nice_length_right:]
+
+            stack1 = tn.stack(right_even_nodes)
+            stack2 = tn.stack(right_odd_nodes)
+            stack1['right'] ^ stack2['left']
+            nodes = stack1 @ stack2
+            nodes = tn.unbind(nodes)
+
+            right_nodes = nodes
+            right_nodes += right_leftover
+            length_right = half_length_right + int(odd_length_right)
+        if PRINT_MODE: print('\t\tRight pairwise contraction:', time.time() - start)
 
         if left_nodes and right_nodes:
             return left_nodes[0], right_nodes[0]
@@ -791,9 +848,9 @@ class MPS(TensorNetwork):
                 left_node = (self.left_node @ self.left_node.neighbours('input')).permute((0, 2, 1))
                 # left_node = einsum('lir,bi->lbr', self.left_node, self.left_node.neighbours('input'))
             left_list.append(left_node)
+            if PRINT_MODE: print('\tLeft node:', time.time() - start)
         if left_env_contracted is not None:
             left_list.append(left_env_contracted)  # new
-            if PRINT_MODE: print('\tLeft node:', time.time() - start)
         # if left_env:
         #     start = time.time()
         #     if not self.param_bond() and self.same_d_phys() and self.same_d_bond():
@@ -997,6 +1054,10 @@ class MPS(TensorNetwork):
     #     #self.num_current_op_nodes = []
     #     return output
 
+    def embedding(self, image: torch.Tensor) -> torch.Tensor:
+        # return torch.stack([image, 1 - image], dim=1).squeeze(0)
+        return torch.stack([torch.ones_like(image), image, 1 - image], dim=1)#.squeeze(0)
+
     def forward(self, data: torch.Tensor) -> torch.Tensor:
         """
         Parameters
@@ -1014,7 +1075,7 @@ class MPS(TensorNetwork):
             #     self.left_env_data = list(map(lambda node: node.neighbours('input'), self.left_env))
             # if self.right_env:
             #     self.right_env_data = list(map(lambda node: node.neighbours('input'), self.right_env))
-            self._add_data(data=data.permute(2, 0, 1))
+            self._add_data(data=self.embedding(data).permute(2, 0, 1))
             if PRINT_MODE: print('Add data:', time.time() - start)
             start = time.time()
             output = self.contract().tensor  # self.contract2()
@@ -1028,9 +1089,14 @@ class MPS(TensorNetwork):
             return output
         else:
             start = time.time()
-            self._add_data(data=data.permute(2, 0, 1))
+            self._add_data(data=self.embedding(data).permute(2, 0, 1))
             end = time.time()
             if PRINT_MODE: print('Add data:', end - start)
+
+            # start = time.time()
+            # output = self.contract()  # self.contract2()
+            # if PRINT_MODE: print('Contract:', time.time() - start)
+            # if PRINT_MODE: print()
 
             # TODO: esta puede ser la forma gen'erica del forward, y solo hay que definir
             #  add_data y contract (para la primera vez)
@@ -1053,6 +1119,10 @@ class MPS(TensorNetwork):
             #         output = tn.stack(**self._successors['stack'][op[1]].kwargs)
             #     elif op[0] == 'unbind':
             #         output = tn.unbind(**self._successors['unbind'][op[1]].kwargs)
+
+            stack_times = []
+            unbind_times = []
+            contract_edges_times = []
 
             operations = self._seq_ops
             for i, op in enumerate(operations):
@@ -1084,20 +1154,34 @@ class MPS(TensorNetwork):
                 elif op[0] == 'contract_edges':
                     start = time.time()
                     output = tn.contract_edges(**op[1])
-                    if PRINT_MODE: print('contract_edges:', time.time() - start)
+                    if PRINT_MODE:
+                        diff = time.time() - start
+                        print('contract_edges:', diff)
+                        contract_edges_times.append(diff)
 
                 elif op[0] == 'stack':
                     start = time.time()
                     output = tn.stack(**op[1])
-                    if PRINT_MODE: print('stack:', time.time() - start)
+                    if PRINT_MODE:
+                        diff = time.time() - start
+                        print('stack:', diff)
+                        stack_times.append(diff)
 
                 elif op[0] == 'unbind':
                     start = time.time()
                     output = tn.unbind(**op[1])
-                    if PRINT_MODE: print('unbind:', time.time() - start)
+                    if PRINT_MODE:
+                        diff = time.time() - start
+                        print('unbind:', diff)
+                        unbind_times.append(diff)
 
             # TODO: Se tarda igual con _list_ops y _seq_ops
 
-            if PRINT_MODE: print('Contract:', time.time() - start_contract)
-            if PRINT_MODE: print()
+            if PRINT_MODE:
+                print('Contract:', time.time() - start_contract)
+                print('Check times sum:', torch.tensor(tn.CHECK_TIMES)[-len(operations):].sum())
+                print('Stack times sum:', torch.tensor(stack_times).sum())
+                print('Unbind times sum:', torch.tensor(unbind_times).sum())
+                print('Contract edges times sum:', torch.tensor(contract_edges_times).sum())
+                print()
             return output.tensor

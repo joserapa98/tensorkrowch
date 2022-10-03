@@ -59,6 +59,9 @@ AbstractStackEdge, StackEdge, ParamStackEdge = Any, Any, Any
 Successor = Any
 # TODO: hacer import Tensor, Parameter?
 
+PRINT_MODE = False
+CHECK_TIMES = []
+
 
 ################################################
 #               EDGE OPERATIONS                #
@@ -201,7 +204,14 @@ class Operation:
         self.check_first = check_first
 
     def __call__(self, *args, **kwargs):
+        start = time.time()
         successor = self.check_first(*args, **kwargs)
+        # if PRINT_MODE:
+        #     diff = time.time() - start
+        #     print('Check:', diff)
+        #     global CHECK_TIMES
+        #     CHECK_TIMES.append(diff)
+
         if successor is None:
             return self.func1(*args, **kwargs)
         else:
@@ -676,6 +686,7 @@ def _contract_edges_next(successor: Successor,
     """
     Contract edges between two nodes.
     """
+    total_time = time.time()
 
     if node1 == node2:
         result = node1.tensor
@@ -713,11 +724,21 @@ def _contract_edges_next(successor: Successor,
                     axes_nums[num] -= 2
 
     else:
+        if PRINT_MODE: print('\t\t\t\tCheckpoint 1:', time.time() - total_time)
         # TODO: si son StackEdge, ver que todos los correspondientes edges están conectados
 
         # TODO: Bien, pero cuidad con la shape del batch al meterla en hints, hay que dejar libertad en ese hueco
         nodes = [node1, node2]
         tensors = [node1.tensor, node2.tensor]
+
+        if PRINT_MODE:
+            diff = time.time() - total_time
+            print('\t\t\t\tCheckpoint 2:', diff)
+            if diff >= 0.003:
+                print('------------------HERE-------------------')
+                pass
+
+        start = time.time()
 
         for j, edge in enumerate(nodes[0]._edges):
             if edge in edges:
@@ -732,6 +753,9 @@ def _contract_edges_next(successor: Successor,
                     tensors[0] = tensors[0] @ edge.matrix
                     tensors[0] = tensors[0].permute(inv_permutation_dims)
 
+        if PRINT_MODE: print('\t\t\t\tCheck ParamEdges:', time.time() - start)
+        if PRINT_MODE: print('\t\t\t\tCheckpoint 3:', time.time() - total_time)
+
         hints = successor.hints
         # batch_idx = hints['batch_idx']
         # batch_shapes = []
@@ -744,16 +768,24 @@ def _contract_edges_next(successor: Successor,
         # aux_shape = hints['aux_shape']
         # aux_shape[0][0] = torch.tensor(batch_shapes).prod().long().item()
         # aux_shape[1][0] = torch.tensor(batch_shapes).prod().long().item()
+        if PRINT_MODE: print('\t\t\t\tCheckpoint 4:', time.time() - total_time)
 
+        start = time.time()
         for i in [0, 1]:
             tensors[i] = tensors[i].permute(hints['permutation_dims'][i])
             tensors[i] = tensors[i].reshape(hints['aux_shape'][i])
 
         result = tensors[0] @ tensors[1]
         result = result.view(hints['new_shape']).permute(hints['inv_permutation_dims'])
+        if PRINT_MODE: print('\t\t\t\tCompute contraction:', time.time() - start)
+        if PRINT_MODE: print('\t\t\t\tCheckpoint 5:', time.time() - total_time)
 
     child = successor.child
+    if PRINT_MODE: print('\t\t\t\tCheckpoint 6:', time.time() - total_time)
+    start = time.time()
     child._unrestricted_set_tensor(result)
+    if PRINT_MODE: print('\t\t\t\tSave in child:', time.time() - start)
+    if PRINT_MODE: print('\t\t\t\tCheckpoint 7:', time.time() - total_time)
 
     return child
 
@@ -812,7 +844,8 @@ def stack_unequal_tensors(lst_tensors: List[torch.Tensor]) -> torch.Tensor:
                 if tensor.shape != max_shape:
                     pad = []
                     for max_dim, dim in zip(max_shape, tensor.shape):
-                        pad += [max_dim - dim, 0]
+                        pad += [0, max_dim - dim]
+                    pad.reverse()
                     lst_tensors[idx] = nn.functional.pad(tensor, pad)
         return torch.stack(lst_tensors)
 
@@ -841,6 +874,7 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
     all_same_ref = True   # Check if all the nodes' memory is stored in the same reference node's memory
     node_ref = None       # In the case above, the reference node
     stack_indices = []    # In the case above, stack indices of each node in the reference node's memory
+    stack_indices_slice = [None, None, None]  # TODO: intentar convertir lista de indices a slice
     indices = []          # In the case above, indices of each node in the reference node's memory
     for node in nodes:
         if not node._leaf:
@@ -858,9 +892,27 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
                 if node._tensor_info['node_ref'] != node_ref:
                     all_same_ref = False
             stack_indices.append(node._tensor_info['stack_idx'])
+            if stack_indices_slice[0] is None:
+                stack_indices_slice[0] = node._tensor_info['stack_idx']
+            elif stack_indices_slice[1] == None:
+                stack_indices_slice[1] = node._tensor_info['stack_idx']
+                stack_indices_slice[2] = stack_indices_slice[1] - stack_indices_slice[0]
+                # TODO: cuidado con ir al revés, step < 0
+            else:
+                if stack_indices_slice[2] is not None:
+                    if abs(stack_indices_slice[1] - node._tensor_info['stack_idx']) == stack_indices_slice[2]:
+                        stack_indices_slice[1] = node._tensor_info['stack_idx']
+                    else:
+                        stack_indices_slice[2] = None
             indices.append(node._tensor_info['index'])
         else:
             all_same_ref = False
+
+    if stack_indices_slice[2] is not None:
+        stack_indices_slice[1] += 1
+        stack_indices = slice(stack_indices_slice[0],
+                              stack_indices_slice[1],
+                              stack_indices_slice[2])
 
     if all_param:
         stack_node = nc.ParamStackNode(nodes, name=name)
@@ -921,7 +973,8 @@ def _stack_next(successor: Successor,
     if successor.hints['all_same_ref'] or (successor.hints['all_leaf'] and successor.contracting):
         return child
 
-    stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])
+    # stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])  # TODO:
+    stack_tensor = torch.stack([node.tensor for node in nodes])
     child._unrestricted_set_tensor(stack_tensor)
 
     # If contracting turns True, but stack operation had been already performed

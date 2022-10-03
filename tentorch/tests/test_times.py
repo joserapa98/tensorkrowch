@@ -202,3 +202,103 @@ def test_time_check_equal_lists():
     b = hash(t1) == hash(t2)
     print('Hash check:', time.time() - start)
     # Mucho peor!
+
+
+def test_time_stacks():
+    print()
+    lst = [torch.randn(100, 100, 100) for _ in range(1000)]
+    start = time.time()
+    s = torch.stack(lst)
+    print(time.time() - start)
+
+    lst = [torch.randn(100, 100, 100) for _ in range(1000)]
+    start = time.time()
+    s = tn.stack_unequal_tensors(lst)
+    print(time.time() - start)
+
+    lst = [torch.randn(torch.randint(low=1, high=100, size=(1,)).long().item(), 100, 100) for _ in range(1000)]
+    start = time.time()
+    s = tn.stack_unequal_tensors(lst)
+    print(time.time() - start)
+
+
+def test_time_check_kwargs():
+    print()
+    lst = [tn.randn((20, 30)) for _ in range(100)]
+    h1 = hash(tuple(lst))
+
+    lst2 = [tn.randn((20, 30)) for _ in range(100)]
+    h2 = hash(tuple(lst2))
+
+    # Con listas
+    start = time.time()
+    print(lst == lst)
+    print(time.time() - start)
+
+    start = time.time()
+    print(lst == lst2)
+    print(time.time() - start)
+
+    # Con hashes  ->  cuando es True, es un orden de magnitud más rápido
+    start = time.time()
+    print(h1 == h1)
+    print(time.time() - start)
+
+    start = time.time()
+    print(h1 == h2)
+    print(time.time() - start)
+    # TODO: cuando es True, es un orden de magnitud más rápido -> implementar hashes para kwargs
+
+
+def test_time_stack_vs_cat():
+    print()
+    lst = [torch.randn(100, 100, 100) for _ in range(100)]
+    t = torch.randn(100, 100, 100)
+
+    # Stack
+    start = time.time()
+    aux1 = torch.stack(lst + [t])
+    print(time.time() - start)
+
+    # Cat  ->  un poco menos, pero casi iguales
+    s = torch.stack(lst)
+    start = time.time()
+    aux2 = torch.cat([s, t.view(1, *t.shape)])
+    print(time.time() - start)
+
+    assert torch.equal(aux1, aux2)
+
+
+def test_time_index():
+    print()
+    # List
+    t = torch.randn(100, 100, 100)
+    idx = torch.randint(0, 100, (50,)).tolist()
+    start = time.time()
+    t = t[idx]
+    print(time.time() - start)
+    print(t.shape)
+
+    # Slice
+    t = torch.randn(100, 100, 100)
+    idx = slice(0, 100, 2)
+    start = time.time()
+    t = t[idx]
+    print(time.time() - start)
+    print(t.shape)
+
+    # List of one element
+    t = torch.randn(100, 100, 100)
+    idx = [50]
+    start = time.time()
+    t = t[idx]
+    print(time.time() - start)
+    print(t.shape)
+
+    # Index one element
+    t = torch.randn(100, 100, 100)
+    idx = 50
+    start = time.time()
+    t = t[idx].view(1, *t.shape[1:])
+    print(time.time() - start)
+    print(t.shape)

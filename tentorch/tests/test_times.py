@@ -181,3 +181,24 @@ def test_time_padding():
     t2 = nn.functional.pad(t, (100, 0, 100, 0))
     print(time.time() - start)
     # Padding m'as r'apido claramente (un orden de magnitud aprox.)
+
+
+def test_time_check_equal_lists():
+    t1 = []
+    for _ in range(1000):
+        t1.append(torch.randn(100, 100))
+
+    t2 = t1[:]
+
+    t1 = tuple(t1)
+    t2 = tuple(t2)
+
+    print()
+    start = time.time()
+    b = t1 == t2
+    print('Classic check:', time.time() - start)
+
+    start = time.time()
+    b = hash(t1) == hash(t2)
+    print('Hash check:', time.time() - start)
+    # Mucho peor!

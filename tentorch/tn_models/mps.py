@@ -599,7 +599,22 @@ class MPS(TensorNetwork):
                 result = stack @ stack_data
                 result = result.permute((0, 1, 3, 2))
                 result = tn.unbind(result)
-                # TODO: mismo problema, cada permute da un nodo nuevo, no reusamos, permute tiene que ser operation
+                # left_result = []
+                # right_result = []
+                # if self.left_env:
+                #     left_stack = tn.stack(self.left_env)
+                #     left_stack_data = tn.stack(self.left_env_data)
+                #     left_stack['input'] ^ left_stack_data['feature']
+                #     left_result = left_stack @ left_stack_data
+                #     left_result = left_result.permute((0, 1, 3, 2))
+                #     left_result = tn.unbind(left_result)
+                # if self.right_env:
+                #     right_stack = tn.stack(self.right_env)
+                #     right_stack_data = tn.stack(self.right_env_data)
+                #     right_stack['input'] ^ right_stack_data['feature']
+                #     right_result = right_stack @ right_stack_data
+                #     right_result = right_result.permute((0, 1, 3, 2))
+                #     right_result = tn.unbind(right_result)
                 #result = stacked_einsum('lir,bi->lbr', self.left_env + self.right_env, env_data)
                 if PRINT_MODE: print('\t\tResult:', time.time() - start)
                 start = time.time()
@@ -994,6 +1009,11 @@ class MPS(TensorNetwork):
             self.set_data_nodes(batch_sizes=[data.shape[0]])
             if self.left_env + self.right_env:
                 self.env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
+            # TODO: usar 2 lados left y right en input contraction tarda lo mismo que solo 1 lado
+            # if self.left_env:
+            #     self.left_env_data = list(map(lambda node: node.neighbours('input'), self.left_env))
+            # if self.right_env:
+            #     self.right_env_data = list(map(lambda node: node.neighbours('input'), self.right_env))
             self._add_data(data=data.permute(2, 0, 1))
             if PRINT_MODE: print('Add data:', time.time() - start)
             start = time.time()

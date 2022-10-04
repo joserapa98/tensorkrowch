@@ -731,6 +731,8 @@ def _contract_edges_next(successor: Successor,
         nodes = [node1, node2]
         tensors = [node1.tensor, node2.tensor]
 
+        torch.cuda.synchronize()
+
         if PRINT_MODE:
             diff = time.time() - total_time
             print('\t\t\t\tCheckpoint 2:', diff)
@@ -774,10 +776,12 @@ def _contract_edges_next(successor: Successor,
         for i in [0, 1]:
             tensors[i] = tensors[i].permute(hints['permutation_dims'][i])
             tensors[i] = tensors[i].reshape(hints['aux_shape'][i])
+        torch.cuda.synchronize()
         if PRINT_MODE: print('\t\t\t\tCheckpoint 4.1:', time.time() - total_time)
 
         result = tensors[0] @ tensors[1]
         if PRINT_MODE: print('\t\t\t\tCheckpoint 4.2:', time.time() - total_time)
+        torch.cuda.synchronize()
         result = result.view(hints['new_shape']).permute(hints['inv_permutation_dims'])
         if PRINT_MODE: print('\t\t\t\tCompute contraction:', time.time() - start)
         if PRINT_MODE: print('\t\t\t\tCheckpoint 5:', time.time() - total_time)

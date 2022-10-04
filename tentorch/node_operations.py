@@ -59,7 +59,7 @@ AbstractStackEdge, StackEdge, ParamStackEdge = Any, Any, Any
 Successor = Any
 # TODO: hacer import Tensor, Parameter?
 
-PRINT_MODE = False
+PRINT_MODE = True
 CHECK_TIMES = []
 
 
@@ -206,11 +206,11 @@ class Operation:
     def __call__(self, *args, **kwargs):
         start = time.time()
         successor = self.check_first(*args, **kwargs)
-        # if PRINT_MODE:
-        #     diff = time.time() - start
-        #     print('Check:', diff)
-        #     global CHECK_TIMES
-        #     CHECK_TIMES.append(diff)
+        if PRINT_MODE:
+            diff = time.time() - start
+            print('Check:', diff)
+            global CHECK_TIMES
+            CHECK_TIMES.append(diff)
 
         if successor is None:
             return self.func1(*args, **kwargs)
@@ -774,8 +774,10 @@ def _contract_edges_next(successor: Successor,
         for i in [0, 1]:
             tensors[i] = tensors[i].permute(hints['permutation_dims'][i])
             tensors[i] = tensors[i].reshape(hints['aux_shape'][i])
+        if PRINT_MODE: print('\t\t\t\tCheckpoint 4.1:', time.time() - total_time)
 
         result = tensors[0] @ tensors[1]
+        if PRINT_MODE: print('\t\t\t\tCheckpoint 4.2:', time.time() - total_time)
         result = result.view(hints['new_shape']).permute(hints['inv_permutation_dims'])
         if PRINT_MODE: print('\t\t\t\tCompute contraction:', time.time() - start)
         if PRINT_MODE: print('\t\t\t\tCheckpoint 5:', time.time() - total_time)

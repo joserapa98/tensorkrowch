@@ -874,8 +874,9 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
     all_same_ref = True   # Check if all the nodes' memory is stored in the same reference node's memory
     node_ref = None       # In the case above, the reference node
     stack_indices = []    # In the case above, stack indices of each node in the reference node's memory
+    use_slice = True
     stack_indices_slice = [None, None, None]  # TODO: intentar convertir lista de indices a slice
-    indices = []          # In the case above, indices of each node in the reference node's memory
+    # indices = []          # In the case above, indices of each node in the reference node's memory
     for node in nodes:
         if not node._leaf:
             all_leaf = False
@@ -892,23 +893,26 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
                 if node._tensor_info['node_ref'] != node_ref:
                     all_same_ref = False
             stack_indices.append(node._tensor_info['stack_idx'])
-            if stack_indices_slice[0] is None:
-                stack_indices_slice[0] = node._tensor_info['stack_idx']
-            elif stack_indices_slice[1] == None:
-                stack_indices_slice[1] = node._tensor_info['stack_idx']
-                stack_indices_slice[2] = stack_indices_slice[1] - stack_indices_slice[0]
-                # TODO: cuidado con ir al revés, step < 0
-            else:
-                if stack_indices_slice[2] is not None:
-                    if abs(stack_indices_slice[1] - node._tensor_info['stack_idx']) == stack_indices_slice[2]:
+
+            if use_slice:
+                if stack_indices_slice[0] is None:
+                    stack_indices_slice[0] = node._tensor_info['stack_idx']
+                    stack_indices_slice[1] = node._tensor_info['stack_idx']
+                elif stack_indices_slice[2] == None:
+                    stack_indices_slice[1] = node._tensor_info['stack_idx']
+                    stack_indices_slice[2] = stack_indices_slice[1] - stack_indices_slice[0]
+                    # TODO: cuidado con ir al revés, step < 0
+                else:
+                    if (node._tensor_info['stack_idx'] - stack_indices_slice[1]) == stack_indices_slice[2]:
                         stack_indices_slice[1] = node._tensor_info['stack_idx']
                     else:
-                        stack_indices_slice[2] = None
-            indices.append(node._tensor_info['index'])
+                        use_slice = False
+
+            # indices.append(node._tensor_info['index'])
         else:
             all_same_ref = False
 
-    if stack_indices_slice[2] is not None:
+    if stack_indices_slice[0] is not None and use_slice:
         stack_indices_slice[1] += 1
         stack_indices = slice(stack_indices_slice[0],
                               stack_indices_slice[1],

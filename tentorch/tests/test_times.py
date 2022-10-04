@@ -302,3 +302,11 @@ def test_time_index():
     t = t[idx].view(1, *t.shape[1:])
     print(time.time() - start)
     print(t.shape)
+
+    # Slice of one element
+    t = torch.randn(100, 100, 100)
+    idx = slice(50, 51)
+    start = time.time()
+    t = t[idx]
+    print(time.time() - start)
+    print(t.shape)

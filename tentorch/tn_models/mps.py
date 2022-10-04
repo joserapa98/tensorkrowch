@@ -17,10 +17,11 @@ from tentorch.node_operations import einsum, stacked_einsum
 import tentorch as tn
 
 import opt_einsum
+import math
 
 import time
 
-PRINT_MODE = False
+PRINT_MODE = True
 
 
 # TODO: move_l_position -> needs svd and qr to contract and split nodes
@@ -652,8 +653,65 @@ class MPS(TensorNetwork):
         """
         result_node = nodes[0]
         for node in nodes[1:]:
+            start = time.time()
             result_node @= node
+            if PRINT_MODE: print('\t\t\tMatrix contraction:', time.time() - start)
         return result_node
+
+    @staticmethod
+    def _aux_pairwise2(nodes: List[Node]) -> List[Node]:
+        length = len(nodes)
+        start_total = time.time()
+        while length > 1:
+            odd_length = length % 2 == 1
+            half_length = length // 2
+            nice_length = 2 * half_length
+
+            start = time.time()
+            even_nodes = nodes[0:nice_length:2]
+            odd_nodes = nodes[1:nice_length:2]
+            leftover = nodes[nice_length:]
+            if PRINT_MODE: print('\t\t\tSelect nodes:', time.time() - start)
+
+            start = time.time()
+            stack1 = tn.stack(even_nodes)
+            if PRINT_MODE: print('\t\t\tStack even nodes:', time.time() - start)
+            start = time.time()
+            stack2 = tn.stack(odd_nodes)
+            if PRINT_MODE: print('\t\t\tStack odd nodes:', time.time() - start)
+            start = time.time()
+            stack1['right'] ^ stack2['left']
+            if PRINT_MODE: print('\t\t\tConnect stacks:', time.time() - start)
+            start = time.time()
+            nodes = stack1 @ stack2
+            if PRINT_MODE: print('\t\t\tContract stacks:', time.time() - start)
+            start = time.time()
+            nodes = tn.unbind(nodes)
+            if PRINT_MODE: print('\t\t\tUnbind stacks:', time.time() - start)
+
+            nodes += leftover
+            length = half_length + int(odd_length)
+        if PRINT_MODE: print('\t\tLeft pairwise contraction:', time.time() - start_total)
+
+        return nodes
+
+    @staticmethod
+    def _aux_pairwise(nodes: List[Node]) -> List[Node]:
+        length = len(nodes)
+        if length > 1:
+            lst_lengths = [0]
+            while length > 0:
+                exp = math.floor(math.log(length) / math.log(2))
+                lst_lengths.append(lst_lengths[-1] + 2**exp)
+                length -= 2**exp
+
+            aux_nodes = []
+            for i in range(len(lst_lengths) - 1):
+                aux_nodes.append(MPS._aux_pairwise2(nodes[lst_lengths[i]:lst_lengths[i+1]])[0])
+
+            return MPS._aux_pairwise(aux_nodes)
+
+        return nodes
 
     @staticmethod
     def _pairwise_contraction(left_nodes: List[Node], right_nodes: List[Node]) -> Tuple[Node, Node]:
@@ -666,145 +724,148 @@ class MPS(TensorNetwork):
         # TODO: hacer algoritmo que encuentre subconjuntos de longitud potencias de 2 donde se vaya
         #  haciendo la operaciones reutilizando siempre la misma pila, y al final con los que queden
         #  solo 1 o 2 operaciones que no reutilizan pila (pensar con formula si esto seria ventaja)
-        length_left = len(left_nodes)
-        length_right = len(right_nodes)
+        left_nodes = MPS._aux_pairwise(left_nodes)
+        right_nodes = MPS._aux_pairwise(right_nodes)
+
+        # length_left = len(left_nodes)
+        # length_right = len(right_nodes)
         # while (length_left > 1) or (length_right > 1):
-            # if (length_left > 1) and (length_right > 1):
-            #     odd_length_left = length_left % 2 == 1
-            #     half_length_left = length_left // 2
-            #     nice_length_left = 2 * half_length_left
-            #
-            #     left_even_nodes = left_nodes[0:nice_length_left:2]
-            #     left_odd_nodes = left_nodes[1:nice_length_left:2]
-            #     left_leftover = left_nodes[nice_length_left:]
-            #
-            #     odd_length_right = length_right % 2 == 1
-            #     half_length_right = length_right // 2
-            #     nice_length_right = 2 * half_length_right
-            #
-            #     right_even_nodes = right_nodes[0:nice_length_right:2]
-            #     right_odd_nodes = right_nodes[1:nice_length_right:2]
-            #     right_leftover = right_nodes[nice_length_right:]
-            #
-            #     stack1 = tn.stack(left_even_nodes + right_even_nodes)
-            #     stack2 = tn.stack(left_odd_nodes + right_odd_nodes)
-            #     stack1['right'] ^ stack2['left']
-            #     nodes = stack1 @ stack2
-            #     nodes = tn.unbind(nodes)
-            #
-            #     # nodes = stacked_einsum('ibj,jbk->ibk',
-            #     #                        left_even_nodes + right_even_nodes,
-            #     #                        left_odd_nodes + right_odd_nodes)
-            #
-            #     left_nodes = nodes[:half_length_left]
-            #     left_nodes += left_leftover
-            #     length_left = half_length_left + int(odd_length_left)
-            #
-            #     right_nodes = nodes[half_length_left:]
-            #     right_nodes += right_leftover
-            #     length_right = half_length_right + int(odd_length_right)
-            #
-            # elif length_left > 1:
-            # if length_left > 1:
-            #     odd_length_left = length_left % 2 == 1
-            #     half_length_left = length_left // 2
-            #     nice_length_left = 2 * half_length_left
-            #
-            #     left_even_nodes = left_nodes[0:nice_length_left:2]
-            #     left_odd_nodes = left_nodes[1:nice_length_left:2]
-            #     left_leftover = left_nodes[nice_length_left:]
-            #
-            #     stack1 = tn.stack(left_even_nodes)
-            #     stack2 = tn.stack(left_odd_nodes)
-            #     stack1['right'] ^ stack2['left']
-            #     nodes = stack1 @ stack2
-            #     nodes = tn.unbind(nodes)
-            #
-            #     # nodes = stacked_einsum('ibj,jbk->ibk',
-            #     #                        left_even_nodes,
-            #     #                        left_odd_nodes)
-            #
-            #     left_nodes = nodes
-            #     left_nodes += left_leftover
-            #     length_left = half_length_left + int(odd_length_left)
-            #
-            # else:
-            # if length_right > 1:
-            #     odd_length_right = length_right % 2 == 1
-            #     half_length_right = length_right // 2
-            #     nice_length_right = 2 * half_length_right
-            #
-            #     right_even_nodes = right_nodes[0:nice_length_right:2]
-            #     right_odd_nodes = right_nodes[1:nice_length_right:2]
-            #     right_leftover = right_nodes[nice_length_right:]
-            #
-            #     stack1 = tn.stack(right_even_nodes)
-            #     stack2 = tn.stack(right_odd_nodes)
-            #     stack1['right'] ^ stack2['left']
-            #     nodes = stack1 @ stack2
-            #     nodes = tn.unbind(nodes)
-            #
-            #     # nodes = stacked_einsum('ibj,jbk->ibk',
-            #     #                        right_even_nodes,
-            #     #                        right_odd_nodes)
-            #
-            #     right_nodes = nodes
-            #     right_nodes += right_leftover
-            #     length_right = half_length_right + int(odd_length_right)
-
-        start_total = time.time()
-        while length_left > 1:
-            odd_length_left = length_left % 2 == 1
-            half_length_left = length_left // 2
-            nice_length_left = 2 * half_length_left
-
-            start = time.time()
-            left_even_nodes = left_nodes[0:nice_length_left:2]
-            left_odd_nodes = left_nodes[1:nice_length_left:2]
-            left_leftover = left_nodes[nice_length_left:]
-            if PRINT_MODE: print('\t\t\tSelect nodes:', time.time() - start)
-
-            start = time.time()
-            stack1 = tn.stack(left_even_nodes)
-            if PRINT_MODE: print('\t\t\tStack even nodes:', time.time() - start)
-            start = time.time()
-            stack2 = tn.stack(left_odd_nodes)
-            if PRINT_MODE: print('\t\t\tStack odd nodes:', time.time() - start)
-            start = time.time()
-            stack1['right'] ^ stack2['left']
-            if PRINT_MODE: print('\t\t\tConnect stacks:', time.time() - start)
-            start = time.time()
-            nodes = stack1 @ stack2
-            if PRINT_MODE: print('\t\t\tContract stacks:', time.time() - start)
-            start = time.time()
-            nodes = tn.unbind(nodes)
-            if PRINT_MODE: print('\t\t\tUnbind stacks:', time.time() - start)
-
-            left_nodes = nodes
-            left_nodes += left_leftover
-            length_left = half_length_left + int(odd_length_left)
-        if PRINT_MODE: print('\t\tLeft pairwise contraction:', time.time() - start_total)
-
-        start = time.time()
-        while length_right > 1:
-            odd_length_right = length_right % 2 == 1
-            half_length_right = length_right // 2
-            nice_length_right = 2 * half_length_right
-
-            right_even_nodes = right_nodes[0:nice_length_right:2]
-            right_odd_nodes = right_nodes[1:nice_length_right:2]
-            right_leftover = right_nodes[nice_length_right:]
-
-            stack1 = tn.stack(right_even_nodes)
-            stack2 = tn.stack(right_odd_nodes)
-            stack1['right'] ^ stack2['left']
-            nodes = stack1 @ stack2
-            nodes = tn.unbind(nodes)
-
-            right_nodes = nodes
-            right_nodes += right_leftover
-            length_right = half_length_right + int(odd_length_right)
-        if PRINT_MODE: print('\t\tRight pairwise contraction:', time.time() - start)
+        #     if (length_left > 1) and (length_right > 1):
+        #         odd_length_left = length_left % 2 == 1
+        #         half_length_left = length_left // 2
+        #         nice_length_left = 2 * half_length_left
+        #
+        #         left_even_nodes = left_nodes[0:nice_length_left:2]
+        #         left_odd_nodes = left_nodes[1:nice_length_left:2]
+        #         left_leftover = left_nodes[nice_length_left:]
+        #
+        #         odd_length_right = length_right % 2 == 1
+        #         half_length_right = length_right // 2
+        #         nice_length_right = 2 * half_length_right
+        #
+        #         right_even_nodes = right_nodes[0:nice_length_right:2]
+        #         right_odd_nodes = right_nodes[1:nice_length_right:2]
+        #         right_leftover = right_nodes[nice_length_right:]
+        #
+        #         stack1 = tn.stack(left_even_nodes + right_even_nodes)
+        #         stack2 = tn.stack(left_odd_nodes + right_odd_nodes)
+        #         stack1['right'] ^ stack2['left']
+        #         nodes = stack1 @ stack2
+        #         nodes = tn.unbind(nodes)
+        #
+        #         # nodes = stacked_einsum('ibj,jbk->ibk',
+        #         #                        left_even_nodes + right_even_nodes,
+        #         #                        left_odd_nodes + right_odd_nodes)
+        #
+        #         left_nodes = nodes[:half_length_left]
+        #         left_nodes += left_leftover
+        #         length_left = half_length_left + int(odd_length_left)
+        #
+        #         right_nodes = nodes[half_length_left:]
+        #         right_nodes += right_leftover
+        #         length_right = half_length_right + int(odd_length_right)
+        #
+        #     elif length_left > 1:
+        #     if length_left > 1:
+        #         odd_length_left = length_left % 2 == 1
+        #         half_length_left = length_left // 2
+        #         nice_length_left = 2 * half_length_left
+        #
+        #         left_even_nodes = left_nodes[0:nice_length_left:2]
+        #         left_odd_nodes = left_nodes[1:nice_length_left:2]
+        #         left_leftover = left_nodes[nice_length_left:]
+        #
+        #         stack1 = tn.stack(left_even_nodes)
+        #         stack2 = tn.stack(left_odd_nodes)
+        #         stack1['right'] ^ stack2['left']
+        #         nodes = stack1 @ stack2
+        #         nodes = tn.unbind(nodes)
+        #
+        #         # nodes = stacked_einsum('ibj,jbk->ibk',
+        #         #                        left_even_nodes,
+        #         #                        left_odd_nodes)
+        #
+        #         left_nodes = nodes
+        #         left_nodes += left_leftover
+        #         length_left = half_length_left + int(odd_length_left)
+        #
+        #     else:
+        #     if length_right > 1:
+        #         odd_length_right = length_right % 2 == 1
+        #         half_length_right = length_right // 2
+        #         nice_length_right = 2 * half_length_right
+        #
+        #         right_even_nodes = right_nodes[0:nice_length_right:2]
+        #         right_odd_nodes = right_nodes[1:nice_length_right:2]
+        #         right_leftover = right_nodes[nice_length_right:]
+        #
+        #         stack1 = tn.stack(right_even_nodes)
+        #         stack2 = tn.stack(right_odd_nodes)
+        #         stack1['right'] ^ stack2['left']
+        #         nodes = stack1 @ stack2
+        #         nodes = tn.unbind(nodes)
+        #
+        #         # nodes = stacked_einsum('ibj,jbk->ibk',
+        #         #                        right_even_nodes,
+        #         #                        right_odd_nodes)
+        #
+        #         right_nodes = nodes
+        #         right_nodes += right_leftover
+        #         length_right = half_length_right + int(odd_length_right)
+        #
+        # start_total = time.time()
+        # while length_left > 1:
+        #     odd_length_left = length_left % 2 == 1
+        #     half_length_left = length_left // 2
+        #     nice_length_left = 2 * half_length_left
+        #
+        #     start = time.time()
+        #     left_even_nodes = left_nodes[0:nice_length_left:2]
+        #     left_odd_nodes = left_nodes[1:nice_length_left:2]
+        #     left_leftover = left_nodes[nice_length_left:]
+        #     if PRINT_MODE: print('\t\t\tSelect nodes:', time.time() - start)
+        #
+        #     start = time.time()
+        #     stack1 = tn.stack(left_even_nodes)
+        #     if PRINT_MODE: print('\t\t\tStack even nodes:', time.time() - start)
+        #     start = time.time()
+        #     stack2 = tn.stack(left_odd_nodes)
+        #     if PRINT_MODE: print('\t\t\tStack odd nodes:', time.time() - start)
+        #     start = time.time()
+        #     stack1['right'] ^ stack2['left']
+        #     if PRINT_MODE: print('\t\t\tConnect stacks:', time.time() - start)
+        #     start = time.time()
+        #     nodes = stack1 @ stack2
+        #     if PRINT_MODE: print('\t\t\tContract stacks:', time.time() - start)
+        #     start = time.time()
+        #     nodes = tn.unbind(nodes)
+        #     if PRINT_MODE: print('\t\t\tUnbind stacks:', time.time() - start)
+        #
+        #     left_nodes = nodes
+        #     left_nodes += left_leftover
+        #     length_left = half_length_left + int(odd_length_left)
+        # if PRINT_MODE: print('\t\tLeft pairwise contraction:', time.time() - start_total)
+        #
+        # start = time.time()
+        # while length_right > 1:
+        #     odd_length_right = length_right % 2 == 1
+        #     half_length_right = length_right // 2
+        #     nice_length_right = 2 * half_length_right
+        #
+        #     right_even_nodes = right_nodes[0:nice_length_right:2]
+        #     right_odd_nodes = right_nodes[1:nice_length_right:2]
+        #     right_leftover = right_nodes[nice_length_right:]
+        #
+        #     stack1 = tn.stack(right_even_nodes)
+        #     stack2 = tn.stack(right_odd_nodes)
+        #     stack1['right'] ^ stack2['left']
+        #     nodes = stack1 @ stack2
+        #     nodes = tn.unbind(nodes)
+        #
+        #     right_nodes = nodes
+        #     right_nodes += right_leftover
+        #     length_right = half_length_right + int(odd_length_right)
+        # if PRINT_MODE: print('\t\tRight pairwise contraction:', time.time() - start)
 
         if left_nodes and right_nodes:
             return left_nodes[0], right_nodes[0]
@@ -825,7 +886,7 @@ class MPS(TensorNetwork):
 
         start = time.time()
         # TODO: cuidado, era self.same_d_phys() y self.same_d_bond()
-        if not self.param_bond() and self._same_d_phys and self._same_d_bond:
+        if False:  #not self.param_bond() and self._same_d_phys and self._same_d_bond:
             left_env_contracted, right_env_contracted = self._pairwise_contraction(left_env, right_env)
         else:
             left_env_contracted = None
@@ -1079,6 +1140,8 @@ class MPS(TensorNetwork):
             if PRINT_MODE: print('Add data:', time.time() - start)
             start = time.time()
             output = self.contract().tensor  # self.contract2()
+            # TODO: esto solo si output a la izda del todo
+            # output = output.permute((1, 0))  # TODO: cuidado donde acaba el batch, tiene que acabar al principio
             if PRINT_MODE: print('Contract:', time.time() - start)
             if PRINT_MODE: print()
 
@@ -1175,6 +1238,8 @@ class MPS(TensorNetwork):
                         print('unbind:', diff)
                         unbind_times.append(diff)
 
+            output = output.tensor
+
             # TODO: Se tarda igual con _list_ops y _seq_ops
 
             if PRINT_MODE:
@@ -1184,4 +1249,8 @@ class MPS(TensorNetwork):
                 print('Unbind times sum:', torch.tensor(unbind_times).sum())
                 print('Contract edges times sum:', torch.tensor(contract_edges_times).sum())
                 print()
-            return output.tensor
+
+            # TODO: esto solo si output a la izda del todo
+            # output = output.permute((1, 0))  # TODO: cuidado donde acaba el batch, tiene que acabar al principio
+
+            return output

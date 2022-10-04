@@ -15,6 +15,9 @@ from torchvision import transforms, datasets
 from typing import (Union, Optional, Sequence,
                     Text, List, Tuple)
 
+import torch.autograd.profiler as profiler
+from torchviz import make_dot
+
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -33,7 +36,7 @@ start_time = time.time()
 num_train = 6000
 num_test = 1000
 batch_size = 500
-image_size = (28, 28)
+image_size = (15, 15)
 num_epochs = 10
 learn_rate = 1e-4
 l2_reg = 0.0
@@ -123,8 +126,8 @@ mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
 #             param_bond=True)
 
 #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-device = torch.device('cuda')
-#device = torch.device('cpu')
+# device = torch.device('cuda')
+device = torch.device('cpu')
 mps = mps.to(device)
 
 # memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
@@ -164,7 +167,8 @@ def embedding(image: torch.Tensor) -> torch.Tensor:
 # transform = transforms.Compose([transforms.Resize(image_size),
 #                                 transforms.ToTensor(),
 #                                 transforms.Lambda(embedding)])
-transform = transforms.ToTensor()
+transform = transforms.Compose([transforms.Resize(image_size),
+                                transforms.ToTensor()])
 train_set = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
                            download=True, transform=transform)
 test_set = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
@@ -219,7 +223,7 @@ print()
 mps.mps._contracting = True
 with torch.no_grad():
     # mps(torch.zeros(1, 3, image_size[0] * image_size[1]).to(device))
-    mps(torch.zeros(1, image_size[0] * image_size[1]).to(device))
+    mps(torch.zeros(100, image_size[0] * image_size[1]).to(device))
 optimizer = torch.optim.Adam(mps.parameters(), lr=learn_rate, weight_decay=l2_reg)
 # TODO: hay que añadir optimizer después de cambiar los parámetros del MPS
 
@@ -229,12 +233,16 @@ for epoch_num in range(1, num_epochs + 1):
 
     first = True
 
+    end = time.time()
     for inputs, labels in loaders["train"]:
-        start = time.time()
+        data_loading_duration_ms = (time.time() - end)
+        # start = time.time()
         # inputs, labels = inputs.view([batch_size, 3, image_size[0] * image_size[1]]), labels.data
+        torch.cuda.synchronize()
+        pre_forward_time = time.time()
         inputs, labels = inputs.view([batch_size, image_size[0] * image_size[1]]), labels.data
         inputs, labels = inputs.to(device), labels.to(device)
-        print(time.time() - start)
+        # print(time.time() - start)
 
         # if first:
         #     # inputs = torch.cat([inputs[:-1], inv_image], dim=0)
@@ -247,12 +255,24 @@ for epoch_num in range(1, num_epochs + 1):
 
         # Call our MPS to get logit scores and predictions
         # start = time.time()
+
+        # g = make_dot(mps(inputs), params=dict(mps.named_parameters()))
+        # g.render('comp_graph_inline')
+        # break
+
+        # with profiler.profile(with_stack=True, profile_memory=True) as prof:
+        #     scores = mps(inputs)
+        # print(prof.key_averages(group_by_stack_n=5).table(sort_by='self_cpu_time_total', row_limit=5))
+
         scores = mps(inputs)
         # print(time.time() - start)
         _, preds = torch.max(scores, 1)
 
         # Compute the loss and accuracy, add them to the running totals
         loss = loss_fun(scores, labels)
+        torch.cuda.synchronize()
+        post_forward_time = time.time()
+
         with torch.no_grad():
             accuracy = torch.sum(preds == labels).item() / batch_size
             running_loss += loss
@@ -261,9 +281,22 @@ for epoch_num in range(1, num_epochs + 1):
         # Backpropagate and update parameters
         optimizer.zero_grad()
         loss.backward()
+        # with profiler.profile(with_stack=True, profile_memory=True) as prof:
+        #     loss.backward()
+        # print(prof.key_averages(group_by_stack_n=5).table(sort_by='self_cpu_time_total', row_limit=5))
+        torch.cuda.synchronize()
+        post_backward_time = time.time()
         optimizer.step()
 
+        forward_duration_ms = (post_forward_time - pre_forward_time)
+        backward_duration_ms = (post_backward_time - post_forward_time)
+        print("forward time (ms) {:.2f} | backward time (ms) {:.2f} | dataloader time (ms) {:.2f}".format(
+            forward_duration_ms, backward_duration_ms, data_loading_duration_ms
+        ))
+        end = time.time()
+
         # print(time.time() - start)
+    # break
 
     # grads = []
     # for p in list(mps.parameters())[100:]:

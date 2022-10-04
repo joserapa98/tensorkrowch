@@ -59,7 +59,7 @@ AbstractStackEdge, StackEdge, ParamStackEdge = Any, Any, Any
 Successor = Any
 # TODO: hacer import Tensor, Parameter?
 
-PRINT_MODE = True
+PRINT_MODE = False
 CHECK_TIMES = []
 
 

@@ -20,8 +20,9 @@ import opt_einsum
 import math
 
 import time
+from torchviz import make_dot
 
-PRINT_MODE = True
+PRINT_MODE = False
 
 
 # TODO: move_l_position -> needs svd and qr to contract and split nodes
@@ -1156,10 +1157,10 @@ class MPS(TensorNetwork):
             end = time.time()
             if PRINT_MODE: print('Add data:', end - start)
 
-            # start = time.time()
-            # output = self.contract()  # self.contract2()
-            # if PRINT_MODE: print('Contract:', time.time() - start)
-            # if PRINT_MODE: print()
+            start = time.time()
+            output = self.contract()  # self.contract2()
+            if PRINT_MODE: print('Contract:', time.time() - start)
+            if PRINT_MODE: print()
 
             # TODO: esta puede ser la forma gen'erica del forward, y solo hay que definir
             #  add_data y contract (para la primera vez)
@@ -1183,72 +1184,72 @@ class MPS(TensorNetwork):
             #     elif op[0] == 'unbind':
             #         output = tn.unbind(**self._successors['unbind'][op[1]].kwargs)
 
-            stack_times = []
-            unbind_times = []
-            contract_edges_times = []
-
-            operations = self._seq_ops
-            for i, op in enumerate(operations):
-                if op[0] == 'permute':
-                    start = time.time()
-                    output = tn.permute(**op[1])
-                    if PRINT_MODE: print('permute:', time.time() - start)
-
-                elif op[0] == 'tprod':
-                    start = time.time()
-                    output = tn.tprod(**op[1])
-                    if PRINT_MODE: print('tprod:', time.time() - start)
-
-                elif op[0] == 'mul':
-                    start = time.time()
-                    output = tn.mul(**op[1])
-                    if PRINT_MODE: print('mul:', time.time() - start)
-
-                elif op[0] == 'add':
-                    start = time.time()
-                    output = tn.add(**op[1])
-                    if PRINT_MODE: print('add:', time.time() - start)
-
-                elif op[0] == 'sub':
-                    start = time.time()
-                    output = tn.sub(**op[1])
-                    if PRINT_MODE: print('sub:', time.time() - start)
-
-                elif op[0] == 'contract_edges':
-                    start = time.time()
-                    output = tn.contract_edges(**op[1])
-                    if PRINT_MODE:
-                        diff = time.time() - start
-                        print('contract_edges:', diff)
-                        contract_edges_times.append(diff)
-
-                elif op[0] == 'stack':
-                    start = time.time()
-                    output = tn.stack(**op[1])
-                    if PRINT_MODE:
-                        diff = time.time() - start
-                        print('stack:', diff)
-                        stack_times.append(diff)
-
-                elif op[0] == 'unbind':
-                    start = time.time()
-                    output = tn.unbind(**op[1])
-                    if PRINT_MODE:
-                        diff = time.time() - start
-                        print('unbind:', diff)
-                        unbind_times.append(diff)
+            # stack_times = []
+            # unbind_times = []
+            # contract_edges_times = []
+            #
+            # operations = self._seq_ops
+            # for i, op in enumerate(operations):
+            #     if op[0] == 'permute':
+            #         start = time.time()
+            #         output = tn.permute(**op[1])
+            #         if PRINT_MODE: print('permute:', time.time() - start)
+            #
+            #     elif op[0] == 'tprod':
+            #         start = time.time()
+            #         output = tn.tprod(**op[1])
+            #         if PRINT_MODE: print('tprod:', time.time() - start)
+            #
+            #     elif op[0] == 'mul':
+            #         start = time.time()
+            #         output = tn.mul(**op[1])
+            #         if PRINT_MODE: print('mul:', time.time() - start)
+            #
+            #     elif op[0] == 'add':
+            #         start = time.time()
+            #         output = tn.add(**op[1])
+            #         if PRINT_MODE: print('add:', time.time() - start)
+            #
+            #     elif op[0] == 'sub':
+            #         start = time.time()
+            #         output = tn.sub(**op[1])
+            #         if PRINT_MODE: print('sub:', time.time() - start)
+            #
+            #     elif op[0] == 'contract_edges':
+            #         start = time.time()
+            #         output = tn.contract_edges(**op[1])
+            #         if PRINT_MODE:
+            #             diff = time.time() - start
+            #             print('contract_edges:', diff)
+            #             contract_edges_times.append(diff)
+            #
+            #     elif op[0] == 'stack':
+            #         start = time.time()
+            #         output = tn.stack(**op[1])
+            #         if PRINT_MODE:
+            #             diff = time.time() - start
+            #             print('stack:', diff)
+            #             stack_times.append(diff)
+            #
+            #     elif op[0] == 'unbind':
+            #         start = time.time()
+            #         output = tn.unbind(**op[1])
+            #         if PRINT_MODE:
+            #             diff = time.time() - start
+            #             print('unbind:', diff)
+            #             unbind_times.append(diff)
+            #
+            # # TODO: Se tarda igual con _list_ops y _seq_ops
+            #
+            # if PRINT_MODE:
+            #     print('Contract:', time.time() - start_contract)
+            #     print('Check times sum:', torch.tensor(tn.CHECK_TIMES)[-len(operations):].sum())
+            #     print('Stack times sum:', torch.tensor(stack_times).sum())
+            #     print('Unbind times sum:', torch.tensor(unbind_times).sum())
+            #     print('Contract edges times sum:', torch.tensor(contract_edges_times).sum())
+            #     print()
 
             output = output.tensor
-
-            # TODO: Se tarda igual con _list_ops y _seq_ops
-
-            if PRINT_MODE:
-                print('Contract:', time.time() - start_contract)
-                print('Check times sum:', torch.tensor(tn.CHECK_TIMES)[-len(operations):].sum())
-                print('Stack times sum:', torch.tensor(stack_times).sum())
-                print('Unbind times sum:', torch.tensor(unbind_times).sum())
-                print('Contract edges times sum:', torch.tensor(contract_edges_times).sum())
-                print()
 
             # TODO: esto solo si output a la izda del todo
             # output = output.permute((1, 0))  # TODO: cuidado donde acaba el batch, tiene que acabar al principio

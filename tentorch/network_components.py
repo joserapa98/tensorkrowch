@@ -301,7 +301,7 @@ class AbstractNode(ABC):
         # print('\t\t\t\t\t\tAddress:', time.time() - total_time)
         tensor = memory[address]
         # print('\t\t\t\t\t\tTensor:', time.time() - total_time)
-        index = self._tensor_info['index']
+        index = self._tensor_info['stack_idx']  # TODO: 'index'
         result = tensor[index]
         # if isinstance(index, list):
         #     if len(index) == 1:

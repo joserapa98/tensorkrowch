@@ -302,13 +302,14 @@ class AbstractNode(ABC):
         tensor = memory[address]
         # print('\t\t\t\t\t\tTensor:', time.time() - total_time)
         index = self._tensor_info['index']
-        if isinstance(index, list):
-            if len(index) == 1:
-                result = tensor[index[0]].view(1, *tensor.shape[1:])
-            else:
-                result = tensor[index]
-        else:
-            result = tensor[index]
+        result = tensor[index]
+        # if isinstance(index, list):
+        #     if len(index) == 1:
+        #         result = tensor[index[0]].view(1, *tensor.shape[1:])
+        #     else:
+        #         result = tensor[index]
+        # else:
+        #     result = tensor[index]
         # print('\t\t\t\t\t\tIndex tensor:', time.time() - total_time)
         # print('\t\t\t\t\tFull False:', time.time() - total_time)
         return result

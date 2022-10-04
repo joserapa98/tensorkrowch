@@ -2424,8 +2424,13 @@ class TensorNetwork(nn.Module):
                         network=self,
                         leaf=False)
             node['feature'] ^ edge
-            self._data_nodes[node.name] = node
+            self._data_nodes[node._name] = node
 
+        # TODO: igual mejor como antes en un solo bucle, pero cuidado con los nombres
+        #  (cuando modificamos la memoria del primer nodo su nombre es 'data', pero
+        #  luego pasa a ser 'data_0' y no lo cambiamos bien)
+        for i, node in enumerate(self._data_nodes.values()):
+            del self._memory_nodes[node._tensor_info['address']]
             node._tensor_info['address'] = None
             node._tensor_info['node_ref'] = stack_node
             node._tensor_info['full'] = False

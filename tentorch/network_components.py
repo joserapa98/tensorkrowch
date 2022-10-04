@@ -2144,6 +2144,9 @@ class TensorNetwork(nn.Module):
             self._remove_node(prev_node)
 
         self._assign_node_name(node, node.name, True)
+        # TODO: estoy borrando numeraci'on de nodos que ya doy numeracion,
+        #  como cuando opero dos nodos y heredo un subindice. En ese caso
+        #  deber'ia dejar el subindice
 
     def add_nodes_from(self, nodes_list: Sequence[AbstractNode]):
         for name, node in nodes_list:

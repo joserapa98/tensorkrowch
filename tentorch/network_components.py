@@ -2143,7 +2143,10 @@ class TensorNetwork(nn.Module):
             prev_node = self._nodes[node.name]
             self._remove_node(prev_node)
 
-        self._assign_node_name(node, node.name, True)
+        name = node.name # TODO: esto para evitar con nombres larguisimos de contract
+        if node.name.startswith('contract_'):
+            name = 'node'
+        self._assign_node_name(node, name, True)
         # TODO: estoy borrando numeraci'on de nodos que ya doy numeracion,
         #  como cuando opero dos nodos y heredo un subindice. En ese caso
         #  deber'ia dejar el subindice

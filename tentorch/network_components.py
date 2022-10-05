@@ -289,7 +289,8 @@ class AbstractNode(ABC):
         else:
             node = self
 
-        if self._tensor_info['full']:
+        if self._tensor_info['full'] or self.name.startswith('unbind'):  # TODO: Comment for index mode
+            # TODO: truquito para que los unbind lean su tensor directamente
             result = self._network._memory_nodes[node._tensor_info['address']]
             # print('\t\t\t\t\tFull True:', time.time() - total_time)
             return result

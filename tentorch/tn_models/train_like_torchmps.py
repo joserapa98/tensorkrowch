@@ -2,8 +2,8 @@
 
 import os
 import psutil
-# pid = os.getpid()
-# python_process = psutil.Process(pid)
+pid = os.getpid()
+python_process = psutil.Process(pid)
 
 
 import time
@@ -110,7 +110,7 @@ mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
             d_phys=3,
             n_labels=10,
             d_bond=10,
-            l_position=None,
+            l_position=2,
             boundary='obc',
             param_bond=False)
 # Epoch: 10, Runtime: 606 s, Train acc.: 0.9803, Test acc.: 0.9747, LR: 1e-4
@@ -125,13 +125,16 @@ mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
 #             boundary='obc',
 #             param_bond=True)
 
+memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
+print('memory use:', memoryUse)
+
 #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-# device = torch.device('cuda')
-device = torch.device('cpu')
+device = torch.device('cuda')
+# device = torch.device('cpu')
 mps = mps.to(device)
 
-# memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
-# print('memory use:', memoryUse)
+memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
+print('memory use:', memoryUse)
 
 # Set our loss function and optimizer
 loss_fun = torch.nn.CrossEntropyLoss()
@@ -174,11 +177,11 @@ train_set = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
 test_set = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
                           download=True, transform=transform, train=False)
 
-train_set_aux = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
-                               download=True)
+# train_set_aux = datasets.MNIST("~/PycharmProjects/TeNTorch/tentorch/tn_models/data",
+#                                download=True)
 
-# memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
-# print('memory use:', memoryUse)
+memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
+print('memory use:', memoryUse)
 
 # inv_image = transform(PIL.ImageOps.invert(train_set_aux[0][0]))
 # inv_image = inv_image.view(1, 3, -1).cuda()
@@ -223,7 +226,7 @@ print()
 mps.mps._contracting = True
 with torch.no_grad():
     # mps(torch.zeros(1, 3, image_size[0] * image_size[1]).to(device))
-    mps(torch.zeros(100, image_size[0] * image_size[1]).to(device))
+    mps(torch.zeros(500, image_size[0] * image_size[1]).to(device))
 optimizer = torch.optim.Adam(mps.parameters(), lr=learn_rate, weight_decay=l2_reg)
 # TODO: hay que añadir optimizer después de cambiar los parámetros del MPS
 
@@ -233,13 +236,13 @@ for epoch_num in range(1, num_epochs + 1):
 
     first = True
 
-    end = time.time()
+    # end = time.time()
     for inputs, labels in loaders["train"]:
-        data_loading_duration_ms = (time.time() - end)
+        # data_loading_duration_ms = (time.time() - end)
         # start = time.time()
         # inputs, labels = inputs.view([batch_size, 3, image_size[0] * image_size[1]]), labels.data
-        torch.cuda.synchronize()
-        pre_forward_time = time.time()
+        # torch.cuda.synchronize()
+        # pre_forward_time = time.time()
         inputs, labels = inputs.view([batch_size, image_size[0] * image_size[1]]), labels.data
         inputs, labels = inputs.to(device), labels.to(device)
         # print(time.time() - start)
@@ -257,12 +260,14 @@ for epoch_num in range(1, num_epochs + 1):
         # start = time.time()
 
         # g = make_dot(mps(inputs), params=dict(mps.named_parameters()))
-        # g.render('comp_graph_inline')
+        # g.render('comp_graph3')
         # break
 
-        # with profiler.profile(with_stack=True, profile_memory=True) as prof:
+        # with profiler.profile(with_stack=True, profile_memory=True, with_modules=True) as prof:
         #     scores = mps(inputs)
         # print(prof.key_averages(group_by_stack_n=5).table(sort_by='self_cpu_time_total', row_limit=5))
+        # memoryUse = python_process.memory_info().rss / 1024 ** 2  # [0]/2.**30  # memory use in GB...I think
+        # print('memory use:', memoryUse)
 
         scores = mps(inputs)
         # print(time.time() - start)
@@ -270,8 +275,8 @@ for epoch_num in range(1, num_epochs + 1):
 
         # Compute the loss and accuracy, add them to the running totals
         loss = loss_fun(scores, labels)
-        torch.cuda.synchronize()
-        post_forward_time = time.time()
+        # torch.cuda.synchronize()
+        # post_forward_time = time.time()
 
         with torch.no_grad():
             accuracy = torch.sum(preds == labels).item() / batch_size
@@ -281,21 +286,25 @@ for epoch_num in range(1, num_epochs + 1):
         # Backpropagate and update parameters
         optimizer.zero_grad()
         loss.backward()
-        # with profiler.profile(with_stack=True, profile_memory=True) as prof:
+        # with profiler.profile(with_stack=True, profile_memory=True, with_modules=True) as prof:
         #     loss.backward()
         # print(prof.key_averages(group_by_stack_n=5).table(sort_by='self_cpu_time_total', row_limit=5))
-        torch.cuda.synchronize()
-        post_backward_time = time.time()
+        # memoryUse = python_process.memory_info().rss / 1024 ** 2  # [0]/2.**30  # memory use in GB...I think
+        # print('memory use:', memoryUse)
+
+        # torch.cuda.synchronize()
+        # post_backward_time = time.time()
         optimizer.step()
 
-        forward_duration_ms = (post_forward_time - pre_forward_time)
-        backward_duration_ms = (post_backward_time - post_forward_time)
-        print("forward time (ms) {:.2f} | backward time (ms) {:.2f} | dataloader time (ms) {:.2f}".format(
-            forward_duration_ms, backward_duration_ms, data_loading_duration_ms
-        ))
-        end = time.time()
+        # forward_duration_ms = (post_forward_time - pre_forward_time)
+        # backward_duration_ms = (post_backward_time - post_forward_time)
+        # print("forward time (ms) {:.5f} | backward time (ms) {:.5f} | dataloader time (ms) {:.5f}".format(
+        #     forward_duration_ms, backward_duration_ms, data_loading_duration_ms
+        # ))
+        # end = time.time()
 
         # print(time.time() - start)
+        # break
     # break
 
     # grads = []
@@ -333,8 +342,8 @@ for epoch_num in range(1, num_epochs + 1):
 print('Finished')
 
 
-# memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
-# print('memory use:', memoryUse)
+memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
+print('memory use:', memoryUse)
 
 
 # Increase bond dim

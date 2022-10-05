@@ -310,3 +310,95 @@ def test_time_index():
     t = t[idx]
     print(time.time() - start)
     print(t.shape)
+
+
+def test_time_bmm():
+    print()
+    # Matrix - Matrix
+    m1 = torch.randn(500, 10, 10)
+    m2 = torch.randn(500, 10, 10)
+    start = time.time()
+    m1 @ m2
+    print(time.time() - start)
+
+    # Matrix - Vector
+    v = torch.randn(500, 1, 10)
+    m = torch.randn(500, 10, 10)
+    start = time.time()
+    v @ m
+    print(time.time() - start)
+
+
+def test_time_select_backward():
+    print()
+    a = nn.Parameter(torch.randn(1000, 10, 10))
+
+    # Unbind  ->  Más rápido a partir de batch = 500, antes más lento
+    lst = a.unbind()
+    start = time.time()
+    result = lst[0]
+    for i in range(1, 1000):
+        result = result @ lst[i]
+    result = result.sum()
+    result.backward()
+    print(time.time() - start)
+
+    # Select
+    lst = [a[i] for i in range(a.shape[0])]
+    start = time.time()
+    result = lst[0]
+    for i in range(1, 1000):
+        result = result @ lst[i]
+    result = result.sum()
+    result.backward()
+    print(time.time() - start)
+
+
+def test_time_stack_backward():
+    print()
+    a = nn.Parameter(torch.randn(1000, 10, 10))
+
+    # Unbind + Stack
+    lst = list(a.unbind())
+    stack1 = torch.stack(lst[0:1000:2])
+    stack2 = torch.stack(lst[1:1000:2])
+    start = time.time()
+    result = stack1 @ stack2
+    result = result.sum()
+    print('Forward:', time.time() - start)
+    start = time.time()
+    result.backward()
+    print('Backward:', time.time() - start)
+
+    # Slice
+    stack1 = a[0:1000:2]
+    stack2 = a[1:1000:2]
+    start = time.time()
+    result = stack1 @ stack2
+    result = result.sum()
+    print('Forward:', time.time() - start)
+    start = time.time()
+    result.backward()
+    print('Backward:', time.time() - start)
+
+
+def test_memory():
+    print()
+
+    def same_storage(x, y):
+        x_ptrs = set(e.data_ptr() for e in x.view(-1))
+        y_ptrs = set(e.data_ptr() for e in y.view(-1))
+        return (x_ptrs <= y_ptrs) or (y_ptrs <= x_ptrs)
+
+    lst = [torch.randn(2, 3) for _ in range(100)]
+    stack = torch.stack(lst)  # Does allocate new memory
+    print(same_storage(lst[0], stack))
+
+    unbinded = stack.unbind()  # Does not allocate new memory
+    print(same_storage(unbinded[0], stack))
+
+    sliced = stack[0:50]  # Does not allocate new memory
+    print(same_storage(sliced, stack))
+
+    restack = torch.stack(unbinded)  # Allocates new memory again
+    print(same_storage(restack, stack))

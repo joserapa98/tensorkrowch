@@ -647,11 +647,22 @@ class MPS(TensorNetwork):
         # return left_result, right_result
 
     @staticmethod
-    def _inline_contraction(nodes: List[Node]) -> Node:
+    def _inline_contraction(nodes: List[Node], left) -> Node:
         """
         Contract a sequence of MPS tensors that have
         parameterized bond dimensions
         """
+        # if left:
+        #     vec = nodes[0].tensor.unsqueeze(1)
+        #     for mat in nodes[1:]:
+        #         vec = vec @ mat.tensor.permute(1, 0, 2)
+        #     return vec
+        # else:
+        #     vec = nodes[0].tensor.permute(1, 0).unsqueeze(2)
+        #     for mat in nodes[1:]:
+        #         vec = mat.tensor.permute(1, 0, 2) @ vec
+        #     return vec
+
         result_node = nodes[0]
         for node in nodes[1:]:
             start = time.time()
@@ -692,7 +703,7 @@ class MPS(TensorNetwork):
 
             nodes += leftover
             length = half_length + int(odd_length)
-        if PRINT_MODE: print('\t\tLeft pairwise contraction:', time.time() - start_total)
+        if PRINT_MODE: print('\t\tPairwise contraction:', time.time() - start_total)
 
         return nodes
 
@@ -714,8 +725,205 @@ class MPS(TensorNetwork):
 
         return nodes
 
-    @staticmethod
-    def _pairwise_contraction(left_nodes: List[Node], right_nodes: List[Node]) -> Tuple[Node, Node]:
+    def _aux_pairwise3(self, nodes: List[Node], left) -> List[Node]:
+        length = len(nodes)
+        aux_nodes = nodes
+        if length > 1:
+            lst_lengths = [0]
+            while length > 0:
+                exp = math.floor(math.log(length) / math.log(2))
+                lst_lengths.append(lst_lengths[-1] + 2 ** exp)
+                length -= 2 ** exp
+
+            aux_nodes = []
+            for i in range(len(lst_lengths) - 1):
+                aux_nodes.append(MPS._aux_pairwise2(nodes[lst_lengths[i]:lst_lengths[i + 1]])[0])
+
+        if left:
+            left_node = (self.left_node @ self.left_node.neighbours('input')).permute((1, 0))
+            result = [self._inline_contraction([left_node] + aux_nodes, left)]
+        else:
+            right_node = self.right_node @ self.right_node.neighbours('input')
+            lst = aux_nodes + [right_node]
+            lst.reverse()
+            result = [self._inline_contraction(lst, left)]
+
+        return result
+
+    def _aux_pairwise4(self, nodes: List[Node], left) -> List[Node]:
+        length = len(nodes)
+        aux_nodes = nodes
+        if length > 1:
+            leftovers = []
+            start_total = time.time()
+            while length > 1:
+                half_length = length // 2
+                nice_length = 2 * half_length
+
+                start = time.time()
+                even_nodes = aux_nodes[0:nice_length:2]
+                odd_nodes = aux_nodes[1:nice_length:2]
+                leftovers = aux_nodes[nice_length:] + leftovers
+                if PRINT_MODE: print('\t\t\tSelect nodes:', time.time() - start)
+
+                start = time.time()
+                stack1 = tn.stack(even_nodes)
+                if PRINT_MODE: print('\t\t\tStack even nodes:', time.time() - start)
+                start = time.time()
+                stack2 = tn.stack(odd_nodes)
+                if PRINT_MODE: print('\t\t\tStack odd nodes:', time.time() - start)
+                start = time.time()
+                stack1['right'] ^ stack2['left']
+                if PRINT_MODE: print('\t\t\tConnect stacks:', time.time() - start)
+                start = time.time()
+                aux_nodes = stack1 @ stack2
+                if PRINT_MODE: print('\t\t\tContract stacks:', time.time() - start)
+                start = time.time()
+                aux_nodes = tn.unbind(aux_nodes)
+                if PRINT_MODE: print('\t\t\tUnbind stacks:', time.time() - start)
+
+                length = half_length
+            if PRINT_MODE: print('\t\tPairwise contraction:', time.time() - start_total)
+
+            aux_nodes = aux_nodes + leftovers
+
+        if left:
+            left_node = (self.left_node @ self.left_node.neighbours('input')).permute((1, 0))
+            result = [self._inline_contraction([left_node] + aux_nodes, left)]
+        else:
+            right_node = self.right_node @ self.right_node.neighbours('input')
+            lst = aux_nodes + [right_node]
+            lst.reverse()
+            result = [self._inline_contraction(lst, left)]
+
+        return result
+
+    def _aux_pairwise5(self, nodes: List[Node], left) -> List[Node]:
+        length = len(nodes)
+        aux_nodes = nodes
+        if length > 1:
+            leftovers = []
+            start_total = time.time()
+            while length > 1:
+                half_length = length // 2
+                nice_length = 2 * half_length
+
+                start = time.time()
+                even_nodes = aux_nodes[0:nice_length:2]
+                odd_nodes = aux_nodes[1:nice_length:2]
+                leftovers = aux_nodes[nice_length:] + leftovers
+                if PRINT_MODE: print('\t\t\tSelect nodes:', time.time() - start)
+
+                start = time.time()
+                stack1 = tn.stack(even_nodes)
+                if PRINT_MODE: print('\t\t\tStack even nodes:', time.time() - start)
+                start = time.time()
+                stack2 = tn.stack(odd_nodes)
+                if PRINT_MODE: print('\t\t\tStack odd nodes:', time.time() - start)
+                start = time.time()
+                stack1['right'] ^ stack2['left']
+                if PRINT_MODE: print('\t\t\tConnect stacks:', time.time() - start)
+                start = time.time()
+                aux_nodes = stack1 @ stack2
+                if PRINT_MODE: print('\t\t\tContract stacks:', time.time() - start)
+                start = time.time()
+                aux_nodes = tn.unbind(aux_nodes)
+                if PRINT_MODE: print('\t\t\tUnbind stacks:', time.time() - start)
+
+                length = half_length
+            if PRINT_MODE: print('\t\tPairwise contraction:', time.time() - start_total)
+
+            aux_nodes = aux_nodes + leftovers
+            return self._aux_pairwise5(aux_nodes, left)
+
+        if left:
+            left_node = (self.left_node @ self.left_node.neighbours('input')).permute((1, 0))
+            result = [self._inline_contraction([left_node] + aux_nodes, left)]
+        else:
+            right_node = self.right_node @ self.right_node.neighbours('input')
+            lst = aux_nodes + [right_node]
+            lst.reverse()
+            result = [self._inline_contraction(lst, left)]
+
+        return result
+
+    def _aux_aux_pairwise6(self, nodes: List[Node]) -> Tuple[List[Node], List[Node]]:
+        length = len(nodes)
+        aux_nodes = nodes
+        if length > 1:
+            start_total = time.time()
+
+            half_length = length // 2
+            nice_length = 2 * half_length
+
+            start = time.time()
+            even_nodes = aux_nodes[0:nice_length:2]
+            odd_nodes = aux_nodes[1:nice_length:2]
+            leftover = aux_nodes[nice_length:]
+            if PRINT_MODE: print('\t\t\tSelect nodes:', time.time() - start)
+
+            start = time.time()
+            stack1 = tn.stack(even_nodes)
+            if PRINT_MODE: print('\t\t\tStack even nodes:', time.time() - start)
+            start = time.time()
+            stack2 = tn.stack(odd_nodes)
+            if PRINT_MODE: print('\t\t\tStack odd nodes:', time.time() - start)
+            start = time.time()
+            stack1['right'] ^ stack2['left']
+            if PRINT_MODE: print('\t\t\tConnect stacks:', time.time() - start)
+            start = time.time()
+            aux_nodes = stack1 @ stack2
+            if PRINT_MODE: print('\t\t\tContract stacks:', time.time() - start)
+            start = time.time()
+            aux_nodes = tn.unbind(aux_nodes)
+            if PRINT_MODE: print('\t\t\tUnbind stacks:', time.time() - start)
+
+            if PRINT_MODE: print('\t\tPairwise contraction:', time.time() - start_total)
+
+            return aux_nodes, leftover
+        return nodes, []
+
+    def _aux_pairwise6(self, left_nodes: List[Node], right_nodes: List[Node]) -> Tuple[List[Node], List[Node]]:
+        left_length = len(left_nodes)
+        left_aux_nodes = left_nodes
+        right_length = len(right_nodes)
+        right_aux_nodes = right_nodes
+        if left_length > 1 or right_length > 1:
+            left_leftovers = []
+            right_leftovers = []
+            while left_length > 1 or right_length > 1:
+                aux1, aux2 = self._aux_aux_pairwise6(left_aux_nodes)
+                left_aux_nodes = aux1
+                left_leftovers = aux2 + left_leftovers
+                left_length = len(aux1)
+
+                aux1, aux2 = self._aux_aux_pairwise6(right_aux_nodes)
+                right_aux_nodes = aux1
+                right_leftovers = aux2 + right_leftovers
+                right_length = len(aux1)
+
+            left_aux_nodes = left_aux_nodes + left_leftovers
+            right_aux_nodes = right_aux_nodes + right_leftovers
+            return self._aux_pairwise6(left_aux_nodes, right_aux_nodes)
+
+        # left_node = (self.left_node @ self.left_node.neighbours('input'))
+        # left_env = left_node @ left_aux_nodes[0]
+        #
+        # right_node = self.right_node @ self.right_node.neighbours('input')
+        # right_env = (right_aux_nodes[0] @ right_node).permute((1, 0))
+
+        left_node = (self.left_node @ self.left_node.neighbours('input')).permute((1, 0))
+        left_env = [self._inline_contraction([left_node] + left_aux_nodes, True)]
+
+        right_node = self.right_node @ self.right_node.neighbours('input')
+        lst = right_aux_nodes + [right_node]
+        lst.reverse()
+        right_env = [self._inline_contraction(lst, False)]
+
+        return left_env, right_env
+
+    # @staticmethod
+    def _pairwise_contraction(self, left_nodes: List[Node], right_nodes: List[Node]) -> Tuple[Node, Node]:
         """
         Contract a sequence of MPS tensors that do not have
         parameterized bond dimensions, making the operation
@@ -723,10 +931,13 @@ class MPS(TensorNetwork):
         """
         # TODO: rewrite this (simplify)
         # TODO: hacer algoritmo que encuentre subconjuntos de longitud potencias de 2 donde se vaya
-        #  haciendo la operaciones reutilizando siempre la misma pila, y al final con los que queden
+        #  haciendo las operaciones reutilizando siempre la misma pila, y al final con los que queden
         #  solo 1 o 2 operaciones que no reutilizan pila (pensar con formula si esto seria ventaja)
-        left_nodes = MPS._aux_pairwise(left_nodes)
-        right_nodes = MPS._aux_pairwise(right_nodes)
+        # left_nodes = MPS._aux_pairwise2(left_nodes)
+        # right_nodes = MPS._aux_pairwise2(right_nodes)
+        # left_nodes = self._aux_pairwise5(left_nodes, True)
+        # right_nodes = self._aux_pairwise5(right_nodes, False)
+        left_nodes, right_nodes = self._aux_pairwise6(left_nodes, right_nodes)
 
         # length_left = len(left_nodes)
         # length_right = len(right_nodes)
@@ -887,17 +1098,36 @@ class MPS(TensorNetwork):
 
         start = time.time()
         # TODO: cuidado, era self.same_d_phys() y self.same_d_bond()
-        if False:  #not self.param_bond() and self._same_d_phys and self._same_d_bond:
+        if not self.param_bond() and self._same_d_phys and self._same_d_bond:
             left_env_contracted, right_env_contracted = self._pairwise_contraction(left_env, right_env)
         else:
+            # TODO: if left_node/right_node is not None
             left_env_contracted = None
             right_env_contracted = None
             if left_env:
-                left_env_contracted = self._inline_contraction(left_env)
+                left_node = (self.left_node @ self.left_node.neighbours('input')).permute((1, 0))
+                left_env_contracted = self._inline_contraction([left_node] + left_env, True)
+                # aux = self.nodes['permute_node_0'].tensor[:len(left_env)].unbind()
+                # left_env_contracted = self._inline_contraction([left_node.tensor] + list(aux), True)
             if right_env:
-                right_env_contracted = self._inline_contraction(right_env)
+                right_node = self.right_node @ self.right_node.neighbours('input')
+                lst = right_env + [right_node]
+                # lst = list(self.nodes['permute_node_0'].tensor[len(left_env):].unbind()) + [right_node.tensor]
+                lst.reverse()
+                right_env_contracted = self._inline_contraction(lst, False)
         if PRINT_MODE: print('\tMatrices contraction:', time.time() - start)
 
+        # result = opt_einsum.contract('bxl,lor,bry->bxoy',
+        #                              left_env_contracted,
+        #                              self.output_node.tensor,
+        #                              right_env_contracted).squeeze(1).squeeze(2)
+        # return result  # TODO: inline solo tensor
+
+        result = opt_einsum.contract('bl,lor,br->bo',
+                                     left_env_contracted.tensor,
+                                     self.output_node.tensor,
+                                     right_env_contracted.tensor)
+        return result
         
         # Operations of left environment
         left_list = []
@@ -958,7 +1188,7 @@ class MPS(TensorNetwork):
         #    if node not in self.permanent_nodes:
         #        self.delete_node(node)
 
-        return result
+        return result.tensor
 
     def stack(self, lst_tensors: List[torch.Tensor]) -> torch.Tensor:
         if lst_tensors:
@@ -1140,7 +1370,7 @@ class MPS(TensorNetwork):
             self._add_data(data=self.embedding(data).permute(2, 0, 1))
             if PRINT_MODE: print('Add data:', time.time() - start)
             start = time.time()
-            output = self.contract().tensor  # self.contract2()
+            output = self.contract()#.tensor  # self.contract2()
             # TODO: esto solo si output a la izda del todo
             # output = output.permute((1, 0))  # TODO: cuidado donde acaba el batch, tiene que acabar al principio
             if PRINT_MODE: print('Contract:', time.time() - start)
@@ -1249,7 +1479,7 @@ class MPS(TensorNetwork):
             #     print('Contract edges times sum:', torch.tensor(contract_edges_times).sum())
             #     print()
 
-            output = output.tensor
+            output = output#.tensor
 
             # TODO: esto solo si output a la izda del todo
             # output = output.permute((1, 0))  # TODO: cuidado donde acaba el batch, tiene que acabar al principio

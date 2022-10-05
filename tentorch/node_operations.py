@@ -731,7 +731,7 @@ def _contract_edges_next(successor: Successor,
         nodes = [node1, node2]
         tensors = [node1.tensor, node2.tensor]
 
-        torch.cuda.synchronize()
+        # torch.cuda.synchronize()
 
         if PRINT_MODE:
             diff = time.time() - total_time
@@ -776,12 +776,17 @@ def _contract_edges_next(successor: Successor,
         for i in [0, 1]:
             tensors[i] = tensors[i].permute(hints['permutation_dims'][i])
             tensors[i] = tensors[i].reshape(hints['aux_shape'][i])
-        torch.cuda.synchronize()
+        # torch.cuda.synchronize()
         if PRINT_MODE: print('\t\t\t\tCheckpoint 4.1:', time.time() - total_time)
 
         result = tensors[0] @ tensors[1]
+        # torch.cuda.synchronize()
         if PRINT_MODE: print('\t\t\t\tCheckpoint 4.2:', time.time() - total_time)
-        torch.cuda.synchronize()
+
+        # result = torch.randn(tensors[0].shape) @ torch.randn(tensors[1].shape)
+        # torch.cuda.synchronize()
+        # if PRINT_MODE: print('\t\t\t\tCheckpoint 4.2:', time.time() - total_time)
+
         result = result.view(hints['new_shape']).permute(hints['inv_permutation_dims'])
         if PRINT_MODE: print('\t\t\t\tCompute contraction:', time.time() - start)
         if PRINT_MODE: print('\t\t\t\tCheckpoint 5:', time.time() - total_time)
@@ -892,12 +897,14 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
         else:
             all_param = False
 
-        if node._tensor_info['address'] is None:
+        # TODO: uncomment for mix index mode
+        if node._tensor_info['address'] is None:# or node.name.startswith('unbind'):
             if node_ref is None:
                 node_ref = node._tensor_info['node_ref']
             else:
                 if node._tensor_info['node_ref'] != node_ref:
                     all_same_ref = False
+
             stack_indices.append(node._tensor_info['stack_idx'])
 
             if use_slice:
@@ -1059,12 +1066,28 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
                            node1_list=list(node1_list))
         nodes.append(new_node)
 
+    # TODO: originalmente borramos informacion y solo hacemos referencia a la pila
     # This memory management can happen always, even not in contracting mode
+    # for i, new_node in enumerate(nodes):
+    #     shape = new_node.shape
+    #     if new_node._tensor_info['address'] is not None:
+    #         del new_node.network._memory_nodes[new_node._tensor_info['address']]
+    #     new_node._tensor_info['address'] = None
+    #     new_node._tensor_info['node_ref'] = node
+    #     new_node._tensor_info['full'] = False
+    #     new_node._tensor_info['stack_idx'] = i
+    #     index = [i]
+    #     for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo
+    #         index.append(slice(max_dim - dim, max_dim))
+    #     new_node._tensor_info['index'] = index
+
+    # This memory management can happen always, even not in contracting mode
+    # TODO: comment for index mode
     for i, new_node in enumerate(nodes):
         shape = new_node.shape
-        if new_node._tensor_info['address'] is not None:
-            del new_node.network._memory_nodes[new_node._tensor_info['address']]
-        new_node._tensor_info['address'] = None
+        # if new_node._tensor_info['address'] is not None:
+        #     del new_node.network._memory_nodes[new_node._tensor_info['address']]
+        # new_node._tensor_info['address'] = None
         new_node._tensor_info['node_ref'] = node
         new_node._tensor_info['full'] = False
         new_node._tensor_info['stack_idx'] = i
@@ -1083,7 +1106,7 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
 
     net._list_ops.append(('unbind', len(net._successors['unbind']) - 1))
 
-    return nodes
+    return nodes[:]
 
 
 def _unbind_next(successor: Successor, node: AbstractNode) -> List[Node]:
@@ -1091,18 +1114,25 @@ def _unbind_next(successor: Successor, node: AbstractNode) -> List[Node]:
     # Thus if we have already created the unbinded nodes with their reference to where their
     # memory is stored, the next times we don't have to compute anything
 
-    batch_idx = successor.hints
+    # TODO: comment for index mode
+    tensors = torch.unbind(node.tensor)
     children = successor.child
-    new_dim = node.shape[batch_idx + 1]
-    child_dim = children[0].shape[batch_idx]
+    for tensor, child in zip(tensors, children):
+        child._unrestricted_set_tensor(tensor)
+    return children[:]
 
-    if new_dim == child_dim:
-        return children
-
-    for i, child in enumerate(children):
-        child._tensor_info['index'][batch_idx + 1] = slice(0, new_dim)
-
-    return successor.child  # TODO: cambia el tamaño del batch
+    # batch_idx = successor.hints
+    # children = successor.child
+    # new_dim = node.shape[batch_idx + 1]
+    # child_dim = children[0].shape[batch_idx]
+    #
+    # if new_dim == child_dim:
+    #     return children[:]  # TODO: añadimos [:] para no poder modificar la lista de hijos desde fuera
+    #
+    # for i, child in enumerate(children):
+    #     child._tensor_info['index'][batch_idx + 1] = slice(0, new_dim)
+    #
+    # return successor.child[:]  # TODO: cambia el tamaño del batch
 
 
 unbind = Operation(_check_first_unbind, _unbind_first, _unbind_next)

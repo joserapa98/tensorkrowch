@@ -840,6 +840,7 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
 
 ###################   STACK   ##################
 def stack_unequal_tensors(lst_tensors: List[torch.Tensor]) -> torch.Tensor:
+    lst_tensors = lst_tensors[:]  # TODO: protect original list
     if lst_tensors:
         same_dims = True
         max_shape = list(lst_tensors[0].shape)

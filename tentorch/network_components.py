@@ -712,7 +712,8 @@ class AbstractNode(ABC):
         if tensor is not None:
             if not isinstance(tensor, Tensor):
                 raise ValueError('`tensor` should be Tensor type')
-            elif not self._compatible_dims(tensor):
+            elif not self._compatible_dims(tensor):  # False
+                # TODO: digamos que podemos siempre, cuidado, dim del edge es la del node1
                 raise ValueError('`tensor` dimensions should match the '
                                  'dimensions of non-dangling edges')
             elif device is not None:
@@ -1787,8 +1788,8 @@ class StackNode(Node):
             if not isinstance(nodes[i], type(nodes[i + 1])):
                 raise TypeError('Cannot stack nodes of different types. Nodes '
                                 'must be either all Node or all ParamNode type')
-            if nodes[i].shape != nodes[i + 1].shape:
-                raise ValueError('Cannot stack nodes with different shapes')
+            # if nodes[i].shape != nodes[i + 1].shape:
+            #     raise ValueError('Cannot stack nodes with different shapes')
             if nodes[i].axes_names != nodes[i + 1].axes_names:
                 raise ValueError('Stacked nodes must have the same name for each axis')
             for edge1, edge2 in zip(nodes[i].edges, nodes[i + 1].edges):
@@ -1892,8 +1893,8 @@ class ParamStackNode(ParamNode):
             if not isinstance(nodes[i], type(nodes[i + 1])):
                 raise TypeError('Cannot stack nodes of different types. Nodes '
                                 'must be either all Node or all ParamNode type')
-            if nodes[i].shape != nodes[i + 1].shape:
-                raise ValueError('Cannot stack nodes with different shapes')
+            # if nodes[i].shape != nodes[i + 1].shape:
+            #     raise ValueError('Cannot stack nodes with different shapes')
             if nodes[i].axes_names != nodes[i + 1].axes_names:
                 raise ValueError('Stacked nodes must have the same name for each axis')
             for edge1, edge2 in zip(nodes[i].edges, nodes[i + 1].edges):

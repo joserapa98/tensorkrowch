@@ -394,6 +394,16 @@ def test_memory():
     stack = torch.stack(lst)  # Does allocate new memory
     print(same_storage(lst[0], stack))
 
+    lst = [nn.Parameter(torch.randn(2, 3)) for _ in range(10)]
+    stack = torch.stack(lst)  # Does allocate new memory
+    print(same_storage(lst[0], stack))
+
+    assert lst[0][0, 0] == stack[0, 0, 0]
+    optimizer = torch.optim.SGD(lst, lr=0.01)
+    stack.sum().backward()
+    optimizer.step()
+    assert lst[0][0, 0] != stack[0, 0, 0]
+
     unbinded = stack.unbind()  # Does not allocate new memory
     print(same_storage(unbinded[0], stack))
 
@@ -402,3 +412,58 @@ def test_memory():
 
     restack = torch.stack(unbinded)  # Allocates new memory again
     print(same_storage(restack, stack))
+
+
+def test_time_matmul_with_zeros():
+    # Random tensors
+    a = torch.randn(1000, 100, 100)
+    b = torch.randn(1000, 100, 100)
+    start = time.time()
+    c = a @ b
+    print('\nRandom:')
+    print(time.time() - start)
+    print(f'{a.element_size() * a.nelement() / 1024**2:.2f} Mb')
+
+    # Triangular matrices
+    a = torch.tril(a)
+    b = torch.tril(b)
+    start = time.time()
+    c = a @ b
+    print('\nTriangular:')
+    print(time.time() - start)
+    print(f'{a.element_size() * a.nelement() / 1024**2:.2f} Mb')
+
+    aux = a.to_sparse()
+    print(f'{aux.element_size() * aux.nelement() / 1024 ** 2:.2f} Mb')
+
+    class TriMat:
+        def __init__(self, trimat):
+            assert trimat.shape[-2] == trimat.shape[-1]  # Asumimos primero que son cuadradas
+            lst = []
+            for i in range(trimat.shape[-2]):
+                lst.append(trimat[..., i, :(i+1)])
+            self.lst = lst
+            self.shape = trimat.shape
+
+        def as_tensor(self):
+            result = tn.stack_unequal_tensors(self.lst)
+            return result.permute(1, 0, 2)
+
+    a = TriMat(a)
+    # b = torch.tril(b)
+    # start = time.time()
+    # c = torch.zeros(1000, 100, 100)
+    # for i in range(100):
+    #     for j in range(i+1):
+    #         for k in range(100):
+    #             c[:, i, k] = a.lst[i][:, j] * b[:, j, k]
+    # print('\nTriangular optimized:')
+    # print(time.time() - start)
+    #
+    # c2 = a.as_tensor() @ b  # TODO: al usar mi stack estaba modificando la lista de tensores que paso
+    # assert torch.equal(c, c2)
+
+    s = 0
+    for t in a.lst:
+        s += t.element_size() * t.nelement()
+    print(f'{s / 1024**2:.2f} Mb')

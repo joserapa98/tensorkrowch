@@ -947,7 +947,8 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
         stack_node._tensor_info['index'] = stack_indices  #list(zip(*indices))
 
     else:
-        # TODO: quitamos todos non-param por lo de la stack de data nodes, hay que controlar eso
+        # TODO: quitamos todos non-param por lo de la stack de data nodes, hay que
+        #  controlar eso -> ya esta, los data nodes no son leaf
         if all_leaf and (all_param or all_non_param) and net._contracting:
         # if all_leaf and all_param and net._contracting:
             # This memory management can only happen for leaf nodes,
@@ -990,8 +991,8 @@ def _stack_next(successor: Successor,
     if successor.hints['all_same_ref'] or (successor.hints['all_leaf'] and successor.contracting):
         return child
 
-    # stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])  # TODO:
-    stack_tensor = torch.stack([node.tensor for node in nodes])
+    stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])  # TODO:
+    # stack_tensor = torch.stack([node.tensor for node in nodes])
     child._unrestricted_set_tensor(stack_tensor)
 
     # If contracting turns True, but stack operation had been already performed

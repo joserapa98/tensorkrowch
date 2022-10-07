@@ -33,13 +33,15 @@ start_time = time.time()
 # param_bond = False
 
 # Training parameters
-num_train = 6000
-num_test = 1000
+num_train = 60000
+num_test = 10000
 batch_size = 500
 image_size = (28, 28)
 num_epochs = 10
 learn_rate = 1e-4
 l2_reg = 0.0
+
+PRINT_MODE = False
 
 
 # Initialize the MPS module
@@ -110,7 +112,7 @@ mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
             d_phys=3,
             n_labels=10,
             d_bond=10,
-            l_position=2,
+            l_position=None,
             boundary='obc',
             param_bond=False)
 # Epoch: 10, Runtime: 606 s, Train acc.: 0.9803, Test acc.: 0.9747, LR: 1e-4
@@ -123,7 +125,36 @@ mps = MyMPS(n_sites=image_size[0] * image_size[1] + 1,
 #             d_bond=torch.randint(5, 10, (image_size[0] * image_size[1], )).tolist(),
 #             l_position=None,
 #             boundary='obc',
-#             param_bond=True)
+#             param_bond=False)
+
+# mps = nn.Linear(image_size[0] * image_size[1], 10)
+
+
+# class CNN(nn.Module):
+#     def __init__(self):
+#         super().__init__()
+#         self.conv = nn.Sequential(
+#             nn.Conv2d(1, 6, 5),  # 1x28x28 -> 6x24x24
+#             nn.ReLU(),
+#             nn.MaxPool2d(2, 2),  # 6x24x24 -> 6x12x12
+#             nn.Conv2d(6, 16, 5),  # 6x12x12 -> 16x8x8
+#             nn.ReLU(),
+#             nn.MaxPool2d(2, 2))  # 16x8x8 -> 16x4x4
+#         self.fc = nn.Sequential(
+#             nn.Linear(16 * 4 * 4, 120),
+#             nn.ReLU(),
+#             nn.Linear(120, 84),
+#             nn.ReLU(),
+#             nn.Linear(84, 10))
+#
+#     def forward(self, x):
+#         x = self.conv(x)
+#         x = x.flatten(1)
+#         x = self.fc(x)
+#         return x
+#
+# mps = CNN()
+
 
 memoryUse = python_process.memory_info().rss / 1024 ** 2  #  [0]/2.**30  # memory use in GB...I think
 print('memory use:', memoryUse)
@@ -226,7 +257,7 @@ print()
 mps.mps._contracting = True
 with torch.no_grad():
     # mps(torch.zeros(1, 3, image_size[0] * image_size[1]).to(device))
-    mps(torch.zeros(500, image_size[0] * image_size[1]).to(device))
+    mps(torch.zeros(1, image_size[0] * image_size[1]).to(device))
 optimizer = torch.optim.Adam(mps.parameters(), lr=learn_rate, weight_decay=l2_reg)
 # TODO: hay que añadir optimizer después de cambiar los parámetros del MPS
 
@@ -236,13 +267,14 @@ for epoch_num in range(1, num_epochs + 1):
 
     first = True
 
-    # end = time.time()
+    if PRINT_MODE: end = time.time()
     for inputs, labels in loaders["train"]:
-        # data_loading_duration_ms = (time.time() - end)
+        if PRINT_MODE: data_loading_duration_ms = (time.time() - end)
         # start = time.time()
         # inputs, labels = inputs.view([batch_size, 3, image_size[0] * image_size[1]]), labels.data
-        # torch.cuda.synchronize()
-        # pre_forward_time = time.time()
+        if PRINT_MODE:
+            torch.cuda.synchronize()
+            pre_forward_time = time.time()
         inputs, labels = inputs.view([batch_size, image_size[0] * image_size[1]]), labels.data
         inputs, labels = inputs.to(device), labels.to(device)
         # print(time.time() - start)
@@ -275,8 +307,9 @@ for epoch_num in range(1, num_epochs + 1):
 
         # Compute the loss and accuracy, add them to the running totals
         loss = loss_fun(scores, labels)
-        # torch.cuda.synchronize()
-        # post_forward_time = time.time()
+        if PRINT_MODE:
+            torch.cuda.synchronize()
+            post_forward_time = time.time()
 
         with torch.no_grad():
             accuracy = torch.sum(preds == labels).item() / batch_size
@@ -292,16 +325,18 @@ for epoch_num in range(1, num_epochs + 1):
         # memoryUse = python_process.memory_info().rss / 1024 ** 2  # [0]/2.**30  # memory use in GB...I think
         # print('memory use:', memoryUse)
 
-        # torch.cuda.synchronize()
-        # post_backward_time = time.time()
+        if PRINT_MODE:
+            torch.cuda.synchronize()
+            post_backward_time = time.time()
         optimizer.step()
 
-        # forward_duration_ms = (post_forward_time - pre_forward_time)
-        # backward_duration_ms = (post_backward_time - post_forward_time)
-        # print("forward time (ms) {:.5f} | backward time (ms) {:.5f} | dataloader time (ms) {:.5f}".format(
-        #     forward_duration_ms, backward_duration_ms, data_loading_duration_ms
-        # ))
-        # end = time.time()
+        if PRINT_MODE:
+            forward_duration_ms = (post_forward_time - pre_forward_time)
+            backward_duration_ms = (post_backward_time - post_forward_time)
+            print("forward time (ms) {:.5f} | backward time (ms) {:.5f} | dataloader time (ms) {:.5f}".format(
+                forward_duration_ms, backward_duration_ms, data_loading_duration_ms
+            ))
+            end = time.time()
 
         # print(time.time() - start)
         # break

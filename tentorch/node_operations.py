@@ -1162,6 +1162,7 @@ unbind = Operation(_check_first_unbind, _unbind_first, _unbind_next)
 # TODO: más adelante, no prioritario
 
 def einsum(string: Text, *nodes: AbstractNode) -> Node:
+    # TODO: find contraction path in first, apply in next (try with opt_einsum and torch.einsum)
     """
     Adapt opt_einsum contract function to make it suitable for nodes
 

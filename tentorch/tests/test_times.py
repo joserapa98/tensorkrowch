@@ -494,6 +494,7 @@ def test_time_matmul_with_zeros():
     print(time.time() - start)
     print(f'{a.element_size() * a.nelement() / 1024**2:.2f} Mb')
 
+    print('\nTriangular as sparse:')
     aux = a.to_sparse_coo()
     print(f'{aux.element_size() * aux.nelement() / 1024 ** 2:.2f} Mb')
 
@@ -507,23 +508,37 @@ def test_time_matmul_with_zeros():
             self.shape = trimat.shape
 
         def as_tensor(self):
-            result = tn.stack_unequal_tensors(self.lst)
-            return result.permute(1, 0, 2)
+            aux_lst = []
+            for i, tensor in enumerate(self.lst):
+                tensor = nn.functional.pad(tensor, (0, 100 - (i+1)))
+                aux_lst.append(tensor)
+            result = torch.stack(aux_lst, dim=1)
+            return result
+
+    # Handmade multiplications
+    a = torch.randn(1000, 100, 100)
+    b = torch.randn(1000, 100, 100)
+    start_total = time.time()
+    c = torch.zeros(1000, 100, 100)
+    for i in range(100):
+        c[:, i, :] = (a[:, i, :].unsqueeze(-1) * b).sum(dim=-2)
+    print('\nRandom handmade mul.:')
+    print(time.time() - start_total)
 
     a = TriMat(a)
-    # b = torch.tril(b)
-    # start = time.time()
-    # c = torch.zeros(1000, 100, 100)
-    # for i in range(100):
-    #     for j in range(i+1):
-    #         for k in range(100):
-    #             c[:, i, k] = a.lst[i][:, j] * b[:, j, k]
-    # print('\nTriangular optimized:')
-    # print(time.time() - start)
-    #
-    # c2 = a.as_tensor() @ b  # TODO: al usar mi stack estaba modificando la lista de tensores que paso
-    # assert torch.equal(c, c2)
+    b = torch.randn(1000, 100, 100)
+    start_total = time.time()
+    c = torch.zeros(1000, 100, 100)
+    for i in range(100):
+        c[:, i, :] = (a.lst[i].unsqueeze(-1) * b[:, :(i+1), :]).sum(dim=-2)
+    print('\nTriangular handmade mul.:')
+    print(time.time() - start_total)
 
+    a_aux = a.as_tensor()
+    c2 = a_aux @ b  # TODO: al usar mi stack estaba modificando la lista de tensores que paso
+    assert torch.allclose(c, c2, rtol=1e-3, atol=1e-5)
+
+    print('\nTriangular as TriMat:')
     s = 0
     for t in a.lst:
         s += t.element_size() * t.nelement()

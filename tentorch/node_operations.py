@@ -649,6 +649,16 @@ def _contract_edges_first(edges: List[AbstractEdge],
                 new_edges.append(nodes[i][idx])
                 new_node1_list.append(nodes[i].axes[idx].is_node1())
 
+        # TODO: Save time if no transformation occurs
+        if permutation_dims[0] == list(range(len(tensors[0].shape))):
+            permutation_dims[0] = []
+        if permutation_dims[1] == list(range(len(tensors[0].shape))):
+            permutation_dims[1] = []
+        if aux_shape[0] == tensors[0].shape:
+            aux_shape[0] = []
+        if aux_shape[1] == tensors[0].shape:
+            aux_shape[1] = []
+
         hints = {'permutation_dims': permutation_dims,
                  'inv_permutation_dims': inv_permutation_dims,
                  'aux_shape': aux_shape,
@@ -774,8 +784,11 @@ def _contract_edges_next(successor: Successor,
 
         start = time.time()
         for i in [0, 1]:
-            tensors[i] = tensors[i].permute(hints['permutation_dims'][i])
-            tensors[i] = tensors[i].reshape(hints['aux_shape'][i])
+            # TODO: save time if transformations don't occur
+            if hints['permutation_dims'][i]:
+                tensors[i] = tensors[i].permute(hints['permutation_dims'][i])
+            if hints['aux_shape'][i]:
+                tensors[i] = tensors[i].reshape(hints['aux_shape'][i])
         # torch.cuda.synchronize()
         if PRINT_MODE: print('\t\t\t\tCheckpoint 4.1:', time.time() - total_time)
 
@@ -787,7 +800,12 @@ def _contract_edges_next(successor: Successor,
         # torch.cuda.synchronize()
         # if PRINT_MODE: print('\t\t\t\tCheckpoint 4.2:', time.time() - total_time)
 
-        result = result.view(hints['new_shape']).permute(hints['inv_permutation_dims'])
+        # TODO: save time if transformations don't occur
+        if hints['aux_shape'] != [[], []]:
+            result = result.view(hints['new_shape'])
+        if hints['permutation_dims'] != [[], []]:
+            result = result.permute(hints['inv_permutation_dims'])
+        # result = result.view(hints['new_shape']).permute(hints['inv_permutation_dims'])
         if PRINT_MODE: print('\t\t\t\tCompute contraction:', time.time() - start)
         if PRINT_MODE: print('\t\t\t\tCheckpoint 5:', time.time() - total_time)
 

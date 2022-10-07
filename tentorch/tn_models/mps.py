@@ -599,7 +599,8 @@ class MPS(TensorNetwork):
                 stack_data = tn.stack(self.env_data)
                 stack['input'] ^ stack_data['feature']
                 result = stack @ stack_data
-                result = result.permute((0, 1, 3, 2))
+                # result = result.permute((0, 1, 3, 2))
+                result = result.permute((0, 3, 1, 2))  # TODO: batch delante
                 result = tn.unbind(result)
                 # left_result = []
                 # right_result = []
@@ -669,6 +670,14 @@ class MPS(TensorNetwork):
             result_node @= node
             if PRINT_MODE: print('\t\t\tMatrix contraction:', time.time() - start)
         return result_node
+
+        # mat_nodes = [n.permute((1, 0, 2)) for n in nodes[1:]]
+        # result_node = nodes[0]
+        # for node in mat_nodes:
+        #     start = time.time()
+        #     result_node @= node
+        #     if PRINT_MODE: print('\t\t\tMatrix contraction:', time.time() - start)
+        # return result_node
 
     @staticmethod
     def _aux_pairwise2(nodes: List[Node]) -> List[Node]:
@@ -1394,6 +1403,7 @@ class MPS(TensorNetwork):
             # output = self.contract()  # self.contract2()
             # if PRINT_MODE: print('Contract:', time.time() - start)
             # if PRINT_MODE: print()
+            # return output
 
             # TODO: esta puede ser la forma gen'erica del forward, y solo hay que definir
             #  add_data y contract (para la primera vez)

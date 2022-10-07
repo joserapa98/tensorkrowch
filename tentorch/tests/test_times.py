@@ -382,18 +382,72 @@ def test_time_stack_backward():
     print('Backward:', time.time() - start)
 
 
+def test_time_stay_the_same():
+    a = torch.randn(100, 200, 300)
+
+    # Permute
+    start = time.time()
+    a.permute(2, 1, 0)
+    print('\nPermute diff.:', time.time() - start)
+
+    start = time.time()
+    a.permute(0, 1, 2)
+    print('Permute same:', time.time() - start)
+
+    start = time.time()
+    if [0, 1, 2] == list(range(len(a.shape))):
+        pass
+    print('Permute same (no-op):', time.time() - start)
+
+    start = time.time()
+    if not []:
+        pass
+    print('Permute same (no-op, no-check):', time.time() - start)
+
+    # Reshape
+    start = time.time()
+    a.reshape(-1)
+    print('\nReshape diff.:', time.time() - start)
+
+    start = time.time()
+    a.reshape(100, 200, 300)
+    print('Reshape same:', time.time() - start)
+
+    start = time.time()
+    if [100, 200, 300] == a.shape:
+        pass
+    print('Reshape same (no-op):', time.time() - start)
+
+    # View
+    start = time.time()
+    a.view(-1)
+    print('\nView diff.:', time.time() - start)
+
+    start = time.time()
+    a.view(100, 200, 300)
+    print('View same:', time.time() - start)
+
+    start = time.time()
+    if [100, 200, 300] == a.shape:
+        pass
+    print('View same (no-op):', time.time() - start)
+
+
 def test_memory():
     print()
 
     def same_storage(x, y):
-        x_ptrs = set(e.data_ptr() for e in x.view(-1))
-        y_ptrs = set(e.data_ptr() for e in y.view(-1))
+        # TODO: We have replaced view with reshape, maybe this changes something
+        x_ptrs = set(e.data_ptr() for e in x.reshape(-1))
+        y_ptrs = set(e.data_ptr() for e in y.reshape(-1))
         return (x_ptrs <= y_ptrs) or (y_ptrs <= x_ptrs)
 
+    # Stack tensors
     lst = [torch.randn(2, 3) for _ in range(100)]
     stack = torch.stack(lst)  # Does allocate new memory
     print(same_storage(lst[0], stack))
 
+    # Stack parameters
     lst = [nn.Parameter(torch.randn(2, 3)) for _ in range(10)]
     stack = torch.stack(lst)  # Does allocate new memory
     print(same_storage(lst[0], stack))
@@ -404,14 +458,21 @@ def test_memory():
     optimizer.step()
     assert lst[0][0, 0] != stack[0, 0, 0]
 
+    # Unbind tensors
     unbinded = stack.unbind()  # Does not allocate new memory
     print(same_storage(unbinded[0], stack))
 
+    # Slice from stack
     sliced = stack[0:50]  # Does not allocate new memory
     print(same_storage(sliced, stack))
 
+    # Restack unbinded tensors
     restack = torch.stack(unbinded)  # Allocates new memory again
     print(same_storage(restack, stack))
+
+    # Permute
+    permute = stack.permute(1, 0, 2)  # Allocates new memory
+    print(same_storage(permute, stack))
 
 
 def test_time_matmul_with_zeros():
@@ -433,7 +494,7 @@ def test_time_matmul_with_zeros():
     print(time.time() - start)
     print(f'{a.element_size() * a.nelement() / 1024**2:.2f} Mb')
 
-    aux = a.to_sparse()
+    aux = a.to_sparse_coo()
     print(f'{aux.element_size() * aux.nelement() / 1024 ** 2:.2f} Mb')
 
     class TriMat:

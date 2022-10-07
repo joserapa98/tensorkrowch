@@ -494,9 +494,15 @@ def test_time_matmul_with_zeros():
     print(time.time() - start)
     print(f'{a.element_size() * a.nelement() / 1024**2:.2f} Mb')
 
+    # Triangular as sparse
+    a_sparse = a.to_sparse_coo()
+    start = time.time()
+    c = torch.bmm(a_sparse, b)
     print('\nTriangular as sparse:')
-    aux = a.to_sparse_coo()
-    print(f'{aux.element_size() * aux.nelement() / 1024 ** 2:.2f} Mb')
+    print(time.time() - start)
+    memory = a_sparse.indices().nelement() * a_sparse.indices().element_size() + \
+             a_sparse.values().nelement() * a_sparse.values().element_size()
+    print(f'{memory / 1024**2:.2f} Mb')  # It's worse than dense tensor
 
     class TriMat:
         def __init__(self, trimat):
@@ -516,8 +522,6 @@ def test_time_matmul_with_zeros():
             return result
 
     # Handmade multiplications
-    a = torch.randn(1000, 100, 100)
-    b = torch.randn(1000, 100, 100)
     start_total = time.time()
     c = torch.zeros(1000, 100, 100)
     for i in range(100):
@@ -543,3 +547,118 @@ def test_time_matmul_with_zeros():
     for t in a.lst:
         s += t.element_size() * t.nelement()
     print(f'{s / 1024**2:.2f} Mb')
+
+    # # from functools import partial
+    # # @partial(torch.jit.trace, example_inputs=(a, b))
+    # # @torch.jit.script
+    # def foo(mat1, mat2):
+    #     res = torch.zeros(1000, 100, 100)
+    #     for i in range(100):
+    #         res[:, i, :] = (mat1[:, i, :].unsqueeze(-1) * mat2).sum(dim=-2)
+    #     return res
+    #
+    # foo = torch.jit.trace(foo, (a, b))
+    #
+    # start_total = time.time()
+    # c = foo(a, b)
+    # print('\nRandom handmade mul. traced:')
+    # print(time.time() - start_total)
+
+    # model = nn.Linear(100, 100)
+    # start_total = time.time()
+    # c = model(a[..., 0])
+    # print('\nmodel 1:')
+    # print(time.time() - start_total)
+    #
+    # model = torch.jit.trace(nn.Linear(100, 100), torch.zeros(1000, 100))
+    # start_total = time.time()
+    # c = model(a[..., 0])
+    # print('\nmodel 2:')
+    # print(time.time() - start_total)
+
+    # def foo(mat1, mat2): return mat1 @ mat2
+    # start_total = time.time()
+    # c = foo(a, b)
+    # print('\nfoo 1:')
+    # print(time.time() - start_total)
+    #
+    # foo = torch.jit.script(foo)
+    # start_total = time.time()
+    # c = foo(a, b)
+    # print('\nfoo 2:')
+    # print(time.time() - start_total)
+    # start_total = time.time()
+    # c = foo(a, b)
+    # print('\nfoo 2:')
+    # print(time.time() - start_total)
+
+
+def test_scipy():
+    # TODO: Esto podr'ia funcionar, pero me tengo que conformar con usar solo matrices
+    print()
+    from scipy.sparse import csr_array, triu, tril
+
+    # Memory
+    a = csr_array(torch.randn(10, 10).numpy())
+    a_memory = a.data.nbytes + a.indptr.nbytes + a.indices.nbytes
+    print(f'Memory of a: {a_memory/1024**2:.2f} Mb')
+
+    b = triu(a).tocsr()
+    b_memory = b.data.nbytes + b.indptr.nbytes + b.indices.nbytes
+    print(f'Memory of b: {b_memory/1024**2:.2f} Mb')
+
+    c = tril(a).tocsr()
+    c_memory = c.data.nbytes + c.indptr.nbytes + c.indices.nbytes
+    print(f'Memory of c: {c_memory/1024**2:.2f} Mb')
+
+    # Multiplication time
+    start = time.time()
+    res = a.multiply(a)
+    print('a @ a:', time.time() - start)
+
+    start = time.time()
+    res = b.multiply(b)
+    print('b @ b:', time.time() - start)
+
+    start = time.time()
+    res = c.multiply(c)
+    print('c @ c:', time.time() - start)
+
+    start = time.time()
+    res = a.multiply(b)
+    print('a @ b:', time.time() - start)
+
+    start = time.time()
+    res = b.multiply(a)
+    print('b @ a:', time.time() - start)
+
+    start = time.time()
+    res = a.multiply(c)
+    print('a @ c:', time.time() - start)
+
+    start = time.time()
+    res = c.multiply(a)
+    print('c @ a:', time.time() - start)
+
+    start = time.time()
+    res = c.multiply(b)
+    print('c @ b:', time.time() - start)
+
+    start = time.time()
+    res = b.multiply(c)
+    print('b @ c:', time.time() - start)
+
+    # Compare matrix vs tensor
+    import numpy as np
+
+    tensor1 = torch.randn(1000, 200, 300).triu()
+    tensor2 = torch.randn(1000, 300, 100).triu()
+
+    sparse_mat1 = csr_array(tensor1.reshape(-1, 300).numpy())
+    sparse_mat2 = csr_array(tensor2.permute(1, 2, 0).reshape(300, -1))
+
+    start = time.time()
+    res = sparse_mat1.multiply(sparse_mat2)
+
+    a_memory = a.data.nbytes + a.indptr.nbytes + a.indices.nbytes
+    print(f'Memory of a: {a_memory / 1024 ** 2:.2f} Mb')

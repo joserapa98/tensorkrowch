@@ -548,6 +548,56 @@ def test_time_matmul_with_zeros():
         s += t.element_size() * t.nelement()
     print(f'{s / 1024**2:.2f} Mb')
 
+    # Handmade option 2
+    a = torch.randn(1000, 128, 128)
+    b = torch.randn(1000, 128, 128)
+
+    start = time.time()
+    c = a @ b
+    print('\nRandom 2:')
+    print(time.time() - start)
+
+    def foo(a, b, c):
+        shape = a.shape[1]
+        half_shape = shape // 2
+        if half_shape > 1:
+            c[:, :half_shape, half_shape:] = a[:, :half_shape, half_shape:] @ b[:, :half_shape, half_shape:]
+            c[:, half_shape:, :half_shape] = a[:, half_shape:, :half_shape] @ b[:, half_shape:, :half_shape]
+            c[:, :half_shape, :half_shape] = foo(a[:, :half_shape, :half_shape],
+                                                 b[:, :half_shape, :half_shape],
+                                                 c[:, :half_shape, :half_shape])
+            c[:, half_shape:, half_shape:] = foo(a[:, half_shape:, half_shape:],
+                                                 b[:, half_shape:, half_shape:],
+                                                 c[:, half_shape:, half_shape:])
+        else:
+            c[:, :, :] = a @ b
+        return c
+    start_total = time.time()
+    c = torch.zeros(1000, 128, 128)
+    c = foo(a, b, c)
+    print('\nRandom handmade mul. 2:')
+    print(time.time() - start_total)
+
+    def foo(a, b, c):
+        shape = a.shape[1]
+        half_shape = shape // 2
+        if half_shape > 1:
+            c[:, half_shape:, :half_shape] = a[:, half_shape:, :half_shape] @ b[:, half_shape:, :half_shape]
+            c[:, :half_shape, :half_shape] = foo(a[:, :half_shape, :half_shape],
+                                                 b[:, :half_shape, :half_shape],
+                                                 c[:, :half_shape, :half_shape])
+            c[:, half_shape:, half_shape:] = foo(a[:, half_shape:, half_shape:],
+                                                 b[:, half_shape:, half_shape:],
+                                                 c[:, half_shape:, half_shape:])
+        else:
+            c[:, :, :] = a @ b
+        return c
+    start_total = time.time()
+    c = torch.zeros(1000, 128, 128)
+    c = foo(a, b, c)
+    print('\nTriangular handmade mul. 2:')
+    print(time.time() - start_total)
+
     # # from functools import partial
     # # @partial(torch.jit.trace, example_inputs=(a, b))
     # # @torch.jit.script

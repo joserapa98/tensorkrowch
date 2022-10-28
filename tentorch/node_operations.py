@@ -574,6 +574,7 @@ def _contract_edges_first(edges: List[AbstractEdge],
                                 if 'batch' in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!
                                     batch_edges[edge.axis1._name] = [-1, j]
                                 else:
+                                    # Cuando es una stack
                                     batch_edges[edge.axis1._name] = [tensors[0].shape[j], j]
                                 batch_in_node2 = True
                                 break
@@ -604,11 +605,18 @@ def _contract_edges_first(edges: List[AbstractEdge],
         permutation_dims[1] = list(map(lambda l: l[2], batch_edges.values())) + \
                               list(map(lambda l: l[2], contract_edges.values())) + \
                               list(map(lambda l: l[1], non_contract_edges[1].values()))
+        
+        for i in [0, 1]:
+            if permutation_dims[i] == list(range(len(permutation_dims[i]))):
+                permutation_dims[i] = []
 
         aux_permutation = inverse_permutation(list(map(lambda l: l[1], batch_edges.values())) +
                                               list(map(lambda l: l[1], non_contract_edges[0].values())))
         aux_permutation2 = inverse_permutation(list(map(lambda l: l[1], non_contract_edges[1].values())))
         inv_permutation_dims = aux_permutation + list(map(lambda x: x + len(aux_permutation), aux_permutation2))
+        
+        if inv_permutation_dims == list(range(len(inv_permutation_dims))):
+            inv_permutation_dims = []
 
         aux_shape = [None, None]
         aux_shape[0] = [torch.tensor(list(map(lambda l: l[0], batch_edges.values()))).prod().long().item(),
@@ -622,17 +630,29 @@ def _contract_edges_first(edges: List[AbstractEdge],
             for j in [0, 1, 2]:
                 if aux_shape[i][j] < 0:
                     aux_shape[i][j] = -1  # Por si hemos hecho producto de -1 por otra dim
+                    
+        for i in [0, 1]:
+            if tensors[i].reshape(aux_shape[i]).shape == tensors[i].shape:
+                aux_shape[i] = []
 
         new_shape = list(map(lambda l: l[0], batch_edges.values())) + \
                     list(map(lambda l: l[0], non_contract_edges[0].values())) + \
                     list(map(lambda l: l[0], non_contract_edges[1].values()))
+                
+        if (aux_shape[0] == []) and (aux_shape[1] == []):
+            new_shape = []
 
         for i in [0, 1]:
-            tensors[i] = tensors[i].permute(permutation_dims[i])
-            tensors[i] = tensors[i].reshape(aux_shape[i])
+            if permutation_dims[i]:
+                tensors[i] = tensors[i].permute(permutation_dims[i])
+            if aux_shape[i]:
+                tensors[i] = tensors[i].reshape(aux_shape[i])
 
         result = tensors[0] @ tensors[1]
-        result = result.view(new_shape).permute(inv_permutation_dims)
+        if new_shape:
+            result = result.view(new_shape)
+        if inv_permutation_dims:
+            result = result.permute(inv_permutation_dims)
 
         indices = [None, None]
         indices[0] = permute_list(list(map(lambda l: l[1], batch_edges.values())) +
@@ -650,14 +670,17 @@ def _contract_edges_first(edges: List[AbstractEdge],
                 new_node1_list.append(nodes[i].axes[idx].is_node1())
 
         # TODO: Save time if no transformation occurs
-        if permutation_dims[0] == list(range(len(tensors[0].shape))):
-            permutation_dims[0] = []
-        if permutation_dims[1] == list(range(len(tensors[0].shape))):
-            permutation_dims[1] = []
-        if aux_shape[0] == tensors[0].shape:
-            aux_shape[0] = []
-        if aux_shape[1] == tensors[0].shape:
-            aux_shape[1] = []
+        # TODO: Como hacemos esto despu'es de haber cambiado la forma de los tensores,
+        # est'a mal, estamos midiendo shapes erroneas. Deber'iamos hacerlo antes, al crear
+        # cada lista. Y tambi'en en funci'on de esto cambiar los inv_permutation y demas
+        # if permutation_dims[0] == list(range(len(tensors[0].shape))):
+        #     permutation_dims[0] = []
+        # if permutation_dims[1] == list(range(len(tensors[1].shape))):
+        #     permutation_dims[1] = []
+        # if aux_shape[0] == tensors[0].shape:
+        #     aux_shape[0] = []
+        # if aux_shape[1] == tensors[1].shape:
+        #     aux_shape[1] = []
 
         hints = {'permutation_dims': permutation_dims,
                  'inv_permutation_dims': inv_permutation_dims,
@@ -801,9 +824,9 @@ def _contract_edges_next(successor: Successor,
         # if PRINT_MODE: print('\t\t\t\tCheckpoint 4.2:', time.time() - total_time)
 
         # TODO: save time if transformations don't occur
-        if hints['aux_shape'] != [[], []]:
+        if hints['new_shape']:
             result = result.view(hints['new_shape'])
-        if hints['permutation_dims'] != [[], []]:
+        if hints['inv_permutation_dims']:
             result = result.permute(hints['inv_permutation_dims'])
         # result = result.view(hints['new_shape']).permute(hints['inv_permutation_dims'])
         if PRINT_MODE: print('\t\t\t\tCompute contraction:', time.time() - start)
@@ -916,8 +939,13 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
         else:
             all_param = False
 
-        # TODO: uncomment for mix index mode
-        if node._tensor_info['address'] is None:# or node.name.startswith('unbind'):
+        # NOTE: index mode / mix index mode
+        # if node._tensor_info['address'] is None or node.name.startswith('unbind'):
+        # NOTE: mix index mode
+        
+        # NOTE: unbind mode
+        if node._tensor_info['address'] is None or node.name.startswith('unbind'):
+        # NOTE: unbind mode
             if node_ref is None:
                 node_ref = node._tensor_info['node_ref']
             else:
@@ -1088,6 +1116,7 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
 
     # TODO: originalmente borramos informacion y solo hacemos referencia a la pila
     # This memory management can happen always, even not in contracting mode
+    # NOTE: index mode
     # for i, new_node in enumerate(nodes):
     #     shape = new_node.shape
     #     if new_node._tensor_info['address'] is not None:
@@ -1100,9 +1129,10 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
     #     for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo
     #         index.append(slice(max_dim - dim, max_dim))
     #     new_node._tensor_info['index'] = index
+    # NOTE: index mode
 
     # This memory management can happen always, even not in contracting mode
-    # TODO: comment for index mode
+    # NOTE: unbind mode / mix index mode
     for i, new_node in enumerate(nodes):
         shape = new_node.shape
         # if new_node._tensor_info['address'] is not None:
@@ -1115,6 +1145,7 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
         for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo
             index.append(slice(max_dim - dim, max_dim))
         new_node._tensor_info['index'] = index
+    # NOTE: unbind mode / mix index mode
 
     successor = nc.Successor(kwargs={'node': node},
                              child=nodes,
@@ -1134,13 +1165,15 @@ def _unbind_next(successor: Successor, node: AbstractNode) -> List[Node]:
     # Thus if we have already created the unbinded nodes with their reference to where their
     # memory is stored, the next times we don't have to compute anything
 
-    # TODO: comment for index mode
+    # NOTE: unbind mode / mix index mode
     tensors = torch.unbind(node.tensor)
     children = successor.child
     for tensor, child in zip(tensors, children):
         child._unrestricted_set_tensor(tensor)
     return children[:]
+    # NOTE: unbind mode / mix index mode
 
+    # NOTE: index mode
     # batch_idx = successor.hints
     # children = successor.child
     # new_dim = node.shape[batch_idx + 1]
@@ -1153,6 +1186,7 @@ def _unbind_next(successor: Successor, node: AbstractNode) -> List[Node]:
     #     child._tensor_info['index'][batch_idx + 1] = slice(0, new_dim)
     #
     # return successor.child[:]  # TODO: cambia el tamaño del batch
+    # NOTE: index mode
 
 
 unbind = Operation(_check_first_unbind, _unbind_first, _unbind_next)

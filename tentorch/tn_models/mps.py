@@ -653,24 +653,37 @@ class MPS(TensorNetwork):
         Contract a sequence of MPS tensors that have
         parameterized bond dimensions
         """
+        # NOTE: tensor mode
         # if left:
         #     vec = nodes[0].tensor.unsqueeze(1)
         #     for mat in nodes[1:]:
-        #         vec = vec @ mat.tensor.permute(1, 0, 2)
+        #         vec = vec @ mat.tensor
         #     return vec
         # else:
         #     vec = nodes[0].tensor.permute(1, 0).unsqueeze(2)
         #     for mat in nodes[1:]:
-        #         vec = mat.tensor.permute(1, 0, 2) @ vec
+        #         vec = mat.tensor @ vec
         #     return vec
+        # NOTE: tensor mode
 
-        result_node = nodes[0]
-        for node in nodes[1:]:
-            start = time.time()
-            result_node @= node
-            if PRINT_MODE: print('\t\t\tMatrix contraction:', time.time() - start)
-        return result_node
+        # NOTE: node mode
+        if left:
+            result_node = nodes[0]
+            for node in nodes[1:]:
+                start = time.time()
+                result_node @= node
+                if PRINT_MODE: print('\t\t\tMatrix contraction:', time.time() - start)
+            return result_node
+        else:
+            result_node = nodes[0]
+            for node in nodes[1:]:
+                start = time.time()
+                result_node = node @ result_node
+                if PRINT_MODE: print('\t\t\tMatrix contraction:', time.time() - start)
+            return result_node
+        # NOTE: node mode
 
+        # NOTE: peor, mas lento
         # mat_nodes = [n.permute((1, 0, 2)) for n in nodes[1:]]
         # result_node = nodes[0]
         # for node in mat_nodes:
@@ -1107,7 +1120,7 @@ class MPS(TensorNetwork):
 
         start = time.time()
         # TODO: cuidado, era self.same_d_phys() y self.same_d_bond()
-        if not self.param_bond() and self._same_d_phys and self._same_d_bond:
+        if False:#not self.param_bond() and self._same_d_phys and self._same_d_bond:
             left_env_contracted, right_env_contracted = self._pairwise_contraction(left_env, right_env)
         else:
             # TODO: if left_node/right_node is not None
@@ -1126,11 +1139,13 @@ class MPS(TensorNetwork):
                 right_env_contracted = self._inline_contraction(lst, False)
         if PRINT_MODE: print('\tMatrices contraction:', time.time() - start)
 
+        # NOTE: tensor mode
         # result = opt_einsum.contract('bxl,lor,bry->bxoy',
         #                              left_env_contracted,
         #                              self.output_node.tensor,
         #                              right_env_contracted).squeeze(1).squeeze(2)
-        # return result  # TODO: inline solo tensor
+        # return result  # NOTE: inline solo tensor
+        # NOTE: tensor mode
 
         # result = opt_einsum.contract('bl,lor,br->bo',
         #                              left_env_contracted.tensor,
@@ -1138,8 +1153,10 @@ class MPS(TensorNetwork):
         #                              right_env_contracted.tensor)
         # return result
 
+        # NOTE: node mode
         result = left_env_contracted @ self.output_node @ right_env_contracted
         return result.tensor
+        # NOTE: node mode
         
         # Operations of left environment
         left_list = []
@@ -1399,11 +1416,13 @@ class MPS(TensorNetwork):
             end = time.time()
             if PRINT_MODE: print('Add data:', end - start)
 
+            # NOTE: contract instead of seq operations / tensor mode
             # start = time.time()
             # output = self.contract()  # self.contract2()
             # if PRINT_MODE: print('Contract:', time.time() - start)
             # if PRINT_MODE: print()
             # return output
+            # NOTE: contract instead of seq operations / tensor mode
 
             # TODO: esta puede ser la forma gen'erica del forward, y solo hay que definir
             #  add_data y contract (para la primera vez)

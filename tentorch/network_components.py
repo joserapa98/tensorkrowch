@@ -289,7 +289,14 @@ class AbstractNode(ABC):
         else:
             node = self
 
+        # NOTE: index mode
+        # if self._tensor_info['full']:
+        # NOTE: index mode
+        
+        # NOTE: unbind mode
         if self._tensor_info['full'] or self.name.startswith('unbind'):  # TODO: Comment for index mode
+        # NOTE: unbind mode
+        
             # TODO: truquito para que los unbind lean su tensor directamente
             result = self._network._memory_nodes[node._tensor_info['address']]
             # print('\t\t\t\t\tFull True:', time.time() - total_time)
@@ -613,7 +620,7 @@ class AbstractNode(ABC):
         for i, (edge, node1) in enumerate(zip(self._edges, self.is_node1())):
             if not override:
                 edge = edge.copy()
-            self._edges[i] = edge
+                self._edges[i] = edge
             edge._nodes[1 - node1] = self
             edge._axes[1 - node1] = self._axes[i]
 

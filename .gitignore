@@ -3,5 +3,6 @@
 __pycache__
 
 /training_scripts
+/foo
 
 data/

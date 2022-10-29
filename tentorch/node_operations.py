@@ -59,7 +59,7 @@ AbstractStackEdge, StackEdge, ParamStackEdge = Any, Any, Any
 Successor = Any
 # TODO: hacer import Tensor, Parameter?
 
-PRINT_MODE = False
+PRINT_MODE = True
 CHECK_TIMES = []
 
 
@@ -758,6 +758,7 @@ def _contract_edges_next(successor: Successor,
 
     else:
         if PRINT_MODE: print('\t\t\t\tCheckpoint 1:', time.time() - total_time)
+        total_time = time.time()
         # TODO: si son StackEdge, ver que todos los correspondientes edges están conectados
 
         # TODO: Bien, pero cuidad con la shape del batch al meterla en hints, hay que dejar libertad en ese hueco
@@ -772,8 +773,7 @@ def _contract_edges_next(successor: Successor,
             if diff >= 0.003:
                 print('------------------HERE-------------------')
                 pass
-
-        start = time.time()
+        total_time = time.time()
 
         for j, edge in enumerate(nodes[0]._edges):
             if edge in edges:
@@ -787,9 +787,9 @@ def _contract_edges_next(successor: Successor,
                     tensors[0] = tensors[0].permute(permutation_dims)
                     tensors[0] = tensors[0] @ edge.matrix
                     tensors[0] = tensors[0].permute(inv_permutation_dims)
-
-        if PRINT_MODE: print('\t\t\t\tCheck ParamEdges:', time.time() - start)
+                    
         if PRINT_MODE: print('\t\t\t\tCheckpoint 3:', time.time() - total_time)
+        total_time = time.time()
 
         hints = successor.hints
         # batch_idx = hints['batch_idx']
@@ -804,8 +804,8 @@ def _contract_edges_next(successor: Successor,
         # aux_shape[0][0] = torch.tensor(batch_shapes).prod().long().item()
         # aux_shape[1][0] = torch.tensor(batch_shapes).prod().long().item()
         if PRINT_MODE: print('\t\t\t\tCheckpoint 4:', time.time() - total_time)
+        total_time = time.time()
 
-        start = time.time()
         for i in [0, 1]:
             # TODO: save time if transformations don't occur
             if hints['permutation_dims'][i]:
@@ -814,10 +814,12 @@ def _contract_edges_next(successor: Successor,
                 tensors[i] = tensors[i].reshape(hints['aux_shape'][i])
         # torch.cuda.synchronize()
         if PRINT_MODE: print('\t\t\t\tCheckpoint 4.1:', time.time() - total_time)
+        total_time = time.time()
 
         result = tensors[0] @ tensors[1]
         # torch.cuda.synchronize()
         if PRINT_MODE: print('\t\t\t\tCheckpoint 4.2:', time.time() - total_time)
+        total_time = time.time()
 
         # result = torch.randn(tensors[0].shape) @ torch.randn(tensors[1].shape)
         # torch.cuda.synchronize()
@@ -829,14 +831,14 @@ def _contract_edges_next(successor: Successor,
         if hints['inv_permutation_dims']:
             result = result.permute(hints['inv_permutation_dims'])
         # result = result.view(hints['new_shape']).permute(hints['inv_permutation_dims'])
-        if PRINT_MODE: print('\t\t\t\tCompute contraction:', time.time() - start)
         if PRINT_MODE: print('\t\t\t\tCheckpoint 5:', time.time() - total_time)
+        total_time = time.time()
 
     child = successor.child
     if PRINT_MODE: print('\t\t\t\tCheckpoint 6:', time.time() - total_time)
-    start = time.time()
+    total_time = time.time()
+    
     child._unrestricted_set_tensor(result)
-    if PRINT_MODE: print('\t\t\t\tSave in child:', time.time() - start)
     if PRINT_MODE: print('\t\t\t\tCheckpoint 7:', time.time() - total_time)
 
     return child
@@ -872,7 +874,9 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
     Contract all shared edges between two nodes, also performing batch contraction
     between batch edges that share name in both nodes
     """
+    start = time.time()
     edges = get_shared_edges(node1, node2)
+    if PRINT_MODE: print('Get edges:', time.time() - start)
     if not edges:
         raise ValueError(f'No batch edges neither shared edges between '
                          f'nodes {node1!s} and {node2!s} found')

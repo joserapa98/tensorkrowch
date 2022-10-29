@@ -657,12 +657,16 @@ class MPS(TensorNetwork):
         # if left:
         #     vec = nodes[0].tensor.unsqueeze(1)
         #     for mat in nodes[1:]:
+        #         start = time.time()
         #         vec = vec @ mat.tensor
+        #         print('left bmm:', time.time() - start)
         #     return vec
         # else:
         #     vec = nodes[0].tensor.permute(1, 0).unsqueeze(2)
         #     for mat in nodes[1:]:
+        #         start = time.time()
         #         vec = mat.tensor @ vec
+        #         print('right bmm:', time.time() - start)
         #     return vec
         # NOTE: tensor mode
 
@@ -672,6 +676,7 @@ class MPS(TensorNetwork):
             for node in nodes[1:]:
                 start = time.time()
                 result_node @= node
+                print('left bmm:', time.time() - start)
                 if PRINT_MODE: print('\t\t\tMatrix contraction:', time.time() - start)
             return result_node
         else:
@@ -679,6 +684,7 @@ class MPS(TensorNetwork):
             for node in nodes[1:]:
                 start = time.time()
                 result_node = node @ result_node
+                print('right bmm:', time.time() - start)
                 if PRINT_MODE: print('\t\t\tMatrix contraction:', time.time() - start)
             return result_node
         # NOTE: node mode
@@ -1416,13 +1422,13 @@ class MPS(TensorNetwork):
             end = time.time()
             if PRINT_MODE: print('Add data:', end - start)
 
-            # NOTE: contract instead of seq operations / tensor mode
-            # start = time.time()
-            # output = self.contract()  # self.contract2()
-            # if PRINT_MODE: print('Contract:', time.time() - start)
-            # if PRINT_MODE: print()
-            # return output
-            # NOTE: contract instead of seq operations / tensor mode
+            # NOTE: contract instead of seq operations in node mode / tensor mode
+            start = time.time()
+            output = self.contract()  # self.contract2()
+            if PRINT_MODE: print('Contract:', time.time() - start)
+            if PRINT_MODE: print()
+            return output
+            # NOTE: contract instead of seq operations in node mode / tensor mode
 
             # TODO: esta puede ser la forma gen'erica del forward, y solo hay que definir
             #  add_data y contract (para la primera vez)

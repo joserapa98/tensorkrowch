@@ -22,7 +22,7 @@ import math
 import time
 from torchviz import make_dot
 
-PRINT_MODE = False
+PRINT_MODE = True
 
 
 # TODO: move_l_position -> needs svd and qr to contract and split nodes
@@ -659,14 +659,14 @@ class MPS(TensorNetwork):
         #     for mat in nodes[1:]:
         #         start = time.time()
         #         vec = vec @ mat.tensor
-        #         print('left bmm:', time.time() - start)
+        #         if PRINT_MODE: print('\t\t\tMatrix contraction (left):', time.time() - start)
         #     return vec
         # else:
         #     vec = nodes[0].tensor.permute(1, 0).unsqueeze(2)
         #     for mat in nodes[1:]:
         #         start = time.time()
         #         vec = mat.tensor @ vec
-        #         print('right bmm:', time.time() - start)
+        #         if PRINT_MODE: print('\t\t\tMatrix contraction (right):', time.time() - start)
         #     return vec
         # NOTE: tensor mode
 
@@ -676,16 +676,14 @@ class MPS(TensorNetwork):
             for node in nodes[1:]:
                 start = time.time()
                 result_node @= node
-                print('left bmm:', time.time() - start)
-                if PRINT_MODE: print('\t\t\tMatrix contraction:', time.time() - start)
+                if PRINT_MODE: print('\t\t\tMatrix contraction (left):', time.time() - start)
             return result_node
         else:
             result_node = nodes[0]
             for node in nodes[1:]:
                 start = time.time()
                 result_node = node @ result_node
-                print('right bmm:', time.time() - start)
-                if PRINT_MODE: print('\t\t\tMatrix contraction:', time.time() - start)
+                if PRINT_MODE: print('\t\t\tMatrix contraction (right):', time.time() - start)
             return result_node
         # NOTE: node mode
 

@@ -856,6 +856,58 @@ def contract(edge: AbstractEdge) -> Node:
     return contract_edges([edge], edge.node1, edge.node2)
 
 
+# NOTE: va más lento
+# def _check_first_get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> Optional[Successor]:
+#     kwargs = {'node1': node1,
+#               'node2': node2}
+#     if 'get_shared_edges' in node1._network._successors:
+#         for succ in node1.network._successors['get_shared_edges']:
+#             if succ.kwargs == kwargs:
+#                 return succ
+#     return None
+
+
+# def _get_shared_edges_first(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
+#     """
+#     Obtain list of edges shared between two nodes
+#     """
+#     edges = set()
+#     for i1, edge1 in enumerate(node1._edges):
+#         for i2, edge2 in enumerate(node2._edges):
+#             if (edge1 == edge2) and not edge1.is_dangling():
+#                 if node1.is_node1(i1) != node2.is_node1(i2):
+#                     edges.add(edge1)
+#     edges = list(edges)
+                    
+#     successor = nc.Successor(kwargs={'node1': node1, 'node2': node2},
+#                              child=edges)
+    
+#     net = node1._network
+#     if 'get_shared_edges' in net._successors:
+#         net._successors['get_shared_edges'].append(successor)
+#     else:
+#         net._successors['get_shared_edges'] = [successor]
+
+#     net._list_ops.append(('get_shared_edges', len(net._successors['get_shared_edges']) - 1))
+    
+#     return edges
+
+
+# def _get_shared_edges_next(successor: Successor,
+#                            node1: AbstractNode,
+#                            node2: AbstractNode) -> List[AbstractEdge]:
+#     """
+#     Obtain list of edges shared between two nodes
+#     """
+#     return successor.child
+
+
+# get_shared_edges = Operation(_check_first_get_shared_edges,
+#                              _get_shared_edges_first,
+#                              _get_shared_edges_next)
+# NOTE: hasta aquí
+
+
 def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
     """
     Obtain list of edges shared between two nodes
@@ -866,6 +918,7 @@ def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractE
             if (edge1 == edge2) and not edge1.is_dangling():
                 if node1.is_node1(i1) != node2.is_node1(i2):
                     edges.add(edge1)
+    
     return list(edges)
 
 

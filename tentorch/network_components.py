@@ -258,6 +258,9 @@ class AbstractNode(ABC):
         self._name = name
         self._network = network
         self._leaf = leaf
+        
+        # NOTE: introducing use of successors in node instead of in TN
+        self._successors = dict()
 
     # ----------
     # Properties
@@ -369,6 +372,13 @@ class AbstractNode(ABC):
     @network.setter
     def network(self, network: 'TensorNetwork') -> None:
         self.move_to_network(network)
+        
+    @property
+    def successors(self) -> Dict[Text, 'Successor']:
+        """
+        Dictionary with operations' names as keys, and list of successors as values
+        """
+        return self._successors
 
     # ----------------
     # Abstract methods
@@ -2100,7 +2110,6 @@ class TensorNetwork(nn.Module):
 
         self._contracting = False  # Flag to indicate whether the TN has optimized memory to perform contraction
 
-        self._successors = dict()
         self._list_ops = []
 
     @property
@@ -2127,13 +2136,6 @@ class TensorNetwork(nn.Module):
         List of dangling, non-batch edges of the network
         """
         return self._edges
-
-    @property
-    def successors(self) -> Dict[Text, Successor]:
-        """
-        Dictionary with operations' names as keys, and list of successors as values
-        """
-        return self._successors
 
     def _add_node(self, node: AbstractNode, override: bool = False) -> None:
         """

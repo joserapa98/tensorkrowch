@@ -1409,9 +1409,9 @@ class MPS(TensorNetwork):
             if PRINT_MODE: print('Contract:', time.time() - start)
             if PRINT_MODE: print()
 
-            self._seq_ops = []
-            for op in self._list_ops:
-                self._seq_ops.append((op[0], self._successors[op[0]][op[1]].kwargs))
+            # self._seq_ops = []
+            # for op in self._list_ops:
+            #     self._seq_ops.append((op[0], self._successors[op[0]][op[1]].kwargs))
 
             return output
         else:

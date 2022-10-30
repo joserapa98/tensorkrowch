@@ -223,8 +223,8 @@ class Operation:
 def _check_first_permute(node: AbstractNode, axes: Sequence[Ax]) -> Optional[Successor]:
     kwargs = {'node': node,
               'axes': axes}
-    if 'permute' in node._network._successors:
-        for succ in node.network._successors['permute']:
+    if 'permute' in node._successors:
+        for succ in node._successors['permute']:
             if succ.kwargs == kwargs:
                 return succ
     return None
@@ -252,12 +252,12 @@ def _permute_first(node: AbstractNode, axes: Sequence[Ax]) -> Node:
                                      'axes': axes},
                              child=new_node,
                              hints=axes_nums)
-    if 'permute' in net._successors:
-        net._successors['permute'].append(successor)
+    if 'permute' in node._successors:
+        node._successors['permute'].append(successor)
     else:
-        net._successors['permute'] = [successor]
+        node._successors['permute'] = [successor]
 
-    net._list_ops.append(('permute', len(net._successors['permute']) - 1))
+    net._list_ops.append(('permute', len(node._successors['permute']) - 1))
 
     return new_node
 
@@ -272,8 +272,8 @@ def _permute_next(successor: Successor, node: AbstractNode, axes: Sequence[Ax]) 
 def _check_first_tprod(node1: AbstractNode, node2: AbstractNode) -> Optional[Successor]:
     kwargs = {'node1': node1,
               'node2': node2}
-    if 'tprod' in node1._network._successors:
-        for succ in node1.network._successors['tprod']:
+    if 'tprod' in node1._successors:
+        for succ in node1._successors['tprod']:
             if succ.kwargs == kwargs:
                 return succ
     return None
@@ -300,12 +300,12 @@ def _tprod_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     successor = nc.Successor(kwargs={'node1': node1,
                                      'node2': node2},
                              child=new_node)
-    if 'tprod' in net._successors:
-        net._successors['tprod'].append(successor)
+    if 'tprod' in node1._successors:
+        node1._successors['tprod'].append(successor)
     else:
-        net._successors['tprod'] = [successor]
+        node1._successors['tprod'] = [successor]
 
-    net._list_ops.append(('tprod', len(net._successors['tprod']) - 1))
+    net._list_ops.append(('tprod', len(node1._successors['tprod']) - 1))
 
     return new_node
 
@@ -322,8 +322,8 @@ def _tprod_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) 
 def _check_first_mul(node1: AbstractNode, node2: AbstractNode) -> Optional[Successor]:
     kwargs = {'node1': node1,
               'node2': node2}
-    if 'mul' in node1._network._successors:
-        for succ in node1.network._successors['mul']:
+    if 'mul' in node1._successors:
+        for succ in node1._successors['mul']:
             if succ.kwargs == kwargs:
                 return succ
     return None
@@ -344,12 +344,12 @@ def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     successor = nc.Successor(kwargs={'node1': node1,
                                      'node2': node2},
                              child=new_node)
-    if 'mul' in net._successors:
-        net._successors['mul'].append(successor)
+    if 'mul' in node1._successors:
+        node1._successors['mul'].append(successor)
     else:
-        net._successors['mul'] = [successor]
+        node1._successors['mul'] = [successor]
 
-    net._list_ops.append(('mul', len(net._successors['mul']) - 1))
+    net._list_ops.append(('mul', len(node1._successors['mul']) - 1))
 
     return new_node
 
@@ -364,8 +364,8 @@ def _mul_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) ->
 def _check_first_add(node1: AbstractNode, node2: AbstractNode) -> Optional[Successor]:
     kwargs = {'node1': node1,
               'node2': node2}
-    if 'add' in node1._network._successors:
-        for succ in node1.network._successors['add']:
+    if 'add' in node1._successors:
+        for succ in node1._successors['add']:
             if succ.kwargs == kwargs:
                 return succ
     return None
@@ -386,12 +386,12 @@ def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     successor = nc.Successor(kwargs={'node1': node1,
                                      'node2': node2},
                              child=new_node)
-    if 'add' in net._successors:
-        net._successors['add'].append(successor)
+    if 'add' in node1._successors:
+        node1._successors['add'].append(successor)
     else:
-        net._successors['add'] = [successor]
+        node1._successors['add'] = [successor]
 
-    net._list_ops.append(('add', len(net._successors['add']) - 1))
+    net._list_ops.append(('add', len(node1._successors['add']) - 1))
 
     return new_node
 
@@ -406,8 +406,8 @@ def _add_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) ->
 def _check_first_sub(node1: AbstractNode, node2: AbstractNode) -> Optional[Successor]:
     kwargs = {'node1': node1,
               'node2': node2}
-    if 'sub' in node1._network._successors:
-        for succ in node1.network._successors['sub']:
+    if 'sub' in node1._successors:
+        for succ in node1._successors['sub']:
             if succ.kwargs == kwargs:
                 return succ
     return None
@@ -428,12 +428,12 @@ def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     successor = nc.Successor(kwargs={'node1': node1,
                                      'node2': node2},
                              child=new_node)
-    if 'sub' in net._successors:
-        net._successors['sub'].append(successor)
+    if 'sub' in node1._successors:
+        node1._successors['sub'].append(successor)
     else:
-        net._successors['sub'] = [successor]
+        node1._successors['sub'] = [successor]
 
-    net._list_ops.append(('sub', len(net._successors['sub']) - 1))
+    net._list_ops.append(('sub', len(node1._successors['sub']) - 1))
 
     return new_node
 
@@ -459,8 +459,8 @@ def _check_first_contract_edges(edges: List[AbstractEdge],
     kwargs = {'edges': edges,
               'node1': node1,
               'node2': node2}
-    if 'contract_edges' in node1._network._successors:
-        for succ in node1.network._successors['contract_edges']:
+    if 'contract_edges' in node1._successors:
+        for succ in node1._successors['contract_edges']:
             if succ.kwargs == kwargs:
                 return succ
     return None
@@ -702,12 +702,12 @@ def _contract_edges_first(edges: List[AbstractEdge],
                                      'node2': node2},
                              child=new_node,
                              hints=hints)
-    if 'contract_edges' in net._successors:
-        net._successors['contract_edges'].append(successor)
+    if 'contract_edges' in node1._successors:
+        node1._successors['contract_edges'].append(successor)
     else:
-        net._successors['contract_edges'] = [successor]
+        node1._successors['contract_edges'] = [successor]
 
-    net._list_ops.append(('contract_edges', len(net._successors['contract_edges']) - 1))
+    net._list_ops.append(('contract_edges', len(node1._successors['contract_edges']) - 1))
 
     return new_node
 
@@ -856,59 +856,18 @@ def contract(edge: AbstractEdge) -> Node:
     return contract_edges([edge], edge.node1, edge.node2)
 
 
-# NOTE: va más lento
-# def _check_first_get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> Optional[Successor]:
-#     kwargs = {'node1': node1,
-#               'node2': node2}
-#     if 'get_shared_edges' in node1._network._successors:
-#         for succ in node1.network._successors['get_shared_edges']:
-#             if succ.kwargs == kwargs:
-#                 return succ
-#     return None
+# NOTE: más rápido
+def _check_first_get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> Optional[Successor]:
+    kwargs = {'node1': node1,
+              'node2': node2}
+    if 'get_shared_edges' in node1._successors:
+        for succ in node1._successors['get_shared_edges']:
+            if succ.kwargs == kwargs:
+                return succ
+    return None
 
 
-# def _get_shared_edges_first(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
-#     """
-#     Obtain list of edges shared between two nodes
-#     """
-#     edges = set()
-#     for i1, edge1 in enumerate(node1._edges):
-#         for i2, edge2 in enumerate(node2._edges):
-#             if (edge1 == edge2) and not edge1.is_dangling():
-#                 if node1.is_node1(i1) != node2.is_node1(i2):
-#                     edges.add(edge1)
-#     edges = list(edges)
-                    
-#     successor = nc.Successor(kwargs={'node1': node1, 'node2': node2},
-#                              child=edges)
-    
-#     net = node1._network
-#     if 'get_shared_edges' in net._successors:
-#         net._successors['get_shared_edges'].append(successor)
-#     else:
-#         net._successors['get_shared_edges'] = [successor]
-
-#     net._list_ops.append(('get_shared_edges', len(net._successors['get_shared_edges']) - 1))
-    
-#     return edges
-
-
-# def _get_shared_edges_next(successor: Successor,
-#                            node1: AbstractNode,
-#                            node2: AbstractNode) -> List[AbstractEdge]:
-#     """
-#     Obtain list of edges shared between two nodes
-#     """
-#     return successor.child
-
-
-# get_shared_edges = Operation(_check_first_get_shared_edges,
-#                              _get_shared_edges_first,
-#                              _get_shared_edges_next)
-# NOTE: hasta aquí
-
-
-def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
+def _get_shared_edges_first(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
     """
     Obtain list of edges shared between two nodes
     """
@@ -918,8 +877,51 @@ def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractE
             if (edge1 == edge2) and not edge1.is_dangling():
                 if node1.is_node1(i1) != node2.is_node1(i2):
                     edges.add(edge1)
+    edges = list(edges)
+                    
+    successor = nc.Successor(kwargs={'node1': node1, 'node2': node2},
+                             child=edges)
     
-    return list(edges)
+    net = node1._network
+    if 'get_shared_edges' in node1._successors:
+        node1._successors['get_shared_edges'].append(successor)
+    else:
+        node1._successors['get_shared_edges'] = [successor]
+
+    net._list_ops.append(('get_shared_edges', len(node1._successors['get_shared_edges']) - 1))
+    
+    return edges
+
+
+def _get_shared_edges_next(successor: Successor,
+                           node1: AbstractNode,
+                           node2: AbstractNode) -> List[AbstractEdge]:
+    """
+    Obtain list of edges shared between two nodes
+    """
+    return successor.child
+
+
+get_shared_edges = Operation(_check_first_get_shared_edges,
+                             _get_shared_edges_first,
+                             _get_shared_edges_next)
+# NOTE: hasta aquí
+
+
+# NOTE: modo no Operation
+# def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
+#     """
+#     Obtain list of edges shared between two nodes
+#     """
+#     edges = set()
+#     for i1, edge1 in enumerate(node1._edges):
+#         for i2, edge2 in enumerate(node2._edges):
+#             if (edge1 == edge2) and not edge1.is_dangling():
+#                 if node1.is_node1(i1) != node2.is_node1(i2):
+#                     edges.add(edge1)
+    
+#     return list(edges)
+# NOTE: modo no Operation
 
 
 def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
@@ -962,8 +964,8 @@ def stack_unequal_tensors(lst_tensors: List[torch.Tensor]) -> torch.Tensor:
 
 def _check_first_stack(nodes: List[AbstractNode], name: Optional[Text] = None) -> Optional[Successor]:
     kwargs = {'nodes': nodes}  # TODO: mejor si es set(nodes) por si acaso, o llevarlo controlado
-    if 'stack' in nodes[0].network._successors:
-        for succ in nodes[0].network._successors['stack']:
+    if 'stack' in nodes[0]._successors:
+        for succ in nodes[0]._successors['stack']:
             if succ.kwargs == kwargs:
                 return succ
     return None
@@ -1078,12 +1080,12 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
                              contracting=net._contracting,
                              hints={'all_leaf': all_leaf and (all_param or all_non_param),
                                     'all_same_ref': all_same_ref})
-    if 'stack' in net._successors:
-        net._successors['stack'].append(successor)
+    if 'stack' in nodes[0]._successors:
+        nodes[0]._successors['stack'].append(successor)
     else:
-        net._successors['stack'] = [successor]
+        nodes[0]._successors['stack'] = [successor]
 
-    net._list_ops.append(('stack', len(net._successors['stack']) - 1))
+    net._list_ops.append(('stack', len(nodes[0]._successors['stack']) - 1))
 
     return stack_node
 
@@ -1126,8 +1128,8 @@ stack = Operation(_check_first_stack, _stack_first, _stack_next)
 ##################   UNBIND   ##################
 def _check_first_unbind(node: AbstractNode) -> Optional[Successor]:
     kwargs = {'node': node}
-    if 'unbind' in node._network._successors:
-        for succ in node._network._successors['unbind']:
+    if 'unbind' in node._successors:
+        for succ in node._successors['unbind']:
             if succ.kwargs == kwargs:
                 return succ
     return None
@@ -1207,12 +1209,12 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
     successor = nc.Successor(kwargs={'node': node},
                              child=nodes,
                              hints=batch_idx)
-    if 'unbind' in net._successors:
-        net._successors['unbind'].append(successor)
+    if 'unbind' in node._successors:
+        node._successors['unbind'].append(successor)
     else:
-        net._successors['unbind'] = [successor]
+        node._successors['unbind'] = [successor]
 
-    net._list_ops.append(('unbind', len(net._successors['unbind']) - 1))
+    net._list_ops.append(('unbind', len(node._successors['unbind']) - 1))
 
     return nodes[:]
 

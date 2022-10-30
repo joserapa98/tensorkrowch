@@ -331,6 +331,8 @@ class AbstractNode(ABC):
 
     @property
     def shape(self) -> Size:
+        if hasattr(self, '_shape'):
+            return self._shape
         return self.tensor.shape
 
     @property
@@ -727,6 +729,7 @@ class AbstractNode(ABC):
         kwargs: keyword arguments for the initialization method
         """
         if tensor is not None:
+            # start = time.time()
             if not isinstance(tensor, Tensor):
                 raise ValueError('`tensor` should be Tensor type')
             elif not self._compatible_dims(tensor):  # False
@@ -736,7 +739,12 @@ class AbstractNode(ABC):
             elif device is not None:
                 warnings.warn('`device` was specified but is being ignored. Provide '
                               'a tensor that is already in the required device')
+            # print('Conditionals:', time.time() - start)
+            # start = time.time()
+            
             correct_format_tensor = self._set_tensor_format(tensor)
+            # print('Set format:', time.time() - start)
+            # start = time.time()
 
         elif init_method is not None:
             if device is None:
@@ -748,6 +756,9 @@ class AbstractNode(ABC):
             raise ValueError('One of `tensor` or `init_method` must be provided')
 
         self._save_in_network(correct_format_tensor)
+        # print('Save in network:', time.time() - start)
+        
+        self._shape = tensor.shape  # NOTE: new! to save shape instead of having to access the tensor each time
 
     def set_tensor(self,
                    tensor: Optional[Tensor] = None,

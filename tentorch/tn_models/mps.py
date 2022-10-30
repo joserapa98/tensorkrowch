@@ -22,7 +22,7 @@ import math
 import time
 from torchviz import make_dot
 
-PRINT_MODE = True
+PRINT_MODE = False
 
 
 # TODO: move_l_position -> needs svd and qr to contract and split nodes
@@ -688,12 +688,12 @@ class MPS(TensorNetwork):
         # NOTE: node mode
 
         # NOTE: peor, mas lento
-        # mat_nodes = [n.permute((1, 0, 2)) for n in nodes[1:]]
-        # result_node = nodes[0]
-        # for node in mat_nodes:
-        #     start = time.time()
-        #     result_node @= node
-        #     if PRINT_MODE: print('\t\t\tMatrix contraction:', time.time() - start)
+        mat_nodes = [n.permute((1, 0, 2)) for n in nodes[1:]]
+        result_node = nodes[0]
+        for node in mat_nodes:
+            start = time.time()
+            result_node @= node
+            if PRINT_MODE: print('\t\t\tMatrix contraction:', time.time() - start)
         # return result_node
 
     @staticmethod
@@ -1151,11 +1151,13 @@ class MPS(TensorNetwork):
         # return result  # NOTE: inline solo tensor
         # NOTE: tensor mode
 
+        # NOTE: node mode (using einsum)
         # result = opt_einsum.contract('bl,lor,br->bo',
         #                              left_env_contracted.tensor,
         #                              self.output_node.tensor,
         #                              right_env_contracted.tensor)
         # return result
+        # NOTE: node mode (using einsum)
 
         # NOTE: node mode
         result = left_env_contracted @ self.output_node @ right_env_contracted
@@ -1409,9 +1411,9 @@ class MPS(TensorNetwork):
             if PRINT_MODE: print('Contract:', time.time() - start)
             if PRINT_MODE: print()
 
-            # self._seq_ops = []
-            # for op in self._list_ops:
-            #     self._seq_ops.append((op[0], self._successors[op[0]][op[1]].kwargs))
+            self._seq_ops = []
+            for op in self._list_ops:
+                self._seq_ops.append((op[1], op[0]._successors[op[1]][op[2]].kwargs))
 
             return output
         else:
@@ -1421,11 +1423,11 @@ class MPS(TensorNetwork):
             if PRINT_MODE: print('Add data:', end - start)
 
             # NOTE: contract instead of seq operations in node mode / tensor mode
-            start = time.time()
-            output = self.contract()  # self.contract2()
-            if PRINT_MODE: print('Contract:', time.time() - start)
-            if PRINT_MODE: print()
-            return output
+            # start = time.time()
+            # output = self.contract()  # self.contract2()
+            # if PRINT_MODE: print('Contract:', time.time() - start)
+            # if PRINT_MODE: print()
+            # return output
             # NOTE: contract instead of seq operations in node mode / tensor mode
 
             # TODO: esta puede ser la forma gen'erica del forward, y solo hay que definir

@@ -59,7 +59,7 @@ AbstractStackEdge, StackEdge, ParamStackEdge = Any, Any, Any
 Successor = Any
 # TODO: hacer import Tensor, Parameter?
 
-PRINT_MODE = True
+PRINT_MODE = False
 CHECK_TIMES = []
 
 
@@ -257,7 +257,7 @@ def _permute_first(node: AbstractNode, axes: Sequence[Ax]) -> Node:
     else:
         node._successors['permute'] = [successor]
 
-    net._list_ops.append(('permute', len(node._successors['permute']) - 1))
+    net._list_ops.append((node, 'permute', len(node._successors['permute']) - 1))
 
     return new_node
 
@@ -305,7 +305,7 @@ def _tprod_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     else:
         node1._successors['tprod'] = [successor]
 
-    net._list_ops.append(('tprod', len(node1._successors['tprod']) - 1))
+    net._list_ops.append((node1, 'tprod', len(node1._successors['tprod']) - 1))
 
     return new_node
 
@@ -349,7 +349,7 @@ def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     else:
         node1._successors['mul'] = [successor]
 
-    net._list_ops.append(('mul', len(node1._successors['mul']) - 1))
+    net._list_ops.append((node1, 'mul', len(node1._successors['mul']) - 1))
 
     return new_node
 
@@ -391,7 +391,7 @@ def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     else:
         node1._successors['add'] = [successor]
 
-    net._list_ops.append(('add', len(node1._successors['add']) - 1))
+    net._list_ops.append((node1, 'add', len(node1._successors['add']) - 1))
 
     return new_node
 
@@ -433,7 +433,7 @@ def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     else:
         node1._successors['sub'] = [successor]
 
-    net._list_ops.append(('sub', len(node1._successors['sub']) - 1))
+    net._list_ops.append((node1, 'sub', len(node1._successors['sub']) - 1))
 
     return new_node
 
@@ -707,7 +707,7 @@ def _contract_edges_first(edges: List[AbstractEdge],
     else:
         node1._successors['contract_edges'] = [successor]
 
-    net._list_ops.append(('contract_edges', len(node1._successors['contract_edges']) - 1))
+    net._list_ops.append((node1, 'contract_edges', len(node1._successors['contract_edges']) - 1))
 
     return new_node
 
@@ -856,60 +856,19 @@ def contract(edge: AbstractEdge) -> Node:
     return contract_edges([edge], edge.node1, edge.node2)
 
 
-# NOTE: más rápido
-def _check_first_get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> Optional[Successor]:
-    kwargs = {'node1': node1,
-              'node2': node2}
-    if 'get_shared_edges' in node1._successors:
-        for succ in node1._successors['get_shared_edges']:
-            if succ.kwargs == kwargs:
-                return succ
-    return None
+# NOTE: más rápido -> es una estuidez, al llamar a contract_edges el input
+# NOTE: ya estaba guardado siempre en kwargs del successor
+# def _check_first_get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> Optional[Successor]:
+#     kwargs = {'node1': node1,
+#               'node2': node2}
+#     if 'get_shared_edges' in node1._successors:
+#         for succ in node1._successors['get_shared_edges']:
+#             if succ.kwargs == kwargs:
+#                 return succ
+#     return None
 
 
-def _get_shared_edges_first(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
-    """
-    Obtain list of edges shared between two nodes
-    """
-    edges = set()
-    for i1, edge1 in enumerate(node1._edges):
-        for i2, edge2 in enumerate(node2._edges):
-            if (edge1 == edge2) and not edge1.is_dangling():
-                if node1.is_node1(i1) != node2.is_node1(i2):
-                    edges.add(edge1)
-    edges = list(edges)
-                    
-    successor = nc.Successor(kwargs={'node1': node1, 'node2': node2},
-                             child=edges)
-    
-    net = node1._network
-    if 'get_shared_edges' in node1._successors:
-        node1._successors['get_shared_edges'].append(successor)
-    else:
-        node1._successors['get_shared_edges'] = [successor]
-
-    net._list_ops.append(('get_shared_edges', len(node1._successors['get_shared_edges']) - 1))
-    
-    return edges
-
-
-def _get_shared_edges_next(successor: Successor,
-                           node1: AbstractNode,
-                           node2: AbstractNode) -> List[AbstractEdge]:
-    """
-    Obtain list of edges shared between two nodes
-    """
-    return successor.child
-
-
-get_shared_edges = Operation(_check_first_get_shared_edges,
-                             _get_shared_edges_first,
-                             _get_shared_edges_next)
-# NOTE: hasta aquí
-
-
-# NOTE: modo no Operation
-# def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
+# def _get_shared_edges_first(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
 #     """
 #     Obtain list of edges shared between two nodes
 #     """
@@ -919,8 +878,50 @@ get_shared_edges = Operation(_check_first_get_shared_edges,
 #             if (edge1 == edge2) and not edge1.is_dangling():
 #                 if node1.is_node1(i1) != node2.is_node1(i2):
 #                     edges.add(edge1)
+#     edges = list(edges)
+                    
+#     successor = nc.Successor(kwargs={'node1': node1, 'node2': node2},
+#                              child=edges)
     
-#     return list(edges)
+#     net = node1._network
+#     if 'get_shared_edges' in node1._successors:
+#         node1._successors['get_shared_edges'].append(successor)
+#     else:
+#         node1._successors['get_shared_edges'] = [successor]
+
+#     net._list_ops.append((node1, 'get_shared_edges', len(node1._successors['get_shared_edges']) - 1))
+    
+#     return edges
+
+
+# def _get_shared_edges_next(successor: Successor,
+#                            node1: AbstractNode,
+#                            node2: AbstractNode) -> List[AbstractEdge]:
+#     """
+#     Obtain list of edges shared between two nodes
+#     """
+#     return successor.child
+
+
+# get_shared_edges = Operation(_check_first_get_shared_edges,
+#                              _get_shared_edges_first,
+#                              _get_shared_edges_next)
+# NOTE: hasta aquí
+
+
+# NOTE: modo no Operation
+def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
+    """
+    Obtain list of edges shared between two nodes
+    """
+    edges = set()
+    for i1, edge1 in enumerate(node1._edges):
+        for i2, edge2 in enumerate(node2._edges):
+            if (edge1 == edge2) and not edge1.is_dangling():
+                if node1.is_node1(i1) != node2.is_node1(i2):
+                    edges.add(edge1)
+    
+    return list(edges)
 # NOTE: modo no Operation
 
 
@@ -1085,7 +1086,7 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
     else:
         nodes[0]._successors['stack'] = [successor]
 
-    net._list_ops.append(('stack', len(nodes[0]._successors['stack']) - 1))
+    net._list_ops.append((nodes[0], 'stack', len(nodes[0]._successors['stack']) - 1))
 
     return stack_node
 
@@ -1214,7 +1215,7 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
     else:
         node._successors['unbind'] = [successor]
 
-    net._list_ops.append(('unbind', len(node._successors['unbind']) - 1))
+    net._list_ops.append((node, 'unbind', len(node._successors['unbind']) - 1))
 
     return nodes[:]
 

@@ -712,3 +712,27 @@ def test_scipy():
 
     a_memory = a.data.nbytes + a.indptr.nbytes + a.indices.nbytes
     print(f'Memory of a: {a_memory / 1024 ** 2:.2f} Mb')
+
+
+def test_times_view_reshape():
+    a = torch.randn(100, 200, 300)
+    print()
+    
+    view = []
+    for _ in range(10000):
+        start = time.time()
+        a = a.view(100, 1, 200, 300)
+        view.append(time.time() - start)
+        a = a.view(100, 200, 300)
+    print('View:', torch.tensor(view).mean())
+        
+    reshape = []  
+    for _ in range(10000):
+        start = time.time()
+        a = a.reshape(100, 1, 200, 300)
+        reshape.append(time.time() - start)
+        a = a.reshape(100, 200, 300)
+    print('Reshape:', torch.tensor(reshape).mean())
+        
+    # Both alternatives take almost the same amount of time
+    print()

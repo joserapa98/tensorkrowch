@@ -297,7 +297,7 @@ class AbstractNode(ABC):
         # NOTE: index mode
         
         # NOTE: unbind mode
-        if self._tensor_info['full'] or self.name.startswith('unbind'):  # TODO: Comment for index mode
+        if self._tensor_info['full'] or self.name.startswith('unbind'):
         # NOTE: unbind mode
         
             # TODO: truquito para que los unbind lean su tensor directamente
@@ -510,7 +510,7 @@ class AbstractNode(ABC):
             for i, dim in enumerate(self.shape):
                 if i == axis_num:
                     if size > dim:
-                        index.append(slice(size - dim, size))
+                        index.append(slice(size - dim, size)) # TODO: aqui no se entra
                     else:
                         index.append(slice(dim - size, dim))
                 else:
@@ -524,7 +524,7 @@ class AbstractNode(ABC):
                     if size > dim:
                         pad += [0, size - dim]
                     else:
-                        pad += [0, 0]
+                        pad += [0, 0]  # TODO: aqui no se entra
                 else:
                     pad += [0, 0]
             pad.reverse()
@@ -733,9 +733,32 @@ class AbstractNode(ABC):
             if not isinstance(tensor, Tensor):
                 raise ValueError('`tensor` should be Tensor type')
             elif not self._compatible_dims(tensor):  # False
+                
+                # NOTE
+                if len(tensor.shape) == self.rank:
+                    index = []
+                    for i, dim in enumerate(tensor.shape):
+                        edge = self.get_edge(i)
+                        
+                        if dim > edge.size():
+                            index.append(slice(dim - edge.size(), dim))
+                        elif dim == edge.size():
+                            index.append(slice(0, dim))
+                        else:
+                            raise ValueError('Cannot crop tensor if its dimensions'
+                                             'are less than previous dimensions')
+                            
+                    tensor = tensor[index]
+                    
+                else:
+                    raise ValueError('`tensor` should have the same number of'
+                                     'dimensions as previous tensor')
+                # NOTE
+                
+                
                 # TODO: digamos que podemos siempre, cuidado, dim del edge es la del node1
-                raise ValueError('`tensor` dimensions should match the '
-                                 'dimensions of non-dangling edges')
+                # raise ValueError('`tensor` dimensions should match the '
+                #                  'dimensions of non-dangling edges')
             elif device is not None:
                 warnings.warn('`device` was specified but is being ignored. Provide '
                               'a tensor that is already in the required device')
@@ -2040,8 +2063,8 @@ class ParamStackEdge(AbstractStackEdge, ParamEdge):
         self._node1_lists = node1_lists
         ParamEdge.__init__(self,
                            node1=node1, axis1=axis1,
-                           shift=self._edges[0].shift,
-                           slope=self._edges[0].slope,
+                        #    shift=self._edges[0].shift,
+                        #    slope=self._edges[0].slope,
                            node2=node2, axis2=axis2)
 
     @property
@@ -2051,6 +2074,13 @@ class ParamStackEdge(AbstractStackEdge, ParamEdge):
     @property
     def node1_lists(self) -> List[bool]:
         return self._node1_lists
+    
+    @property
+    def matrix(self) -> Tensor:
+        mats = []
+        for edge in self.edges:
+            mats.append(edge.matrix)
+        return nop.stack_unequal_tensors(mats)
 
     def __xor__(self, other: 'ParamStackEdge') -> ParamEdge:
         return nop.connect_stack(self, other)

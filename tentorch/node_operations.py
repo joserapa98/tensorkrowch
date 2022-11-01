@@ -106,15 +106,26 @@ def connect(edge1: AbstractEdge, edge2: AbstractEdge) -> Union[Edge, ParamEdge]:
 
     if isinstance(edge1, nc.ParamEdge) == isinstance(edge2, nc.ParamEdge):
         if isinstance(edge1, nc.ParamEdge):
-            shift = edge1.shift
-            slope = edge1.slope
-            new_edge = nc.ParamEdge(node1=node1, axis1=axis1,
-                                    shift=shift, slope=slope,
-                                    node2=node2, axis2=axis2)
-            net._add_edge(new_edge)
+            if isinstance(edge1, nc.ParamStackEdge):
+                new_edge = nc.ParamStackEdge(edges=edge1.edges, node1_lists=edge1.node1_lists,
+                                             node1=node1, axis1=axis1,
+                                             node2=node2, axis2=axis2)
+                net._add_edge(new_edge)
+            else:
+                shift = edge1.shift
+                slope = edge1.slope
+                new_edge = nc.ParamEdge(node1=node1, axis1=axis1,
+                                        shift=shift, slope=slope,
+                                        node2=node2, axis2=axis2)
+                net._add_edge(new_edge)
         else:
-            new_edge = nc.Edge(node1=node1, axis1=axis1,
-                               node2=node2, axis2=axis2)
+            if isinstance(edge1, nc.StackEdge):
+                new_edge = nc.StackEdge(edges=edge1.edges, node1_lists=edge1.node1_lists,
+                                        node1=node1, axis1=axis1,
+                                        node2=node2, axis2=axis2)
+            else:
+                new_edge = nc.Edge(node1=node1, axis1=axis1,
+                                node2=node2, axis2=axis2)
     else:
         if isinstance(edge1, nc.ParamEdge):
             shift = edge1.shift
@@ -142,17 +153,6 @@ def connect_stack(edge1: AbstractStackEdge, edge2: AbstractStackEdge):
                          ' edges are not the same. They will be the '
                          'same when both lists contain edges connecting'
                          ' the nodes that formed the stack nodes.')
-    if isinstance(edge1.edges[0], nc.ParamEdge):
-        shift = edge1.edges[0].shift
-        slope = edge1.edges[0].slope
-        # When connecting stacked edges, parameters have to be
-        # shared among all edges in the same ParamStackEdge
-        for i, _ in enumerate(edge1.edges[:-1]):
-            if edge1.edges[i].dim() != edge1.edges[i + 1].dim():
-                raise ValueError('Cannot connect stacked edges with lists of edges '
-                                 'of different dimensions')
-            edge1.edges[i + 1].set_parameters(shift=shift, slope=slope)  # TODO: sure? We want this? Share parameters?
-
     return connect(edge1=edge1, edge2=edge2)
 
 
@@ -555,11 +555,17 @@ def _contract_edges_first(edges: List[AbstractEdge],
                             # Obtain permutations
                             permutation_dims = [k if k < j else k + 1
                                                 for k in range(nodes[i].rank - 1)] + [j]
-                            inv_permutation_dims = inverse_permutation(permutation_dims)
+                            inv_permutation_dims = inverse_permutation(permutation_dims) # TODO: dont permute if not necessary
 
                             # Send multiplication dimension to the end, multiply, recover original shape
                             tensors[i] = tensors[i].permute(permutation_dims)
-                            tensors[i] = tensors[i] @ edge.matrix
+                            if isinstance(edge, nc.ParamStackEdge):
+                                mat = edge.matrix
+                                tensors[i] = tensors[i] @ mat.view(mat.shape[0],
+                                                                  *[1]*(len(tensors[i].shape) - 3),
+                                                                  *mat.shape[1:])  # First dim is stack, last 2 dims are
+                            else:
+                                tensors[i] = tensors[i] @ edge.matrix
                             tensors[i] = tensors[i].permute(inv_permutation_dims)
 
                         contract_edges[edge] = [tensors[i].shape[j]]
@@ -785,7 +791,13 @@ def _contract_edges_next(successor: Successor,
 
                     # Send multiplication dimension to the end, multiply, recover original shape
                     tensors[0] = tensors[0].permute(permutation_dims)
-                    tensors[0] = tensors[0] @ edge.matrix
+                    if isinstance(edge, nc.ParamStackEdge):
+                        mat = edge.matrix
+                        tensors[0] = tensors[0] @ mat.view(mat.shape[0],
+                                                           *[1]*(len(tensors[0].shape) - 3),
+                                                           *mat.shape[1:])  # First dim is stack, last 2 dims are
+                    else:
+                        tensors[0] = tensors[0] @ edge.matrix
                     tensors[0] = tensors[0].permute(inv_permutation_dims)
                     
         if PRINT_MODE: print('\t\t\t\tCheckpoint 3:', time.time() - total_time)
@@ -1004,7 +1016,7 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
         # NOTE: mix index mode
         
         # NOTE: unbind mode
-        if node._tensor_info['address'] is None or node.name.startswith('unbind'):
+        if node._tensor_info['address'] is None:
         # NOTE: unbind mode
             if node_ref is None:
                 node_ref = node._tensor_info['node_ref']

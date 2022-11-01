@@ -589,7 +589,7 @@ class MPS(TensorNetwork):
         #     right_result = stacked_einsum('lir,bi->lbr', self.right_env, right_env_data)
         # return left_result, right_result
 
-        if self._same_d_bond:  # TODO: cuidado, era self.same_d_bond()
+        if True:#self._same_d_bond:  # TODO: cuidado, era self.same_d_bond()
             # start = time.time()
             if self.left_env + self.right_env:
                 # env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
@@ -1124,7 +1124,7 @@ class MPS(TensorNetwork):
 
         start = time.time()
         # TODO: cuidado, era self.same_d_phys() y self.same_d_bond()
-        if False:#not self.param_bond() and self._same_d_phys and self._same_d_bond:
+        if not self.param_bond() and self._same_d_phys and self._same_d_bond:
             left_env_contracted, right_env_contracted = self._pairwise_contraction(left_env, right_env)
         else:
             # TODO: if left_node/right_node is not None

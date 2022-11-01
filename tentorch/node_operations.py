@@ -952,7 +952,7 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
 
 
 ###################   STACK   ##################
-def stack_unequal_tensors(lst_tensors: List[torch.Tensor]) -> torch.Tensor:
+def stack_unequal_tensors(lst_tensors: List[torch.Tensor]) -> torch.Tensor:  # TODO: mover a utils, e importar desde aqui y network_components
     lst_tensors = lst_tensors[:]  # TODO: protect original list
     if lst_tensors:
         same_dims = True

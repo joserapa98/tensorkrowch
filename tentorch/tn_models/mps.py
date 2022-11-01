@@ -1414,6 +1414,33 @@ class MPS(TensorNetwork):
             self._seq_ops = []
             for op in self._list_ops:
                 self._seq_ops.append((op[1], op[0]._successors[op[1]][op[2]].kwargs))
+                
+            # TODO: I have to do something to erase memory as well as I create it
+            # # Create inverse dictionary for memory
+            # self._inverse_memory = dict()
+            # for node in self.nodes.values():
+            #     if node._tensor_info['address'] is not None:
+            #         if node._tensor_info['address'] in self._inverse_memory:
+            #             self._inverse_memory[node._tensor_info['address']].append(node)
+            #         else:
+            #             self._inverse_memory[node._tensor_info['address']] = [node]
+            #     else:
+            #         node_ref = node._tensor_info['node_ref']
+            #         if node_ref._tensor_info['address'] in self._inverse_memory:
+            #             self._inverse_memory[node_ref._tensor_info['address']].append(node)
+            #         else:
+            #             self._inverse_memory[node_ref._tensor_info['address']] = [node]
+                
+            # # Erase memory if no leaf or data nodes use it
+            # for memory in self._inverse_memory:
+            #     all_non_leaf = True
+            #     for node in self._inverse_memory[memory]:
+            #         if node.is_leaf() or (node in self.data_nodes):  # TODO: attribute node.is_data(), like node.is_leaf()
+            #             all_non_leaf = False
+            #             break
+                    
+            #     if all_non_leaf:
+            #         self._memory_nodes[memory] = None
 
             return output
         else:
@@ -1518,6 +1545,17 @@ class MPS(TensorNetwork):
                 print()
 
             output = output.tensor
+            
+            # # Erase memory if no leaf or data nodes use it
+            # for memory in self._inverse_memory:
+            #     all_non_leaf = True
+            #     for node in self._inverse_memory[memory]:
+            #         if node.is_leaf() or (node in self.data_nodes):  # TODO: attribute node.is_data(), like node.is_leaf()
+            #             all_non_leaf = False
+            #             break
+                    
+            #     if all_non_leaf:
+            #         self._memory_nodes[memory] = None
 
             # TODO: esto solo si output a la izda del todo
             # output = output.permute((1, 0))  # TODO: cuidado donde acaba el batch, tiene que acabar al principio

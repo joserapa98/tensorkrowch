@@ -629,12 +629,13 @@ class AbstractNode(ABC):
         override: if True, node1/node2 is changed in the original edge, otherwise
             the edge will be copied and reattached
         """
-        for i, (edge, node1) in enumerate(zip(self._edges, self.is_node1())):
-            if not override:
-                edge = edge.copy()
-                self._edges[i] = edge
-            edge._nodes[1 - node1] = self
-            edge._axes[1 - node1] = self._axes[i]
+        pass # TODO: uncomment when is fixed problem in __init__ Nodes
+        # for i, (edge, node1) in enumerate(zip(self._edges, self.is_node1())):
+        #     if not override:
+        #         edge = edge.copy()
+        #         self._edges[i] = edge
+        #     edge._nodes[1 - node1] = self
+        #     edge._axes[1 - node1] = self._axes[i]
 
     def disconnect(self, axis: Optional[Ax] = None) -> None:
         """
@@ -1011,7 +1012,10 @@ class Node(AbstractNode):
             self._edges = edges[:]
             if self._leaf and not self._network._contracting:
                 # TODO: parameterize, permute, copy, etc.
-                self._reattach_edges(override=False)
+                self._reattach_edges(override=False) 
+                # TODO: no se para que puse eso, no es bueno,
+                # cuando hago permute en MPs contract, acabo aqu'i, y
+                # creo nuevos edges malos en lugar de los que quer'ia usar
 
         # network
         self._network._add_node(self, override=override_node)

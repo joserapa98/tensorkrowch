@@ -2244,7 +2244,9 @@ class TensorNetwork(nn.Module):
         if node._name in self._nodes:
             if self._nodes[node._name] == node:
                 del self._nodes[node._name]
-                del self._memory_nodes[node._name]
+                
+                if node._name in self._memory_nodes:  # NOTE: puede que no est'e si usaba memory de otro nodo
+                    del self._memory_nodes[node._name]
 
     def delete_node(self, node: AbstractNode) -> None:
         """
@@ -2359,7 +2361,7 @@ class TensorNetwork(nn.Module):
             if not hasattr(self, 'param_' + node.name):
                 self.register_parameter('param_' + node._name, self._memory_nodes[node._name])
             else:
-                # Nodes names are never repeated, so it is likely that this case will never occur
+                # TODO: Nodes names are never repeated, so it is likely that this case will never occur
                 raise ValueError(f'Network already has attribute named {node._name}')
         for edge in node.edges:
             self._add_edge(edge)
@@ -2468,7 +2470,7 @@ class TensorNetwork(nn.Module):
                           axes_names=('n_features',
                                       *[f'batch_{j}' for j in range(len(batch_sizes))],
                                       'feature'),
-                          name=f'stack_data_memory',
+                          name=f'stack_data_memory',  # TODO: guardo aqui la memory, no uso memory_data_nodes
                           network=self)
 
         for i, edge in enumerate(input_edges):
@@ -2486,7 +2488,7 @@ class TensorNetwork(nn.Module):
                         network=self,
                         leaf=False)
             node['feature'] ^ edge
-            self._data_nodes[node._name] = node
+            self._data_nodes[node._name] = node  # TODO: se guarda mal, el nombre del primer data cambia de 'data' a 'data_0'
 
         # TODO: igual mejor como antes en un solo bucle, pero cuidado con los nombres
         #  (cuando modificamos la memoria del primer nodo su nombre es 'data', pero

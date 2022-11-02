@@ -242,6 +242,7 @@ def _permute_first(node: AbstractNode, axes: Sequence[Ax]) -> Node:
         new_node = nc.Node(axes_names=permute_list(node.axes_names, axes_nums),
                            name='permute_' + node._name,
                            network=node._network,
+                           leaf=False,
                            param_edges=node.param_edges(),
                            tensor=node.tensor.permute(axes_nums),
                            edges=permute_list(node._edges, axes_nums),

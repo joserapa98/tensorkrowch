@@ -13,6 +13,8 @@ This script contains:
 """
 
 from typing import List, Sequence, Text
+import torch
+import torch.nn as nn
 
 
 def tab_string(string: Text, num_tabs: int = 1) -> Text:
@@ -145,3 +147,26 @@ def fact(n: int) -> int:
 
 def comb_num(n: int, k: int) -> int:
     return fact(n) // (fact(k) * fact(n - k))
+
+
+def stack_unequal_tensors(lst_tensors: List[torch.Tensor]) -> torch.Tensor:  # TODO: mover a utils, e importar desde aqui y network_components
+    lst_tensors = lst_tensors[:]  # TODO: protect original list
+    if lst_tensors:
+        same_dims = True
+        max_shape = list(lst_tensors[0].shape)
+        for tensor in lst_tensors[1:]:
+            for idx, dim in enumerate(tensor.shape):
+                if (dim != max_shape[idx]) and same_dims:
+                    same_dims = False
+                if dim > max_shape[idx]:
+                    max_shape[idx] = dim
+
+        if not same_dims:
+            for idx, tensor in enumerate(lst_tensors):
+                if tensor.shape != max_shape:
+                    pad = []
+                    for max_dim, dim in zip(max_shape, tensor.shape):
+                        pad += [0, max_dim - dim]
+                    pad.reverse()
+                    lst_tensors[idx] = nn.functional.pad(tensor, pad)
+        return torch.stack(lst_tensors)

@@ -20,91 +20,640 @@ import dis
 #  y se lleva registro de hijos y demás
 
 
-def test_init_node():
-    node = tn.Node(shape=(2, 5, 2),
-                   axes_names=('left', 'input', 'right'),
-                   name='node')
+class TestAxis:
+    
+    def test_same_name(self):
+        node = tn.Node(shape=(3, 3),
+                       axes_names=('my_axis', 'my_axis'),
+                       name='my_node')
+        assert node.axes_names == ['my_axis_0', 'my_axis_1']
+    
+    def test_same_name_empty(self):
+        node = tn.Node(shape=(3, 3),
+                       axes_names=('', ''),
+                       name='my_node')
+        assert node.axes_names == ['_0', '_1']
+        
+    def test_batch_axis(self):
+        node = tn.Node(shape=(3, 3),
+                       axes_names=('batch', 'axis'),
+                       name='my_node')
+        assert node.axes_names == ['batch', 'axis']
+        assert node['batch'].is_batch()
+        assert not node['axis'].is_batch()
+        
+    def test_change_axis_name(self):
+        node = tn.Node(shape=(3, 3),
+                       axes_names=('axis', 'axis1'),
+                       name='my_node')
+        assert node.axes_names == ['axis', 'axis1']
+        
+        node.axes[1].name = 'axis2'
+        assert node.axes_names == ['axis', 'axis2']
+        
+        node.axes[1].name = 'axis'
+        assert node.axes_names == ['axis_0', 'axis_1']
+        
+    
+class TestInitNode:
+    
+    def test_init_node1(self):
+        node = tn.Node(shape=(2, 5, 2),
+                       axes_names=('left', 'input', 'right'),
+                       name='my_node')
 
-    assert node.shape == torch.Size((2, 5, 2))
-    assert node.shape == node.tensor.shape
-    assert node['left'] == node.edges[0]
-    assert node['left'] == node[0]
-    assert node.name == 'node'
-    assert isinstance(node.edges[0], tn.Edge)
+        assert node.name == 'my_node'
+        assert node.shape == (2, 5, 2)
+        assert node.axes_names == ['left', 'input', 'right']
+        assert node.rank == 3
+        assert node.dtype is None
+        
+        assert node.tensor is None
+        assert node._tensor_info == {'address': 'my_node',
+                                     'node_ref': None,
+                                     'full': True,
+                                     'stack_idx': None,
+                                     'index': None}
+        
+        net = node.network
+        assert net.name == 'net'
+        assert len(net.nodes) == 1
+        assert len(net._memory_nodes) == 1
+        assert len(net.data_nodes) == 0
+        assert list(net._memory_nodes.keys()) == ['my_node']
+        
+        assert node['left'] == node.edges[0]
+        assert node['left'] == node[0]
+        assert isinstance(node.edges[0], tn.Edge)
+        
+        assert node.is_leaf()
+        assert not node.is_data()
+        assert node.successors == dict()
+        
+    def test_init_node2(self):
+        node = tn.Node(shape=(2, 5, 2),
+                       axes_names=('left', 'input', 'right'),
+                       network=tn.TensorNetwork('my_net'),
+                       leaf=False,
+                       data=True)
+
+        assert node.name == 'node'
+        assert node.shape == (2, 5, 2)
+        assert node.axes_names == ['left', 'input', 'right']
+        assert node.rank == 3
+        assert node.dtype is None
+        
+        assert node.tensor is None
+        assert node._tensor_info == {'address': 'node',
+                                     'node_ref': None,
+                                     'full': True,
+                                     'stack_idx': None,
+                                     'index': None}
+        
+        net = node.network
+        assert net.name == 'my_net'
+        assert len(net.nodes) == 1
+        assert len(net._memory_nodes) == 1
+        assert len(net.data_nodes) == 0
+        assert list(net._memory_nodes.keys()) == ['node']
+        
+        assert node['left'] == node.edges[0]
+        assert node['left'] == node[0]
+        assert isinstance(node.edges[0], tn.Edge)
+        
+        assert not node.is_leaf()
+        assert node.is_data()
+        assert node.successors == dict()
+        
+    def test_init_node3(self):
+        tensor = torch.randn(2, 5, 2)
+        node = tn.Node(axes_names=('left', 'input', 'right'),
+                       param_edges=True,
+                       tensor=tensor)
+
+        assert node.name == 'node'
+        assert node.shape == (2, 5, 2)
+        assert node.axes_names == ['left', 'input', 'right']
+        assert node.rank == 3
+        assert node.dtype is torch.float32
+        
+        assert torch.equal(node.tensor, tensor)
+        assert node._tensor_info == {'address': 'node',
+                                     'node_ref': None,
+                                     'full': True,
+                                     'stack_idx': None,
+                                     'index': None}
+        
+        net = node.network
+        assert net.name == 'net'
+        assert len(net.nodes) == 1
+        assert len(net._memory_nodes) == 1
+        assert len(net.data_nodes) == 0
+        assert list(net._memory_nodes.keys()) == ['node']
+        
+        assert node['left'] == node.edges[0]
+        assert node['left'] == node[0]
+        assert isinstance(node.edges[0], tn.ParamEdge)
+        
+        assert node.is_leaf()
+        assert not node.is_data()
+        assert node.successors == dict()
+        
+    def test_init_node4(self):
+        tensor = torch.randn(2, 5, 2)
+        node = tn.Node(param_edges=True,
+                       tensor=tensor)
+
+        assert node.name == 'node'
+        assert node.shape == (2, 5, 2)
+        assert node.axes_names == ['axis_0', 'axis_1', 'axis_2']
+        assert node.rank == 3
+        assert node.dtype is torch.float32
+        
+        assert torch.equal(node.tensor, tensor)
+        assert node._tensor_info == {'address': 'node',
+                                     'node_ref': None,
+                                     'full': True,
+                                     'stack_idx': None,
+                                     'index': None}
+        
+        net = node.network
+        assert net.name == 'net'
+        assert len(net.nodes) == 1
+        assert len(net._memory_nodes) == 1
+        assert len(net.data_nodes) == 0
+        assert list(net._memory_nodes.keys()) == ['node']
+        
+        assert node['axis_0'] == node.edges[0]
+        assert node['axis_0'] == node[0]
+        assert isinstance(node.edges[0], tn.ParamEdge)
+        
+        assert node.is_leaf()
+        assert not node.is_data()
+        assert node.successors == dict()
+        
+    def test_init_node_errors(self):
+        with pytest.raises(ValueError):
+            node = tn.Node(shape=(2, 5, 2),
+                           data=True)
+            
+        with pytest.raises(ValueError):
+            node = tn.Node(shape=(2, 5, 2),
+                           tensor=torch.randn(2, 5, 2))
+            
+            
+class TestInitParamNode:
+    
+    def test_init_paramnode1(self):
+        node = tn.ParamNode(shape=(2, 5, 2),
+                            axes_names=('left', 'input', 'right'),
+                            name='my_node')
+
+        assert node.name == 'my_node'
+        assert node.shape == (2, 5, 2)
+        assert node.axes_names == ['left', 'input', 'right']
+        assert node.rank == 3
+        assert node.dtype is None
+        
+        assert node.tensor is None
+        assert node._tensor_info == {'address': 'my_node',
+                                     'node_ref': None,
+                                     'full': True,
+                                     'stack_idx': None,
+                                     'index': None}
+        
+        net = node.network
+        assert net.name == 'net'
+        assert len(net.nodes) == 1
+        assert len(net._memory_nodes) == 1
+        assert len(net.data_nodes) == 0
+        assert list(net._memory_nodes.keys()) == ['my_node']
+        
+        assert node['left'] == node.edges[0]
+        assert node['left'] == node[0]
+        assert isinstance(node.edges[0], tn.Edge)
+        
+        assert node.is_leaf()
+        assert not node.is_data()
+        assert node.successors == dict()
+        
+    def test_init_paramnode2(self):
+        node = tn.ParamNode(shape=(2, 5, 2),
+                            axes_names=('left', 'input', 'right'),
+                            network=tn.TensorNetwork('my_net'),
+                            leaf=False,
+                            data=True)
+
+        assert node.name == 'paramnode'
+        assert node.shape == (2, 5, 2)
+        assert node.axes_names == ['left', 'input', 'right']
+        assert node.rank == 3
+        assert node.dtype is None
+        
+        assert node.tensor is None
+        assert node._tensor_info == {'address': 'paramnode',
+                                     'node_ref': None,
+                                     'full': True,
+                                     'stack_idx': None,
+                                     'index': None}
+        
+        net = node.network
+        assert net.name == 'my_net'
+        assert len(net.nodes) == 1
+        assert len(net._memory_nodes) == 1
+        assert len(net.data_nodes) == 0
+        assert list(net._memory_nodes.keys()) == ['paramnode']
+        
+        assert node['left'] == node.edges[0]
+        assert node['left'] == node[0]
+        assert isinstance(node.edges[0], tn.Edge)
+        
+        assert not node.is_leaf()
+        assert node.is_data()
+        assert node.successors == dict()
+        
+    def test_init_paramnode3(self):
+        tensor = torch.randn(2, 5, 2)
+        node = tn.ParamNode(axes_names=('left', 'input', 'right'),
+                            param_edges=True,
+                            tensor=tensor)
+
+        assert node.name == 'paramnode'
+        assert node.shape == (2, 5, 2)
+        assert node.axes_names == ['left', 'input', 'right']
+        assert node.rank == 3
+        assert node.dtype is torch.float32
+        
+        assert torch.equal(node.tensor, nn.Parameter(tensor))
+        assert node._tensor_info == {'address': 'paramnode',
+                                     'node_ref': None,
+                                     'full': True,
+                                     'stack_idx': None,
+                                     'index': None}
+        
+        net = node.network
+        assert net.name == 'net'
+        assert len(net.nodes) == 1
+        assert len(net._memory_nodes) == 1
+        assert len(net.data_nodes) == 0
+        assert list(net._memory_nodes.keys()) == ['paramnode']
+        
+        assert node['left'] == node.edges[0]
+        assert node['left'] == node[0]
+        assert isinstance(node.edges[0], tn.ParamEdge)
+        
+        assert node.is_leaf()
+        assert not node.is_data()
+        assert node.successors == dict()
+        
+    def test_init_paramnode4(self):
+        tensor = torch.randn(2, 5, 2)
+        node = tn.ParamNode(param_edges=True,
+                            tensor=tensor)
+
+        assert node.name == 'paramnode'
+        assert node.shape == (2, 5, 2)
+        assert node.axes_names == ['axis_0', 'axis_1', 'axis_2']
+        assert node.rank == 3
+        assert node.dtype is torch.float32
+        
+        assert torch.equal(node.tensor, nn.Parameter(tensor))
+        assert node._tensor_info == {'address': 'paramnode',
+                                     'node_ref': None,
+                                     'full': True,
+                                     'stack_idx': None,
+                                     'index': None}
+        
+        net = node.network
+        assert net.name == 'net'
+        assert len(net.nodes) == 1
+        assert len(net._memory_nodes) == 1
+        assert len(net.data_nodes) == 0
+        assert list(net._memory_nodes.keys()) == ['paramnode']
+        
+        assert node['axis_0'] == node.edges[0]
+        assert node['axis_0'] == node[0]
+        assert isinstance(node.edges[0], tn.ParamEdge)
+        
+        assert node.is_leaf()
+        assert not node.is_data()
+        assert node.successors == dict()
+        
+    def test_init_paramnode_errors(self):
+        with pytest.raises(ValueError):
+            node = tn.ParamNode(shape=(2, 5, 2),
+                                data=True)
+            
+        with pytest.raises(ValueError):
+            node = tn.ParamNode(shape=(2, 5, 2),
+                                tensor=torch.randn(2, 5, 2))
 
 
-def test_init_param_node():
-    node = tn.ParamNode(shape=(2, 5, 2),
+class TestSetTensor:
+    
+    @pytest.fixture
+    def setup():
+        node1 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1')
+        
+        tensor = torch.randn(2, 5, 2)
+        node2 = tn.Node(axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        tensor=tensor)
+        return node1, node2, tensor
+    
+    def test_set_tensor(self, setup):
+        node1, node2, tensor = setup
+        
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        
+        node1.tensor = tensor
+        assert torch.equal(node1.tensor, node2.tensor)
+        assert node1.shape == (2, 5, 2)
+        
+    def test_change_tensor(self, setup):
+        node1, node2, tensor = setup
+        assert node1.tensor is None
+        
+        # Changing tensor changes node1's and node2's tensor
+        node1.tensor = tensor
+        tensor[0, 0, 0] = 1000
+        assert node1.tensor[0, 0, 0] == 1000
+        assert node2.tensor[0, 0, 0] == 1000
+        
+    def test_unset_tensor(self, setup):
+        node1, node2, tensor = setup
+        assert self.node1.tensor is None
+        
+        # Using unset_tensor method
+        node1.tensor = tensor
+        assert torch.equal(node1.tensor, tensor)
+        assert node1.shape == (2, 5, 2)
+        
+        node1.unset_tensor()
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        
+        # Using tensor.setter
+        node1.tensor = tensor
+        assert torch.equal(node1.tensor, tensor)
+        assert node1.shape == (2, 5, 2)
+        
+        node1.tensor = None
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        
+        # Using set_tensor method
+        node1.tensor = tensor
+        assert torch.equal(node1.tensor, tensor)
+        assert node1.shape == (2, 5, 2)
+        
+        node1.set_tensor(None)
+        assert torch.equal(node1.tensor, torch.zeros(node1.shape))
+        assert node1.shape == (2, 5, 2)
+        
+    def test_set_diff_shape(self, setup):
+        node1, node2, tensor = setup
+        assert node1.tensor is None
+        assert self.node1.shape == (2, 5, 2)
+        
+        # If edges are non-dangling, we can set a
+        # tensor with different size in those axes
+        diff_tensor = torch.randn(2, 5, 5)
+        node1.tensor = diff_tensor
+        assert node1.shape == (2, 5, 5)
+        
+    def test_set_init_method(self, setup):
+        node1, node2, tensor = setup
+        assert self.node1.tensor is None
+        
+        # Initialize tensor of node1
+        node1.set_tensor(init_method='randn', mean=1., std=2.)
+        assert node1.tensor is not None
+
+        # Set node1's tensor as node2's tensor
+        node2.tensor = node1.tensor
+        assert torch.equal(node1.tensor, node2.tensor)
+
+        # Changing node1's tensor changes node2's tensor
+        node1.tensor[0, 0, 0] = 1000
+        assert node2.tensor[0, 0, 0] == 1000
+        
+    def test_set_parametric(self, setup):
+        node1, node2, tensor = setup
+        assert node1.tensor is None
+        
+        # Create parametric node
+        node3 = tn.ParamNode(axes_names=('left', 'input', 'right'),
+                             tensor=tensor)
+        assert isinstance(node3.tensor, nn.Parameter)
+        assert torch.equal(node3.tensor.data, tensor)
+
+        # Creating parameter from tensor does not affect tensor's grad
+        param = nn.Parameter(tensor)
+        param.mean().backward()
+        assert node3.grad is None
+
+        # Set nn.Parameter as node3's tensor
+        node3.tensor = param
+        assert node3.grad is not None
+        assert torch.equal(node3.grad, node3.tensor.grad)
+        
+        node3.tensor = None
+        assert node3.tensor is None
+        assert node3.grad is None
+        
+        
+class TestConnect:
+    
+    def test_connect_edges(self):
+        node1 = tn.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node')
+        node2 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node')
+        
+        assert node1.name == 'node'
+        assert node2.name == 'node'
+        assert node1.network != node2.network
+        
+        assert isinstance(node1[2], tn.Edge)
+        assert isinstance(node2[0], tn.Edge)
+        
+        new_edge = node1[2] ^ node2[0]
+        assert isinstance(new_edge, tn.Edge)
+        
+        assert node1.name == 'node_0'
+        assert node2.name == 'node_1'
+        assert node1.network == node2.network
+        
+    def test_connect_paramedges(self):
+        node1 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        param_edges=True)
+        node2 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        param_edges=True)
+        
+        assert node1.name == 'node'
+        assert node2.name == 'node'
+        assert node1.network != node2.network
+        
+        assert isinstance(node1[2], tn.ParamEdge)
+        assert isinstance(node2[0], tn.ParamEdge)
+        
+        new_edge = node1[2] ^ node2[0]
+        assert isinstance(new_edge, tn.ParamEdge)
+        
+        assert node1.name == 'node_0'
+        assert node2.name == 'node_1'
+        assert node1.network == node2.network
+        
+    def test_connect_edge_paramedge(self):
+        node1 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node')
+        node2 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        param_edges=True)
+        
+        assert node1.name == 'node'
+        assert node2.name == 'node'
+        assert node1.network != node2.network
+        
+        assert isinstance(node1[2], tn.Edge)
+        assert isinstance(node2[0], tn.ParamEdge)
+        
+        new_edge = node1[2] ^ node2[0]
+        assert isinstance(new_edge, tn.ParamEdge)
+        
+        assert node1.name == 'node_0'
+        assert node2.name == 'node_1'
+        assert node1.network == node2.network
+        
+    def test_connect_paramedge_edge(self):
+        node1 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        param_edges=True)
+        node2 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node')
+        
+        assert node1.name == 'node'
+        assert node2.name == 'node'
+        assert node1.network != node2.network
+        
+        assert isinstance(node1[2], tn.ParamEdge)
+        assert isinstance(node2[0], tn.Edge)
+        
+        new_edge = node1[2] ^ node2[0]
+        assert isinstance(new_edge, tn.ParamEdge)
+        
+        assert node1.name == 'node_0'
+        assert node2.name == 'node_1'
+        assert node1.network == node2.network
+        
+    def test_connect_same_network(self):
+        net = tn.TensorNetwork()
+        node1 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        network=net)
+        assert node1.name == 'node'
+        
+        node2 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        network=net)
+        
+        assert node1.name == 'node_0'
+        assert node2.name == 'node_1'
+        assert node1.network == node2.network
+        
+        assert isinstance(node1[2], tn.Edge)
+        assert isinstance(node2[0], tn.Edge)
+        
+        new_edge = node1[2] ^ node2[0]
+        assert isinstance(new_edge, tn.Edge)
+        
+        assert node1.name == 'node_0'
+        assert node2.name == 'node_1'
+        assert node1.network == node2.network
+        
+    def test_connect_different_sizes(self):
+        node1 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1')
+        node2 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        param_edges=True)
+        
+        node2[0].change_size(4)
+        new_edge = node1[2] ^ node2[0]
+        assert isinstance(new_edge, tn.ParamEdge)
+        assert new_edge.size() == 2
+        assert new_edge.dim() == 2
 
-    assert node.shape == torch.Size((2, 5, 2))
-    assert node.shape == node.tensor.shape
-    assert node['left'] == node.edges[0]
-    assert node['left'] == node[0]
-    assert node.name == 'node'
-    assert isinstance(node.edges[0], tn.Edge)
+        node1 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        param_edges=True)
+        node2 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        param_edges=True)
+        node1[2].change_size(3)
+        node2[0].change_size(4)
+        new_edge = node1[2] ^ node2[0]
+        assert isinstance(new_edge, tn.ParamEdge)
+        assert new_edge.size() == 3
+        assert new_edge.dim() == 2
+    
+    
+        
+        
+        
+        
+def test_copy_node():
+    node = tn.Node(shape=(2, 5, 2),
+                   axes_names=('left', 'input', 'right'),
+                   name='node',
+                   init_method='randn')
+    copy = node.copy()
+    assert torch.equal(copy.tensor, node.tensor)
+    for i in range(copy.rank):
+        if copy.axes[i].is_node1():
+            assert copy.edges[i].node1 == copy
+            assert node.edges[i].node1 == node
+            assert copy.edges[i].node2 == node.edges[i].node2
+        else:
+            assert copy.edges[i].node2 == copy
+            assert node.edges[i].node2 == node
+            assert copy.edges[i].node1 == node.edges[i].node1
 
-
-def test_set_tensor():
-    # Node with empty tensor
-    node1 = tn.Node(shape=(2, 5, 2),
-                    axes_names=('left', 'input', 'right'),
-                    name='node1')
-
-    # Node with tensor
-    tensor = torch.randn(2, 5, 2)
-    node2 = tn.Node(axes_names=('left', 'input', 'right'),
-                    name='node2',
-                    tensor=tensor)
-
-    # Set tensor in node1
-    node1.set_tensor(tensor=tensor)
-    assert torch.equal(node1.tensor, node2.tensor)
-
-    # Changing tensor changes node1's and node2's tensor
-    tensor[0, 0, 0] = 1000
-    assert node1.tensor[0, 0, 0] == 1000
-    assert node2.tensor[0, 0, 0] == 1000
-
-    # Unset tensor in node1
-    node1.unset_tensor()
-    assert not torch.equal(node1.tensor, tensor)
-    assert node1.shape == tensor.shape
-
-    # It's possible to set tensor with different shape if the
-    # edges are dangling edges
-    diff_tensor = torch.randn(2, 5, 5)
-    node1.set_tensor(tensor=diff_tensor)
-    assert node1.shape == torch.Size([2, 5, 5])
-
-    # Initialize tensor of node1
-    node1.set_tensor(init_method='randn', mean=1., std=2.)
-
-    # Set node1's tensor as node2's tensor
-    node2.tensor = node1.tensor
-    assert torch.equal(node1.tensor, node2.tensor)
-
-    # Changing node1's tensor changes node2's tensor
-    node1.tensor[0, 0, 0] = 1000
-    assert node2.tensor[0, 0, 0] == 1000
-
-    # Create parametric node
-    node3 = tn.ParamNode(axes_names=('left', 'input', 'right'),
-                         name='node3',
-                         tensor=tensor)
-    assert isinstance(node3.tensor, nn.Parameter)
-    assert torch.equal(node3.tensor.data, tensor)
-
-    # Creating parameter from tensor does not affect tensor's grad
-    param = nn.Parameter(tensor)
-    param.mean().backward()
-    assert node3.grad is None
-
-    # Set nn.Parameter as node3's tensor
-    node3.set_tensor(param)
-    assert node3.grad is not None
-    assert torch.equal(node3.grad, node3.tensor.grad)
+    node = tn.ParamNode(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        init_method='randn')
+    copy = node.copy()
+    assert torch.equal(copy.tensor, node.tensor)
+    for i in range(copy.rank):
+        if copy.axes[i].is_node1():
+            assert copy.edges[i].node1 == copy
+            assert node.edges[i].node1 == node
+            assert copy.edges[i].node2 == node.edges[i].node2
+        else:
+            assert copy.edges[i].node2 == copy
+            assert node.edges[i].node2 == node
+            assert copy.edges[i].node1 == node.edges[i].node1
 
 
 def test_parameterize():
@@ -114,13 +663,21 @@ def test_parameterize():
                    name='node',
                    network=net,
                    init_method='randn')
-    node = node.parameterize()
-    assert isinstance(node, tn.ParamNode)
-    assert node['left'].node1 == node
-    assert isinstance(node['left'], tn.Edge)
-    assert node.edges == net.edges
+    assert len(net.nodes) == 1
+    assert len(net.edges) == 3
+    
+    paramnode = node.parameterize()
+    assert node.network is None   # TODO: node still exists, but not in network, do i want this?
+    assert node.edges != paramnode.edges
+    
+    assert len(net.nodes) == 1
+    assert len(net.edges) == 3
+    assert isinstance(paramnode, tn.ParamNode)
+    assert paramnode['left'].node1 == paramnode
+    assert isinstance(paramnode['left'], tn.Edge)
+    assert paramnode.edges == net.edges
 
-    node = node.parameterize(False)
+    node = paramnode.parameterize(False)
     assert isinstance(node, tn.Node)
     assert node['left'].node1 == node
     assert isinstance(node['left'], tn.Edge)
@@ -160,78 +717,6 @@ def test_param_edges():
     for i, edge in enumerate(node.edges):
         assert isinstance(edge, tn.ParamEdge)
         assert edge.dim() == node.shape[i]
-
-
-def test_copy_node():
-    node = tn.Node(shape=(2, 5, 2),
-                   axes_names=('left', 'input', 'right'),
-                   name='node',
-                   init_method='randn')
-    copy = node.copy()
-    assert torch.equal(copy.tensor, node.tensor)
-    for i in range(copy.rank):
-        if copy.axes[i].is_node1():
-            assert copy.edges[i].node1 == copy
-            assert node.edges[i].node1 == node
-            assert copy.edges[i].node2 == node.edges[i].node2
-        else:
-            assert copy.edges[i].node2 == copy
-            assert node.edges[i].node2 == node
-            assert copy.edges[i].node1 == node.edges[i].node1
-
-    node = tn.ParamNode(shape=(2, 5, 2),
-                        axes_names=('left', 'input', 'right'),
-                        name='node',
-                        init_method='randn')
-    copy = node.copy()
-    assert torch.equal(copy.tensor, node.tensor)
-    for i in range(copy.rank):
-        if copy.axes[i].is_node1():
-            assert copy.edges[i].node1 == copy
-            assert node.edges[i].node1 == node
-            assert copy.edges[i].node2 == node.edges[i].node2
-        else:
-            assert copy.edges[i].node2 == copy
-            assert node.edges[i].node2 == node
-            assert copy.edges[i].node1 == node.edges[i].node1
-
-
-def test_permute():
-    node = tn.Node(shape=(2, 5, 2),
-                   axes_names=('left', 'input', 'right'),
-                   name='node',
-                   init_method='randn')
-    permuted_node = node.permute((0, 2, 1))
-
-    assert permuted_node['left']._nodes[permuted_node.is_node1('left')] == \
-           node['left']._nodes[node.is_node1('left')]
-    assert permuted_node['input']._nodes[permuted_node.is_node1('left')] == \
-           node['input']._nodes[node.is_node1('left')]
-    assert permuted_node['right']._nodes[permuted_node.is_node1('left')] == \
-           node['right']._nodes[node.is_node1('left')]
-
-    assert permuted_node[0]._nodes[permuted_node.is_node1('left')] == node[0]._nodes[node.is_node1('left')]
-    assert permuted_node[1]._nodes[permuted_node.is_node1('left')] == node[2]._nodes[node.is_node1('left')]
-    assert permuted_node[2]._nodes[permuted_node.is_node1('left')] == node[1]._nodes[node.is_node1('left')]
-
-    assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
-
-    # Param
-    node = tn.ParamNode(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node', init_method='randn')
-    permuted_node = node.permute((0, 2, 1))
-
-    assert permuted_node['left']._nodes[permuted_node.is_node1('left')] == \
-           node['left']._nodes[node.is_node1('left')]
-    assert permuted_node['input']._nodes[permuted_node.is_node1('left')] == \
-           node['input']._nodes[node.is_node1('left')]
-    assert permuted_node['right']._nodes[permuted_node.is_node1('left')] == \
-           node['right']._nodes[node.is_node1('left')]
-
-    assert permuted_node[0]._nodes[permuted_node.is_node1('left')] == node[0]._nodes[node.is_node1('left')]
-    assert permuted_node[1]._nodes[permuted_node.is_node1('left')] == node[2]._nodes[node.is_node1('left')]
-    assert permuted_node[2]._nodes[permuted_node.is_node1('left')] == node[1]._nodes[node.is_node1('left')]
-
-    assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
 
 
 def test_param_edge():

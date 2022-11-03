@@ -11,6 +11,44 @@ import tentorch as tn
 import time
 
 
+def test_permute():
+    node = tn.Node(shape=(2, 5, 2),
+                   axes_names=('left', 'input', 'right'),
+                   name='node',
+                   init_method='randn')
+    permuted_node = node.permute((0, 2, 1))
+
+    assert permuted_node['left']._nodes[permuted_node.is_node1('left')] == \
+           node['left']._nodes[node.is_node1('left')]
+    assert permuted_node['input']._nodes[permuted_node.is_node1('left')] == \
+           node['input']._nodes[node.is_node1('left')]
+    assert permuted_node['right']._nodes[permuted_node.is_node1('left')] == \
+           node['right']._nodes[node.is_node1('left')]
+
+    assert permuted_node[0]._nodes[permuted_node.is_node1('left')] == node[0]._nodes[node.is_node1('left')]
+    assert permuted_node[1]._nodes[permuted_node.is_node1('left')] == node[2]._nodes[node.is_node1('left')]
+    assert permuted_node[2]._nodes[permuted_node.is_node1('left')] == node[1]._nodes[node.is_node1('left')]
+
+    assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
+
+    # Param
+    node = tn.ParamNode(shape=(2, 5, 2), axes_names=('left', 'input', 'right'), name='node', init_method='randn')
+    permuted_node = node.permute((0, 2, 1))
+
+    assert permuted_node['left']._nodes[permuted_node.is_node1('left')] == \
+           node['left']._nodes[node.is_node1('left')]
+    assert permuted_node['input']._nodes[permuted_node.is_node1('left')] == \
+           node['input']._nodes[node.is_node1('left')]
+    assert permuted_node['right']._nodes[permuted_node.is_node1('left')] == \
+           node['right']._nodes[node.is_node1('left')]
+
+    assert permuted_node[0]._nodes[permuted_node.is_node1('left')] == node[0]._nodes[node.is_node1('left')]
+    assert permuted_node[1]._nodes[permuted_node.is_node1('left')] == node[2]._nodes[node.is_node1('left')]
+    assert permuted_node[2]._nodes[permuted_node.is_node1('left')] == node[1]._nodes[node.is_node1('left')]
+
+    assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
+    
+    
 def test_tensor_product():
     node1 = tn.Node(shape=(2, 3),
                     axes_names=('left', 'right'),

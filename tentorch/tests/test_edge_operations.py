@@ -13,55 +13,6 @@ import opt_einsum
 import dis
 
 
-def test_connect():
-    net = tn.TensorNetwork(name='net')
-    node1 = tn.Node(shape=(2, 5, 2),
-                    axes_names=('left', 'input', 'right'),
-                    name='node1',
-                    network=net)
-    node2 = tn.Node(shape=(2, 5, 2),
-                    axes_names=('left', 'input', 'right'),
-                    name='node2',
-                    param_edges=True)
-    assert isinstance(node1[2], tn.Edge)
-    assert isinstance(node2[0], tn.ParamEdge)
-    new_edge = node1[2] ^ node2[0]
-    assert isinstance(new_edge, tn.ParamEdge)
-    assert node2.network == net
-
-    node1 = tn.Node(shape=(2, 5, 2),
-                    axes_names=('left', 'input', 'right'),
-                    name='node1',
-                    param_edges=True)
-    node2 = tn.Node(shape=(2, 5, 2),
-                    axes_names=('left', 'input', 'right'),
-                    name='node2',
-                    network=net)
-    assert isinstance(node1[2], tn.ParamEdge)
-    assert isinstance(node2[0], tn.Edge)
-    new_edge = node1[2] ^ node2[0]
-    assert isinstance(new_edge, tn.ParamEdge)
-    assert node1.network == node2.network
-    assert node2.network != net
-
-    net1 = tn.TensorNetwork(name='net1')
-    net2 = tn.TensorNetwork(name='net2')
-    node1 = tn.Node(shape=(2, 5, 2),
-                    axes_names=('left', 'input', 'right'),
-                    name='node1',
-                    network=net1)
-    node2 = tn.Node(shape=(2, 5, 2),
-                    axes_names=('left', 'input', 'right'),
-                    name='node2',
-                    network=net2)
-    # TODO: Problem! Does not raise error because override is True when using ^
-    #with pytest.raises(ValueError):
-    #    node1[2] ^ node2[0]
-    tn.connect(node1[2], node2[0])
-    assert node1.network == net1
-    assert node2.network == net1
-
-
 def test_svd_edge():
     # TODO: complicado, esto pal futuro
     node1 = tn.Node(shape=(2, 5, 3), axes_names=('left', 'contract', 'batch1'), name='node1', init_method='randn')

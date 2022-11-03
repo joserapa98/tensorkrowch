@@ -35,8 +35,8 @@ import opt_einsum
 
 from tentorch.utils import (tab_string, check_name_style,
                             erase_enum, enum_repeated_names,
-                            permute_list, is_permutation)
-import tentorch.node_operations as nop
+                            permute_list, is_permutation,
+                            stack_unequal_tensors)
 
 import time
 
@@ -253,6 +253,7 @@ class AbstractNode(ABC):
         # Set attributes
         self._tensor_info = None
         self._temp_tensor = torch.empty(shape)
+        self._shape = shape  # TODO: check this
         self._axes = axes
         self._edges = []
         self._name = name
@@ -282,7 +283,7 @@ class AbstractNode(ABC):
     @property
     def tensor(self) -> Union[torch.Tensor, Parameter]:
         total_time = time.time()
-        if self._tensor_info is None:
+        if (self._temp_tensor is not None) or (self._tensor_info is None):  #self._tensor_info is None:
             result = self._temp_tensor
             # print('\t\t\t\t\tTensor info None:', time.time() - total_time)
             return result
@@ -311,6 +312,8 @@ class AbstractNode(ABC):
         address = node._tensor_info['address']
         # print('\t\t\t\t\t\tAddress:', time.time() - total_time)
         tensor = memory[address]
+        if tensor is None:
+            return tensor
         # print('\t\t\t\t\t\tTensor:', time.time() - total_time)
         index = self._tensor_info['stack_idx']  # TODO: 'index'
         result = tensor[index]
@@ -410,12 +413,12 @@ class AbstractNode(ABC):
         pass
 
     #@abstractmethod
-    def permute(self, axes: Sequence[Ax]) -> 'AbstractNode':
-        """
-        Extend the permute function of tensors
-        """
-        #pass
-        return nop.permute(self, axes)
+    # def permute(self, axes: Sequence[Ax]) -> 'AbstractNode':
+    #     """
+    #     Extend the permute function of tensors
+    #     """
+    #     #pass
+    #     return nop.permute(self, axes)
 
     # -------
     # Methods
@@ -629,13 +632,13 @@ class AbstractNode(ABC):
         override: if True, node1/node2 is changed in the original edge, otherwise
             the edge will be copied and reattached
         """
-        pass # TODO: uncomment when is fixed problem in __init__ Nodes
-        # for i, (edge, node1) in enumerate(zip(self._edges, self.is_node1())):
-        #     if not override:
-        #         edge = edge.copy()
-        #         self._edges[i] = edge
-        #     edge._nodes[1 - node1] = self
-        #     edge._axes[1 - node1] = self._axes[i]
+        # pass # TODO: uncomment when is fixed problem in __init__ Nodes
+        for i, (edge, node1) in enumerate(zip(self._edges, self.is_node1())):
+            if not override:
+                edge = edge.copy()
+                self._edges[i] = edge
+            edge._nodes[1 - node1] = self
+            edge._axes[1 - node1] = self._axes[i]
 
     def disconnect(self, axis: Optional[Ax] = None) -> None:
         """
@@ -912,24 +915,24 @@ class AbstractNode(ABC):
     tensor network operations should not be parameterized
     """
 
-    # Contraction of all edges connecting two nodes
-    def __matmul__(self, other: 'AbstractNode') -> 'Node':
-        return nop.contract_between(self, other)
+    # # Contraction of all edges connecting two nodes
+    # def __matmul__(self, other: 'AbstractNode') -> 'Node':
+    #     return nop.contract_between(self, other)
 
-    # Tensor product of two nodes
-    def __mod__(self, other: 'AbstractNode') -> 'Node':
-        return nop.tprod(self, other)
+    # # Tensor product of two nodes
+    # def __mod__(self, other: 'AbstractNode') -> 'Node':
+    #     return nop.tprod(self, other)
 
-    # For element-wise operations (not tensor-network-like operations),
-    # a new Node with new edges is created
-    def __mul__(self, other: 'AbstractNode') -> 'Node':
-        return nop.mul(self, other)
+    # # For element-wise operations (not tensor-network-like operations),
+    # # a new Node with new edges is created
+    # def __mul__(self, other: 'AbstractNode') -> 'Node':
+    #     return nop.mul(self, other)
 
-    def __add__(self, other: 'AbstractNode') -> 'Node':
-        return nop.add(self, other)
+    # def __add__(self, other: 'AbstractNode') -> 'Node':
+    #     return nop.add(self, other)
 
-    def __sub__(self, other: 'AbstractNode') -> 'Node':
-        return nop.sub(self, other)
+    # def __sub__(self, other: 'AbstractNode') -> 'Node':
+    #     return nop.sub(self, other)
 
     def __str__(self) -> Text:
         return self.name
@@ -1392,8 +1395,8 @@ class AbstractEdge(ABC):
     def size(self) -> int:
         return self.node1.size(self.axis1)
 
-    def contract(self) -> Node:
-        return nop.contract(self)
+    # def contract(self) -> Node:
+    #     return nop.contract(self)
 
     def svd(self,
             side='left',
@@ -1570,11 +1573,11 @@ class Edge(AbstractEdge):
         pass
 
     def __xor__(self, other: Union['Edge', 'ParamEdge']) -> Union['Edge', 'ParamEdge']:
-        return nop.connect(self, other)
+        return connect(self, other)
 
     def __or__(self, other: 'Edge') -> Tuple['Edge', 'Edge']:
         if other == self:
-            return nop.disconnect(self)
+            return disconnect(self)
         else:
             raise ValueError('Cannot disconnect one edge from another, different one. '
                              'Edge should be disconnected from itself')
@@ -1808,11 +1811,11 @@ class ParamEdge(AbstractEdge, nn.Module):
         pass
 
     def __xor__(self, other: Union['Edge', 'ParamEdge']) -> 'ParamEdge':
-        return nop.connect(self, other)
+        return connect(self, other)
 
     def __or__(self, other: 'ParamEdge') -> Tuple['ParamEdge', 'ParamEdge']:
         if other == self:
-            return nop.disconnect(self)
+            return disconnect(self)
         else:
             raise ValueError('Cannot disconnect one edge from another, different one. '
                              'Edge should be disconnected from itself')
@@ -1871,7 +1874,7 @@ class StackNode(Node):
 
         # stacked_tensor = torch.stack([node.tensor for node in nodes])
         if tensor is None:
-            tensor = nop.stack_unequal_tensors([node.tensor for node in nodes])  # TODO: not sure if this is necessary
+            tensor = stack_unequal_tensors([node.tensor for node in nodes])  # TODO: not sure if this is necessary
         super().__init__(axes_names=['stack'] + nodes[0].axes_names,
                          name=name,
                          network=nodes[0]._network,
@@ -1976,7 +1979,7 @@ class ParamStackNode(ParamNode):
 
         # stacked_tensor = torch.stack([node.tensor for node in nodes])
         if tensor is None:
-            tensor = nop.stack_unequal_tensors([node.tensor for node in nodes])
+            tensor = stack_unequal_tensors([node.tensor for node in nodes])
         super().__init__(axes_names=['stack'] + nodes[0].axes_names,
                          name=name,
                          network=nodes[0]._network,
@@ -2047,7 +2050,7 @@ class StackEdge(AbstractStackEdge, Edge):
         return self._node1_lists
 
     def __xor__(self, other: 'StackEdge') -> Edge:
-        return nop.connect_stack(self, other)
+        return connect_stack(self, other)
 
 
 class ParamStackEdge(AbstractStackEdge, ParamEdge):
@@ -2084,10 +2087,10 @@ class ParamStackEdge(AbstractStackEdge, ParamEdge):
         mats = []
         for edge in self.edges:
             mats.append(edge.matrix)
-        return nop.stack_unequal_tensors(mats)
+        return stack_unequal_tensors(mats)
 
     def __xor__(self, other: 'ParamStackEdge') -> ParamEdge:
-        return nop.connect_stack(self, other)
+        return connect_stack(self, other)
 
     # TODO: crear matrix en función de los parámetros de sus edges apilados (saber dimension maxima)
 
@@ -2471,7 +2474,9 @@ class TensorNetwork(nn.Module):
                                       *[f'batch_{j}' for j in range(len(batch_sizes))],
                                       'feature'),
                           name=f'stack_data_memory',  # TODO: guardo aqui la memory, no uso memory_data_nodes
-                          network=self)
+                          network=self,
+                          leaf=False)
+        # self._data_nodes[stack_node._name] = stack_node
 
         for i, edge in enumerate(input_edges):
             if isinstance(edge, int):
@@ -2526,9 +2531,9 @@ class TensorNetwork(nn.Module):
         #     #                      f'not match data node shape {node.shape}')
         #     node._unrestricted_set_tensor(data[i])
 
-        if data.shape[0] != len(self.data_nodes):
-            raise IndexError(f'Number of data nodes does not match number of features '
-                             f'for input data with {len(data)} features')
+        # if data.shape[0] != len(self.data_nodes):
+        #     raise IndexError(f'Number of data nodes does not match number of features '
+        #                      f'for input data with {len(data)} features')
 
         stack_node = self['stack_data_memory']
         stack_node._unrestricted_set_tensor(data)
@@ -2599,6 +2604,134 @@ class TensorNetwork(nn.Module):
     # TODO: Function to build instructions and reallocate memory, optimized for a function
     #  (se deben reasignar los par'ametros)
     # TODO: Function to allocate one memory tensor for each node, like old mode
+
+
+################################################
+#               EDGE OPERATIONS                #
+################################################
+def connect(edge1: AbstractEdge, edge2: AbstractEdge) -> Union[Edge, ParamEdge]:
+    """
+    Connect two dangling, non-batch edges.
+    """
+    # TODO: no puedo capar el conectar nodos no-leaf, pero no tiene el resultado esperado,
+    #  en realidad estás conectando los nodos originales (leaf)
+    if edge1 == edge2:
+        return edge1
+
+    for edge in [edge1, edge2]:
+        if not edge.is_dangling():
+            raise ValueError(f'Edge {edge!s} is not a dangling edge. '
+                             f'This edge points to nodes: {edge.node1!s} and {edge.node2!s}')
+        if edge.is_batch():
+            raise ValueError(f'Edge {edge!s} is a batch edge')
+    # if edge1 == edge2:
+    #     raise ValueError(f'Cannot connect edge {edge1!s} to itself')
+    if edge1.dim() != edge2.dim():
+        raise ValueError(f'Cannot connect edges of unequal dimension. '
+                         f'Dimension of edge {edge1!s}: {edge1.dim()}. '
+                         f'Dimension of edge {edge2!s}: {edge2.dim()}')
+    if edge1.size() != edge2.size():
+        # Keep the minimum size
+        if edge1.size() < edge2.size():
+            edge2.change_size(edge1.size())
+        elif edge1.size() > edge2.size():
+            edge1.change_size(edge2.size())
+
+    node1, axis1 = edge1.node1, edge1.axis1
+    node2, axis2 = edge2.node1, edge2.axis1
+    net1, net2 = node1._network, node2._network
+
+    if net1 != net2:
+        node2.move_to_network(net1)
+    net1._remove_edge(edge1)
+    net1._remove_edge(edge2)
+    net = net1
+
+    if isinstance(edge1, ParamEdge) == isinstance(edge2, ParamEdge):
+        if isinstance(edge1, ParamEdge):
+            if isinstance(edge1, ParamStackEdge):
+                new_edge = ParamStackEdge(edges=edge1.edges, node1_lists=edge1.node1_lists,
+                                             node1=node1, axis1=axis1,
+                                             node2=node2, axis2=axis2)
+                net._add_edge(new_edge)
+            else:
+                shift = edge1.shift
+                slope = edge1.slope
+                new_edge = ParamEdge(node1=node1, axis1=axis1,
+                                        shift=shift, slope=slope,
+                                        node2=node2, axis2=axis2)
+                net._add_edge(new_edge)
+        else:
+            if isinstance(edge1, StackEdge):
+                new_edge = StackEdge(edges=edge1.edges, node1_lists=edge1.node1_lists,
+                                        node1=node1, axis1=axis1,
+                                        node2=node2, axis2=axis2)
+            else:
+                new_edge = Edge(node1=node1, axis1=axis1,
+                                node2=node2, axis2=axis2)
+    else:
+        if isinstance(edge1, ParamEdge):
+            shift = edge1.shift
+            slope = edge1.slope
+        else:
+            shift = edge2.shift
+            slope = edge2.slope
+        new_edge = ParamEdge(node1=node1, axis1=axis1,
+                                shift=shift, slope=slope,
+                                node2=node2, axis2=axis2)
+        net._add_edge(new_edge)
+
+    node1._add_edge(new_edge, axis1, True)
+    node2._add_edge(new_edge, axis2, False)
+    return new_edge
+
+
+def connect_stack(edge1: AbstractStackEdge, edge2: AbstractStackEdge):
+    """
+    Connect stack edges only if their lists of edges are the same
+    (coming from already connected edges)
+    """
+    if edge1.edges != edge2.edges:
+        raise ValueError('Cannot connect stack edges whose lists of'
+                         ' edges are not the same. They will be the '
+                         'same when both lists contain edges connecting'
+                         ' the nodes that formed the stack nodes.')
+    return connect(edge1=edge1, edge2=edge2)
+
+
+def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
+                                                      Union[Edge, ParamEdge]]:
+    """
+    Disconnect an edge, returning a couple of dangling edges
+    """
+    if edge.is_dangling():
+        raise ValueError('Cannot disconnect a dangling edge')
+
+    node1, node2 = edge.node1, edge.node2
+    axis1, axis2 = edge.axis1, edge.axis2
+    if isinstance(edge, Edge):
+        new_edge1 = Edge(node1=node1, axis1=axis1)
+        new_edge2 = Edge(node1=node2, axis1=axis2)
+        net = edge.node1._network
+        net._add_edge(new_edge1)
+        net._add_edge(new_edge2)
+    else:
+        assert isinstance(edge, ParamEdge)
+        shift = edge.shift
+        slope = edge.slope
+        new_edge1 = ParamEdge(node1=node1, axis1=axis1,
+                                 shift=shift, slope=slope)
+        new_edge2 = ParamEdge(node1=node2, axis1=axis2,
+                                 shift=shift, slope=slope)
+        net = edge.node1._network
+        net._remove_edge(edge)
+        net._add_edge(new_edge1)
+        net._add_edge(new_edge2)
+
+    node1._add_edge(new_edge1, axis1, True)
+    node2._add_edge(new_edge2, axis2, True)
+    return new_edge1, new_edge2
+
 
 # ################################################
 # #                  OPERATIONS                  #

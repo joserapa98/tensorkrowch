@@ -2154,9 +2154,6 @@ class Successor:
         ----------
         kwargs: keyword arguments used in the operation
         child: node resultant from the operation
-        contracting: boolean indicating whether the first time
-            the operation was computed was in contracting mode
-            (i.e. optimizing memory management) or not
         hints: hints created the first time the computation was
             performed, so that next times we can avoid calculating
             auxiliary information needed for the computation
@@ -2164,7 +2161,6 @@ class Successor:
 
         self.kwargs = kwargs
         self.child = child
-        self.contracting = contracting
         self.hints = hints
 
 

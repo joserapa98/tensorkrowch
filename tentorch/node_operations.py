@@ -958,10 +958,10 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
                     delattr(net, 'param_' + node._name)
 
     successor = Successor(kwargs={'nodes': nodes},
-                             child=stack_node,
-                             contracting=net._automemory,
-                             hints={'all_leaf': all_leaf and (all_param or all_non_param),
-                                    'all_same_ref': all_same_ref})
+                                    child=stack_node,
+                                    hints={'all_leaf': all_leaf and (all_param or all_non_param),
+                                           'all_same_ref': all_same_ref,
+                                           'automemory': net._automemory})
     if 'stack' in nodes[0]._successors:
         nodes[0]._successors['stack'].append(successor)
     else:
@@ -976,7 +976,8 @@ def _stack_next(successor: Successor,
                 nodes: List[AbstractNode],
                 name: Optional[Text] = None) -> StackNode:
     child = successor.child
-    if successor.hints['all_same_ref'] or (successor.hints['all_leaf'] and successor.contracting):
+    if successor.hints['all_same_ref'] or \
+        (successor.hints['all_leaf'] and successor.hints['automemory']):
         return child
 
     stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])  # TODO:
@@ -999,7 +1000,7 @@ def _stack_next(successor: Successor,
                 index.append(slice(max_dim - dim, max_dim))
             node._tensor_info['index'] = index
 
-        successor.contracting = True
+        successor.hints['automemory'] = True
 
     return child
 

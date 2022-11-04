@@ -8,6 +8,8 @@ import torch
 import torch.nn as nn
 import tentorch as tn
 
+import copy
+
 import time
 import opt_einsum
 import dis
@@ -53,6 +55,27 @@ class TestAxis:
         
         node.axes[1].name = 'axis'
         assert node.axes_names == ['axis_0', 'axis_1']
+        
+    def test_change_name_batch(self):
+        node = tn.Node(shape=(3, 3),
+                       axes_names=('batch', 'axis'),
+                       name='my_node')
+        assert node.axes_names == ['batch', 'axis']
+        assert node.axes[0].is_batch()
+        assert not node.axes[1].is_batch()
+            
+        # batch attribute depends on the name,
+        # only axis with word `batch` or `stack`
+        # in the name are batch axis
+        node.axes[0].name = 'new_axis'
+        assert node.axes_names == ['new_axis', 'axis']
+        assert not node.axes[0].is_batch()
+        assert not node.axes[1].is_batch()
+        
+        node.axes[1].name = 'new_batch'
+        assert node.axes_names == ['new_axis', 'new_batch']
+        assert not node.axes[0].is_batch()
+        assert node.axes[1].is_batch()
         
     
 class TestInitNode:
@@ -114,7 +137,7 @@ class TestInitNode:
         assert net.name == 'my_net'
         assert len(net.nodes) == 1
         assert len(net._memory_nodes) == 1
-        assert len(net.data_nodes) == 0
+        assert len(net.data_nodes) == 1
         assert list(net._memory_nodes.keys()) == ['node']
         
         assert node['left'] == node.edges[0]
@@ -261,7 +284,7 @@ class TestInitParamNode:
         assert net.name == 'my_net'
         assert len(net.nodes) == 1
         assert len(net._memory_nodes) == 1
-        assert len(net.data_nodes) == 0
+        assert len(net.data_nodes) == 1
         assert list(net._memory_nodes.keys()) == ['paramnode']
         
         assert node['left'] == node.edges[0]
@@ -1370,34 +1393,56 @@ class TestTensorNetwork:
         data = torch.randn(2, 100, 5)
         net._add_data(data)
         
+    def test_copy_tn(self):
+        net = tn.TensorNetwork(name='net')
+        for i in range(4):
+            _ = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        network=net,
+                        init_method='ones')
+        for i in range(3):
+            net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
+            
+        copy_net = copy.deepcopy(net)
+        assert copy_net != net
+        assert copy_net.nodes != net.nodes
+        assert copy_net.edges != net.edges
+        
+        assert len(net.nodes) == 4
+        assert len(net.edges) == 6
+        
+        assert len(copy_net.nodes) == 4
+        assert len(copy_net.edges) == 6
+        
         
 
 
-def test_is_updated():
-    # TODO: no lo uso
-    node1 = tn.Node(shape=(2, 3),
-                    axes_names=('left', 'right'),
-                    name='node1',
-                    param_edges=True,
-                    init_method='ones')
-    node2 = tn.Node(shape=(3, 4),
-                    axes_names=('left', 'right'),
-                    name='node2',
-                    param_edges=True,
-                    init_method='ones')
-    new_edge = node1['right'] ^ node2['left']
-    prev_matrix = new_edge.matrix
-    optimizer = torch.optim.SGD(params=new_edge.parameters(), lr=0.1)
+# def test_is_updated():
+#     # TODO: no lo uso
+#     node1 = tn.Node(shape=(2, 3),
+#                     axes_names=('left', 'right'),
+#                     name='node1',
+#                     param_edges=True,
+#                     init_method='ones')
+#     node2 = tn.Node(shape=(3, 4),
+#                     axes_names=('left', 'right'),
+#                     name='node2',
+#                     param_edges=True,
+#                     init_method='ones')
+#     new_edge = node1['right'] ^ node2['left']
+#     prev_matrix = new_edge.matrix
+#     optimizer = torch.optim.SGD(params=new_edge.parameters(), lr=0.1)
 
-    node3 = node1 @ node2
-    mean = node3.mean()
-    mean.backward()
-    optimizer.step()
+#     node3 = node1 @ node2
+#     mean = node3.mean()
+#     mean.backward()
+#     optimizer.step()
 
-    assert not new_edge.is_updated()  # TODO: a lo mejor no sirve pa na
+#     assert not new_edge.is_updated()  # TODO: a lo mejor no sirve pa na
 
-    new_matrix = new_edge.matrix
-    assert not torch.equal(prev_matrix, new_matrix)
+#     new_matrix = new_edge.matrix
+#     assert not torch.equal(prev_matrix, new_matrix)
 
 
 # TODO: Hacer ParamStackNode, al hacer stack, si todos los nodos son leaf y ParamNode

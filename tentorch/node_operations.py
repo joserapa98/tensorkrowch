@@ -113,7 +113,7 @@ def _permute_first(node: AbstractNode, axes: Sequence[Ax]) -> Node:
                          ' axes of the node')
     else:
         new_node = Node(axes_names=permute_list(node.axes_names, axes_nums),
-                           name='permute_' + node._name,
+                           name='permute',
                            network=node._network,
                            leaf=False,
                            param_edges=node.param_edges(),
@@ -163,7 +163,7 @@ def _tprod_first(node1: AbstractNode, node2: AbstractNode) -> Node:
                              node2.tensor.flatten()).view(*(list(node1.shape) +
                                                             list(node2.shape)))
     new_node = Node(axes_names=node1.axes_names + node2.axes_names,
-                       name=f'tprod_{node1._name}_{node2._name}',
+                       name=f'tprod',
                        network=node1._network,
                        leaf=False,
                        tensor=new_tensor,
@@ -209,7 +209,7 @@ def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
 
     new_tensor = node1.tensor * node2.tensor
     new_node = Node(axes_names=node1.axes_names,
-                       name=f'mul_{node1._name}_{node2._name}',
+                       name=f'mul',
                        network=node1._network,
                        leaf=False,
                        tensor=new_tensor)
@@ -251,7 +251,7 @@ def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
 
     new_tensor = node1.tensor + node2.tensor
     new_node = Node(axes_names=node1.axes_names,
-                       name=f'add_{node1._name}_{node2._name}',
+                       name=f'add',
                        network=node1._network,
                        leaf=False,
                        tensor=new_tensor)
@@ -293,7 +293,7 @@ def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
 
     new_tensor = node1.tensor - node2.tensor
     new_node = Node(axes_names=node1.axes_names,
-                       name=f'sub_{node1._name}_{node2._name}',
+                       name=f'sub',
                        network=node1._network,
                        leaf=False,
                        tensor=new_tensor)
@@ -582,7 +582,7 @@ def _contract_edges_first(edges: List[AbstractEdge],
                  'new_shape': new_shape}
 
     new_node = Node(axes_names=new_axes_names,
-                       name=f'contract_{node1._name}_{node2._name}',
+                       name=f'contract',
                        network=node1._network,
                        leaf=False,
                        param_edges=False,
@@ -1047,7 +1047,7 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
     net = node._network
     for i, (tensor, edges, node1_list) in enumerate(lst):
         new_node = Node(axes_names=node.axes_names[1:],
-                           name='unbind_node',
+                           name='unbind',
                            network=net,
                            leaf=False,
                            tensor=tensor,

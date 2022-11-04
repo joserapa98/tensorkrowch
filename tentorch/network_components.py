@@ -483,14 +483,14 @@ class AbstractNode(ABC):
         if size <= 0:
             raise ValueError('new `size` should be greater than zero')
         axis_num = self.get_axis_number(axis)
-        
+          
         tensor = self.tensor
         if tensor is None:
             aux_shape = list(self.shape)
             aux_shape[axis_num] = size
             self._shape = tuple(aux_shape)
-            
-        else:
+        
+        else:  
             if size < self.shape[axis_num]:
                 index = []
                 for i, dim in enumerate(self.shape):
@@ -501,6 +501,9 @@ class AbstractNode(ABC):
                             index.append(slice(dim - size, dim))
                     else:
                         index.append(slice(0, dim))
+                aux_shape = list(self.shape)
+                aux_shape[axis_num] = size
+                self._shape = tuple(aux_shape)
                 self.tensor = tensor[index]
 
             elif size > self.shape[axis_num]:
@@ -514,6 +517,9 @@ class AbstractNode(ABC):
                     else:
                         pad += [0, 0]
                 pad.reverse()
+                aux_shape = list(self.shape)
+                aux_shape[axis_num] = size
+                self._shape = tuple(aux_shape)
                 self.tensor = nn.functional.pad(tensor, pad)
 
     def get_axis_number(self, axis: Ax) -> int:
@@ -605,23 +611,32 @@ class AbstractNode(ABC):
 
     def _reattach_edges(self, override: bool = False) -> None:
         """
-        When a node has edges that are a reference to other previously created edges,
-        those edges might have no reference to this node. With `reattach_edges`,
+        When a node has edges that are a reference to other previously created
+        edges, those edges might have no reference to this node. With `reattach_edges`,
         `node1` or `node2` of all the edges is redirected to the node, according
         to each axis `node1` attribute.
 
         Parameters
         ----------
-        override: if True, node1/node2 is changed in the original edge, otherwise
-            the edge will be copied and reattached
+        override: if True, the copied edges are also put in the corresponding
+            axis of the neighbours, so that the new node is connected to its
+            neighbours and vice versa. Otherwise, the new node has edges pointing
+            to the neighbours, but their edges are still connected to the original
+            node
         """
-        # pass # TODO: uncomment when is fixed problem in __init__ Nodes
         for i, (edge, node1) in enumerate(zip(self._edges, self.is_node1())):
-            if not override:
-                edge = edge.copy()
-                self._edges[i] = edge
+            # New edges are always a copy, so that the original
+            # node has different edges than the new one
+            edge = edge.copy()
+            self._edges[i] = edge
+            
             edge._nodes[1 - node1] = self
             edge._axes[1 - node1] = self._axes[i]
+            
+            if override:
+                if not edge.is_dangling():
+                    other_node = edge._nodes[node1]
+                    other_node._add_edge(edge, edge._axes[node1], 1 - node1)
 
     def disconnect(self, axis: Optional[Ax] = None) -> None:
         """
@@ -722,7 +737,7 @@ class AbstractNode(ABC):
                 else:
                     raise ValueError('Cannot crop tensor if its dimensions'
                                      'are smaller than node\'s dimensions')
-            tensor = tensor[index]
+            return tensor[index]
             
         else:
             raise ValueError('`tensor` should have the same number of'
@@ -953,6 +968,7 @@ class Node(AbstractNode):
                  param_edges: bool = False,
                  tensor: Optional[Tensor] = None,
                  edges: Optional[List['AbstractEdge']] = None,
+                 override_edges: bool = False,
                  node1_list: Optional[List[bool]] = None,
                  init_method: Optional[Text] = None,
                  **kwargs: float) -> None:
@@ -966,6 +982,9 @@ class Node(AbstractNode):
             (trainable) or not
         tensor: tensor "contained" in the node
         edges: list of edges to be attached to the node
+        override_edges: boolean indicating whether the provided edges should
+            be overriden when reattached (used for operations like parameterize,
+            copy and permute)
         node1_list: list of node1 boolean values corresponding to each axis
         init_method: method to use to initialize the node's tensor when it
             is not provided
@@ -1006,7 +1025,7 @@ class Node(AbstractNode):
             self._edges = edges[:]
             if self._leaf and not self._network._automemory:
                 # TODO: parameterize, permute, copy, etc.
-                self._reattach_edges(override=False) 
+                self._reattach_edges(override=override_edges) 
                 # TODO: no se para que puse eso, no es bueno,
                 # cuando hago permute en MPs contract, acabo aqu'i, y
                 # creo nuevos edges malos en lugar de los que quer'ia usar
@@ -1038,6 +1057,7 @@ class Node(AbstractNode):
                                  param_edges=self.param_edges(),
                                  tensor=self.tensor,
                                  edges=self._edges,
+                                 override_edges=True,
                                  node1_list=self.is_node1())
             return new_node
         else:
@@ -1099,6 +1119,7 @@ class ParamNode(AbstractNode):
                  param_edges: bool = False,
                  tensor: Optional[Tensor] = None,
                  edges: Optional[List['AbstractEdge']] = None,
+                 override_edges: bool = False,
                  node1_list: Optional[List[bool]] = None,
                  init_method: Optional[Text] = None,
                  **kwargs: float) -> None:
@@ -1112,6 +1133,9 @@ class ParamNode(AbstractNode):
             (trainable) or not
         tensor: tensor "contained" in the node
         edges: list of edges to be attached to the node
+        override_edges: boolean indicating whether the provided edges should
+            be overriden when reattached (used for operations like parameterize,
+            copy and permute)
         node1_list: list of node1 boolean values corresponding to each axis
         init_method: method to use to initialize the node's tensor when it
             is not provided
@@ -1153,7 +1177,7 @@ class ParamNode(AbstractNode):
                 axis._node1 = node1_list[i]
             self._edges = edges[:]
             if self._leaf and not self._network._automemory:
-                self._reattach_edges(override=False)
+                self._reattach_edges(override=override_edges)  # TODO: no estoy seguro que haya que hacerlo siempre
 
         # network
         self._network._add_node(self, override=override_node)
@@ -1208,6 +1232,7 @@ class ParamNode(AbstractNode):
                             param_edges=self.param_edges(),
                             tensor=self.tensor,
                             edges=self._edges,
+                            override_edges=True,
                             node1_list=self.is_node1())
             return new_node
         else:
@@ -1306,6 +1331,7 @@ class AbstractEdge(ABC):
 
         self._nodes = [node1, node2]
         self._axes = [axis1, axis2]
+        self._size = node1.shape[axis1.num]
 
     # ----------
     # Properties
@@ -1391,7 +1417,7 @@ class AbstractEdge(ABC):
         return (self.node1 == node) or (self.node2 == node)
 
     def size(self) -> int:
-        return self.node1.size(self.axis1)
+        return self._size  #self.node1.size(self.axis1)
 
     # def contract(self) -> Node:
     #     return nop.contract(self)
@@ -1532,6 +1558,7 @@ class Edge(AbstractEdge):
     def change_size(self, size: int) -> None:
         if not isinstance(size, int):
             TypeError('`size` should be int type')
+        self._size = size
         if not self.is_dangling():
             self.node2._change_axis_size(self.axis2, size)
         self.node1._change_axis_size(self.axis1, size)
@@ -1770,12 +1797,13 @@ class ParamEdge(AbstractEdge, nn.Module):
     def change_size(self, size: int) -> None:
         if not isinstance(size, int):
             TypeError('`size` should be int type')
+        self._size = size
+        shift, slope = self.compute_parameters(size, min(size, self.dim()))
+        self.set_parameters(shift, slope)
+        
         if not self.is_dangling():
             self.node2._change_axis_size(self.axis2, size)
         self.node1._change_axis_size(self.axis1, size)
-
-        shift, slope = self.compute_parameters(size, min(size, self.dim()))
-        self.set_parameters(shift, slope)
 
     def parameterize(self,
                      set_param: bool = True,

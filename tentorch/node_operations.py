@@ -112,6 +112,7 @@ def _permute_first(node: AbstractNode, axes: Sequence[Ax]) -> Node:
         raise ValueError('The provided list of axis is not a permutation of the'
                          ' axes of the node')
     else:
+        # TODO: allow node.tenso be None??
         new_node = Node(axes_names=permute_list(node.axes_names, axes_nums),
                            name='permute',
                            network=node._network,
@@ -926,6 +927,7 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
 
     net = nodes[0]._network
     if all_same_ref:
+        # TODO: make distinction here between unbind or index mode
         # This memory management can happen always, even not in contracting mode
         del net._memory_nodes[stack_node._tensor_info['address']]
         stack_node._tensor_info['address'] = None

@@ -175,7 +175,8 @@ class AbstractNode(ABC):
                  name: Optional[Text] = None,
                  network: Optional['TensorNetwork'] = None,
                  leaf: bool = True,
-                 data: bool = False) -> None:
+                 data: bool = False,
+                 virtual: bool = False) -> None:
         """
         Create a node. Should be subclassed before usage and
         a limited number of abstract methods overridden.
@@ -188,6 +189,8 @@ class AbstractNode(ABC):
         network: tensor network to which the node belongs
         leaf: indicates if the node is a leaf node in the network
         data: indicates if the node is a data node
+        virtual: indicates if the node is a virtual node
+            (e.g. stack_data_memory used to store the data tensor)
 
         Raises
         ------
@@ -249,6 +252,7 @@ class AbstractNode(ABC):
         self._network = network
         self._leaf = leaf
         self._data = data
+        self._virtual = virtual
         self._successors = dict()
 
     # ----------
@@ -420,6 +424,12 @@ class AbstractNode(ABC):
     
     def is_data(self) -> bool:
         return self._data
+    
+    def is_virtual(self) -> bool:
+        return self._virtual
+    
+    def is_non_leaf(self) -> bool:
+        return not (self._leaf or self._data or self._virtual)
 
     def size(self, axis: Optional[Ax] = None) -> Union[Size, int]:
         if axis is None:
@@ -805,6 +815,7 @@ class AbstractNode(ABC):
         """
         Set a new node's tensor for leaf nodes.
         """
+        # TODO: pensar bien cu'ando permito hacer set y unset
         if self._leaf and not self._network._automemory:
             self._unrestricted_set_tensor(tensor=tensor, init_method=init_method, device=device, **kwargs)
         else:
@@ -973,6 +984,7 @@ class Node(AbstractNode):
                  network: Optional['TensorNetwork'] = None,
                  leaf: bool = True,
                  data: bool = False,
+                 virtual: bool = False,
                  override_node: bool = False,
                  param_edges: bool = False,
                  tensor: Optional[Tensor] = None,
@@ -1015,14 +1027,16 @@ class Node(AbstractNode):
                              name=name,
                              network=network,
                              leaf=leaf,
-                             data=data)
+                             data=data,
+                             virtual=virtual)
         else:
             super().__init__(shape=tensor.shape,
                              axes_names=axes_names,
                              name=name,
                              network=network,
                              leaf=leaf,
-                             data=data)
+                             data=data,
+                             virtual=virtual)
 
         # edges
         if edges is None:
@@ -1129,6 +1143,7 @@ class ParamNode(AbstractNode):
                  network: Optional['TensorNetwork'] = None,
                  leaf: bool = True,
                  data: bool = False,
+                 virtual: bool = False,
                  override_node: bool = False,
                  param_edges: bool = False,
                  tensor: Optional[Tensor] = None,
@@ -1172,7 +1187,8 @@ class ParamNode(AbstractNode):
                                   name=name,
                                   network=network,
                                   leaf=leaf,
-                                  data=data)
+                                  data=data,
+                                  virtual=virtual)
         else:
             AbstractNode.__init__(self,
                                   shape=tensor.shape,
@@ -1180,7 +1196,8 @@ class ParamNode(AbstractNode):
                                   name=name,
                                   network=network,
                                   leaf=leaf,
-                                  data=data)
+                                  data=data,
+                                  virtual=virtual)
 
         # edges
         if edges is None:
@@ -2188,7 +2205,12 @@ class TensorNetwork(nn.Module):
             name = self.__class__.__name__
         self.name = name
 
-        self._nodes = dict()
+        # self._nodes = dict()
+        self._leaf_nodes = dict()
+        self._data_nodes = dict()
+        self._virtual_nodes = dict()
+        self._non_leaf_nodes = dict()
+        
         self._memory_nodes = dict()
         self._repeated_nodes_names = dict()
 
@@ -2207,11 +2229,21 @@ class TensorNetwork(nn.Module):
         """
         All the nodes belonging to the network (including data nodes)
         """
-        return self._nodes
+        all_nodes = dict()
+        all_nodes.update(self._leaf_nodes)
+        all_nodes.update(self._data_nodes)
+        all_nodes.update(self._virtual_nodes)
+        all_nodes.update(self._non_leaf_nodes)
+        return all_nodes
 
     @property
     def nodes_names(self) -> List[Text]:
-        return list(self._nodes.keys())
+        all_nodes_names = []
+        al_nodes_names += list(self._leaf_nodes.keys())
+        al_nodes_names += list(self._data_nodes.keys())
+        al_nodes_names += list(self._virtual_nodes.keys())
+        al_nodes_names += list(self._non_leaf_nodes.keys())
+        return all_nodes_names
 
     @property
     def data_nodes(self) -> Dict[Text, AbstractNode]:
@@ -2241,7 +2273,7 @@ class TensorNetwork(nn.Module):
             conflicts
         """
         if override:
-            prev_node = self._nodes[node.name]
+            prev_node = self.nodes[node.name]
             self._remove_node(prev_node)
         self._assign_node_name(node, node.name, True)
 
@@ -2265,6 +2297,16 @@ class TensorNetwork(nn.Module):
                 delattr(self, edge.module_name)
             if edge in self.edges:
                 self._edges.remove(edge)
+                
+    def _which_dict(self, node: AbstractNode) -> Optional[Dict[Text, AbstractNode]]:
+        if node._leaf:
+            return self._leaf_nodes
+        elif node._data:
+            return self._data_nodes
+        elif node._virtual:
+            return self._virtual_nodes
+        else:
+            return self._non_leaf_nodes
 
     def _remove_node(self, node: AbstractNode) -> None:
         """
@@ -2279,9 +2321,10 @@ class TensorNetwork(nn.Module):
 
         self._unassign_node_name(node)
 
-        if node._name in self._nodes:
-            if self._nodes[node._name] == node:
-                del self._nodes[node._name]
+        nodes_dict = self._which_dict(node)
+        if node._name in nodes_dict:
+            if nodes_dict[node._name] == node:
+                del nodes_dict[node._name]
                 
                 if node._name in self._memory_nodes:  # NOTE: puede que no est'e si usaba memory de otro nodo
                     del self._memory_nodes[node._name]
@@ -2327,19 +2370,20 @@ class TensorNetwork(nn.Module):
 
     def _update_node_info(self, node: AbstractNode, new_name: Text) -> None:
         prev_name = node._name
+        nodes_dict = self._which_dict(node)
 
-        if new_name in self._nodes:
-            aux_node = self._nodes[new_name]
+        if new_name in nodes_dict:
+            aux_node = nodes_dict[new_name]
             aux_node._temp_tensor = aux_node.tensor
 
-        if self._nodes[prev_name] == node:
-            self._nodes[new_name] = self._nodes.pop(prev_name)
+        if nodes_dict[prev_name] == node:
+            nodes_dict[new_name] = nodes_dict.pop(prev_name)
             # TODO: A lo mejor esto solo si address is not None
             if node._tensor_info['address'] is not None:  # TODO: caso se est'a usando la memoria de otro nodo
                 self._memory_nodes[new_name] = self._memory_nodes.pop(prev_name)
                 node._assign_memory(address=new_name)
         else:
-            self._nodes[new_name] = node
+            nodes_dict[new_name] = node
             self._memory_nodes[new_name] = node._temp_tensor
             node._temp_tensor = None
             node._assign_memory(address=new_name)
@@ -2381,7 +2425,8 @@ class TensorNetwork(nn.Module):
         self._repeated_nodes_names[non_enum_prev_name] += 1
 
         if first_time:
-            self._nodes[new_name] = node
+            nodes_dict = self._which_dict(node)
+            nodes_dict[new_name] = node
             self._memory_nodes[new_name] = node._temp_tensor
             node._tensor_info = {'address': new_name,
                                  'node_ref': None,

@@ -348,11 +348,11 @@ class TestInitParamNode:
             node = tn.ParamNode(shape=(2, 5, 2),
                                 tensor=torch.randn(2, 5, 2))
 
-
+    
 class TestSetTensor:
     
     @pytest.fixture
-    def setup():
+    def setup(self):
         node1 = tn.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node1')
@@ -385,7 +385,7 @@ class TestSetTensor:
         
     def test_unset_tensor(self, setup):
         node1, node2, tensor = setup
-        assert self.node1.tensor is None
+        assert node1.tensor is None
         
         # Using unset_tensor method
         node1.tensor = tensor
@@ -417,7 +417,7 @@ class TestSetTensor:
     def test_set_diff_shape(self, setup):
         node1, node2, tensor = setup
         assert node1.tensor is None
-        assert self.node1.shape == (2, 5, 2)
+        assert node1.shape == (2, 5, 2)
         
         # If edges are non-dangling, we can set a
         # tensor with different size in those axes
@@ -427,7 +427,7 @@ class TestSetTensor:
         
     def test_set_init_method(self, setup):
         node1, node2, tensor = setup
-        assert self.node1.tensor is None
+        assert node1.tensor is None
         
         # Initialize tensor of node1
         node1.set_tensor(init_method='randn', mean=1., std=2.)
@@ -618,10 +618,231 @@ class TestConnect:
         assert new_edge.dim() == 2
     
     
+class TestParameterize:
+    
+    def test_parameterize_node(self):
+        node1 = tn.Node(axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        tensor=torch.randn(2, 5, 2))
+        node2 = tn.Node(axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        tensor=torch.randn(2, 5, 2))
+        node1['right'] ^ node2['left']
         
+        net = node1.network
+        assert len(net.nodes) == 2
+        assert len(net.edges) == 4
+        assert node1['right'] == node2['left']
         
+        paramnode1 = node1.parameterize()
+        assert len(net.nodes) == 2
+        assert len(net.edges) == 4
         
+        # Now `node2`` and `paramnode1`` share same edges
+        assert paramnode1['right'] == node2['left']
         
+        # `node1`` still exists and has edges pointing to `node2``,
+        # but `node2`` cannot "see" it
+        assert node1['right'] != node2['left']
+        assert node1['right']._nodes[node1.is_node1('right')] == node2
+        del node1
+        
+        assert isinstance(paramnode1, tn.ParamNode)
+        assert paramnode1['left'].node1 == paramnode1
+        assert isinstance(paramnode1['left'], tn.Edge)
+        
+    def test_deparameterize_paramnode(self):
+        paramnode1 = tn.ParamNode(axes_names=('left', 'input', 'right'),
+                                  name='paramnode1',
+                                  tensor=torch.randn(2, 5, 2))
+        node2 = tn.Node(axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        tensor=torch.randn(2, 5, 2))
+        paramnode1['right'] ^ node2['left']
+        
+        net = paramnode1.network
+        assert len(net.nodes) == 2
+        assert len(net.edges) == 4
+        assert paramnode1['right'] == node2['left']
+        
+        node1 = paramnode1.parameterize(False)
+        assert len(net.nodes) == 2
+        assert len(net.edges) == 4
+        
+        # Now `node2`` and `node1`` share same edges
+        assert node1['right'] == node2['left']
+        
+        # `paramnode1`` still exists and has edges pointing to `node2``,
+        # but `node2`` cannot "see" it
+        assert paramnode1['right'] != node2['left']
+        assert paramnode1['right']._nodes[paramnode1.is_node1('right')] == node2
+        del paramnode1
+        
+        assert isinstance(node1, tn.Node)
+        assert node1['left'].node1 == node1
+        assert isinstance(node1['left'], tn.Edge)
+        
+    def test_parameterize_dangling_edge(self):
+        node = tn.Node(axes_names=('left', 'input', 'right'),
+                       tensor=torch.randn(3, 5, 2))
+        net = node.network
+        
+        prev_edge = node['left']
+        assert prev_edge in net.edges
+
+        node['left'].parameterize(set_param=True, size=4)
+        assert isinstance(node['left'], tn.ParamEdge)
+        assert node.shape == (4, 5, 2)
+        assert node.dim() == (3, 5, 2)
+
+        assert prev_edge not in net.edges
+        assert node['left'] in net.edges
+
+        node['left'].parameterize(set_param=False)
+        assert isinstance(node['left'], tn.Edge)
+        assert node.shape == (3, 5, 2)
+        assert node.dim() == (3, 5, 2)
+
+        node['left'].parameterize(set_param=True, size=2)
+        assert node.shape == (2, 5, 2)
+        assert node.dim() == (2, 5, 2)
+
+        node['left'].parameterize(set_param=False)
+        assert node.shape == (2, 5, 2)
+        assert node.dim() == (2, 5, 2)
+        
+    def test_parameterize_dangling_edge2(self):
+        node = tn.Node(shape=(3, 5, 2),
+                       axes_names=('left', 'input', 'right'))
+        net = node.network
+        
+        prev_edge = node['left']
+        assert prev_edge in net.edges
+
+        node['left'].parameterize(set_param=True, size=4)
+        assert isinstance(node['left'], tn.ParamEdge)
+        assert node.shape == (4, 5, 2)
+        assert node.dim() == (3, 5, 2)
+
+        assert prev_edge not in net.edges
+        assert node['left'] in net.edges
+
+        node['left'].parameterize(set_param=False)
+        assert isinstance(node['left'], tn.Edge)
+        assert node.shape == (3, 5, 2)
+        assert node.dim() == (3, 5, 2)
+
+        node['left'].parameterize(set_param=True, size=2)
+        assert node.shape == (2, 5, 2)
+        assert node.dim() == (2, 5, 2)
+
+        node['left'].parameterize(set_param=False)
+        assert node.shape == (2, 5, 2)
+        assert node.dim() == (2, 5, 2)
+        
+    def test_parameterize_connected_edge(self):
+        node1 = tn.Node(axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        tensor=torch.randn(2, 5, 3))
+        node2 = tn.Node(axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        tensor=torch.randn(3, 5, 2))
+        node1['right'] ^ node2['left']
+        
+        prev_edge = node2['left']
+        assert prev_edge in node2.edges
+
+        node2['left'].parameterize(set_param=True, size=4)
+        assert isinstance(node2['left'], tn.ParamEdge)
+        assert node2.shape == (4, 5, 2)
+        assert node2.dim() == (3, 5, 2)
+
+        assert prev_edge not in node2.edges
+
+        node2['left'].parameterize(set_param=False)
+        assert isinstance(node2['left'], tn.Edge)
+        assert node2.shape == (3, 5, 2)
+        assert node2.dim() == (3, 5, 2)
+
+        node2['left'].parameterize(set_param=True, size=2)
+        assert node2.shape == (2, 5, 2)
+        assert node2.dim() == (2, 5, 2)
+
+        node2['left'].parameterize(set_param=False)
+        assert node2.shape == (2, 5, 2)
+        assert node2.dim() == (2, 5, 2) 
+        
+    def test_change_size_dim_dangling(self):
+        node = tn.Node(shape=(2, 5, 2),
+                       axes_names=('left', 'input', 'right'),
+                       name='node',
+                       param_edges=True,
+                       init_method='randn')
+        
+        for i, edge in enumerate(node.edges):
+            assert isinstance(edge, tn.ParamEdge)
+            assert edge.dim() == node.shape[i]
+        
+        param_edge = node[0]
+        param_edge.change_size(size=4)
+        assert param_edge.size() == 4
+        assert param_edge.node1.size() == (4, 5, 2)
+        assert param_edge.dim() == 2
+        assert param_edge.node1.dim() == (2, 5, 2)
+
+        param_edge.change_dim(dim=3)
+        assert param_edge.size() == 4
+        assert param_edge.node1.size() == (4, 5, 2)
+        assert param_edge.dim() == 3
+        assert param_edge.node1.dim() == (3, 5, 2)
+
+        param_edge.change_size(size=2)
+        assert param_edge.size() == 2
+        assert param_edge.node1.size() == (2, 5, 2)
+        assert param_edge.dim() == 2
+        assert param_edge.node1.dim() == (2, 5, 2)
+        
+    def test_change_size_dim_connected(self):
+        node1 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        param_edges=True,
+                        init_method='randn')
+        node2 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        param_edges=True,
+                        init_method='randn')
+        node1['right'] ^ node2['left']
+        
+        param_edge = node2['left']
+        param_edge.change_size(size=4)
+        assert param_edge.size() == 4
+        assert param_edge.node1.size() == (2, 5, 4)
+        assert param_edge.node2.size() == (4, 5, 2)
+        assert param_edge.dim() == 2
+        assert param_edge.node1.dim() == (2, 5, 2)
+        assert param_edge.node2.dim() == (2, 5, 2)
+
+        param_edge.change_dim(dim=3)
+        assert param_edge.size() == 4
+        assert param_edge.node1.size() == (2, 5, 4)
+        assert param_edge.node2.size() == (4, 5, 2)
+        assert param_edge.dim() == 3
+        assert param_edge.node1.dim() == (2, 5, 3)
+        assert param_edge.node2.dim() == (3, 5, 2)
+
+        param_edge.change_size(size=2)
+        assert param_edge.size() == 2
+        assert param_edge.node1.size() == (2, 5, 2)
+        assert param_edge.node2.size() == (2, 5, 2)
+        assert param_edge.dim() == 2
+        assert param_edge.node1.dim() == (2, 5, 2)
+        assert param_edge.node2.dim() == (2, 5, 2)
+
+
+
+
 def test_copy_node():
     node = tn.Node(shape=(2, 5, 2),
                    axes_names=('left', 'input', 'right'),
@@ -654,98 +875,7 @@ def test_copy_node():
             assert copy.edges[i].node2 == copy
             assert node.edges[i].node2 == node
             assert copy.edges[i].node1 == node.edges[i].node1
-
-
-def test_parameterize():
-    net = tn.TensorNetwork(name='net_test')
-    node = tn.Node(shape=(3, 5, 2),
-                   axes_names=('left', 'input', 'right'),
-                   name='node',
-                   network=net,
-                   init_method='randn')
-    assert len(net.nodes) == 1
-    assert len(net.edges) == 3
-    
-    paramnode = node.parameterize()
-    assert node.network is None   # TODO: node still exists, but not in network, do i want this?
-    assert node.edges != paramnode.edges
-    
-    assert len(net.nodes) == 1
-    assert len(net.edges) == 3
-    assert isinstance(paramnode, tn.ParamNode)
-    assert paramnode['left'].node1 == paramnode
-    assert isinstance(paramnode['left'], tn.Edge)
-    assert paramnode.edges == net.edges
-
-    node = paramnode.parameterize(False)
-    assert isinstance(node, tn.Node)
-    assert node['left'].node1 == node
-    assert isinstance(node['left'], tn.Edge)
-    assert node.edges == net.edges
-
-    prev_edge = node['left']
-    assert prev_edge in net.edges
-
-    node['left'].parameterize(set_param=True, size=4)
-    assert isinstance(node['left'], tn.ParamEdge)
-    assert node.shape == (4, 5, 2)
-    assert node.dim() == (3, 5, 2)
-
-    assert prev_edge not in net.edges
-    assert node['left'] in net.edges
-
-    node['left'].parameterize(set_param=False)
-    assert isinstance(node['left'], tn.Edge)
-    assert node.shape == (3, 5, 2)
-    assert node.dim() == (3, 5, 2)
-
-    node['left'].parameterize(set_param=True, size=2)
-    assert node.shape == (2, 5, 2)
-    assert node.dim() == (2, 5, 2)
-
-    node['left'].parameterize(set_param=False)
-    assert node.shape == (2, 5, 2)
-    assert node.dim() == (2, 5, 2)
-
-
-def test_param_edges():
-    node = tn.Node(shape=(2, 5, 2),
-                   axes_names=('left', 'input', 'right'),
-                   name='node',
-                   param_edges=True,
-                   init_method='randn')
-    for i, edge in enumerate(node.edges):
-        assert isinstance(edge, tn.ParamEdge)
-        assert edge.dim() == node.shape[i]
-
-
-def test_param_edge():
-    node = tn.Node(shape=(2, 5, 2),
-                   axes_names=('left', 'input', 'right'),
-                   name='node',
-                   param_edges=True,
-                   init_method='randn')
-    param_edge = node[0]
-    assert isinstance(param_edge, tn.ParamEdge)
-
-    param_edge.change_size(size=4)
-    assert param_edge.size() == 4
-    assert param_edge.node1.size() == (4, 5, 2)
-    assert param_edge.dim() == 2
-    assert param_edge.node1.dim() == (2, 5, 2)
-
-    param_edge.change_dim(dim=3)
-    assert param_edge.size() == 4
-    assert param_edge.node1.size() == (4, 5, 2)
-    assert param_edge.dim() == 3
-    assert param_edge.node1.dim() == (3, 5, 2)
-
-    param_edge.change_size(size=2)
-    assert param_edge.size() == 2
-    assert param_edge.node1.size() == (2, 5, 2)
-    assert param_edge.dim() == 2
-    assert param_edge.node1.dim() == (2, 5, 2)
-
+            
 
 def test_is_updated():
     node1 = tn.Node(shape=(2, 3),

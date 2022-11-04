@@ -1134,10 +1134,17 @@ unbind = Operation(_check_first_unbind, _unbind_first, _unbind_next)
 
 
 ##################   OTHERS   ##################
-# TODO: más adelante, no prioritario
+def _check_first_einsum(string: Text, *nodes: AbstractNode) -> Optional[Successor]:
+    kwargs = {'string': string,
+              'nodes': nodes}
+    if 'einsum' in nodes[0]._successors:
+        for succ in nodes[0]._successors['einsum']:
+            if succ.kwargs == kwargs:
+                return succ
+    return None
 
-def einsum(string: Text, *nodes: AbstractNode) -> Node:
-    # TODO: find contraction path in first, apply in next (try with opt_einsum and torch.einsum)
+
+def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
     """
     Adapt opt_einsum contract function to make it suitable for nodes
 
@@ -1239,13 +1246,148 @@ def einsum(string: Text, *nodes: AbstractNode) -> Node:
     input_string = ','.join(input_strings + matrices_strings)
     einsum_string = input_string + '->' + output_string
     tensors = list(map(lambda n: n.tensor, nodes))
-    new_tensor = opt_einsum.contract(einsum_string, *(tensors + matrices))
+    path, _ = opt_einsum.contract_path(einsum_string, *(tensors + matrices))
+    new_tensor = opt_einsum.contract(einsum_string, *(tensors + matrices),
+                                     optimize=path)
 
     # We assume all nodes belong to the same network
-    new_node = Node(axes_names=list(axes_names.values()), name='einsum_node', network=nodes[0].network, leaf=False,
-                       param_edges=False, tensor=new_tensor, edges=list(edges.values()),
-                       node1_list=list(node1_list.values()))
+    new_node = Node(axes_names=list(axes_names.values()),
+                    name='einsum',
+                    network=nodes[0].network,
+                    leaf=False,
+                    param_edges=False,
+                    tensor=new_tensor,
+                    edges=list(edges.values()),
+                    node1_list=list(node1_list.values()))
+    
+    successor = Successor(kwargs = {'string': string,
+                                    'nodes': nodes},
+                          child=new_node,
+                          hints=path)
+    if 'einsum' in nodes[0]._successors:
+        nodes[0]._successors['einsum'].append(successor)
+    else:
+        nodes[0]._successors['einsum'] = [successor]
+
+    net = nodes[0].network
+    net._list_ops.append((nodes[0], 'einsum', len(nodes[0]._successors['einsum']) - 1))
+    
     return new_node
+
+
+# TODO: pensar esto un poco mejor, ahorrar c'odigo y c'alculos
+def _einsum_next(successor: Successor, string: Text, *nodes: AbstractNode) -> Node:
+    """
+    Adapt opt_einsum contract function to make it suitable for nodes
+
+    Parameters
+    ----------
+    string: einsum-like string
+    nodes: nodes to be operated
+
+    Returns
+    -------
+    new_node: node resultant from the einsum operation
+    """
+    if '->' not in string:
+        raise ValueError('Einsum `string` should have an arrow `->` separating '
+                         'inputs and output strings')
+    input_strings = string.split('->')[0].split(',')
+    if len(input_strings) != len(nodes):
+        raise ValueError('Number of einsum subscripts must be equal to the number of operands')
+    if len(string.split('->')) >= 2:
+        output_string = string.split('->')[1]
+    else:
+        output_string = ''
+
+    # Check string and collect information from involved edges
+    matrices = []
+    matrices_strings = []
+    output_dict = dict(zip(output_string, [0] * len(output_string)))
+    # Used for counting appearances of output subscripts in the input strings
+    output_char_index = dict(zip(output_string, range(len(output_string))))
+    contracted_edges = dict()
+    # Used for counting how many times a contracted edge's subscript appears among input strings
+    batch_edges = dict()
+    # Used for counting how many times a batch edge's subscript appears among input strings
+    axes_names = dict(zip(range(len(output_string)),
+                          [None] * len(output_string)))
+    edges = dict(zip(range(len(output_string)),
+                     [None] * len(output_string)))
+    node1_list = dict(zip(range(len(output_string)),
+                          [None] * len(output_string)))
+    for i, input_string in enumerate(input_strings):
+        for j, char in enumerate(input_string):
+            if char not in output_dict:
+                edge = nodes[i][j]
+                if char not in contracted_edges:
+                    contracted_edges[char] = [edge]
+                else:
+                    if len(contracted_edges[char]) >= 2:
+                        raise ValueError(f'Subscript {char} appearing more than once in the '
+                                         f'input should be a batch index, but it does not '
+                                         f'appear among the output subscripts')
+                    if edge != contracted_edges[char][0]:
+                        if isinstance(edge, AbstractStackEdge) and \
+                                isinstance(contracted_edges[char][0], AbstractStackEdge):
+                            edge = edge ^ contracted_edges[char][0]
+                        else:
+                            raise ValueError(f'Subscript {char} appears in two nodes that do not '
+                                             f'share a connected edge at the specified axis')
+                    contracted_edges[char] += [edge]
+                if isinstance(edge, ParamEdge):
+                    in_matrices = False
+                    for mat in matrices:
+                        if torch.equal(edge.matrix, mat):
+                            in_matrices = True
+                            break
+                    if not in_matrices:
+                        matrices_strings.append(2 * char)
+                        matrices.append(edge.matrix)
+            else:
+                if output_dict[char] == 0:
+                    edge = nodes[i][j]
+                    if edge.is_batch():
+                        batch_edges[char] = 0
+                    k = output_char_index[char]
+                    axes_names[k] = nodes[i].axes[j].name
+                    edges[k] = edge
+                    node1_list[k] = nodes[i].axes[j].is_node1()
+                output_dict[char] += 1
+                if char in batch_edges:
+                    batch_edges[char] += 1
+
+    for char in output_dict:
+        if output_dict[char] == 0:
+            raise ValueError(f'Output subscript {char} must appear among '
+                             f'the input subscripts')
+        if output_dict[char] > 1:
+            if char in batch_edges:
+                if batch_edges[char] < output_dict[char]:
+                    raise ValueError(f'Subscript {char} used as batch, but some '
+                                     f'of those edges are not batch edges')
+            else:
+                raise ValueError(f'Subscript {char} used as batch, but none '
+                                 f'of those edges is a batch edge')
+
+    for char in contracted_edges:
+        if len(contracted_edges[char]) == 1:
+            raise ValueError(f'Subscript {char} appears only once in the input '
+                             f'but none among the output subscripts')
+
+    input_string = ','.join(input_strings + matrices_strings)
+    einsum_string = input_string + '->' + output_string
+    tensors = list(map(lambda n: n.tensor, nodes))
+    new_tensor = opt_einsum.contract(einsum_string, *(tensors + matrices),
+                                     optimize=successor.hints)
+    
+    child = successor.child
+    child._unrestricted_set_tensor(new_tensor)
+    return child
+
+
+einsum = Operation(_check_first_einsum, _einsum_first, _einsum_next)
+
 
 
 def stacked_einsum(string: Text, *nodes_lists: List[AbstractNode]) -> List[Node]:

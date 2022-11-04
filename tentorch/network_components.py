@@ -121,7 +121,13 @@ class Axis:
             raise TypeError('`name` should be str type')
         if not check_name_style(name):
             raise ValueError('Names can only contain letters, numbers and underscores')
-        elif self._node is not None:
+        
+        if self._batch and not ('batch' in name or 'stack' in name):
+            self._batch = False
+        elif not self._batch and ('batch' in name or 'stack' in name):
+            self._batch = True
+        
+        if self._node is not None:
             self._node._change_axis_name(self, name)
         else:
             self._name = name

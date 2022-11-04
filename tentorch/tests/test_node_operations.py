@@ -378,8 +378,8 @@ def test_stack():
         input_edges += [node['input_0'], node['input_1']]
     net.set_data_nodes(input_edges=input_edges,
                        batch_sizes=[10])
-    data = torch.randn(10, 3, 2 * 5)
-    net._add_data(data.unbind(2))
+    data = torch.randn(2 * 5, 10, 3)
+    net._add_data(data)
 
     stack_node = tn.stack(nodes, name='stack_node')
     stack_input_0 = tn.stack([node.neighbours('input_0') for node in nodes],
@@ -429,8 +429,8 @@ def test_stack():
         input_edges += [node['input_0'], node['input_1']]
     net.set_data_nodes(input_edges=input_edges,
                        batch_sizes=[10])
-    data = torch.randn(10, 3, 2 * 5)
-    net._add_data(data.unbind(2))
+    data = torch.randn(2 * 5, 10, 3)
+    net._add_data(data)
 
     net._contracting = True
     stack_node = tn.stack(nodes, name='stack_node')
@@ -481,8 +481,8 @@ def test_stack():
         input_edges += [node['input_0'], node['input_1']]
     net.set_data_nodes(input_edges=input_edges,
                        batch_sizes=[10])
-    data = torch.randn(10, 3, 2 * 5)
-    net._add_data(data.unbind(2))
+    data = torch.randn(2 * 5, 10, 3)
+    net._add_data(data)
 
     stack_node = tn.stack(nodes, name='stack_node')
     stack_input_0 = tn.stack([node.neighbours('input_0') for node in nodes],
@@ -529,8 +529,8 @@ def test_stack():
         input_edges += [node['input_0'], node['input_1']]
     net.set_data_nodes(input_edges=input_edges,
                        batch_sizes=[10])
-    data = torch.randn(10, 3, 2 * 5)
-    net._add_data(data.unbind(2))
+    data = torch.randn(2 * 5, 10, 3)
+    net._add_data(data)
 
     stack_node = tn.stack(nodes, name='stack_node')
     stack_input_0 = tn.stack([node.neighbours('input_0') for node in nodes],
@@ -556,8 +556,8 @@ def test_stack():
         input_edges += [node['input_0'], node['input_1']]
     net.set_data_nodes(input_edges=input_edges,
                        batch_sizes=[10])
-    data = torch.randn(10, 3, 2 * 5)
-    net._add_data(data.unbind(2))
+    data = torch.randn(2 * 5, 10, 3)
+    net._add_data(data)
     net['data_0'].disconnect()
 
     stack_node = tn.stack(nodes, name='stack_node')

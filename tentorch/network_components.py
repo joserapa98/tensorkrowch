@@ -770,6 +770,9 @@ class AbstractNode(ABC):
                               'a tensor that is already in the required device')
             if not self._compatible_dims(tensor):
                 tensor = self._crop_tensor(tensor)
+                warnings.warn('`tensor` dimensions are not compatible with the'
+                              ' node\'s dimensions. `tensor` has been cropped '
+                              'before setting it to the node')
             correct_format_tensor = self._set_tensor_format(tensor)
 
         elif init_method is not None:
@@ -995,9 +998,12 @@ class Node(AbstractNode):
         if (shape is None) == (tensor is None):
             if shape is None:
                 raise ValueError('One of `shape` or `tensor` must be provided')
+            elif tensor.shape == shape:
+                shape = None
             else:
-                raise ValueError('Only one of `shape` or `tensor` should be provided')
-        elif shape is not None:
+                raise ValueError('If both `shape` or `tensor` are given,'
+                                 '`tensor`\'s shape should be equal to `shape`')
+        if shape is not None:
             super().__init__(shape=shape,
                              axes_names=axes_names,
                              name=name,
@@ -1050,7 +1056,8 @@ class Node(AbstractNode):
 
     def parameterize(self, set_param: bool = True) -> Union['Node', 'ParamNode']:
         if set_param:
-            new_node = ParamNode(axes_names=self.axes_names,
+            new_node = ParamNode(shape=self.shape,
+                                 axes_names=self.axes_names,
                                  name=self._name,
                                  network=self._network,
                                  override_node=True,
@@ -1064,7 +1071,8 @@ class Node(AbstractNode):
             return self
 
     def copy(self) -> 'Node':
-        new_node = Node(axes_names=self.axes_names,
+        new_node = Node(shape=self.shape,
+                        axes_names=self.axes_names,
                         name='copy_' + self._name,
                         network=self._network,
                         param_edges=self.param_edges(),
@@ -1146,9 +1154,12 @@ class ParamNode(AbstractNode):
         if (shape is None) == (tensor is None):
             if shape is None:
                 raise ValueError('One of `shape` or `tensor` must be provided')
+            elif tensor.shape == shape:
+                shape = None
             else:
-                raise ValueError('Only one of `shape` or `tensor` should be provided')
-        elif shape is not None:
+                raise ValueError('If both `shape` or `tensor` are given,'
+                                 '`tensor`\'s shape should be equal to `shape`')
+        if shape is not None:
             AbstractNode.__init__(self,
                                   shape=shape,
                                   axes_names=axes_names,
@@ -1225,7 +1236,8 @@ class ParamNode(AbstractNode):
 
     def parameterize(self, set_param: bool = True) -> Union['Node', 'ParamNode']:
         if not set_param:
-            new_node = Node(axes_names=self.axes_names,
+            new_node = Node(shape=self.shape,
+                            axes_names=self.axes_names,
                             name=self._name,
                             network=self._network,
                             override_node=True,
@@ -1239,7 +1251,8 @@ class ParamNode(AbstractNode):
             return self
 
     def copy(self) -> 'ParamNode':
-        new_node = ParamNode(axes_names=self.axes_names,
+        new_node = ParamNode(shape=self.shape,
+                             axes_names=self.axes_names,
                              name='copy_' + self._name,
                              network=self._network,
                              param_edges=self.param_edges(),
@@ -2170,7 +2183,7 @@ class TensorNetwork(nn.Module):
     def __init__(self, name: Optional[Text] = None):
         super().__init__()
         if name is None:
-            name = 'net'
+            name = self.__class__.__name__
         self.name = name
 
         self._nodes = dict()
@@ -2228,16 +2241,9 @@ class TensorNetwork(nn.Module):
         if override:
             prev_node = self._nodes[node.name]
             self._remove_node(prev_node)
+        self._assign_node_name(node, node.name, True)
 
-        name = node.name # TODO: esto para evitar con nombres larguisimos de contract
-        if node.name.startswith('contract_'):
-            name = 'node'
-        self._assign_node_name(node, name, True)
-        # TODO: estoy borrando numeraci'on de nodos que ya doy numeracion,
-        #  como cuando opero dos nodos y heredo un subindice. En ese caso
-        #  deber'ia dejar el subindice
-
-    def add_nodes_from(self, nodes_list: Sequence[AbstractNode]):
+    def add_nodes_from(self, nodes_list: Sequence[AbstractNode]):  # TODO: not used
         for name, node in nodes_list:
             self._add_node(node)
 
@@ -2496,15 +2502,29 @@ class TensorNetwork(nn.Module):
             raise ValueError('Tensor network data nodes should be unset in order to set new ones')
 
         # TODO: Stack data node donde se guardan los datos, se supone que todas las features tienen la misma dim
-        stack_node = Node(shape=(*batch_sizes, len(input_edges), input_edges[0].size()),  # TODO: supongo edge es AbstractEdge
+        stack_node = Node(shape=(len(input_edges), *batch_sizes, input_edges[0].size()),  # TODO: supongo edge es AbstractEdge
                           axes_names=('n_features',
                                       *[f'batch_{j}' for j in range(len(batch_sizes))],
                                       'feature'),
                           name=f'stack_data_memory',  # TODO: guardo aqui la memory, no uso memory_data_nodes
                           network=self,
                           leaf=False)
+        n_features_node = Node(shape=(stack_node.shape[0],),
+                               axes_names=('n_features',),
+                               name='virtual_n_features',
+                               network=self,
+                               leaf=False)
+        feature_node = Node(shape=(stack_node.shape[-1],),
+                            axes_names=('feature',),
+                            name='virtual_feature',
+                            network=self,
+                            leaf=False)
+        stack_node['n_features'] ^ n_features_node['n_features']
+        stack_node['feature'] ^ feature_node['feature']
+        
         # self._data_nodes[stack_node._name] = stack_node
 
+        data_nodes = []
         for i, edge in enumerate(input_edges):
             if isinstance(edge, int):
                 edge = self[edge]
@@ -2520,33 +2540,35 @@ class TensorNetwork(nn.Module):
                         network=self,
                         leaf=False)
             node['feature'] ^ edge
-            self._data_nodes[node._name] = node  # TODO: se guarda mal, el nombre del primer data cambia de 'data' a 'data_0'
-
-        # TODO: igual mejor como antes en un solo bucle, pero cuidado con los nombres
-        #  (cuando modificamos la memoria del primer nodo su nombre es 'data', pero
-        #  luego pasa a ser 'data_0' y no lo cambiamos bien)
-        for i, node in enumerate(self._data_nodes.values()):
+            data_nodes.append(node)
+            
+        for i, node in enumerate(data_nodes):
             del self._memory_nodes[node._tensor_info['address']]
             node._tensor_info['address'] = None
             node._tensor_info['node_ref'] = stack_node
             node._tensor_info['full'] = False
             node._tensor_info['stack_idx'] = i
             node._tensor_info['index'] = i
+            
+            self._data_nodes[node._name] = node
 
     def unset_data_nodes(self) -> None:
         if self.data_nodes:
             for node in self.data_nodes.values():
                 self.delete_node(node)
             self._data_nodes = dict()
+            self.delete_node(self.nodes['stack_data_memory'])
+            self.delete_node(self.nodes['virtual_n_features'])
+            self.delete_node(self.nodes['virtual_feature'])
 
-    def _add_data(self, data: Sequence[Tensor]) -> None:  # TODO: data should be stored as one stacked tensor
+    def _add_data(self, data: Tensor) -> None:
         """
         Add data to data nodes, that is, change their tensors by new data tensors given a new data set.
         
         Parameters
         ----------
-        data: sequence of tensors, each having the same shape as the corresponding data node,
-              batch_size_{0} x ... x batch_size_{n} x feature_size_{i}  # TODO: n_features x batch_size x feature_size
+        data: data tensor, of dimensions
+            n_features x batch_size_{0} x ... x batch_size_{n} x feature_size
         """
         # if len(data) != len(self.data_nodes):
         #     raise IndexError(f'Number of data nodes does not match number of features '

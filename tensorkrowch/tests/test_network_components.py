@@ -1354,7 +1354,7 @@ class TestTensorNetwork:
         input_edges = []
         for i in range(4):
             input_edges.append(net[f'node_{i}']['input'])
-        net.set_data_nodes(input_edges, [10])
+        net.set_data_nodes(input_edges, 1)
         # 4 leaf nodes, 4 data nodes, and the
         # stack_data_memory (+2 virtual nodes)
         assert len(net.nodes) == 11
@@ -1364,7 +1364,7 @@ class TestTensorNetwork:
         for i in range(3):
             input_edges.append(net[f'node_{i}']['input'])
         with pytest.raises(ValueError):
-            net.set_data_nodes(input_edges, [10])
+            net.set_data_nodes(input_edges, 1)
 
         net.unset_data_nodes()
         assert len(net.nodes) == 4
@@ -1373,7 +1373,7 @@ class TestTensorNetwork:
         input_edges = []
         for i in range(2):
             input_edges.append(net[f'node_{i}']['input'])
-        net.set_data_nodes(input_edges, [10])
+        net.set_data_nodes(input_edges, 1)
         assert len(net.nodes) == 9
         assert len(net.data_nodes) == 2
 

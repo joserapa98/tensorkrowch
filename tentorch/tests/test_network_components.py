@@ -1415,6 +1415,161 @@ class TestTensorNetwork:
         assert len(copy_net.nodes) == 4
         assert len(copy_net.edges) == 6
         
+    def test_delete_nodes(self):
+        net = tn.TensorNetwork(name='net')
+        for i in range(4):
+            _ = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        network=net,
+                        init_method='randn')
+
+        for i in range(3):
+            net[f'node_{i}']['right'] ^ net[f'node_{i+1}']['left']
+        assert len(net.nodes) == 4
+        assert len(net.edges) == 6
+        
+        net.delete_node(net['node_3'])
+        assert len(net.nodes) == 3
+        assert len(net.edges) == 5
+        
+        node = net['node_0']
+        for i in range(1, 3):
+            node @= net[f'node_{i}']
+        assert len(net.nodes) == 5
+        assert len(net.leaf_nodes) == 3
+        assert len(net.non_leaf_nodes) == 2
+        assert len(net.edges) == 5
+        
+        net.delete_node(node)
+        assert len(net.nodes) == 4
+        assert len(net.leaf_nodes) == 3
+        assert len(net.non_leaf_nodes) == 1
+        assert len(net.edges) == 5
+        
+    def test_delete_non_leaf(self):
+        net = tn.TensorNetwork(name='net')
+        for i in range(4):
+            _ = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        network=net,
+                        init_method='randn')
+
+        for i in range(3):
+            net[f'node_{i}']['right'] ^ net[f'node_{i+1}']['left']
+        assert len(net.nodes) == 4
+        assert len(net.edges) == 6
+        
+        stack_node1 = tn.stack([net['node_0'], net['node_2']])
+        stack_node2 = tn.stack([net['node_1'], net['node_3']])
+        stack_node1['right'] ^ stack_node2['left']
+        assert len(net.nodes) == 6
+        assert len(net.leaf_nodes) == 4
+        assert len(net.non_leaf_nodes) == 2
+        assert len(net.edges) == 6
+        
+        contract_node = stack_node1 @ stack_node2
+        assert len(net.nodes) == 7
+        assert len(net.leaf_nodes) == 4
+        assert len(net.non_leaf_nodes) == 3
+        assert len(net.edges) == 6
+        
+        net.delete_non_leaf()
+        assert len(net.nodes) == 4
+        assert len(net.leaf_nodes) == 4
+        assert len(net.non_leaf_nodes) == 0
+        assert len(net.edges) == 6
+        
+    def test_automemory(self):
+        net = tn.TensorNetwork(name='net')
+        for i in range(4):
+            _ = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        network=net,
+                        init_method='randn')
+
+        for i in range(3):
+            net[f'node_{i}']['right'] ^ net[f'node_{i+1}']['left']
+        assert len(net.nodes) == 4
+        assert len(net.edges) == 6
+        for node in net.nodes.values():
+            assert node._tensor_info['address'] is not None
+        
+        assert net.automemory == False
+        assert net.unbind_mode == True
+        
+        stack = tn.stack(list(net.nodes.values()))
+        # All nodes still have their own memory
+        for node in net.leaf_nodes.values():
+            assert node._tensor_info['address'] is not None
+        for node in net.non_leaf_nodes.values():
+            assert node._tensor_info['address'] is not None
+            
+        net.automemory = True
+        assert net.automemory == True
+        assert net.unbind_mode == True
+        
+        stack = tn.stack(list(net.nodes.values()))
+        # Now leaf nodes have their emory stored in the stack
+        for node in net.leaf_nodes.values():
+            assert node._tensor_info['address'] is None
+        for node in net.non_leaf_nodes.values():
+            assert node._tensor_info['address'] is not None
+            
+    def test_unbind_mode(self):
+        net = tn.TensorNetwork(name='net')
+        for i in range(4):
+            _ = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        network=net,
+                        init_method='randn')
+
+        for i in range(3):
+            net[f'node_{i}']['right'] ^ net[f'node_{i+1}']['left']
+        assert len(net.nodes) == 4
+        assert len(net.edges) == 6
+        for node in net.nodes.values():
+            assert node._tensor_info['address'] is not None
+        
+        assert net.automemory == False
+        assert net.unbind_mode == True
+        
+        stack1 = tn.stack(list(net.nodes.values()))
+        unbinded = tn.unbind(stack1)
+        stack2 = tn.stack(unbinded)
+        # All nodes still have their own memory
+        for node in net.leaf_nodes.values():
+            assert node._tensor_info['address'] is not None
+            assert node._tensor_info['node_ref'] is None
+        for node in net.non_leaf_nodes.values():
+            if node.name.startswith('unbind'):
+                assert node._tensor_info['node_ref'] is not None
+            else:
+                assert node._tensor_info['node_ref'] is None
+            assert node._tensor_info['address'] is not None
+            
+        net.unbind_mode = False
+        assert net.automemory == False
+        assert net.unbind_mode == False
+        
+        stack1 = tn.stack(list(net.nodes.values()))
+        unbinded = tn.unbind(stack1)
+        stack2 = tn.stack(unbinded)
+        # Now leaf nodes have their emory stored in the stack
+        for node in net.leaf_nodes.values():
+            assert node._tensor_info['address'] is not None
+            assert node._tensor_info['node_ref'] is None
+            
+        # Unbinded nodes and `stack2` share memory with `stack1`
+        assert stack1._tensor_info['address'] is not None
+        for node in unbinded:
+            assert node._tensor_info['address'] is None
+        assert stack2._tensor_info['address'] is None
+        
+        
         
 
 

@@ -11,6 +11,10 @@ import tentorch as tn
 import time
 
 
+class TestNodeoperations:
+    
+    pass
+
 def test_permute():
     node = tn.Node(shape=(2, 5, 2),
                    axes_names=('left', 'input', 'right'),

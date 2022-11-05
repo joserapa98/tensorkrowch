@@ -292,3 +292,78 @@ def test_example2_mps():
     result = mps.forward(data)
     result[0, 0].backward()
     result
+
+
+def test_convnode():
+    image = torch.randn(1, 28, 28)  # batch x height x width
+    
+    def embedding(image: torch.Tensor) -> torch.Tensor:
+        return torch.stack([torch.ones_like(image),
+                            image,
+                            1 - image], dim=1)
+        
+    image = embedding(image)
+    print(image.shape)  # batch x channels x height x width
+
+    n_channels = 3
+
+    kh, kw = 3, 3 # kernel size
+    dh, dw = 3, 3 # stride
+
+    # Manual approach
+    patches = image.unfold(2, kh, dh).unfold(3, kw, dw)
+    print(patches.shape) # batch_size, channels, h_windows, w_windows, kh, kw
+
+    patches = patches.contiguous().view(1, n_channels, -1, kh, kw)
+    print(patches.shape) # batch_size, channels, windows, kh, kw
+
+    nb_windows = patches.size(2)
+
+    # Now we have to shift the windows into the batch dimension.
+    # Maybe there is another way without .permute, but this should work
+    patches = patches.permute(0, 2, 1, 3, 4)
+    print(patches.shape) # batch_size, nb_windows, channels, kh, kw
+
+    patches = patches.view((*patches.shape[:-2], -1))
+    print(patches.shape) # batch_size, nb_windows, channels, num_input
+
+    patches = patches.permute(3, 0, 1, 2)
+    print(patches.shape) # num_input, batch_size, nb_windows, channels
+
+    class ConvNode(tn.TensorNetwork):
+        
+        def __init__(self, kernel_size, input_dim, output_dim):
+            super().__init__(name='ConvTN')
+            
+            num_input = kernel_size[0] * kernel_size[1]
+            node = tn.ParamNode(shape=(*([input_dim]*num_input), output_dim),
+                                axes_names=(*(['input']*num_input), 'output'),
+                                network=self,
+                                name='node')
+            
+            tensor = 1e-9 * torch.randn(node.shape)
+            tensor[(0,)*(num_input + 1)] = 1.
+            node.tensor = tensor
+            
+        def set_data_nodes(self) -> None:
+            input_edges = []
+            for edge in self.edges:
+                if edge.axis1.name != 'output':
+                    input_edges.append(edge)
+                    
+            super().set_data_nodes(input_edges, 2)
+            for data_node in self.data_nodes.values():
+                data_node.axes[1].name = 'stack'
+        
+        def contract(self):
+            result = self['node']
+            for node in self.data_nodes.values():
+                result @= node
+            return result
+        
+    convnode = ConvNode(kernel_size=(kh, kw),
+                        input_dim=n_channels,
+                        output_dim=5)
+
+    result = convnode(patches)
+

@@ -19,11 +19,23 @@ def _initializer(init_method,
                  param_edges: bool = False,
                  **kwargs: float) -> AbstractNode:
     if not param_node:
-        return Node(shape=shape, axes_names=axes_names, name=name, network=network, override_node=override_node,
-                    param_edges=param_edges, init_method=init_method, **kwargs)
+        return Node(shape=shape,
+                    axes_names=axes_names,
+                    name=name,
+                    network=network,
+                    override_node=override_node,
+                    param_edges=param_edges,
+                    init_method=init_method,
+                    **kwargs)
     else:
-        return ParamNode(shape=shape, axes_names=axes_names, name=name, network=network, override_node=override_node,
-                         param_edges=param_edges, init_method=init_method, **kwargs)
+        return ParamNode(shape=shape,
+                         axes_names=axes_names,
+                         name=name,
+                         network=network,
+                         override_node=override_node,
+                         param_edges=param_edges,
+                         init_method=init_method,
+                         **kwargs)
 
 
 def zeros(shape: Optional[Shape] = None,

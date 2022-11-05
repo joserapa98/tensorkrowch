@@ -17,6 +17,9 @@ import torch
 import torch.nn as nn
 
 
+def print_list(lst: List) -> Text:
+    return '[' + '\n '.join(f'{item}' for item in lst) + ']'
+    
 def tab_string(string: Text, num_tabs: int = 1) -> Text:
     """
     Introduce '\t' a certain amount of times before each line.

@@ -99,7 +99,7 @@ class TestInitNode:
                                      'index': None}
         
         net = node.network
-        assert net.name == 'TensorNetwork'
+        assert net.name == 'tensornetwork'
         assert len(net.nodes) == 1
         assert len(net._memory_nodes) == 1
         assert len(net.data_nodes) == 0
@@ -168,7 +168,7 @@ class TestInitNode:
                                      'index': None}
         
         net = node.network
-        assert net.name == 'TensorNetwork'
+        assert net.name == 'tensornetwork'
         assert len(net.nodes) == 1
         assert len(net._memory_nodes) == 1
         assert len(net.data_nodes) == 0
@@ -201,7 +201,7 @@ class TestInitNode:
                                      'index': None}
         
         net = node.network
-        assert net.name == 'TensorNetwork'
+        assert net.name == 'tensornetwork'
         assert len(net.nodes) == 1
         assert len(net._memory_nodes) == 1
         assert len(net.data_nodes) == 0
@@ -246,7 +246,7 @@ class TestInitParamNode:
                                      'index': None}
         
         net = node.network
-        assert net.name == 'TensorNetwork'
+        assert net.name == 'tensornetwork'
         assert len(net.nodes) == 1
         assert len(net._memory_nodes) == 1
         assert len(net.data_nodes) == 0
@@ -315,7 +315,7 @@ class TestInitParamNode:
                                      'index': None}
         
         net = node.network
-        assert net.name == 'TensorNetwork'
+        assert net.name == 'tensornetwork'
         assert len(net.nodes) == 1
         assert len(net._memory_nodes) == 1
         assert len(net.data_nodes) == 0
@@ -348,7 +348,7 @@ class TestInitParamNode:
                                      'index': None}
         
         net = node.network
-        assert net.name == 'TensorNetwork'
+        assert net.name == 'tensornetwork'
         assert len(net.nodes) == 1
         assert len(net._memory_nodes) == 1
         assert len(net.data_nodes) == 0

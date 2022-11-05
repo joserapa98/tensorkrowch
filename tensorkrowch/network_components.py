@@ -33,7 +33,7 @@ from torch.nn import Parameter
 
 import opt_einsum
 
-from tensorkrowch.utils import (tab_string, check_name_style,
+from tensorkrowch.utils import (print_list, tab_string, check_name_style,
                             erase_enum, enum_repeated_names,
                             permute_list, is_permutation,
                             stack_unequal_tensors)
@@ -972,8 +972,8 @@ class AbstractNode(ABC):
         return f'{self.__class__.__name__}(\n ' \
                f'\tname: {self._name}\n' \
                f'\ttensor:\n{tab_string(repr(self.tensor), 2)}\n' \
-               f'\taxes: {self.axes_names}\n' \
-               f'\tedges:\n{tab_string(repr(self._edges), 2)})'
+               f'\taxes:\n{tab_string(print_list(self.axes_names), 2)}\n' \
+               f'\tedges:\n{tab_string(print_list(self._edges), 2)})'
 
 
 class Node(AbstractNode):
@@ -2214,7 +2214,7 @@ class TensorNetwork(nn.Module):
     def __init__(self, name: Optional[Text] = None):
         super().__init__()
         if name is None:
-            name = self.__class__.__name__
+            name = self.__class__.__name__.lower()
         self.name = name
 
         # self._nodes = dict()
@@ -2806,9 +2806,9 @@ class TensorNetwork(nn.Module):
 
     def __repr__(self) -> Text:
         return f'{self.__class__.__name__}(\n ' \
-               f'\tname: {self.name}' \
-               f'\tnodes: \n{tab_string(repr(list(self.nodes.keys())), 2)}\n' \
-               f'\tedges:\n{tab_string(repr(self.edges), 2)})'
+               f'\tname: {self.name}\n' \
+               f'\tnodes: \n{tab_string(print_list(list(self.nodes.keys())), 2)}\n' \
+               f'\tedges:\n{tab_string(print_list(self.edges), 2)})'
 
     # TODO: Function to build instructions and reallocate memory, optimized for a function
     #  (se deben reasignar los par'ametros)

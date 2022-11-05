@@ -460,6 +460,7 @@ def _contract_edges_first(edges: List[AbstractEdge],
                             tensors[i] = tensors[i].permute(permutation_dims)
                             if isinstance(edge, ParamStackEdge):
                                 mat = edge.matrix
+                                # TODO: comprobar si en cualquier situacion el orden del stack edge es asi
                                 tensors[i] = tensors[i] @ mat.view(mat.shape[0],
                                                                   *[1]*(len(tensors[i].shape) - 3),
                                                                   *mat.shape[1:])  # First dim is stack, last 2 dims are
@@ -515,31 +516,54 @@ def _contract_edges_first(edges: List[AbstractEdge],
             if permutation_dims[i] == list(range(len(permutation_dims[i]))):
                 permutation_dims[i] = []
 
-        aux_permutation = inverse_permutation(list(map(lambda l: l[1], batch_edges.values())) +
-                                              list(map(lambda l: l[1], non_contract_edges[0].values())))
-        aux_permutation2 = inverse_permutation(list(map(lambda l: l[1], non_contract_edges[1].values())))
-        inv_permutation_dims = aux_permutation + list(map(lambda x: x + len(aux_permutation), aux_permutation2))
+        # aux_permutation = inverse_permutation(list(map(lambda l: l[1], batch_edges.values())) +
+        #                                       list(map(lambda l: l[1], non_contract_edges[0].values())))
+        # aux_permutation2 = inverse_permutation(list(map(lambda l: l[1], non_contract_edges[1].values())))
+        # inv_permutation_dims = aux_permutation + list(map(lambda x: x + len(aux_permutation), aux_permutation2))
+        
+        # TODO: creo que inv_permutation no hace nada, porque dejamos los batches
+        # al principio y los edges no contraidos de sejan en el mismo orden en que lo encontramos
+        # NOTE: Dejamos los batches al principio
+        inv_permutation_batches = list(range(len(batch_edges)))
+        inv_permutation_0 = inverse_permutation(list(map(lambda l: l[1], non_contract_edges[0].values())))
+        inv_permutation_0 = inv_permutation_batches + \
+            list(map(lambda x: x + len(inv_permutation_batches), inv_permutation_0))
+        
+        inv_permutation_1 = inverse_permutation(list(map(lambda l: l[1], non_contract_edges[1].values())))
+        inv_permutation_dims = inv_permutation_0 + \
+            list(map(lambda x: x + len(inv_permutation_0), inv_permutation_1))
+        # NOTE: Dejamos los batches al principio
         
         if inv_permutation_dims == list(range(len(inv_permutation_dims))):
             inv_permutation_dims = []
 
         aux_shape = [None, None]
-        aux_shape[0] = [torch.tensor(list(map(lambda l: l[0], batch_edges.values()))).prod().long().item(),
-                        torch.tensor(list(map(lambda l: l[0], non_contract_edges[0].values()))).prod().long().item(),
-                        torch.tensor(list(map(lambda l: l[0], contract_edges.values()))).prod().long().item()]
+        aux_shape[0] = [torch.tensor(list(map(lambda l: l[0], batch_edges.values()))),
+                        torch.tensor(list(map(lambda l: l[0], non_contract_edges[0].values()))),
+                        torch.tensor(list(map(lambda l: l[0], contract_edges.values())))]
 
-        aux_shape[1] = [torch.tensor(list(map(lambda l: l[0], batch_edges.values()))).prod().long().item(),
-                        torch.tensor(list(map(lambda l: l[0], contract_edges.values()))).prod().long().item(),
-                        torch.tensor(list(map(lambda l: l[0], non_contract_edges[1].values()))).prod().long().item()]
+        aux_shape[1] = [torch.tensor(list(map(lambda l: l[0], batch_edges.values()))),
+                        torch.tensor(list(map(lambda l: l[0], contract_edges.values()))),
+                        torch.tensor(list(map(lambda l: l[0], non_contract_edges[1].values())))]
         for i in [0, 1]:
             for j in [0, 1, 2]:
-                if aux_shape[i][j] < 0:
-                    aux_shape[i][j] = -1  # Por si hemos hecho producto de -1 por otra dim
+                if (aux_shape[i][j] < 0).any():
+                    aux_shape[i][j] = torch.tensor(-1)  # Por si hemos hecho producto de -1 por otra dim
+                    
+        for i in [0, 1]:
+            for j in [0, 1, 2]:
+                aux_shape[i][j] = aux_shape[i][j].prod().long().item()
                     
         for i in [0, 1]:
             if tensors[i].reshape(aux_shape[i]).shape == tensors[i].shape:
                 aux_shape[i] = []
 
+        # TODO: solo contemplo 1 batch de tipo batch, y el resto pueden
+        # ser stacks, ya que los batches son los que pueden tener dims
+        # distintas cada vez, los stacks supongo que no. Si hay alg'un
+        # caso en el que haya que usar dos edges distintos de batch,
+        # hay que implementarlo. Ahora, en ese caso, `new_shape` tendr'ia
+        # varios -1 y dar'ia error
         new_shape = list(map(lambda l: l[0], batch_edges.values())) + \
                     list(map(lambda l: l[0], non_contract_edges[0].values())) + \
                     list(map(lambda l: l[0], non_contract_edges[1].values()))
@@ -559,11 +583,19 @@ def _contract_edges_first(edges: List[AbstractEdge],
         if inv_permutation_dims:
             result = result.permute(inv_permutation_dims)
 
+        # indices = [None, None]
+        # indices[0] = permute_list(list(map(lambda l: l[1], batch_edges.values())) +
+        #                           list(map(lambda l: l[1], non_contract_edges[0].values())),
+        #                           aux_permutation)
+        # indices[1] = list(map(lambda l: l[1], non_contract_edges[1].values()))
+        
+        # NOTE: Dejamos los batches al principio
         indices = [None, None]
         indices[0] = permute_list(list(map(lambda l: l[1], batch_edges.values())) +
                                   list(map(lambda l: l[1], non_contract_edges[0].values())),
-                                  aux_permutation)
+                                  inv_permutation_0)
         indices[1] = list(map(lambda l: l[1], non_contract_edges[1].values()))
+        # NOTE: Dejamos los batches al principio
 
         new_axes_names = []
         new_edges = []

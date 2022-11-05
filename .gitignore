@@ -4,3 +4,5 @@ __pycache__
 
 /training_scripts
 /foo
+
+*.ipynb

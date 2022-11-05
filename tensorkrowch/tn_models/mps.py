@@ -37,7 +37,8 @@ class MPS(TensorNetwork):
                  d_bond: Union[int, Sequence[int]],
                  l_position: Optional[int] = None,
                  boundary: Text = 'obc',
-                 param_bond: bool = False) -> None:
+                 param_bond: bool = False,
+                 num_batches: int = 1) -> None:
         """
         Create an MPS module.
 
@@ -51,6 +52,7 @@ class MPS(TensorNetwork):
                 th i-th node
         l_position: position of output_node site
         param_bond: boolean indicating whether bond edges should be parametric
+        num_batches: number of batch edges of input data
         """
 
         super().__init__(name='mps')
@@ -127,6 +129,8 @@ class MPS(TensorNetwork):
         #  y luego ya si eso actualizarse
         self._same_d_bond = self.same_d_bond()
         self._same_d_phys = self.same_d_phys()
+        
+        self.num_batches = num_batches
 
     @property
     def l_position(self) -> int:
@@ -570,7 +574,7 @@ class MPS(TensorNetwork):
         if self.right_node is not None:
             input_edges.append(self.right_node['input'])
         super().set_data_nodes(input_edges=input_edges,
-                               num_batch_edges=1) # TODO: we could choose this when instantiating an MPS
+                               num_batch_edges=self.num_batches) # TODO: we could choose this when instantiating an MPS
         self._permanent_nodes += list(self.data_nodes.values())
         
         if self.left_env + self.right_env:

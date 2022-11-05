@@ -561,21 +561,20 @@ class MPS(TensorNetwork):
                         tensor[i, :, j] = torch.randn(tensor.shape[1]).to(device) * target_std
                 self.right_node.set_tensor(tensor=tensor)
 
-    def set_data_nodes(self,
-                       batch_sizes: Sequence[int],
-                       input_edges: Optional[Union[List[int],
-                                                   List[AbstractEdge]]] = None) -> None:
-        if input_edges is None:
-            input_edges = []
-            if self.left_node is not None:
-                input_edges.append(self.left_node['input'])
-            input_edges += list(map(lambda node: node['input'],
-                                    self.left_env + self.right_env))
-            if self.right_node is not None:
-                input_edges.append(self.right_node['input'])
+    def set_data_nodes(self) -> None:
+        input_edges = []
+        if self.left_node is not None:
+            input_edges.append(self.left_node['input'])
+        input_edges += list(map(lambda node: node['input'],
+                                self.left_env + self.right_env))
+        if self.right_node is not None:
+            input_edges.append(self.right_node['input'])
         super().set_data_nodes(input_edges=input_edges,
-                               batch_sizes=batch_sizes)
+                               num_batch_edges=1) # TODO: we could choose this when instantiating an MPS
         self._permanent_nodes += list(self.data_nodes.values())
+        
+        if self.left_env + self.right_env:
+            self.env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
 
     def _input_contraction(self) -> Tuple[Optional[List[Node]],
                                           Optional[List[Node]]]:
@@ -589,7 +588,7 @@ class MPS(TensorNetwork):
         #     right_result = stacked_einsum('lir,bi->lbr', self.right_env, right_env_data)
         # return left_result, right_result
 
-        if True:#self._same_d_bond:  # TODO: cuidado, era self.same_d_bond()
+        if self._same_d_bond:  # TODO: cuidado, era self.same_d_bond()
             # start = time.time()
             if self.left_env + self.right_env:
                 # env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
@@ -1161,7 +1160,7 @@ class MPS(TensorNetwork):
 
         # NOTE: node mode
         result = left_env_contracted @ self.output_node @ right_env_contracted
-        return result.tensor
+        return result
         # NOTE: node mode
         
         # Operations of left environment
@@ -1381,191 +1380,206 @@ class MPS(TensorNetwork):
     #     #self.num_current_op_nodes = []
     #     return output
 
-    def embedding(self, image: torch.Tensor) -> torch.Tensor:
-        # return torch.stack([image, 1 - image], dim=1).squeeze(0)
-        return torch.stack([torch.ones_like(image), image, 1 - image], dim=1)#.squeeze(0)
+    # def embedding(self, image: torch.Tensor) -> torch.Tensor:
+    #     # return torch.stack([image, 1 - image], dim=1).squeeze(0)
+    #     return torch.stack([torch.ones_like(image), image, 1 - image], dim=1)#.squeeze(0)
 
-    def forward(self, data: torch.Tensor) -> torch.Tensor:
-        """
-        Parameters
-        ----------
-        data: tensor with shape batch x feature x n_features
-        """
-        if not self.data_nodes:
-            start = time.time()
-            # All data tensors have the same batch size
-            self.set_data_nodes(batch_sizes=[data.shape[0]])
-            if self.left_env + self.right_env:
-                self.env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
-            # TODO: usar 2 lados left y right en input contraction tarda lo mismo que solo 1 lado
-            # if self.left_env:
-            #     self.left_env_data = list(map(lambda node: node.neighbours('input'), self.left_env))
-            # if self.right_env:
-            #     self.right_env_data = list(map(lambda node: node.neighbours('input'), self.right_env))
-            self._add_data(data=self.embedding(data).permute(2, 0, 1))
-            if PRINT_MODE: print('Add data:', time.time() - start)
-            start = time.time()
-            output = self.contract()#.tensor  # self.contract2()
-            # TODO: esto solo si output a la izda del todo
-            # output = output.permute((1, 0))  # TODO: cuidado donde acaba el batch, tiene que acabar al principio
-            if PRINT_MODE: print('Contract:', time.time() - start)
-            if PRINT_MODE: print()
-
-            self._seq_ops = []
-            for op in self._list_ops:
-                self._seq_ops.append((op[1], op[0]._successors[op[1]][op[2]].kwargs))
-                
-            # TODO: I have to do something to erase memory as well as I create it
-            # Create inverse dictionary for memory
-            # NOTE: erase memory after epoch
-            self._inverse_memory = dict()
-            for node in self.nodes.values():
-                if node._tensor_info['address'] is not None:
-                    if node._tensor_info['address'] in self._inverse_memory:
-                        self._inverse_memory[node._tensor_info['address']].append(node)
-                    else:
-                        self._inverse_memory[node._tensor_info['address']] = [node]
-                else:
-                    node_ref = node._tensor_info['node_ref']
-                    if node_ref._tensor_info['address'] in self._inverse_memory:
-                        self._inverse_memory[node_ref._tensor_info['address']].append(node)
-                    else:
-                        self._inverse_memory[node_ref._tensor_info['address']] = [node]
-                
-            # Erase memory if no leaf or data nodes use it
-            for memory in self._inverse_memory:
-                all_non_leaf = True
-                for node in self._inverse_memory[memory]:
-                    if node.is_leaf() or (node in self.data_nodes):  # TODO: attribute node.is_data(), like node.is_leaf()
-                        all_non_leaf = False
-                        break
-                    
-                if all_non_leaf:
-                    self._memory_nodes[memory] = None
-                    
-            self._memory_nodes['stack_data_memory'] = None
-            # NOTE: erase memory after epoch
-
-            return output
-        else:
-            start = time.time()
-            self._add_data(data=self.embedding(data).permute(2, 0, 1))
-            end = time.time()
-            if PRINT_MODE: print('Add data:', end - start)
-
-            # NOTE: contract instead of seq operations in node mode / tensor mode
-            # start = time.time()
-            # output = self.contract()  # self.contract2()
-            # if PRINT_MODE: print('Contract:', time.time() - start)
-            # if PRINT_MODE: print()
-            # return output
-            # NOTE: contract instead of seq operations in node mode / tensor mode
-
-            # TODO: esta puede ser la forma gen'erica del forward, y solo hay que definir
-            #  add_data y contract (para la primera vez)
-            start_contract = time.time()
-            # operations = self._list_ops
-            # for i, op in enumerate(operations):
-            #     if op[0] == 'permute':
-            #         output = tn.permute(**self._successors['permute'][op[1]].kwargs)
-            #     elif op[0] == 'tprod':
-            #         output = tn.tprod(**self._successors['tprod'][op[1]].kwargs)
-            #     elif op[0] == 'mul':
-            #         output = tn.mul(**self._successors['mul'][op[1]].kwargs)
-            #     elif op[0] == 'add':
-            #         output = tn.add(**self._successors['add'][op[1]].kwargs)
-            #     elif op[0] == 'sub':
-            #         output = tn.sub(**self._successors['sub'][op[1]].kwargs)
-            #     elif op[0] == 'contract_edges':
-            #         output = tn.contract_edges(**self._successors['contract_edges'][op[1]].kwargs)
-            #     elif op[0] == 'stack':
-            #         output = tn.stack(**self._successors['stack'][op[1]].kwargs)
-            #     elif op[0] == 'unbind':
-            #         output = tn.unbind(**self._successors['unbind'][op[1]].kwargs)
-
-            stack_times = []
-            unbind_times = []
-            contract_edges_times = []
-
-            operations = self._seq_ops
-            for i, op in enumerate(operations):
-                if op[0] == 'permute':
-                    start = time.time()
-                    output = tn.permute(**op[1])
-                    if PRINT_MODE: print('permute:', time.time() - start)
-
-                elif op[0] == 'tprod':
-                    start = time.time()
-                    output = tn.tprod(**op[1])
-                    if PRINT_MODE: print('tprod:', time.time() - start)
-
-                elif op[0] == 'mul':
-                    start = time.time()
-                    output = tn.mul(**op[1])
-                    if PRINT_MODE: print('mul:', time.time() - start)
-
-                elif op[0] == 'add':
-                    start = time.time()
-                    output = tn.add(**op[1])
-                    if PRINT_MODE: print('add:', time.time() - start)
-
-                elif op[0] == 'sub':
-                    start = time.time()
-                    output = tn.sub(**op[1])
-                    if PRINT_MODE: print('sub:', time.time() - start)
-
-                elif op[0] == 'contract_edges':
-                    start = time.time()
-                    output = tn.contract_edges(**op[1])
-                    if PRINT_MODE:
-                        diff = time.time() - start
-                        print('contract_edges:', diff)
-                        contract_edges_times.append(diff)
-
-                elif op[0] == 'stack':
-                    start = time.time()
-                    output = tn.stack(**op[1])
-                    if PRINT_MODE:
-                        diff = time.time() - start
-                        print('stack:', diff)
-                        stack_times.append(diff)
-
-                elif op[0] == 'unbind':
-                    start = time.time()
-                    output = tn.unbind(**op[1])
-                    if PRINT_MODE:
-                        diff = time.time() - start
-                        print('unbind:', diff)
-                        unbind_times.append(diff)
-
-            # TODO: Se tarda igual con _list_ops y _seq_ops
-
-            if PRINT_MODE:
-                print('Contract:', time.time() - start_contract)
-                print('Check times sum:', torch.tensor(tn.CHECK_TIMES)[-len(operations):].sum())
-                print('Stack times sum:', torch.tensor(stack_times).sum())
-                print('Unbind times sum:', torch.tensor(unbind_times).sum())
-                print('Contract edges times sum:', torch.tensor(contract_edges_times).sum())
-                print()
-
-            output = output.tensor
+    # def forward(self, data: torch.Tensor) -> torch.Tensor:
+    #     """
+    #     Parameters
+    #     ----------
+    #     data: tensor with shape batch x feature x n_features
+    #     """
+    #     if not self.data_nodes:
+    #         start = time.time()
+    #         # All data tensors have the same batch size
+    #         self.set_data_nodes()
+    #         # TODO: usar 2 lados left y right en input contraction tarda lo mismo que solo 1 lado
+    #         # if self.left_env:
+    #         #     self.left_env_data = list(map(lambda node: node.neighbours('input'), self.left_env))
+    #         # if self.right_env:
+    #         #     self.right_env_data = list(map(lambda node: node.neighbours('input'), self.right_env))
             
-            # NOTE: erase memory after epoch
-            # Erase memory if no leaf or data nodes use it
-            for memory in self._inverse_memory:
-                all_non_leaf = True
-                for node in self._inverse_memory[memory]:
-                    if node.is_leaf() or (node in self.data_nodes):  # TODO: attribute node.is_data(), like node.is_leaf()
-                        all_non_leaf = False
-                        break
-                    
-                if all_non_leaf:
-                    self._memory_nodes[memory] = None
-                    
-            self._memory_nodes['stack_data_memory'] = None
-            # NOTE: erase memory after epoch
+    #     if not self.non_leaf_nodes:
+    #         self._add_data(data=data)
+    #         if PRINT_MODE: print('Add data:', time.time() - start)
+    #         start = time.time()
+    #         output = self.contract()#.tensor  # self.contract2()
+    #         # TODO: esto solo si output a la izda del todo
+    #         # output = output.permute((1, 0))  # TODO: cuidado donde acaba el batch, tiene que acabar al principio
+    #         if PRINT_MODE: print('Contract:', time.time() - start)
+    #         if PRINT_MODE: print()
 
-            # TODO: esto solo si output a la izda del todo
-            # output = output.permute((1, 0))  # TODO: cuidado donde acaba el batch, tiene que acabar al principio
+    #         self._seq_ops = []  # TODO: guardar as'i list ops?
+    #         for op in self._list_ops:
+    #             self._seq_ops.append((op[1], op[0]._successors[op[1]][op[2]].kwargs))
+                
+    #         # TODO: I have to do something to erase memory as well as I create it
+    #         # Create inverse dictionary for memory
+    #         # NOTE: erase memory after epoch
+    #         # self._inverse_memory = dict()
+    #         # for node in self.nodes.values():
+    #         #     if node._tensor_info['address'] is not None:
+    #         #         if node._tensor_info['address'] in self._inverse_memory:
+    #         #             self._inverse_memory[node._tensor_info['address']].append(node)
+    #         #         else:
+    #         #             self._inverse_memory[node._tensor_info['address']] = [node]
+    #         #     else:
+    #         #         node_ref = node._tensor_info['node_ref']
+    #         #         if node_ref._tensor_info['address'] in self._inverse_memory:
+    #         #             self._inverse_memory[node_ref._tensor_info['address']].append(node)
+    #         #         else:
+    #         #             self._inverse_memory[node_ref._tensor_info['address']] = [node]
+                
+    #         # # Erase memory if no leaf or data nodes use it
+    #         # for memory in self._inverse_memory:
+    #         #     all_non_leaf = True
+    #         #     for node in self._inverse_memory[memory]:
+    #         #         if node.is_leaf() or (node in self.data_nodes):  # TODO: attribute node.is_data(), like node.is_leaf()
+    #         #             all_non_leaf = False
+    #         #             break
+                    
+    #         #     if all_non_leaf:
+    #         #         self._memory_nodes[memory] = None
+                    
+    #         # self._memory_nodes['stack_data_memory'] = None
+    #         # NOTE: erase memory after epoch
 
-            return output
+    #         return output
+    #     else:
+            
+    #         # NOTE: trace with inverse memory to erase non used information
+    #         # if self._tracing:
+    #         #     self._inverse_memory = dict()
+    #         # else:
+    #         #     for address in self._inverse_memory:
+    #         #         self._inverse_memory[address]['re-accessed'] = 0
+    #         # NOTE: trace with inverse memory to erase non used information
+            
+    #         start = time.time()
+    #         self._add_data(data=data)
+    #         end = time.time()
+    #         if PRINT_MODE: print('Add data:', end - start)
+
+    #         # NOTE: contract instead of seq operations in node mode / tensor mode
+    #         # start = time.time()
+    #         # output = self.contract()  # self.contract2()
+    #         # if PRINT_MODE: print('Contract:', time.time() - start)
+    #         # if PRINT_MODE: print()
+    #         # return output
+    #         # NOTE: contract instead of seq operations in node mode / tensor mode
+
+    #         # TODO: esta puede ser la forma gen'erica del forward, y solo hay que definir
+    #         #  add_data y contract (para la primera vez)
+    #         start_contract = time.time()
+    #         # operations = self._list_ops
+    #         # for i, op in enumerate(operations):
+    #         #     if op[0] == 'permute':
+    #         #         output = tn.permute(**self._successors['permute'][op[1]].kwargs)
+    #         #     elif op[0] == 'tprod':
+    #         #         output = tn.tprod(**self._successors['tprod'][op[1]].kwargs)
+    #         #     elif op[0] == 'mul':
+    #         #         output = tn.mul(**self._successors['mul'][op[1]].kwargs)
+    #         #     elif op[0] == 'add':
+    #         #         output = tn.add(**self._successors['add'][op[1]].kwargs)
+    #         #     elif op[0] == 'sub':
+    #         #         output = tn.sub(**self._successors['sub'][op[1]].kwargs)
+    #         #     elif op[0] == 'contract_edges':
+    #         #         output = tn.contract_edges(**self._successors['contract_edges'][op[1]].kwargs)
+    #         #     elif op[0] == 'stack':
+    #         #         output = tn.stack(**self._successors['stack'][op[1]].kwargs)
+    #         #     elif op[0] == 'unbind':
+    #         #         output = tn.unbind(**self._successors['unbind'][op[1]].kwargs)
+
+    #         stack_times = []
+    #         unbind_times = []
+    #         contract_edges_times = []
+
+    #         operations = self._seq_ops
+    #         for i, op in enumerate(operations):
+    #             if op[0] == 'permute':
+    #                 start = time.time()
+    #                 output = tn.permute(**op[1])
+    #                 if PRINT_MODE: print('permute:', time.time() - start)
+
+    #             elif op[0] == 'tprod':
+    #                 start = time.time()
+    #                 output = tn.tprod(**op[1])
+    #                 if PRINT_MODE: print('tprod:', time.time() - start)
+
+    #             elif op[0] == 'mul':
+    #                 start = time.time()
+    #                 output = tn.mul(**op[1])
+    #                 if PRINT_MODE: print('mul:', time.time() - start)
+
+    #             elif op[0] == 'add':
+    #                 start = time.time()
+    #                 output = tn.add(**op[1])
+    #                 if PRINT_MODE: print('add:', time.time() - start)
+
+    #             elif op[0] == 'sub':
+    #                 start = time.time()
+    #                 output = tn.sub(**op[1])
+    #                 if PRINT_MODE: print('sub:', time.time() - start)
+
+    #             elif op[0] == 'contract_edges':
+    #                 start = time.time()
+    #                 output = tn.contract_edges(**op[1])
+    #                 if PRINT_MODE:
+    #                     diff = time.time() - start
+    #                     print('contract_edges:', diff)
+    #                     contract_edges_times.append(diff)
+
+    #             elif op[0] == 'stack':
+    #                 start = time.time()
+    #                 output = tn.stack(**op[1])
+    #                 if PRINT_MODE:
+    #                     diff = time.time() - start
+    #                     print('stack:', diff)
+    #                     stack_times.append(diff)
+
+    #             elif op[0] == 'unbind':
+    #                 start = time.time()
+    #                 output = tn.unbind(**op[1])
+    #                 if PRINT_MODE:
+    #                     diff = time.time() - start
+    #                     print('unbind:', diff)
+    #                     unbind_times.append(diff)
+
+    #         # TODO: Se tarda igual con _list_ops y _seq_ops
+
+    #         if PRINT_MODE:
+    #             print('Contract:', time.time() - start_contract)
+    #             print('Check times sum:', torch.tensor(tn.CHECK_TIMES)[-len(operations):].sum())
+    #             print('Stack times sum:', torch.tensor(stack_times).sum())
+    #             print('Unbind times sum:', torch.tensor(unbind_times).sum())
+    #             print('Contract edges times sum:', torch.tensor(contract_edges_times).sum())
+    #             print()
+
+    #         output = output.tensor
+            
+    #         # NOTE: erase memory after epoch
+    #         # Erase memory if no leaf or data nodes use it
+    #         # for memory in self._inverse_memory:
+    #         #     all_non_leaf = True
+    #         #     for node in self._inverse_memory[memory]:
+    #         #         if node.is_leaf() or (node in self.data_nodes):  # TODO: attribute node.is_data(), like node.is_leaf()
+    #         #             all_non_leaf = False
+    #         #             break
+                    
+    #         #     if all_non_leaf:
+    #         #         self._memory_nodes[memory] = None
+                    
+    #         # self._memory_nodes['stack_data_memory'] = None
+    #         # NOTE: erase memory after epoch
+
+    #         # TODO: esto solo si output a la izda del todo
+    #         # output = output.permute((1, 0))  # TODO: cuidado donde acaba el batch, tiene que acabar al principio
+            
+    #         # NOTE: trace with inverse memory to erase non used information
+    #         # for address in self._inverse_memory:
+    #         #     if self._inverse_memory[address] != 0:
+    #         #         print(address, 'MEMORY NOT ERASED')
+    #         # NOTE: trace with inverse memory to erase non used information
+
+    #         return output

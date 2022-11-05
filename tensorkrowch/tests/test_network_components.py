@@ -6,7 +6,7 @@ import pytest
 
 import torch
 import torch.nn as nn
-import tentorch as tn
+import tensorkrowch as tn
 
 import copy
 

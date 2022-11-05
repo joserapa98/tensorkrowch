@@ -1,5 +1,5 @@
 """
-import tentorch as tn
+import tensorkrowch as tn
 
 node1 = tn.ParamNode(shape=(2, 5, 3),
                      axes_names=('left', 'input', 'right'),

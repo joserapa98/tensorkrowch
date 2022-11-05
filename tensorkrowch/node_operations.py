@@ -43,9 +43,9 @@ import torch
 import torch.nn as nn
 import opt_einsum
 
-from tentorch.utils import is_permutation, permute_list, inverse_permutation
+from tensorkrowch.utils import is_permutation, permute_list, inverse_permutation
 
-from tentorch.network_components import *
+from tensorkrowch.network_components import *
 
 import time
 

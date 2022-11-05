@@ -5,7 +5,7 @@ Embedding methods
 from math import pi, sqrt
 import torch
 
-from tentorch.utils import comb_num
+from tensorkrowch.utils import comb_num
 
 
 def unit(data: torch.Tensor, dim: int) -> torch.Tensor:

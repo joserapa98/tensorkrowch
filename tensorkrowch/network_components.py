@@ -33,7 +33,7 @@ from torch.nn import Parameter
 
 import opt_einsum
 
-from tentorch.utils import (tab_string, check_name_style,
+from tensorkrowch.utils import (tab_string, check_name_style,
                             erase_enum, enum_repeated_names,
                             permute_list, is_permutation,
                             stack_unequal_tensors)

@@ -11,11 +11,11 @@ This script contains:
         *contract_between
 """
 
-import tentorch.network_components as nc
+import tensorkrowch.network_components as nc
 import torch
 
 from typing import Callable, List, Any
-from tentorch.utils import permute_list, inverse_permutation
+from tensorkrowch.utils import permute_list, inverse_permutation
 
 AbstractNode = Any
 Node = Any
@@ -86,7 +86,7 @@ foo = Foo(_func1, _func2)
 #
 #
 # import torch
-# import tentorch as tn
+# import tensorkrowch as tn
 # import pytest
 #
 #

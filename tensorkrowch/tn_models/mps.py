@@ -8,13 +8,13 @@ from typing import (Union, Optional, Sequence,
 import torch
 from torch.nn.functional import pad
 
-from tentorch.network_components import (AbstractNode, Node, ParamNode,
+from tensorkrowch.network_components import (AbstractNode, Node, ParamNode,
                                          AbstractEdge)
-from tentorch.network_components import TensorNetwork
+from tensorkrowch.network_components import TensorNetwork
 
-from tentorch.node_operations import einsum, stacked_einsum
+from tensorkrowch.node_operations import einsum, stacked_einsum
 
-import tentorch as tn
+import tensorkrowch as tn
 
 import opt_einsum
 import math

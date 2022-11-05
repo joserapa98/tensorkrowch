@@ -2639,7 +2639,8 @@ class TensorNetwork(nn.Module):
 
     def set_data_nodes(self,
                        input_edges: Union[List[int], List[AbstractEdge]],
-                       num_batch_edges: int) -> None:
+                       num_batch_edges: int,
+                       names_batch_edges: Optional[Sequence[Text]] = None) -> None:
         """
         Create data nodes and connect them to the list of specified edges of the TN.
         `set_data_nodes` should be executed after instantiating a TN, before
@@ -2650,6 +2651,7 @@ class TensorNetwork(nn.Module):
         input_edges: list of edges in the same order as they are expected to be
             contracted with each feature node of the input data_nodes
         num_batch_edges: number of batch edges in the input data
+        names_batch_edges: sequence of names for the batch edges
         """
         if self.data_nodes:
             raise ValueError('Tensor network data nodes should be unset in order to set new ones')
@@ -2678,6 +2680,13 @@ class TensorNetwork(nn.Module):
         stack_node['n_features'] ^ n_features_node['n_features']
         stack_node['feature'] ^ feature_node['feature']
 
+        if names_batch_edges is not None:
+            if len(names_batch_edges) != num_batch_edges:
+                raise ValueError(f'`names_batch_edges` should have exactly '
+                                 f'{num_batch_edges} names')
+        else:
+            names_batch_edges = [f'batch_{j}' for j in range(num_batch_edges)]
+
         data_nodes = []
         for i, edge in enumerate(input_edges):
             if isinstance(edge, int):
@@ -2688,7 +2697,7 @@ class TensorNetwork(nn.Module):
             else:
                 raise TypeError('`input_edges` should be List[int] or List[AbstractEdge] type')
             node = Node(shape=(*([1]*num_batch_edges), edge.size()),
-                        axes_names=(*[f'batch_{j}' for j in range(num_batch_edges)],
+                        axes_names=(*names_batch_edges,
                                     'feature'),
                         name=f'data_{i}',
                         network=self,

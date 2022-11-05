@@ -520,19 +520,19 @@ class AbstractNode(ABC):
             for ax in self._axes:
                 if axis == ax._num:
                     return ax._num
-            IndexError(f'Node {self!s} has no axis with index {axis}')
+            raise IndexError(f'Node {self!s} has no axis with index {axis}')
         elif isinstance(axis, str):
             for ax in self._axes:
                 if axis == ax._name:
                     return ax._num
-            IndexError(f'Node {self!s} has no axis with name {axis}')
+            raise IndexError(f'Node {self!s} has no axis with name {axis}')
         elif isinstance(axis, Axis):
             for ax in self._axes:
                 if axis == ax:
                     return ax._num
-            IndexError(f'Node {self!s} has no axis {axis!r}')
+            raise IndexError(f'Node {self!s} has no axis {axis!r}')
         else:
-            TypeError('`axis` should be int, str or Axis type')
+            raise TypeError('`axis` should be int, str or Axis type')
 
     def get_edge(self, axis: Ax) -> 'AbstractEdge':
         axis_num = self.get_axis_number(axis)

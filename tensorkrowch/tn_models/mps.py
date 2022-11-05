@@ -130,6 +130,11 @@ class MPS(TensorNetwork):
         self._same_d_bond = self.same_d_bond()
         self._same_d_phys = self.same_d_phys()
         
+        # Can only be 1 (batch) or 2 (batch and 
+        # stack of patches for convolution)
+        if num_batches not in [1, 2]:
+            raise ValueError('`num_batches` can only be 1 (for batch) or 2 '
+                             '(for batch and stack of patches for convolutions)')
         self.num_batches = num_batches
 
     @property
@@ -427,8 +432,12 @@ class MPS(TensorNetwork):
                         eye_tensor = torch.eye(node.shape[0], node.shape[2]).view([node.shape[0], 1, node.shape[2]])
                         eye_tensor = eye_tensor.expand(node.shape)
                 else:
+                    # NOTE: trying oher initializations
                     eye_tensor = torch.eye(node.shape[0], node.shape[2]).view([node.shape[0], 1, node.shape[2]])
                     eye_tensor = eye_tensor.expand(node.shape)
+                    
+                    # eye_tensor = torch.zeros(node.shape)
+                    # eye_tensor[0, 0, 0] += 1.
 
                 # Add on a bit of random noise
                 tensor = eye_tensor + std * torch.randn(node.shape)
@@ -573,8 +582,14 @@ class MPS(TensorNetwork):
                                 self.left_env + self.right_env))
         if self.right_node is not None:
             input_edges.append(self.right_node['input'])
+            
+        names_batches = None
+        if self.num_batches == 2:
+            names_batches = ['batch', 'stack']
+            
         super().set_data_nodes(input_edges=input_edges,
-                               num_batch_edges=self.num_batches) # TODO: we could choose this when instantiating an MPS
+                               num_batch_edges=self.num_batches,
+                               names_batch_edges=names_batches) # TODO: we could choose this when instantiating an MPS
         self._permanent_nodes += list(self.data_nodes.values())
         
         if self.left_env + self.right_env:

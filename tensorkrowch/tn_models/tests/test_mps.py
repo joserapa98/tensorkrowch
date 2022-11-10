@@ -367,3 +367,15 @@ def test_convnode():
 
     result = convnode(patches)
 
+
+def test_param_non_leaf():
+    node1 = tn.randn(shape=(2, 3, 2))
+    node2 = tn.randn(shape=(2, 3, 2))
+    
+    node1[2] ^ node2[0]
+    node3 = node1 @ node2
+    
+    paramnode3 = node3.parameterize()
+    
+    print()
+

@@ -1095,6 +1095,18 @@ class Node(AbstractNode):
                                  edges=self._edges,
                                  override_edges=True,
                                  node1_list=self.is_node1())
+            # TODO: para un modo en el que se haga todo inplace: 'util para DMRG por ejemplo
+            # new_node = ParamNode(shape=self.shape,
+            #                      axes_names=self.axes_names,
+            #                      name='parameterized_' + self._name,
+            #                      network=self._network,
+            #                      override_node=False,
+            #                      leaf=False,
+            #                      param_edges=self.param_edges(),
+            #                      tensor=self.tensor,
+            #                      edges=self._edges,
+            #                      override_edges=True,
+            #                      node1_list=self.is_node1())
             return new_node
         else:
             return self
@@ -2408,6 +2420,7 @@ class TensorNetwork(nn.Module):
         """
         node.disconnect()
         self._remove_node(node, move_names)
+        # TODO: del node
         
     def delete_non_leaf(self):
         # TODO: tarda mogoll'on, tengo que arreglarlo
@@ -2435,6 +2448,9 @@ class TensorNetwork(nn.Module):
                     # TODO: why i need this?
                     node._unrestricted_set_tensor(node._temp_tensor)
                     node._temp_tensor = None
+                    
+            for node in list(self._data_nodes.values()):
+                node._successors = dict()
                     
             for node in list(self._non_leaf_nodes.values()):
                 self.delete_node(node, False)

@@ -618,7 +618,7 @@ class MPS(TensorNetwork):
                 stack['input'] ^ stack_data['feature']
                 result = stack @ stack_data
                 # result = result.permute((0, 1, 3, 2))
-                result = result.permute((0, 3, 1, 2))  # TODO: batch delante
+                # result = result.permute((0, 3, 1, 2))  # TODO: batch delante
                 result = tn.unbind(result)
                 # left_result = []
                 # right_result = []
@@ -956,7 +956,7 @@ class MPS(TensorNetwork):
         # right_node = self.right_node @ self.right_node.neighbours('input')
         # right_env = (right_aux_nodes[0] @ right_node).permute((1, 0))
 
-        left_node = (self.left_node @ self.left_node.neighbours('input')).permute((1, 0))
+        left_node = (self.left_node @ self.left_node.neighbours('input'))#.permute((1, 0))
         left_env = [self._inline_contraction([left_node] + left_aux_nodes, True)]
 
         right_node = self.right_node @ self.right_node.neighbours('input')
@@ -1142,6 +1142,7 @@ class MPS(TensorNetwork):
 
         start = time.time()
         # TODO: cuidado, era self.same_d_phys() y self.same_d_bond()
+        # TODO: update self._same_d_bond after canonical form
         if not self.param_bond() and self._same_d_phys and self._same_d_bond:
             left_env_contracted, right_env_contracted = self._pairwise_contraction(left_env, right_env)
         else:
@@ -1149,7 +1150,7 @@ class MPS(TensorNetwork):
             left_env_contracted = None
             right_env_contracted = None
             if left_env:
-                left_node = (self.left_node @ self.left_node.neighbours('input')).permute((1, 0))
+                left_node = (self.left_node @ self.left_node.neighbours('input'))#.permute((1, 0))
                 left_env_contracted = self._inline_contraction([left_node] + left_env, True)
                 # aux = self.nodes['permute_node_0'].tensor[:len(left_env)].unbind()
                 # left_env_contracted = self._inline_contraction([left_node.tensor] + list(aux), True)

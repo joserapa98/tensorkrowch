@@ -134,15 +134,19 @@ def _permute_first(node: AbstractNode, axes: Sequence[Ax]) -> Node:
         node._successors['permute'] = [successor]
 
     net._list_ops.append((node, 'permute', len(node._successors['permute']) - 1))
+    
+    node._record_in_inverse_memory()
 
     return new_node
 
 
 def _permute_next(successor: Successor, node: AbstractNode, axes: Sequence[Ax]) -> Node:
     new_tensor = node.tensor.permute(successor.hints)
-    # node._record_in_inverse_memory()
     child = successor.child
     child._unrestricted_set_tensor(new_tensor)
+    
+    node._record_in_inverse_memory()
+    
     return child
 
 
@@ -183,6 +187,9 @@ def _tprod_first(node1: AbstractNode, node2: AbstractNode) -> Node:
         node1._successors['tprod'] = [successor]
 
     net._list_ops.append((node1, 'tprod', len(node1._successors['tprod']) - 1))
+    
+    node1._record_in_inverse_memory()
+    node2._record_in_inverse_memory()
 
     return new_node
 
@@ -191,10 +198,12 @@ def _tprod_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) 
     new_tensor = torch.outer(node1.tensor.flatten(),
                              node2.tensor.flatten()).view(*(list(node1.shape) +
                                                             list(node2.shape)))
-    # node1._record_in_inverse_memory()
-    # node2._record_in_inverse_memory()
     child = successor.child
     child._unrestricted_set_tensor(new_tensor)
+    
+    node1._record_in_inverse_memory()
+    node2._record_in_inverse_memory()
+    
     return child
 
 
@@ -229,16 +238,21 @@ def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
         node1._successors['mul'] = [successor]
 
     net._list_ops.append((node1, 'mul', len(node1._successors['mul']) - 1))
+    
+    node1._record_in_inverse_memory()
+    node2._record_in_inverse_memory()
 
     return new_node
 
 
 def _mul_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) -> Node:
     new_tensor = node1.tensor * node2.tensor
-    # node1._record_in_inverse_memory()
-    # node2._record_in_inverse_memory()
     child = successor.child
     child._unrestricted_set_tensor(new_tensor)
+    
+    node1._record_in_inverse_memory()
+    node2._record_in_inverse_memory()
+    
     return child
 
 
@@ -273,16 +287,21 @@ def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
         node1._successors['add'] = [successor]
 
     net._list_ops.append((node1, 'add', len(node1._successors['add']) - 1))
+    
+    node1._record_in_inverse_memory()
+    node2._record_in_inverse_memory()
 
     return new_node
 
 
 def _add_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) -> Node:
     new_tensor = node1.tensor + node2.tensor
-    # node1._record_in_inverse_memory()
-    # node2._record_in_inverse_memory()
     child = successor.child
     child._unrestricted_set_tensor(new_tensor)
+    
+    node1._record_in_inverse_memory()
+    node2._record_in_inverse_memory()
+    
     return child
 
 
@@ -317,16 +336,21 @@ def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
         node1._successors['sub'] = [successor]
 
     net._list_ops.append((node1, 'sub', len(node1._successors['sub']) - 1))
+    
+    node1._record_in_inverse_memory()
+    node2._record_in_inverse_memory()
 
     return new_node
 
 
 def _sub_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) -> Node:
     new_tensor = node1.tensor * node2.tensor
-    # node1._record_in_inverse_memory()
-    # node2._record_in_inverse_memory()
     child = successor.child
     child._unrestricted_set_tensor(new_tensor)
+    
+    node1._record_in_inverse_memory()
+    node2._record_in_inverse_memory()
+    
     return child
 
 
@@ -435,6 +459,8 @@ def _contract_edges_first(edges: List[AbstractEdge],
                 new_node1_list.append(node1.is_node1(num))
 
         hints = None
+        
+        node1._record_in_inverse_memory()
 
     else:
         # TODO: si son StackEdge, ver que todos los correspondientes edges están conectados
@@ -623,6 +649,9 @@ def _contract_edges_first(edges: List[AbstractEdge],
                  'inv_permutation_dims': inv_permutation_dims,
                  'aux_shape': aux_shape,
                  'new_shape': new_shape}
+        
+        node1._record_in_inverse_memory()
+        node2._record_in_inverse_memory()
 
     new_node = Node(axes_names=new_axes_names,
                        name=f'contract',
@@ -693,6 +722,8 @@ def _contract_edges_next(successor: Successor,
                     axes_nums[num] = -1
                 elif num > max_axis:
                     axes_nums[num] -= 2
+                    
+        node1._record_in_inverse_memory()
 
     else:
         if PRINT_MODE: print('\t\t\t\tCheckpoint 1:', time.time() - total_time)
@@ -779,6 +810,9 @@ def _contract_edges_next(successor: Successor,
         # result = result.view(hints['new_shape']).permute(hints['inv_permutation_dims'])
         if PRINT_MODE: print('\t\t\t\tCheckpoint 5:', time.time() - total_time)
         total_time = time.time()
+        
+        node1._record_in_inverse_memory()
+        node2._record_in_inverse_memory()
 
     child = successor.child
     if PRINT_MODE: print('\t\t\t\tCheckpoint 6:', time.time() - total_time)
@@ -975,7 +1009,7 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
                               stack_indices_slice[1],
                               stack_indices_slice[2])
 
-    if all_param:
+    if all_param and net._automemory:
         stack_node = ParamStackNode(nodes, name=name)
     else:
         stack_node = StackNode(nodes, name=name)
@@ -989,6 +1023,8 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
         stack_node._tensor_info['full'] = False
         stack_node._tensor_info['stack_idx'] = stack_indices
         stack_node._tensor_info['index'] = stack_indices  #list(zip(*indices))
+        
+        # stack_node._record_in_inverse_memory()
 
     else:
         # TODO: quitamos todos non-param por lo de la stack de data nodes, hay que
@@ -1012,6 +1048,9 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
 
                 if all_param:
                     delattr(net, 'param_' + node._name)
+                    
+        for node in nodes:
+            node._record_in_inverse_memory()
 
     successor = Successor(kwargs={'nodes': nodes},
                                     child=stack_node,
@@ -1037,8 +1076,6 @@ def _stack_next(successor: Successor,
         return child
 
     stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])  # TODO:
-    # for node in nodes:
-    #     node._record_in_inverse_memory()
     child._unrestricted_set_tensor(stack_tensor)
 
     # TODO: no permitido ya cambiar automemory mode en mitad de ejecucion, asi que esto no pasa
@@ -1059,6 +1096,10 @@ def _stack_next(successor: Successor,
             node._tensor_info['index'] = index
 
         successor.hints['automemory'] = True
+        
+    else:
+        for node in nodes:
+            node._record_in_inverse_memory()
 
     return child
 
@@ -1144,10 +1185,12 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
             new_node._tensor_info['full'] = False
             new_node._tensor_info['stack_idx'] = i
             index = [i]
-            for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo
+            for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo -> no si apilo de distintas dims
                 index.append(slice(max_dim - dim, max_dim))
             new_node._tensor_info['index'] = index
         # NOTE: unbind mode / mix index mode
+        
+    node._record_in_inverse_memory()
 
     successor = Successor(kwargs={'node': node},
                              child=nodes,
@@ -1171,10 +1214,11 @@ def _unbind_next(successor: Successor, node: AbstractNode) -> List[Node]:
     if net.unbind_mode:
         # NOTE: unbind mode / mix index mode
         tensors = torch.unbind(node.tensor)
-        # node._record_in_inverse_memory()
         children = successor.child
         for tensor, child in zip(tensors, children):
             child._unrestricted_set_tensor(tensor)
+            
+        node._record_in_inverse_memory()
         return children[:]
         # NOTE: unbind mode / mix index mode
         
@@ -1193,6 +1237,7 @@ def _unbind_next(successor: Successor, node: AbstractNode) -> List[Node]:
         for i, child in enumerate(children):
             child._tensor_info['index'][batch_idx + 1] = slice(0, new_dim)
         
+        node._record_in_inverse_memory()
         return successor.child[:]  # TODO: cambia el tamaño del batch
         # NOTE: index mode
 

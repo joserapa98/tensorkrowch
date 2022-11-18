@@ -380,8 +380,7 @@ def test_stack():
                        init_method='randn')
         nodes.append(node)
         input_edges += [node['input_0'], node['input_1']]
-    net.set_data_nodes(input_edges=input_edges,
-                       batch_sizes=[10])
+    net.set_data_nodes(input_edges, 1)
     data = torch.randn(2 * 5, 10, 3)
     net._add_data(data)
 
@@ -431,8 +430,7 @@ def test_stack():
                             param_edges=True, init_method='randn')
         nodes.append(node)
         input_edges += [node['input_0'], node['input_1']]
-    net.set_data_nodes(input_edges=input_edges,
-                       batch_sizes=[10])
+    net.set_data_nodes(input_edges, 1)
     data = torch.randn(2 * 5, 10, 3)
     net._add_data(data)
 
@@ -483,8 +481,7 @@ def test_stack():
                             param_edges=True, init_method='randn')
         nodes.append(node)
         input_edges += [node['input_0'], node['input_1']]
-    net.set_data_nodes(input_edges=input_edges,
-                       batch_sizes=[10])
+    net.set_data_nodes(input_edges, 1)
     data = torch.randn(2 * 5, 10, 3)
     net._add_data(data)
 
@@ -531,8 +528,7 @@ def test_stack():
                        init_method='randn')
         nodes.append(node)
         input_edges += [node['input_0'], node['input_1']]
-    net.set_data_nodes(input_edges=input_edges,
-                       batch_sizes=[10])
+    net.set_data_nodes(input_edges, 1)
     data = torch.randn(2 * 5, 10, 3)
     net._add_data(data)
 
@@ -558,8 +554,7 @@ def test_stack():
                        init_method='randn')
         nodes.append(node)
         input_edges += [node['input_0'], node['input_1']]
-    net.set_data_nodes(input_edges=input_edges,
-                       batch_sizes=[10])
+    net.set_data_nodes(input_edges, 1)
     data = torch.randn(2 * 5, 10, 3)
     net._add_data(data)
     net['data_0'].disconnect()
@@ -591,9 +586,9 @@ def test_einsum():
     net = tn.TensorNetwork(name='net')
     node = tn.Node(shape=(5, 5, 5, 5, 2), axes_names=('input', 'input', 'input', 'input', 'output'), network=net,
                    init_method='randn')
-    net.set_data_nodes(node.edges[:-1], [10])
-    data = torch.randn(10, 5, 4)
-    net._add_data(data.unbind(2))
+    net.set_data_nodes(node.edges[:-1], 1)
+    data = torch.randn(4, 10, 5)
+    net._add_data(data)
 
     out_node = tn.einsum('ijklm,bi,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
     assert out_node.shape == (10, 2)
@@ -607,9 +602,9 @@ def test_einsum():
     net = tn.TensorNetwork(name='net')
     node = tn.ParamNode(shape=(5, 5, 5, 5, 2), axes_names=('input', 'input', 'input', 'input', 'output'), network=net,
                         param_edges=True, init_method='randn')
-    net.set_data_nodes(node.edges[:-1], [10])
-    data = torch.randn(10, 5, 4)
-    net._add_data(data.unbind(2))
+    net.set_data_nodes(node.edges[:-1], 1)
+    data = torch.randn(4, 10, 5)
+    net._add_data(data)
 
     out_node = tn.einsum('ijklm,bi,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
     assert out_node.shape == (10, 2)
@@ -634,10 +629,9 @@ def test_stacked_einsum():
             input_edges.append(node['input'])
     for i in range(10):
         net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
-    net.set_data_nodes(input_edges=input_edges,
-                       batch_sizes=[10])
-    data = torch.randn(10, 5, 10)
-    net._add_data(data.unbind(2))
+    net.set_data_nodes(input_edges, 1)
+    data = torch.randn(10, 10, 5)
+    net._add_data(data)
     result_list = tn.stacked_einsum('lir,bi->lbr', nodes[:5] + nodes[6:], list(net.data_nodes.values()))
     result_list = result_list[:5] + [nodes[5]] + result_list[5:]
 
@@ -668,10 +662,9 @@ def test_stacked_einsum():
             input_edges.append(node['input'])
     for i in range(10):
         net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
-    net.set_data_nodes(input_edges=input_edges,
-                       batch_sizes=[10])
-    data = torch.randn(10, 5, 10)
-    net._add_data(data.unbind(2))
+    net.set_data_nodes(input_edges, 1)
+    data = torch.randn(10, 10, 5)
+    net._add_data(data)
     result_list = tn.stacked_einsum('lir,bi->lbr', nodes[:5] + nodes[6:], list(net.data_nodes.values()))
     result_list = result_list[:5] + [nodes[5]] + result_list[5:]
 

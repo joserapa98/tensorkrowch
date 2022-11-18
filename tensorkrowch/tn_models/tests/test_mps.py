@@ -8,6 +8,9 @@ import torch
 import torch.nn as nn
 import tensorkrowch as tn
 
+from typing import Sequence
+import time
+
 
 class TestMPS:
     
@@ -379,3 +382,188 @@ def test_param_non_leaf():
     
     print()
 
+
+def test_conv_mps():
+    class MPSLayer(tn.TensorNetwork):
+    
+        def __init__(self, in_channels, out_channels, kernel_size, bond_dim=10):
+            super().__init__(name='MPS')
+            
+            input_nodes = []
+            for _ in range(kernel_size[0] * kernel_size[1]):
+                node = tn.ParamNode(shape=(bond_dim, in_channels, bond_dim),
+                                    axes_names=('left', 'input', 'right'),
+                                    name='input_node',
+                                    network=self)
+                input_nodes.append(node)
+                
+            for i in range(len(input_nodes) - 1):
+                input_nodes[i]['right'] ^ input_nodes[i + 1]['left']
+                
+            output_node = tn.ParamNode(shape=(bond_dim, out_channels, bond_dim),
+                                    axes_names=('left', 'output', 'right'),
+                                    name='output_node',
+                                    network=self)
+            output_node['right'] ^ input_nodes[0]['left']
+            output_node['left'] ^ input_nodes[-1]['right']
+            
+            
+            std = 1e-9
+            for node in input_nodes:
+                tensor = torch.randn(node.shape) * std
+                random_eye = torch.randn(tensor.shape[0], tensor.shape[2]) * std
+                random_eye  = random_eye + torch.eye(tensor.shape[0], tensor.shape[2])
+                tensor[:, 0, :] = random_eye
+                
+                node.tensor = tensor
+                    
+            eye_tensor = torch.eye(node.shape[0], node.shape[2]).view([node.shape[0], 1, node.shape[2]])
+            eye_tensor = eye_tensor.expand(node.shape)
+            tensor = eye_tensor + std * torch.randn(node.shape)
+            
+            output_node.tensor = tensor
+            
+            
+            self.input_nodes = input_nodes
+            self.output_node = output_node
+            
+            
+        def set_data_nodes(self) -> None:
+                input_edges = []
+                for node in self.input_nodes:
+                    input_edges.append(node['input'])
+                        
+                super().set_data_nodes(input_edges, 2)
+                for data_node in self.data_nodes.values():
+                    data_node.axes[1].name = 'stack_patches'
+        
+        def contract(self):
+            stack_input = tn.stack(self.input_nodes)
+            stack_data = tn.stack(list(self.data_nodes.values()))
+            
+            stack_input['input'] ^ stack_data['feature']
+            stack_result = stack_input @ stack_data
+            
+            # stack_result = stack_result.permute((0, 3, 1, 2))
+            stack_result = tn.unbind(stack_result)
+            
+            result = stack_result[0]
+            for node in stack_result[1:]:
+                result @= node
+            result @= self.output_node
+            
+            return result
+        
+        
+    class ConvNodeLayer(nn.Module):
+    
+        def __init__(self,
+                    in_channels,
+                    out_channels,
+                    kernel_size,
+                    stride=1,
+                    padding=0,
+                    dilation=1,
+                    example_dims=(28, 28)):
+            super().__init__()
+            
+            if isinstance(kernel_size, int):
+                kernel_size = (kernel_size, kernel_size)
+            elif not isinstance(kernel_size, Sequence):
+                raise TypeError('`kernel_size` must be int or Sequence')
+            
+            if isinstance(stride, int):
+                stride = (stride, stride)
+            elif not isinstance(stride, Sequence):
+                raise TypeError('`stride` must be int or Sequence')
+            
+            if isinstance(padding, int):
+                padding = (padding, padding)
+            elif not isinstance(padding, Sequence):
+                raise TypeError('`padding` must be int or Sequence')
+            
+            if isinstance(dilation, int):
+                dilation = (dilation, dilation)
+            elif not isinstance(dilation, Sequence):
+                raise TypeError('`dilation` must be int or Sequence')
+            
+            self.in_channels = in_channels
+            self.kernel_size = kernel_size
+            self.stride = stride
+            self.padding = padding
+            self.dilation = dilation
+            
+            self.unfold = nn.Unfold(kernel_size=kernel_size,
+                                    stride=stride,
+                                    padding=padding,
+                                    dilation=dilation)
+            
+            # self.nodelayer = NodeLayer(in_channels=in_channels,
+            #                            out_channels=out_channels,
+            #                            kernel_size=kernel_size)
+            self.nodelayer = MPSLayer(in_channels=in_channels,
+                                      out_channels=out_channels,
+                                      kernel_size=kernel_size)
+            
+            # Trace TN
+            example = torch.zeros(1, in_channels, *example_dims)
+            patches = self.unfold(example).transpose(1, 2)
+            patches = patches.view(*patches.shape[:-1], self.in_channels, -1)
+            patches = patches.permute(3, 0, 1, 2)
+            
+            self.nodelayer.trace(patches)
+            
+        def forward(self, image):
+            # Input image shape: batch_size x in_channels x height x width
+            
+            # batch_size x nb_windows x (in_channels * nb_pixels)
+            patches = self.unfold(image).transpose(1, 2)
+            
+            # batch_size x nb_windows x in_channels x nb_pixels
+            patches = patches.view(*patches.shape[:-1], self.in_channels, -1)
+            
+            # nb_pixels x batch_size x nb_windows x in_channels
+            patches = patches.permute(3, 0, 1, 2)
+            
+            # batch_size x nb_windows x out_channels
+            result = self.nodelayer(patches)
+            
+            # batch_size x out_channels x nb_windows
+            result = result.transpose(1, 2)
+            
+            h_in = image.shape[2]
+            w_in = image.shape[3]
+            
+            h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] * \
+                (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
+            w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] * \
+                        (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
+            
+            # batch_size x out_channels x height_out x width_out
+            result = result.view(*result.shape[:-1], h_out, w_out)
+            
+            return result
+        
+    
+    image = torch.randn(500, 14, 14)  # batch_size x height x width
+
+    def embedding(image: torch.Tensor) -> torch.Tensor:
+        return torch.stack([torch.ones_like(image),
+                            image], dim=1)
+        
+    image = embedding(image)
+    print(image.shape)  # batch_size x in_channels x height x width
+
+
+    model = ConvNodeLayer(2, 5, (3, 3), stride=2, padding=1, example_dims=(14, 14))
+
+    model.nodelayer.automemory = True
+    model.nodelayer.unbind_mode = True
+
+    start = time.time()
+    result = model(image)
+    print(time.time() - start, result.shape)
+
+    start = time.time()
+    result = model(image)
+    print(time.time() - start, result.shape)

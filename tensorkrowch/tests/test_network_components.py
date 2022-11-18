@@ -371,7 +371,83 @@ class TestInitParamNode:
             node = tn.ParamNode(shape=(2, 5, 3),
                                 tensor=torch.randn(2, 5, 2))
 
+
+class TestNodeName:
     
+    @pytest.fixture
+    def setup(self):
+        net = tn.TensorNetwork()
+        node1 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net)
+        node2 = tn.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        network=net)
+        
+        node1['right'] ^ node2['left']
+        net.set_data_nodes([node1['input'], node2['input']], 1)
+        
+        return net
+    
+    def test_change_node_name(self, setup):
+        net = setup
+        
+        node1 = net['node1']
+        node2 = net['node2']
+        assert node1.name == 'node1'
+        assert node2.name == 'node2'
+        
+        node1.name = 'new_node'
+        assert node1.name == 'new_node'
+        assert node2.name == 'node2'
+        
+        node1.name = 'node2'
+        assert node1.name == 'node2_1'
+        assert node2.name == 'node2_0'
+        
+        node1.name = 'node1'
+        assert node1.name == 'node1'
+        assert node2.name == 'node2'
+        
+        node2.name = 'node1'
+        assert node1.name == 'node1_0'
+        assert node2.name == 'node1_1'
+        
+        node1.name = 'node'
+        assert node1.name == 'node'
+        assert node2.name == 'node1'
+        
+    def test_change_name_to_data(self, setup):
+        net = setup
+        
+        node1 = net['node1']
+        node2 = net['node2']
+        assert node1.name == 'node1'
+        assert node2.name == 'node2'
+        
+        node1.name = 'data'
+        assert node1.name == 'data_2'
+        assert node2.name == 'node2'
+        
+        # What determines whether a node is a data node or
+        # not is the attribute `data`, not the name
+        data_node = net['data_0']
+        assert not node1.is_data()
+        assert data_node.is_data()
+        
+    def test_change_data_name(self, setup):
+        net = setup
+        
+        data_node = net['data_0']
+        assert data_node.name == 'data_0'
+        
+        data_node.name = 'node'
+        assert data_node.name == 'node'
+        assert data_node.is_data()
+
+
 class TestSetTensor:
     
     @pytest.fixture
@@ -441,12 +517,18 @@ class TestSetTensor:
         node1, node2, tensor = setup
         assert node1.tensor is None
         assert node1.shape == (2, 5, 2)
+        assert node1['left'].size() == 2
+        assert node1['input'].size() == 5
+        assert node1['right'].size() == 2
         
         # If edges are non-dangling, we can set a
         # tensor with different size in those axes
         diff_tensor = torch.randn(2, 5, 5)
         node1.tensor = diff_tensor
         assert node1.shape == (2, 5, 5)
+        assert node1['left'].size() == 2
+        assert node1['input'].size() == 5
+        assert node1['right'].size() == 5
         
     def test_set_init_method(self, setup):
         node1, node2, tensor = setup
@@ -705,6 +787,68 @@ class TestConnect:
         assert node1['right'].is_dangling()
         assert node2['left'].is_dangling()
         assert node1['right'] != node2['left']
+        
+    def test_connect_disconnect_stackedge(self):
+        net = tn.TensorNetwork()
+        left_nodes = []
+        right_nodes = []
+        for _ in range(10):
+            node = tn.Node(shape=(5,),
+                           axes_names=('left',),
+                           init_method='randn',
+                           network=net)
+            left_nodes.append(node)
+            
+            node = tn.Node(shape=(5,),
+                           axes_names=('right',),
+                           init_method='randn',
+                           network=net)
+            right_nodes.append(node)
+            
+        for i in range(10):
+            left_nodes[i][0] ^ right_nodes[i][0]
+            
+        left_stack = tn.stack(left_nodes)
+        right_stack = tn.stack(right_nodes)
+        
+        assert isinstance(left_stack[1], tn.StackEdge)
+        assert left_stack[1].is_dangling()
+        assert isinstance(right_stack[1], tn.StackEdge)
+        assert right_stack[1].is_dangling()
+        
+        left_stack[1] ^ right_stack[1]
+        assert left_stack[1] == right_stack[1]
+        assert isinstance(left_stack[1], tn.StackEdge)
+        
+        left_stack[1] | left_stack[1]
+        assert left_stack[1] != right_stack[1]
+        assert isinstance(left_stack[1], tn.StackEdge)
+        assert left_stack[1].is_dangling()
+        assert isinstance(right_stack[1], tn.StackEdge)
+        assert right_stack[1].is_dangling()
+        
+    def test_connect_disconnected_stacks(self):
+        net = tn.TensorNetwork()
+        left_nodes = []
+        right_nodes = []
+        for _ in range(10):
+            node = tn.Node(shape=(5,),
+                           axes_names=('left',),
+                           init_method='randn',
+                           network=net)
+            left_nodes.append(node)
+            
+            node = tn.Node(shape=(5,),
+                           axes_names=('right',),
+                           init_method='randn',
+                           network=net)
+            right_nodes.append(node)
+            
+        left_stack = tn.stack(left_nodes)
+        right_stack = tn.stack(right_nodes)
+        
+        with pytest.raises(ValueError):
+            left_stack[1] ^ right_stack[1]
     
     
 class TestParameterize:

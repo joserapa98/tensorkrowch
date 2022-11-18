@@ -712,7 +712,7 @@ class AbstractNode(ABC):
         if len(tensor.shape) == self.rank:
             for i, dim in enumerate(tensor.shape):
                 edge = self.get_edge(i)
-                if not edge.is_dangling() and dim != edge.dim():
+                if not edge.is_dangling() and dim != edge.dim():  # TODO: sure? I can set any dimension in dangling edges
                     return False
             return True
         return False
@@ -723,18 +723,24 @@ class AbstractNode(ABC):
             for i, dim in enumerate(tensor.shape):
                 edge = self.get_edge(i)
                 
-                if dim > edge.size():
-                    index.append(slice(dim - edge.size(), dim))
-                elif dim == edge.size():
-                    index.append(slice(0, dim))
+                if not edge.is_dangling():
+                    if dim > edge.size():
+                        index.append(slice(dim - edge.size(), dim))
+                    elif dim == edge.size():
+                        index.append(slice(0, dim))
+                    else:
+                        # TODO: or padding with zeros?
+                        raise ValueError('Cannot crop tensor if its dimensions'
+                                        ' are smaller than node\'s dimensions')
                 else:
-                    raise ValueError('Cannot crop tensor if its dimensions'
-                                     'are smaller than node\'s dimensions')
+                    # NOTE: if edge is danglig we can set any tensor
+                    index.append(slice(0, dim))
+                    
             return tensor[index]
             
         else:
             raise ValueError('`tensor` should have the same number of'
-                             'dimensions as node\'s tensor (same rank)')
+                             ' dimensions as node\'s tensor (same rank)')
 
     def _unrestricted_set_tensor(self,
                                  tensor: Optional[Tensor] = None,
@@ -763,6 +769,7 @@ class AbstractNode(ABC):
                               'a tensor that is already in the required device')
             if not self._compatible_dims(tensor):
                 tensor = self._crop_tensor(tensor)
+                # NOTE: case unbind nodes that had different shapes
                 warnings.warn('`tensor` dimensions are not compatible with the'
                               ' node\'s dimensions. `tensor` has been cropped '
                               'before setting it to the node')
@@ -795,6 +802,9 @@ class AbstractNode(ABC):
         # TODO: pensar bien cu'ando permito hacer set y unset
         if self._leaf and not self._network._automemory:
             self._unrestricted_set_tensor(tensor=tensor, init_method=init_method, device=device, **kwargs)
+            
+            for edge, size in zip(self._edges, self._shape):
+                edge._size = size
         else:
             raise ValueError('Node\'s tensor can only be changed if it is a leaf tensor '
                              'and the network is not in contracting mode')
@@ -840,33 +850,55 @@ class AbstractNode(ABC):
                 raise ValueError(f'Network already has attribute named {self._tensor_info["address"]}')
             
     def _record_in_inverse_memory(self):
+        node_ref = None
         address = self._tensor_info['address']
-        node_ref = self._tensor_info['node_ref']
         
         if address is None:
-            node = node_ref
+            node_ref = self._tensor_info['node_ref']
             address = node_ref._tensor_info['address']
-        else:
-            node = self
         
         net = self._network
         if net._tracing:
             if address in net._inverse_memory:
-                net._inverse_memory[address]['accessed'] += 1
-                net._inverse_memory[address]['all_non_leaf'] &= node.is_non_leaf()
-                net._inverse_memory[address]['all_data'] &= node.is_data()
+                if net._inverse_memory[address]['erase']:
+                    net._inverse_memory[address]['accessed'] += 1
+                    if node_ref is None:
+                        net._inverse_memory[address]['erase'] &= \
+                            (self.is_non_leaf() or self.is_data())
+                    else:
+                        net._inverse_memory[address]['erase'] &= \
+                            (self.is_non_leaf() or self.is_data()) and \
+                            (node_ref.is_non_leaf() or node_ref.is_data())
+                    
+                    # net._inverse_memory[address]['all_non_leaf'] &= self.is_non_leaf()
+                    # net._inverse_memory[address]['all_data'] &= self.is_data()
             else:
-                net._inverse_memory[address] = {'accessed': 1,
-                                                're-accessed': 0,
-                                                'all_non_leaf': node.is_non_leaf(),
-                                                'all_data': node.is_data()}
+                if node_ref is None:
+                    net._inverse_memory[address] = {
+                        'accessed': 1,
+                        're-accessed': 0,
+                        'erase': \
+                            (self.is_non_leaf() or self.is_data())}
+                else:
+                    net._inverse_memory[address] = {
+                        'accessed': 1,
+                        're-accessed': 0,
+                        'erase': \
+                            (self.is_non_leaf() or self.is_data()) and \
+                            (node_ref.is_non_leaf() or node_ref.is_data())}
+                
+                # net._inverse_memory[address] = {'accessed': 1,
+                #                                 're-accessed': 0,
+                #                                 'all_non_leaf': self.is_non_leaf(),
+                #                                 'all_data': self.is_data()}
         else:
             if address in net._inverse_memory:
                 net._inverse_memory[address]['re-accessed'] += 1
                 aux_dict = net._inverse_memory[address]
                 
                 if aux_dict['accessed'] == aux_dict['re-accessed']:
-                    if aux_dict['all_non_leaf'] or aux_dict['all_data']:
+                    if aux_dict['erase']:
+                    # if aux_dict['all_non_leaf'] or aux_dict['all_data']:
                         self._network._memory_nodes[address] = None
                     net._inverse_memory[address]['re-accessed'] = 0
 
@@ -1588,6 +1620,12 @@ class AbstractEdge(ABC):
         u = u.permute(*lst_permute1)
         vh = vh.permute(*lst_permute2)
 
+        net = self.node1._network
+        net._list_ops = []
+        for node in self._nodes:
+            node._successors = dict()
+        net.delete_node(contracted_node, False)
+        
         self.change_size(rank)
         self.node1.tensor = u
         self.node2.tensor = vh
@@ -1859,7 +1897,10 @@ class ParamEdge(AbstractEdge, nn.Module):
             TypeError('`size` should be int type')
         self._size = size
         shift, slope = self.compute_parameters(size, min(size, self.dim()))
+        device = self._shift.device
+        
         self.set_parameters(shift, slope)
+        self.to(device)
         
         if not self.is_dangling():
             self.node2._change_axis_size(self.axis2, size)
@@ -1947,12 +1988,12 @@ class StackNode(Node):
         for node in nodes:
             for axis in node._axes:
                 edge = node[axis]
-                if axis.name not in edges_dict:
-                    edges_dict[axis._name] = [edge]
-                    node1_lists_dict[axis._name] = [axis._node1]
+                if axis._num not in edges_dict:
+                    edges_dict[axis._num] = [edge]
+                    node1_lists_dict[axis._num] = [axis._node1]
                 else:
-                    edges_dict[axis._name].append(edge)
-                    node1_lists_dict[axis._name].append(axis._node1)
+                    edges_dict[axis._num].append(edge)
+                    node1_lists_dict[axis._num].append(axis._node1)
 
         self._edges_dict = edges_dict
         self._node1_lists_dict = node1_lists_dict
@@ -1981,13 +2022,13 @@ class StackNode(Node):
         if axis.num == 0:
             # Stack axis
             return Edge(node1=self, axis1=axis)
-        elif isinstance(self._edges_dict[axis._name][0], Edge):
-            return StackEdge(self._edges_dict[axis._name],
-                             self._node1_lists_dict[axis._name],
+        elif isinstance(self._edges_dict[axis._num - 1][0], Edge):
+            return StackEdge(self._edges_dict[axis._num - 1],
+                             self._node1_lists_dict[axis._num - 1],
                              node1=self, axis1=axis)
-        elif isinstance(self._edges_dict[axis._name][0], ParamEdge):
-            return ParamStackEdge(self._edges_dict[axis._name],
-                                  self._node1_lists_dict[axis._name],
+        elif isinstance(self._edges_dict[axis._num - 1][0], ParamEdge):
+            return ParamStackEdge(self._edges_dict[axis._num - 1],
+                                  self._node1_lists_dict[axis._num - 1],
                                   node1=self,
                                   axis1=axis)
 
@@ -2331,6 +2372,7 @@ class TensorNetwork(nn.Module):
         
     def trace(self, example: Tensor) -> None:
         with torch.no_grad():
+            self._tracing = True
             self(example)
             # self._tracing = True  # TODO: IMPORTANT! Solve this
             # self(example)
@@ -2428,6 +2470,9 @@ class TensorNetwork(nn.Module):
         
         if self._non_leaf_nodes:
             # TODO: pensar esto, igual no hace falta siempre cambiar los leaf nodes
+            # TODO: solo poner memoria a sí mismos si su memoria estaba en un nodo non_leaf
+            # (node_ref era nodo non_leaf), as'i podemos hacer Uniform TN guardando siempre
+            # tensor en nodos virtuales
             aux_dict = dict()
             aux_dict.update(self._leaf_nodes)
             aux_dict.update(self._non_leaf_nodes)
@@ -2494,18 +2539,26 @@ class TensorNetwork(nn.Module):
             aux_node = nodes_dict[new_name]
             aux_node._temp_tensor = aux_node.tensor
 
-        if nodes_dict[prev_name] == node:
+        if nodes_dict.get(prev_name) == node:
             nodes_dict[new_name] = nodes_dict.pop(prev_name)
             # TODO: A lo mejor esto solo si address is not None
             if node._tensor_info['address'] is not None:  # TODO: caso se est'a usando la memoria de otro nodo
                 self._memory_nodes[new_name] = self._memory_nodes.pop(prev_name)
                 node._assign_memory(address=new_name)
-        else:
+                
+                if self._tracing and (prev_name in self._inverse_memory):
+                    self._inverse_memory[new_name] = self._inverse_memory.pop(prev_name)
+                    
+        else: # NOTE: Case change node name
             nodes_dict[new_name] = node
             self._memory_nodes[new_name] = node._temp_tensor
             node._temp_tensor = None
             node._assign_memory(address=new_name)
             # node._tensor_info['address'] = new_name
+            
+            # TODO: in tracing mode i do not change names, this does not happen
+            # if self._tracing and (prev_name in self._inverse_memory):
+            #     self._inverse_memory[new_name] = self._inverse_memory[prev_name]
 
     def _update_node_name(self, node: AbstractNode, new_name: Text) -> None:
         if isinstance(node.tensor, Parameter):
@@ -2791,8 +2844,14 @@ class TensorNetwork(nn.Module):
             return output.tensor
         
         else:
+            # output = self.contract()
+            
+            # total = time.time()
             for op in self._seq_ops:
+                # start = time.time()
                 output = self.operations[op[0]](**op[1])
+                # print(f'Time {op[0]}: {time.time() - start:.4f}')
+            # print(f'Total time: {time.time() - total:.4f}')
                 
             return output.tensor
         

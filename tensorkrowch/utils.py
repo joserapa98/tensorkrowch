@@ -120,7 +120,7 @@ def is_permutation(lst: List, permuted_lst: List) -> bool:
     return True
 
 
-def inverse_permutation(dims: Sequence[int]):
+def inverse_permutation(dims: Sequence[int]):  # TODO: not used
     """
     Given a permutation of indices (to permute the elements of a list, tensor, etc.),
     returns the inverse permutation of indices needed to recover the original object

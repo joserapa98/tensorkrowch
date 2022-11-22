@@ -14,7 +14,7 @@ from tensorkrowch.network_components import TensorNetwork
 
 from tensorkrowch.node_operations import einsum, stacked_einsum
 
-import tensorkrowch as tn
+import tensorkrowch as tk
 
 import opt_einsum
 import math
@@ -613,29 +613,29 @@ class MPS(TensorNetwork):
                 # env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
                 # print('\t\tFind data:', time.time() - start)
                 start = time.time()
-                stack = tn.stack(self.left_env + self.right_env)
-                stack_data = tn.stack(self.env_data)
+                stack = tk.stack(self.left_env + self.right_env)
+                stack_data = tk.stack(self.env_data)
                 stack['input'] ^ stack_data['feature']
                 result = stack @ stack_data
                 # result = result.permute((0, 1, 3, 2))
                 # result = result.permute((0, 3, 1, 2))  # TODO: batch delante
-                result = tn.unbind(result)
+                result = tk.unbind(result)
                 # left_result = []
                 # right_result = []
                 # if self.left_env:
-                #     left_stack = tn.stack(self.left_env)
-                #     left_stack_data = tn.stack(self.left_env_data)
+                #     left_stack = tk.stack(self.left_env)
+                #     left_stack_data = tk.stack(self.left_env_data)
                 #     left_stack['input'] ^ left_stack_data['feature']
                 #     left_result = left_stack @ left_stack_data
                 #     left_result = left_result.permute((0, 1, 3, 2))
-                #     left_result = tn.unbind(left_result)
+                #     left_result = tk.unbind(left_result)
                 # if self.right_env:
-                #     right_stack = tn.stack(self.right_env)
-                #     right_stack_data = tn.stack(self.right_env_data)
+                #     right_stack = tk.stack(self.right_env)
+                #     right_stack_data = tk.stack(self.right_env_data)
                 #     right_stack['input'] ^ right_stack_data['feature']
                 #     right_result = right_stack @ right_stack_data
                 #     right_result = right_result.permute((0, 1, 3, 2))
-                #     right_result = tn.unbind(right_result)
+                #     right_result = tk.unbind(right_result)
                 #result = stacked_einsum('lir,bi->lbr', self.left_env + self.right_env, env_data)
                 if PRINT_MODE: print('\t\tResult:', time.time() - start)
                 start = time.time()
@@ -730,10 +730,10 @@ class MPS(TensorNetwork):
             if PRINT_MODE: print('\t\t\tSelect nodes:', time.time() - start)
 
             start = time.time()
-            stack1 = tn.stack(even_nodes)
+            stack1 = tk.stack(even_nodes)
             if PRINT_MODE: print('\t\t\tStack even nodes:', time.time() - start)
             start = time.time()
-            stack2 = tn.stack(odd_nodes)
+            stack2 = tk.stack(odd_nodes)
             if PRINT_MODE: print('\t\t\tStack odd nodes:', time.time() - start)
             start = time.time()
             stack1['right'] ^ stack2['left']
@@ -742,7 +742,7 @@ class MPS(TensorNetwork):
             nodes = stack1 @ stack2
             if PRINT_MODE: print('\t\t\tContract stacks:', time.time() - start)
             start = time.time()
-            nodes = tn.unbind(nodes)
+            nodes = tk.unbind(nodes)
             if PRINT_MODE: print('\t\t\tUnbind stacks:', time.time() - start)
 
             nodes += leftover
@@ -811,10 +811,10 @@ class MPS(TensorNetwork):
                 if PRINT_MODE: print('\t\t\tSelect nodes:', time.time() - start)
 
                 start = time.time()
-                stack1 = tn.stack(even_nodes)
+                stack1 = tk.stack(even_nodes)
                 if PRINT_MODE: print('\t\t\tStack even nodes:', time.time() - start)
                 start = time.time()
-                stack2 = tn.stack(odd_nodes)
+                stack2 = tk.stack(odd_nodes)
                 if PRINT_MODE: print('\t\t\tStack odd nodes:', time.time() - start)
                 start = time.time()
                 stack1['right'] ^ stack2['left']
@@ -823,7 +823,7 @@ class MPS(TensorNetwork):
                 aux_nodes = stack1 @ stack2
                 if PRINT_MODE: print('\t\t\tContract stacks:', time.time() - start)
                 start = time.time()
-                aux_nodes = tn.unbind(aux_nodes)
+                aux_nodes = tk.unbind(aux_nodes)
                 if PRINT_MODE: print('\t\t\tUnbind stacks:', time.time() - start)
 
                 length = half_length
@@ -859,10 +859,10 @@ class MPS(TensorNetwork):
                 if PRINT_MODE: print('\t\t\tSelect nodes:', time.time() - start)
 
                 start = time.time()
-                stack1 = tn.stack(even_nodes)
+                stack1 = tk.stack(even_nodes)
                 if PRINT_MODE: print('\t\t\tStack even nodes:', time.time() - start)
                 start = time.time()
-                stack2 = tn.stack(odd_nodes)
+                stack2 = tk.stack(odd_nodes)
                 if PRINT_MODE: print('\t\t\tStack odd nodes:', time.time() - start)
                 start = time.time()
                 stack1['right'] ^ stack2['left']
@@ -871,7 +871,7 @@ class MPS(TensorNetwork):
                 aux_nodes = stack1 @ stack2
                 if PRINT_MODE: print('\t\t\tContract stacks:', time.time() - start)
                 start = time.time()
-                aux_nodes = tn.unbind(aux_nodes)
+                aux_nodes = tk.unbind(aux_nodes)
                 if PRINT_MODE: print('\t\t\tUnbind stacks:', time.time() - start)
 
                 length = half_length
@@ -907,10 +907,10 @@ class MPS(TensorNetwork):
             if PRINT_MODE: print('\t\t\tSelect nodes:', time.time() - start)
 
             start = time.time()
-            stack1 = tn.stack(even_nodes)
+            stack1 = tk.stack(even_nodes)
             if PRINT_MODE: print('\t\t\tStack even nodes:', time.time() - start)
             start = time.time()
-            stack2 = tn.stack(odd_nodes)
+            stack2 = tk.stack(odd_nodes)
             if PRINT_MODE: print('\t\t\tStack odd nodes:', time.time() - start)
             start = time.time()
             stack1['right'] ^ stack2['left']
@@ -919,7 +919,7 @@ class MPS(TensorNetwork):
             aux_nodes = stack1 @ stack2
             if PRINT_MODE: print('\t\t\tContract stacks:', time.time() - start)
             start = time.time()
-            aux_nodes = tn.unbind(aux_nodes)
+            aux_nodes = tk.unbind(aux_nodes)
             if PRINT_MODE: print('\t\t\tUnbind stacks:', time.time() - start)
 
             if PRINT_MODE: print('\t\tPairwise contraction:', time.time() - start_total)
@@ -1003,11 +1003,11 @@ class MPS(TensorNetwork):
         #         right_odd_nodes = right_nodes[1:nice_length_right:2]
         #         right_leftover = right_nodes[nice_length_right:]
         #
-        #         stack1 = tn.stack(left_even_nodes + right_even_nodes)
-        #         stack2 = tn.stack(left_odd_nodes + right_odd_nodes)
+        #         stack1 = tk.stack(left_even_nodes + right_even_nodes)
+        #         stack2 = tk.stack(left_odd_nodes + right_odd_nodes)
         #         stack1['right'] ^ stack2['left']
         #         nodes = stack1 @ stack2
-        #         nodes = tn.unbind(nodes)
+        #         nodes = tk.unbind(nodes)
         #
         #         # nodes = stacked_einsum('ibj,jbk->ibk',
         #         #                        left_even_nodes + right_even_nodes,
@@ -1031,11 +1031,11 @@ class MPS(TensorNetwork):
         #         left_odd_nodes = left_nodes[1:nice_length_left:2]
         #         left_leftover = left_nodes[nice_length_left:]
         #
-        #         stack1 = tn.stack(left_even_nodes)
-        #         stack2 = tn.stack(left_odd_nodes)
+        #         stack1 = tk.stack(left_even_nodes)
+        #         stack2 = tk.stack(left_odd_nodes)
         #         stack1['right'] ^ stack2['left']
         #         nodes = stack1 @ stack2
-        #         nodes = tn.unbind(nodes)
+        #         nodes = tk.unbind(nodes)
         #
         #         # nodes = stacked_einsum('ibj,jbk->ibk',
         #         #                        left_even_nodes,
@@ -1055,11 +1055,11 @@ class MPS(TensorNetwork):
         #         right_odd_nodes = right_nodes[1:nice_length_right:2]
         #         right_leftover = right_nodes[nice_length_right:]
         #
-        #         stack1 = tn.stack(right_even_nodes)
-        #         stack2 = tn.stack(right_odd_nodes)
+        #         stack1 = tk.stack(right_even_nodes)
+        #         stack2 = tk.stack(right_odd_nodes)
         #         stack1['right'] ^ stack2['left']
         #         nodes = stack1 @ stack2
-        #         nodes = tn.unbind(nodes)
+        #         nodes = tk.unbind(nodes)
         #
         #         # nodes = stacked_einsum('ibj,jbk->ibk',
         #         #                        right_even_nodes,
@@ -1082,10 +1082,10 @@ class MPS(TensorNetwork):
         #     if PRINT_MODE: print('\t\t\tSelect nodes:', time.time() - start)
         #
         #     start = time.time()
-        #     stack1 = tn.stack(left_even_nodes)
+        #     stack1 = tk.stack(left_even_nodes)
         #     if PRINT_MODE: print('\t\t\tStack even nodes:', time.time() - start)
         #     start = time.time()
-        #     stack2 = tn.stack(left_odd_nodes)
+        #     stack2 = tk.stack(left_odd_nodes)
         #     if PRINT_MODE: print('\t\t\tStack odd nodes:', time.time() - start)
         #     start = time.time()
         #     stack1['right'] ^ stack2['left']
@@ -1094,7 +1094,7 @@ class MPS(TensorNetwork):
         #     nodes = stack1 @ stack2
         #     if PRINT_MODE: print('\t\t\tContract stacks:', time.time() - start)
         #     start = time.time()
-        #     nodes = tn.unbind(nodes)
+        #     nodes = tk.unbind(nodes)
         #     if PRINT_MODE: print('\t\t\tUnbind stacks:', time.time() - start)
         #
         #     left_nodes = nodes
@@ -1112,11 +1112,11 @@ class MPS(TensorNetwork):
         #     right_odd_nodes = right_nodes[1:nice_length_right:2]
         #     right_leftover = right_nodes[nice_length_right:]
         #
-        #     stack1 = tn.stack(right_even_nodes)
-        #     stack2 = tn.stack(right_odd_nodes)
+        #     stack1 = tk.stack(right_even_nodes)
+        #     stack2 = tk.stack(right_odd_nodes)
         #     stack1['right'] ^ stack2['left']
         #     nodes = stack1 @ stack2
-        #     nodes = tn.unbind(nodes)
+        #     nodes = tk.unbind(nodes)
         #
         #     right_nodes = nodes
         #     right_nodes += right_leftover
@@ -1495,21 +1495,21 @@ class MPS(TensorNetwork):
     #         # operations = self._list_ops
     #         # for i, op in enumerate(operations):
     #         #     if op[0] == 'permute':
-    #         #         output = tn.permute(**self._successors['permute'][op[1]].kwargs)
+    #         #         output = tk.permute(**self._successors['permute'][op[1]].kwargs)
     #         #     elif op[0] == 'tprod':
-    #         #         output = tn.tprod(**self._successors['tprod'][op[1]].kwargs)
+    #         #         output = tk.tprod(**self._successors['tprod'][op[1]].kwargs)
     #         #     elif op[0] == 'mul':
-    #         #         output = tn.mul(**self._successors['mul'][op[1]].kwargs)
+    #         #         output = tk.mul(**self._successors['mul'][op[1]].kwargs)
     #         #     elif op[0] == 'add':
-    #         #         output = tn.add(**self._successors['add'][op[1]].kwargs)
+    #         #         output = tk.add(**self._successors['add'][op[1]].kwargs)
     #         #     elif op[0] == 'sub':
-    #         #         output = tn.sub(**self._successors['sub'][op[1]].kwargs)
+    #         #         output = tk.sub(**self._successors['sub'][op[1]].kwargs)
     #         #     elif op[0] == 'contract_edges':
-    #         #         output = tn.contract_edges(**self._successors['contract_edges'][op[1]].kwargs)
+    #         #         output = tk.contract_edges(**self._successors['contract_edges'][op[1]].kwargs)
     #         #     elif op[0] == 'stack':
-    #         #         output = tn.stack(**self._successors['stack'][op[1]].kwargs)
+    #         #         output = tk.stack(**self._successors['stack'][op[1]].kwargs)
     #         #     elif op[0] == 'unbind':
-    #         #         output = tn.unbind(**self._successors['unbind'][op[1]].kwargs)
+    #         #         output = tk.unbind(**self._successors['unbind'][op[1]].kwargs)
 
     #         stack_times = []
     #         unbind_times = []
@@ -1519,32 +1519,32 @@ class MPS(TensorNetwork):
     #         for i, op in enumerate(operations):
     #             if op[0] == 'permute':
     #                 start = time.time()
-    #                 output = tn.permute(**op[1])
+    #                 output = tk.permute(**op[1])
     #                 if PRINT_MODE: print('permute:', time.time() - start)
 
     #             elif op[0] == 'tprod':
     #                 start = time.time()
-    #                 output = tn.tprod(**op[1])
+    #                 output = tk.tprod(**op[1])
     #                 if PRINT_MODE: print('tprod:', time.time() - start)
 
     #             elif op[0] == 'mul':
     #                 start = time.time()
-    #                 output = tn.mul(**op[1])
+    #                 output = tk.mul(**op[1])
     #                 if PRINT_MODE: print('mul:', time.time() - start)
 
     #             elif op[0] == 'add':
     #                 start = time.time()
-    #                 output = tn.add(**op[1])
+    #                 output = tk.add(**op[1])
     #                 if PRINT_MODE: print('add:', time.time() - start)
 
     #             elif op[0] == 'sub':
     #                 start = time.time()
-    #                 output = tn.sub(**op[1])
+    #                 output = tk.sub(**op[1])
     #                 if PRINT_MODE: print('sub:', time.time() - start)
 
     #             elif op[0] == 'contract_edges':
     #                 start = time.time()
-    #                 output = tn.contract_edges(**op[1])
+    #                 output = tk.contract_edges(**op[1])
     #                 if PRINT_MODE:
     #                     diff = time.time() - start
     #                     print('contract_edges:', diff)
@@ -1552,7 +1552,7 @@ class MPS(TensorNetwork):
 
     #             elif op[0] == 'stack':
     #                 start = time.time()
-    #                 output = tn.stack(**op[1])
+    #                 output = tk.stack(**op[1])
     #                 if PRINT_MODE:
     #                     diff = time.time() - start
     #                     print('stack:', diff)
@@ -1560,7 +1560,7 @@ class MPS(TensorNetwork):
 
     #             elif op[0] == 'unbind':
     #                 start = time.time()
-    #                 output = tn.unbind(**op[1])
+    #                 output = tk.unbind(**op[1])
     #                 if PRINT_MODE:
     #                     diff = time.time() - start
     #                     print('unbind:', diff)
@@ -1570,7 +1570,7 @@ class MPS(TensorNetwork):
 
     #         if PRINT_MODE:
     #             print('Contract:', time.time() - start_contract)
-    #             print('Check times sum:', torch.tensor(tn.CHECK_TIMES)[-len(operations):].sum())
+    #             print('Check times sum:', torch.tensor(tk.CHECK_TIMES)[-len(operations):].sum())
     #             print('Stack times sum:', torch.tensor(stack_times).sum())
     #             print('Unbind times sum:', torch.tensor(unbind_times).sum())
     #             print('Contract edges times sum:', torch.tensor(contract_edges_times).sum())

@@ -6,7 +6,7 @@ import pytest
 
 import torch
 import torch.nn as nn
-import tensorkrowch as tn
+import tensorkrowch as tk
 
 import copy
 
@@ -25,19 +25,19 @@ import dis
 class TestAxis:
     
     def test_same_name(self):
-        node = tn.Node(shape=(3, 3),
+        node = tk.Node(shape=(3, 3),
                        axes_names=('my_axis', 'my_axis'),
                        name='my_node')
         assert node.axes_names == ['my_axis_0', 'my_axis_1']
     
     def test_same_name_empty(self):
-        node = tn.Node(shape=(3, 3),
+        node = tk.Node(shape=(3, 3),
                        axes_names=('', ''),
                        name='my_node')
         assert node.axes_names == ['_0', '_1']
         
     def test_batch_axis(self):
-        node = tn.Node(shape=(3, 3),
+        node = tk.Node(shape=(3, 3),
                        axes_names=('batch', 'axis'),
                        name='my_node')
         assert node.axes_names == ['batch', 'axis']
@@ -45,7 +45,7 @@ class TestAxis:
         assert not node['axis'].is_batch()
         
     def test_change_axis_name(self):
-        node = tn.Node(shape=(3, 3),
+        node = tk.Node(shape=(3, 3),
                        axes_names=('axis', 'axis1'),
                        name='my_node')
         assert node.axes_names == ['axis', 'axis1']
@@ -57,7 +57,7 @@ class TestAxis:
         assert node.axes_names == ['axis_0', 'axis_1']
         
     def test_change_name_batch(self):
-        node = tn.Node(shape=(3, 3),
+        node = tk.Node(shape=(3, 3),
                        axes_names=('batch', 'axis'),
                        name='my_node')
         assert node.axes_names == ['batch', 'axis']
@@ -80,8 +80,8 @@ class TestAxis:
     
 class TestInitNode:
     
-    def test_init_node1(self):
-        node = tn.Node(shape=(2, 5, 2),
+    def test_init_node_empty(self):
+        node = tk.Node(shape=(2, 5, 2),
                        axes_names=('left', 'input', 'right'),
                        name='my_node')
 
@@ -107,17 +107,16 @@ class TestInitNode:
         
         assert node['left'] == node.edges[0]
         assert node['left'] == node[0]
-        assert isinstance(node.edges[0], tn.Edge)
+        assert isinstance(node.edges[0], tk.Edge)
         
         assert node.is_leaf()
         assert not node.is_data()
         assert node.successors == dict()
         
-    def test_init_node2(self):
-        node = tn.Node(shape=(2, 5, 2),
+    def test_init_node_data(self):
+        node = tk.Node(shape=(2, 5, 2),
                        axes_names=('left', 'input', 'right'),
-                       network=tn.TensorNetwork('my_net'),
-                       leaf=False,
+                       network=tk.TensorNetwork('my_net'),
                        data=True)
 
         assert node.name == 'node'
@@ -142,15 +141,49 @@ class TestInitNode:
         
         assert node['left'] == node.edges[0]
         assert node['left'] == node[0]
-        assert isinstance(node.edges[0], tn.Edge)
+        assert isinstance(node.edges[0], tk.Edge)
         
         assert not node.is_leaf()
         assert node.is_data()
         assert node.successors == dict()
         
-    def test_init_node3(self):
+    def test_init_node_virtual(self):
+        node = tk.Node(shape=(2, 5, 2),
+                       axes_names=('left', 'input', 'right'),
+                       network=tk.TensorNetwork('my_net'),
+                       virtual=True)
+
+        assert node.name == 'node'
+        assert node.shape == (2, 5, 2)
+        assert node.axes_names == ['left', 'input', 'right']
+        assert node.rank == 3
+        assert node.dtype is None
+        
+        assert node.tensor is None
+        assert node._tensor_info == {'address': 'node',
+                                     'node_ref': None,
+                                     'full': True,
+                                     'stack_idx': None,
+                                     'index': None}
+        
+        net = node.network
+        assert net.name == 'my_net'
+        assert len(net.nodes) == 1
+        assert len(net._memory_nodes) == 1
+        assert len(net.virtual_nodes) == 1
+        assert list(net._memory_nodes.keys()) == ['node']
+        
+        assert node['left'] == node.edges[0]
+        assert node['left'] == node[0]
+        assert isinstance(node.edges[0], tk.Edge)
+        
+        assert not node.is_leaf()
+        assert node.is_virtual()
+        assert node.successors == dict()
+        
+    def test_init_node_param_edges(self):
         tensor = torch.randn(2, 5, 2)
-        node = tn.Node(axes_names=('left', 'input', 'right'),
+        node = tk.Node(axes_names=('left', 'input', 'right'),
                        param_edges=True,
                        tensor=tensor)
 
@@ -176,15 +209,15 @@ class TestInitNode:
         
         assert node['left'] == node.edges[0]
         assert node['left'] == node[0]
-        assert isinstance(node.edges[0], tn.ParamEdge)
+        assert isinstance(node.edges[0], tk.ParamEdge)
         
         assert node.is_leaf()
         assert not node.is_data()
         assert node.successors == dict()
         
-    def test_init_node4(self):
+    def test_init_node_param_edges_no_axis_names(self):
         tensor = torch.randn(2, 5, 2)
-        node = tn.Node(param_edges=True,
+        node = tk.Node(param_edges=True,
                        tensor=tensor)
 
         assert node.name == 'node'
@@ -209,26 +242,28 @@ class TestInitNode:
         
         assert node['axis_0'] == node.edges[0]
         assert node['axis_0'] == node[0]
-        assert isinstance(node.edges[0], tn.ParamEdge)
+        assert isinstance(node.edges[0], tk.ParamEdge)
         
         assert node.is_leaf()
         assert not node.is_data()
         assert node.successors == dict()
         
     def test_init_node_errors(self):
+        # A Node cannot be data and virtual at the same time
         with pytest.raises(ValueError):
-            node = tn.Node(shape=(2, 5, 2),
-                           data=True)
+            node = tk.Node(shape=(2, 5, 2),
+                           data=True,
+                           virtual=True)
             
         with pytest.raises(ValueError):
-            node = tn.Node(shape=(2, 5, 3),
+            node = tk.Node(shape=(2, 5, 3),
                            tensor=torch.randn(2, 5, 2))
             
             
 class TestInitParamNode:
     
-    def test_init_paramnode1(self):
-        node = tn.ParamNode(shape=(2, 5, 2),
+    def test_init_paramnode_empty(self):
+        node = tk.ParamNode(shape=(2, 5, 2),
                             axes_names=('left', 'input', 'right'),
                             name='my_node')
 
@@ -254,50 +289,29 @@ class TestInitParamNode:
         
         assert node['left'] == node.edges[0]
         assert node['left'] == node[0]
-        assert isinstance(node.edges[0], tn.Edge)
+        assert isinstance(node.edges[0], tk.Edge)
         
         assert node.is_leaf()
         assert not node.is_data()
         assert node.successors == dict()
         
-    def test_init_paramnode2(self):
-        node = tn.ParamNode(shape=(2, 5, 2),
-                            axes_names=('left', 'input', 'right'),
-                            network=tn.TensorNetwork('my_net'),
-                            leaf=False,
-                            data=True)
-
-        assert node.name == 'paramnode'
-        assert node.shape == (2, 5, 2)
-        assert node.axes_names == ['left', 'input', 'right']
-        assert node.rank == 3
-        assert node.dtype is None
+    def test_init_paramnode_data(self):
+        with pytest.raises(ValueError):
+            node = tk.ParamNode(shape=(2, 5, 2),
+                                axes_names=('left', 'input', 'right'),
+                                network=tk.TensorNetwork('my_net'),
+                                data=True)
+            
+    def test_init_paramnode_virtual(self):
+        with pytest.raises(ValueError):
+            node = tk.ParamNode(shape=(2, 5, 2),
+                                axes_names=('left', 'input', 'right'),
+                                network=tk.TensorNetwork('my_net'),
+                                virtual=True)
         
-        assert node.tensor is None
-        assert node._tensor_info == {'address': 'paramnode',
-                                     'node_ref': None,
-                                     'full': True,
-                                     'stack_idx': None,
-                                     'index': None}
-        
-        net = node.network
-        assert net.name == 'my_net'
-        assert len(net.nodes) == 1
-        assert len(net._memory_nodes) == 1
-        assert len(net.data_nodes) == 1
-        assert list(net._memory_nodes.keys()) == ['paramnode']
-        
-        assert node['left'] == node.edges[0]
-        assert node['left'] == node[0]
-        assert isinstance(node.edges[0], tn.Edge)
-        
-        assert not node.is_leaf()
-        assert node.is_data()
-        assert node.successors == dict()
-        
-    def test_init_paramnode3(self):
+    def test_init_paramnode_param_edges(self):
         tensor = torch.randn(2, 5, 2)
-        node = tn.ParamNode(axes_names=('left', 'input', 'right'),
+        node = tk.ParamNode(axes_names=('left', 'input', 'right'),
                             param_edges=True,
                             tensor=tensor)
 
@@ -323,15 +337,15 @@ class TestInitParamNode:
         
         assert node['left'] == node.edges[0]
         assert node['left'] == node[0]
-        assert isinstance(node.edges[0], tn.ParamEdge)
+        assert isinstance(node.edges[0], tk.ParamEdge)
         
         assert node.is_leaf()
         assert not node.is_data()
         assert node.successors == dict()
         
-    def test_init_paramnode4(self):
+    def test_init_paramnode_param_edges_no_axis_names(self):
         tensor = torch.randn(2, 5, 2)
-        node = tn.ParamNode(param_edges=True,
+        node = tk.ParamNode(param_edges=True,
                             tensor=tensor)
 
         assert node.name == 'paramnode'
@@ -356,19 +370,30 @@ class TestInitParamNode:
         
         assert node['axis_0'] == node.edges[0]
         assert node['axis_0'] == node[0]
-        assert isinstance(node.edges[0], tn.ParamEdge)
+        assert isinstance(node.edges[0], tk.ParamEdge)
         
         assert node.is_leaf()
         assert not node.is_data()
         assert node.successors == dict()
         
     def test_init_paramnode_errors(self):
+        # Parametric Nodes cannot be data nodes
         with pytest.raises(ValueError):
-            node = tn.ParamNode(shape=(2, 5, 2),
+            node = tk.ParamNode(shape=(2, 5, 2),
                                 data=True)
             
+        # Parametric Nodes cannot be virtual nodes
         with pytest.raises(ValueError):
-            node = tn.ParamNode(shape=(2, 5, 3),
+            node = tk.ParamNode(shape=(2, 5, 2),
+                                virtual=True)
+            
+        # Parametric Nodes are always leaf nodes
+        with pytest.raises(ValueError):
+            node = tk.ParamNode(shape=(2, 5, 2),
+                                leaf=False)
+            
+        with pytest.raises(ValueError):
+            node = tk.ParamNode(shape=(2, 5, 3),
                                 tensor=torch.randn(2, 5, 2))
 
 
@@ -376,18 +401,18 @@ class TestNodeName:
     
     @pytest.fixture
     def setup(self):
-        net = tn.TensorNetwork()
-        node1 = tn.Node(shape=(2, 5, 2),
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node1',
                         network=net)
-        node2 = tn.Node(shape=(2, 5, 2),
+        node2 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node2',
                         network=net)
         
         node1['right'] ^ node2['left']
-        net.set_data_nodes([node1['input'], node2['input']], 1)
+        net.set_data_nodes([node1['input'], node2['input']], ['batch'])
         
         return net
     
@@ -452,12 +477,12 @@ class TestSetTensor:
     
     @pytest.fixture
     def setup(self):
-        node1 = tn.Node(shape=(2, 5, 2),
+        node1 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node1')
         
         tensor = torch.randn(2, 5, 2)
-        node2 = tn.Node(axes_names=('left', 'input', 'right'),
+        node2 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node2',
                         tensor=tensor)
         return node1, node2, tensor
@@ -551,7 +576,7 @@ class TestSetTensor:
         assert node1.tensor is None
         
         # Create parametric node
-        node3 = tn.ParamNode(axes_names=('left', 'input', 'right'),
+        node3 = tk.ParamNode(axes_names=('left', 'input', 'right'),
                              tensor=tensor)
         assert isinstance(node3.tensor, nn.Parameter)
         assert torch.equal(node3.tensor.data, tensor)
@@ -574,10 +599,10 @@ class TestSetTensor:
 class TestConnect:
     
     def test_connect_edges(self):
-        node1 = tn.Node(shape=(2, 5, 2),
+        node1 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node')
-        node2 = tn.Node(shape=(2, 5, 2),
+        node2 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node')
         
@@ -585,22 +610,22 @@ class TestConnect:
         assert node2.name == 'node'
         assert node1.network != node2.network
         
-        assert isinstance(node1[2], tn.Edge)
-        assert isinstance(node2[0], tn.Edge)
+        assert isinstance(node1[2], tk.Edge)
+        assert isinstance(node2[0], tk.Edge)
         
         new_edge = node1[2] ^ node2[0]
-        assert isinstance(new_edge, tn.Edge)
+        assert isinstance(new_edge, tk.Edge)
         
         assert node1.name == 'node_0'
         assert node2.name == 'node_1'
         assert node1.network == node2.network
         
     def test_connect_paramedges(self):
-        node1 = tn.Node(shape=(2, 5, 2),
+        node1 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node',
                         param_edges=True)
-        node2 = tn.Node(shape=(2, 5, 2),
+        node2 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node',
                         param_edges=True)
@@ -609,21 +634,21 @@ class TestConnect:
         assert node2.name == 'node'
         assert node1.network != node2.network
         
-        assert isinstance(node1[2], tn.ParamEdge)
-        assert isinstance(node2[0], tn.ParamEdge)
+        assert isinstance(node1[2], tk.ParamEdge)
+        assert isinstance(node2[0], tk.ParamEdge)
         
         new_edge = node1[2] ^ node2[0]
-        assert isinstance(new_edge, tn.ParamEdge)
+        assert isinstance(new_edge, tk.ParamEdge)
         
         assert node1.name == 'node_0'
         assert node2.name == 'node_1'
         assert node1.network == node2.network
         
     def test_connect_edge_paramedge(self):
-        node1 = tn.Node(shape=(2, 5, 2),
+        node1 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node')
-        node2 = tn.Node(shape=(2, 5, 2),
+        node2 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node',
                         param_edges=True)
@@ -632,22 +657,22 @@ class TestConnect:
         assert node2.name == 'node'
         assert node1.network != node2.network
         
-        assert isinstance(node1[2], tn.Edge)
-        assert isinstance(node2[0], tn.ParamEdge)
+        assert isinstance(node1[2], tk.Edge)
+        assert isinstance(node2[0], tk.ParamEdge)
         
         new_edge = node1[2] ^ node2[0]
-        assert isinstance(new_edge, tn.ParamEdge)
+        assert isinstance(new_edge, tk.ParamEdge)
         
         assert node1.name == 'node_0'
         assert node2.name == 'node_1'
         assert node1.network == node2.network
         
     def test_connect_paramedge_edge(self):
-        node1 = tn.Node(shape=(2, 5, 2),
+        node1 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node',
                         param_edges=True)
-        node2 = tn.Node(shape=(2, 5, 2),
+        node2 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node')
         
@@ -655,25 +680,25 @@ class TestConnect:
         assert node2.name == 'node'
         assert node1.network != node2.network
         
-        assert isinstance(node1[2], tn.ParamEdge)
-        assert isinstance(node2[0], tn.Edge)
+        assert isinstance(node1[2], tk.ParamEdge)
+        assert isinstance(node2[0], tk.Edge)
         
         new_edge = node1[2] ^ node2[0]
-        assert isinstance(new_edge, tn.ParamEdge)
+        assert isinstance(new_edge, tk.ParamEdge)
         
         assert node1.name == 'node_0'
         assert node2.name == 'node_1'
         assert node1.network == node2.network
         
     def test_connect_same_network(self):
-        net = tn.TensorNetwork()
-        node1 = tn.Node(shape=(2, 5, 2),
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node',
                         network=net)
         assert node1.name == 'node'
         
-        node2 = tn.Node(shape=(2, 5, 2),
+        node2 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node',
                         network=net)
@@ -682,21 +707,21 @@ class TestConnect:
         assert node2.name == 'node_1'
         assert node1.network == node2.network
         
-        assert isinstance(node1[2], tn.Edge)
-        assert isinstance(node2[0], tn.Edge)
+        assert isinstance(node1[2], tk.Edge)
+        assert isinstance(node2[0], tk.Edge)
         
         new_edge = node1[2] ^ node2[0]
-        assert isinstance(new_edge, tn.Edge)
+        assert isinstance(new_edge, tk.Edge)
         
         assert node1.name == 'node_0'
         assert node2.name == 'node_1'
         assert node1.network == node2.network
         
     def test_connect_different_sizes(self):
-        node1 = tn.Node(shape=(2, 5, 2),
+        node1 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node1')
-        node2 = tn.Node(shape=(2, 5, 2),
+        node2 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node2',
                         param_edges=True)
@@ -706,38 +731,38 @@ class TestConnect:
         assert node2[0].dim() == 2
         
         new_edge = node1[2] ^ node2[0]
-        assert isinstance(new_edge, tn.ParamEdge)
+        assert isinstance(new_edge, tk.ParamEdge)
         assert new_edge.size() == 2
         assert new_edge.dim() == 2
 
-        node1 = tn.Node(shape=(2, 5, 2),
+        node1 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node1',
                         param_edges=True)
-        node2 = tn.Node(shape=(2, 5, 2),
+        node2 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node2',
                         param_edges=True)
         node1[2].change_size(3)
         node2[0].change_size(4)
         new_edge = node1[2] ^ node2[0]
-        assert isinstance(new_edge, tn.ParamEdge)
+        assert isinstance(new_edge, tk.ParamEdge)
         assert new_edge.size() == 3
         assert new_edge.dim() == 2
         
     def test_connect_with_result(self):
-        node1 = tn.Node(shape=(2, 5, 2),
+        node1 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node1',
                         init_method='randn')
-        node2 = tn.Node(shape=(2, 5, 2),
+        node2 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node2',
                         init_method='randn')
         node1[2] ^ node2[0]
         node3 = node1 @ node2
 
-        node4 = tn.Node(shape=(2, 5, 2),
+        node4 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node4',
                         init_method='randn')
@@ -765,11 +790,11 @@ class TestConnect:
         assert node3[3] == node4[0]
         
     def test_disconnect(self):
-        node1 = tn.Node(shape=(2, 5, 2),
+        node1 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node1',
                         init_method='randn')
-        node2 = tn.Node(shape=(2, 5, 2),
+        node2 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node2',
                         init_method='randn')
@@ -789,17 +814,17 @@ class TestConnect:
         assert node1['right'] != node2['left']
         
     def test_connect_disconnect_stackedge(self):
-        net = tn.TensorNetwork()
+        net = tk.TensorNetwork()
         left_nodes = []
         right_nodes = []
         for _ in range(10):
-            node = tn.Node(shape=(5,),
+            node = tk.Node(shape=(5,),
                            axes_names=('left',),
                            init_method='randn',
                            network=net)
             left_nodes.append(node)
             
-            node = tn.Node(shape=(5,),
+            node = tk.Node(shape=(5,),
                            axes_names=('right',),
                            init_method='randn',
                            network=net)
@@ -808,56 +833,106 @@ class TestConnect:
         for i in range(10):
             left_nodes[i][0] ^ right_nodes[i][0]
             
-        left_stack = tn.stack(left_nodes)
-        right_stack = tn.stack(right_nodes)
+        left_stack = tk.stack(left_nodes)
+        right_stack = tk.stack(right_nodes)
         
-        assert isinstance(left_stack[1], tn.StackEdge)
+        assert isinstance(left_stack[1], tk.StackEdge)
         assert left_stack[1].is_dangling()
-        assert isinstance(right_stack[1], tn.StackEdge)
+        assert isinstance(right_stack[1], tk.StackEdge)
         assert right_stack[1].is_dangling()
         
         left_stack[1] ^ right_stack[1]
         assert left_stack[1] == right_stack[1]
-        assert isinstance(left_stack[1], tn.StackEdge)
+        assert isinstance(left_stack[1], tk.StackEdge)
         
         left_stack[1] | left_stack[1]
         assert left_stack[1] != right_stack[1]
-        assert isinstance(left_stack[1], tn.StackEdge)
+        assert isinstance(left_stack[1], tk.StackEdge)
         assert left_stack[1].is_dangling()
-        assert isinstance(right_stack[1], tn.StackEdge)
+        assert isinstance(right_stack[1], tk.StackEdge)
         assert right_stack[1].is_dangling()
         
     def test_connect_disconnected_stacks(self):
-        net = tn.TensorNetwork()
+        net = tk.TensorNetwork()
         left_nodes = []
         right_nodes = []
         for _ in range(10):
-            node = tn.Node(shape=(5,),
+            node = tk.Node(shape=(5,),
                            axes_names=('left',),
                            init_method='randn',
                            network=net)
             left_nodes.append(node)
             
-            node = tn.Node(shape=(5,),
+            node = tk.Node(shape=(5,),
                            axes_names=('right',),
                            init_method='randn',
                            network=net)
             right_nodes.append(node)
             
-        left_stack = tn.stack(left_nodes)
-        right_stack = tn.stack(right_nodes)
+        left_stack = tk.stack(left_nodes)
+        right_stack = tk.stack(right_nodes)
         
         with pytest.raises(ValueError):
             left_stack[1] ^ right_stack[1]
     
+ 
+class TestSVD:
     
+    @pytest.fixture
+    def setup(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+        node2 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        network=net,
+                        init_method='randn')
+        
+        edge = node1['right'] ^ node2['left']
+        return edge
+    
+    def test_svd_edge(self, setup):
+        edge = setup
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
+        assert edge.dim() == 3
+        
+        edge.svd(rank=2)
+        assert edge.node1.shape == (3, 5, 2)
+        assert edge.node2.shape == (2, 5, 3)
+        assert edge.size() == 2
+        assert edge.dim() == 2 
+        
+        edge.svd(cum_percentage=0.9)
+        
+    def test_svd_paramedge(self, setup):
+        edge = setup
+        paramedge = edge.parameterize()
+        
+        assert isinstance(paramedge, tk.ParamEdge)
+        assert paramedge.size() == 3
+        assert paramedge.dim() == 3
+        
+        paramedge.svd(rank=2)
+        assert paramedge.node1.shape == (3, 5, 2)
+        assert paramedge.node2.shape == (2, 5, 3)
+        assert paramedge.size() == 2
+        assert paramedge.dim() == 2 
+        
+        paramedge.svd(cum_percentage=0.9)
+
+
 class TestParameterize:
     
     def test_parameterize_node(self):
-        node1 = tn.Node(axes_names=('left', 'input', 'right'),
+        node1 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node1',
                         tensor=torch.randn(2, 5, 2))
-        node2 = tn.Node(axes_names=('left', 'input', 'right'),
+        node2 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node2',
                         tensor=torch.randn(2, 5, 2))
         node1['right'] ^ node2['left']
@@ -880,15 +955,15 @@ class TestParameterize:
         assert node1['right']._nodes[node1.is_node1('right')] == node2
         del node1
         
-        assert isinstance(paramnode1, tn.ParamNode)
+        assert isinstance(paramnode1, tk.ParamNode)
         assert paramnode1['left'].node1 == paramnode1
-        assert isinstance(paramnode1['left'], tn.Edge)
+        assert isinstance(paramnode1['left'], tk.Edge)
         
     def test_deparameterize_paramnode(self):
-        paramnode1 = tn.ParamNode(axes_names=('left', 'input', 'right'),
+        paramnode1 = tk.ParamNode(axes_names=('left', 'input', 'right'),
                                   name='paramnode1',
                                   tensor=torch.randn(2, 5, 2))
-        node2 = tn.Node(axes_names=('left', 'input', 'right'),
+        node2 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node2',
                         tensor=torch.randn(2, 5, 2))
         paramnode1['right'] ^ node2['left']
@@ -911,12 +986,12 @@ class TestParameterize:
         assert paramnode1['right']._nodes[paramnode1.is_node1('right')] == node2
         del paramnode1
         
-        assert isinstance(node1, tn.Node)
+        assert isinstance(node1, tk.Node)
         assert node1['left'].node1 == node1
-        assert isinstance(node1['left'], tn.Edge)
+        assert isinstance(node1['left'], tk.Edge)
         
     def test_parameterize_dangling_edge(self):
-        node = tn.Node(axes_names=('left', 'input', 'right'),
+        node = tk.Node(axes_names=('left', 'input', 'right'),
                        tensor=torch.randn(3, 5, 2))
         net = node.network
         
@@ -924,7 +999,7 @@ class TestParameterize:
         assert prev_edge in net.edges
 
         node['left'].parameterize(set_param=True, size=4)
-        assert isinstance(node['left'], tn.ParamEdge)
+        assert isinstance(node['left'], tk.ParamEdge)
         assert node.shape == (4, 5, 2)
         assert node.dim() == (3, 5, 2)
 
@@ -932,7 +1007,7 @@ class TestParameterize:
         assert node['left'] in net.edges
 
         node['left'].parameterize(set_param=False)
-        assert isinstance(node['left'], tn.Edge)
+        assert isinstance(node['left'], tk.Edge)
         assert node.shape == (3, 5, 2)
         assert node.dim() == (3, 5, 2)
 
@@ -945,7 +1020,7 @@ class TestParameterize:
         assert node.dim() == (2, 5, 2)
         
     def test_parameterize_dangling_edge2(self):
-        node = tn.Node(shape=(3, 5, 2),
+        node = tk.Node(shape=(3, 5, 2),
                        axes_names=('left', 'input', 'right'))
         net = node.network
         
@@ -953,7 +1028,7 @@ class TestParameterize:
         assert prev_edge in net.edges
 
         node['left'].parameterize(set_param=True, size=4)
-        assert isinstance(node['left'], tn.ParamEdge)
+        assert isinstance(node['left'], tk.ParamEdge)
         assert node.shape == (4, 5, 2)
         assert node.dim() == (3, 5, 2)
 
@@ -961,7 +1036,7 @@ class TestParameterize:
         assert node['left'] in net.edges
 
         node['left'].parameterize(set_param=False)
-        assert isinstance(node['left'], tn.Edge)
+        assert isinstance(node['left'], tk.Edge)
         assert node.shape == (3, 5, 2)
         assert node.dim() == (3, 5, 2)
 
@@ -974,10 +1049,10 @@ class TestParameterize:
         assert node.dim() == (2, 5, 2)
         
     def test_parameterize_connected_edge(self):
-        node1 = tn.Node(axes_names=('left', 'input', 'right'),
+        node1 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node1',
                         tensor=torch.randn(2, 5, 3))
-        node2 = tn.Node(axes_names=('left', 'input', 'right'),
+        node2 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node2',
                         tensor=torch.randn(3, 5, 2))
         node1['right'] ^ node2['left']
@@ -986,14 +1061,14 @@ class TestParameterize:
         assert prev_edge in node2.edges
 
         node2['left'].parameterize(set_param=True, size=4)
-        assert isinstance(node2['left'], tn.ParamEdge)
+        assert isinstance(node2['left'], tk.ParamEdge)
         assert node2.shape == (4, 5, 2)
         assert node2.dim() == (3, 5, 2)
 
         assert prev_edge not in node2.edges
 
         node2['left'].parameterize(set_param=False)
-        assert isinstance(node2['left'], tn.Edge)
+        assert isinstance(node2['left'], tk.Edge)
         assert node2.shape == (3, 5, 2)
         assert node2.dim() == (3, 5, 2)
 
@@ -1006,14 +1081,14 @@ class TestParameterize:
         assert node2.dim() == (2, 5, 2) 
         
     def test_change_size_dim_dangling(self):
-        node = tn.Node(shape=(2, 5, 2),
+        node = tk.Node(shape=(2, 5, 2),
                        axes_names=('left', 'input', 'right'),
                        name='node',
                        param_edges=True,
                        init_method='randn')
         
         for i, edge in enumerate(node.edges):
-            assert isinstance(edge, tn.ParamEdge)
+            assert isinstance(edge, tk.ParamEdge)
             assert edge.dim() == node.shape[i]
         
         param_edge = node[0]
@@ -1036,12 +1111,12 @@ class TestParameterize:
         assert param_edge.node1.dim() == (2, 5, 2)
         
     def test_change_size_dim_connected(self):
-        node1 = tn.Node(shape=(2, 5, 2),
+        node1 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node1',
                         param_edges=True,
                         init_method='randn')
-        node2 = tn.Node(shape=(2, 5, 2),
+        node2 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node2',
                         param_edges=True,
@@ -1077,43 +1152,43 @@ class TestParameterize:
 class TestCopy:
     
     def test_copy_edge(self):
-        node1 = tn.Node(axes_names=('left', 'input', 'right'),
+        node1 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node1',
                         tensor=torch.randn(2, 5, 2))
-        node2 = tn.Node(axes_names=('left', 'input', 'right'),
+        node2 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node2',
                         tensor=torch.randn(2, 5, 2))
         edge = node1['right'] ^ node2['left']
         
         copy_edge = edge.copy()
-        assert isinstance(edge, tn.Edge)
-        assert isinstance(copy_edge, tn.Edge)
+        assert isinstance(edge, tk.Edge)
+        assert isinstance(copy_edge, tk.Edge)
         assert copy_edge._nodes == edge._nodes
         assert copy_edge._axes == edge._axes
         assert copy_edge != edge
         
     def test_copy_paramedge(self):
-        node1 = tn.Node(axes_names=('left', 'input', 'right'),
+        node1 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node1',
                         tensor=torch.randn(2, 5, 2),
                         param_edges=True)
-        node2 = tn.Node(axes_names=('left', 'input', 'right'),
+        node2 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node2',
                         tensor=torch.randn(2, 5, 2))
         paramedge = node1['right'] ^ node2['left']
         
         copy_paramedge = paramedge.copy()
-        assert isinstance(paramedge, tn.ParamEdge)
-        assert isinstance(copy_paramedge, tn.ParamEdge)
+        assert isinstance(paramedge, tk.ParamEdge)
+        assert isinstance(copy_paramedge, tk.ParamEdge)
         assert copy_paramedge._nodes == paramedge._nodes
         assert copy_paramedge._axes == paramedge._axes
         assert copy_paramedge != paramedge
         
     def test_copy_node_empty(self):
-        node1 = tn.Node(shape=(2, 5, 2),
+        node1 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node1')
-        node2 = tn.Node(shape=(2, 5, 2),
+        node2 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node2')
         node1['right'] ^ node2['left']
@@ -1138,10 +1213,10 @@ class TestCopy:
         assert node2['left'].node1 == node1
         
     def test_copy_node(self):
-        node1 = tn.Node(axes_names=('left', 'input', 'right'),
+        node1 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node1',
                         tensor=torch.randn(2, 5, 2))
-        node2 = tn.Node(axes_names=('left', 'input', 'right'),
+        node2 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node2',
                         tensor=torch.randn(2, 5, 2))
         node1['right'] ^ node2['left']
@@ -1166,11 +1241,11 @@ class TestCopy:
         assert node2['left'].node1 == node1
                 
     def test_copy_paramnode_empty(self):
-        node1 = tn.ParamNode(shape=(2, 5, 2),
+        node1 = tk.ParamNode(shape=(2, 5, 2),
                              axes_names=('left', 'input', 'right'),
                              name='node1',
                              param_edges=True)
-        node2 = tn.Node(shape=(2, 5, 2),
+        node2 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node2')
         node1['right'] ^ node2['left']
@@ -1195,11 +1270,11 @@ class TestCopy:
         assert node2['left'].node1 == node1
         
     def test_copy_paramnode(self):
-        node1 = tn.ParamNode(axes_names=('left', 'input', 'right'),
+        node1 = tk.ParamNode(axes_names=('left', 'input', 'right'),
                              name='node1',
                              tensor=torch.randn(2, 5, 2),
                              param_edges=True)
-        node2 = tn.Node(axes_names=('left', 'input', 'right'),
+        node2 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node2',
                         tensor=torch.randn(2, 5, 2))
         node1['right'] ^ node2['left']
@@ -1227,10 +1302,10 @@ class TestCopy:
 class TestTensorNetwork:
     
     def test_change_network(self):
-        node1 = tn.Node(axes_names=('left', 'input', 'right'),
+        node1 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node1',
                         tensor=torch.randn(2, 5, 2))
-        node2 = tn.Node(axes_names=('left', 'input', 'right'),
+        node2 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node2',
                         tensor=torch.randn(2, 5, 2))
         
@@ -1250,17 +1325,17 @@ class TestTensorNetwork:
         assert len(net2.edges) == 0
         
     def test_move_to_network(self):
-        net1 = tn.TensorNetwork(name='net1')
-        node1 = tn.Node(axes_names=('left', 'input', 'right'),
+        net1 = tk.TensorNetwork(name='net1')
+        node1 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node1',
                         tensor=torch.randn(2, 5, 2),
                         network=net1)
-        node2 = tn.Node(axes_names=('left', 'input', 'right'),
+        node2 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node2',
                         tensor=torch.randn(2, 5, 2),
                         network=net1)
         
-        net2 = tn.TensorNetwork(name='net2')
+        net2 = tk.TensorNetwork(name='net2')
         node2.network = net2
         assert node1.network == net1
         assert node2.network == net2
@@ -1279,14 +1354,14 @@ class TestTensorNetwork:
         assert len(net1.edges) == 0
         
     def test_add_remove(self):
-        net = tn.TensorNetwork()
+        net = tk.TensorNetwork()
         for _ in range(4):
-            _ = tn.Node(shape=(2, 5, 2),
+            _ = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         network=net)
         assert list(net.nodes.keys()) == [f'node_{i}' for i in range(4)]
 
-        new_node = tn.Node(shape=(2, 5, 2),
+        new_node = tk.Node(shape=(2, 5, 2),
                            axes_names=('left', 'input', 'right'),
                            name='node')
         new_node.network = net
@@ -1312,9 +1387,9 @@ class TestTensorNetwork:
         del new_node
         
     def test_change_name(self):
-        net = tn.TensorNetwork()
+        net = tk.TensorNetwork()
         for _ in range(4):
-            _ = tn.Node(shape=(2, 5, 2),
+            _ = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         network=net)
         node1 = net['node_0']
@@ -1336,9 +1411,9 @@ class TestTensorNetwork:
         assert node2.name == 'my_node_1'
             
     def test_consecutive_contractions(self):
-        net = tn.TensorNetwork(name='net')
+        net = tk.TensorNetwork(name='net')
         for i in range(4):
-            _ = tn.Node(shape=(2, 5, 2),
+            _ = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node',
                         network=net,
@@ -1356,7 +1431,7 @@ class TestTensorNetwork:
         assert len(net.nodes) == 7
         assert len(net.edges) == 6
 
-        new_node = tn.Node(shape=(2, 5, 2),
+        new_node = tk.Node(shape=(2, 5, 2),
                            axes_names=('left', 'input', 'right'),
                            name='node',
                            init_method='randn')
@@ -1367,14 +1442,14 @@ class TestTensorNetwork:
             node @= new_node
             
     def test_submodules_empty(self):
-        net = tn.TensorNetwork(name='net')
+        net = tk.TensorNetwork(name='net')
         for i in range(2):
-            _ = tn.ParamNode(shape=(2, 5, 2),
+            _ = tk.ParamNode(shape=(2, 5, 2),
                              axes_names=('left', 'input', 'right'),
                              network=net,
                              param_edges=True)
         for i in range(2):
-            _ = tn.Node(shape=(2, 5, 2),
+            _ = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         network=net,
                         param_edges=True)
@@ -1393,15 +1468,15 @@ class TestTensorNetwork:
         assert len(net._parameters) == 0
         
     def test_submodules(self):
-        net = tn.TensorNetwork(name='net')
+        net = tk.TensorNetwork(name='net')
         for i in range(2):
-            _ = tn.ParamNode(shape=(2, 5, 2),
+            _ = tk.ParamNode(shape=(2, 5, 2),
                              axes_names=('left', 'input', 'right'),
                              network=net,
                              param_edges=True,
                              init_method='randn')
         for i in range(2):
-            _ = tn.Node(shape=(2, 5, 2),
+            _ = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         network=net,
                         param_edges=True,
@@ -1421,9 +1496,9 @@ class TestTensorNetwork:
         assert len(net._parameters) == 2
         
     def test_parameterize_tn_empty(self):
-        net = tn.TensorNetwork(name='net')
+        net = tk.TensorNetwork(name='net')
         for i in range(2):
-            _ = tn.Node(shape=(2, 5, 2),
+            _ = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         network=net)
 
@@ -1452,9 +1527,9 @@ class TestTensorNetwork:
         assert len(net._parameters) == 0
         
     def test_parameterize_tn(self):
-        net = tn.TensorNetwork(name='net')
+        net = tk.TensorNetwork(name='net')
         for i in range(2):
-            _ = tn.Node(shape=(2, 5, 2),
+            _ = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         network=net,
                         init_method='randn')
@@ -1483,10 +1558,10 @@ class TestTensorNetwork:
         assert len(submodules) == 0
         assert len(net._parameters) == 0
         
-    def test_set_data_nodes(self):
-        net = tn.TensorNetwork(name='net')
+    def test_set_data_nodes_same_shape(self):
+        net = tk.TensorNetwork(name='net')
         for i in range(4):
-            _ = tn.Node(shape=(2, 5, 2),
+            _ = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node',
                         network=net,
@@ -1498,17 +1573,20 @@ class TestTensorNetwork:
         input_edges = []
         for i in range(4):
             input_edges.append(net[f'node_{i}']['input'])
-        net.set_data_nodes(input_edges, 1)
+        net.set_data_nodes(input_edges, ['batch'])
+        
         # 4 leaf nodes, 4 data nodes, and the
         # stack_data_memory (+2 virtual nodes)
         assert len(net.nodes) == 11
+        assert len(net.leaf_nodes) == 4
         assert len(net.data_nodes) == 4
+        assert len(net.virtual_nodes) == 3
 
         input_edges = []
         for i in range(3):
             input_edges.append(net[f'node_{i}']['input'])
         with pytest.raises(ValueError):
-            net.set_data_nodes(input_edges, 1)
+            net.set_data_nodes(input_edges, ['batch'])
 
         net.unset_data_nodes()
         assert len(net.nodes) == 4
@@ -1517,9 +1595,27 @@ class TestTensorNetwork:
         input_edges = []
         for i in range(2):
             input_edges.append(net[f'node_{i}']['input'])
-        net.set_data_nodes(input_edges, 1)
+        net.set_data_nodes(input_edges, ['batch'])
         assert len(net.nodes) == 9
+        assert len(net.leaf_nodes) == 4
         assert len(net.data_nodes) == 2
+        assert len(net.virtual_nodes) == 3
+
+    def test_add_data_same_shape(self):
+        net = tk.TensorNetwork(name='net')
+        for i in range(4):
+            _ = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node',
+                        network=net,
+                        init_method='ones')
+        for i in range(3):
+            net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
+
+        input_edges = []
+        for i in range(2):
+            input_edges.append(net[f'node_{i}']['input'])
+        net.set_data_nodes(input_edges, ['batch'])
 
         # data shape = n_features x batch_dim x feature_dim
         data = torch.randn(2, 10, 5)
@@ -1536,11 +1632,89 @@ class TestTensorNetwork:
         # This does not give warning, batch size can be changed as we wish
         data = torch.randn(2, 100, 5)
         net._add_data(data)
+
+        # Add data with no data nodes raises error
+        net.unset_data_nodes()
+        with pytest.raises(ValueError):
+            net._add_data(data)
+            
+    def test_set_data_nodes_diff_shape(self):
+        net = tk.TensorNetwork(name='net')
+        for i in range(4):
+            node = tk.Node(shape=(2, i + 2, 2),
+                           axes_names=('left', 'input', 'right'),
+                           name='node',
+                           network=net,
+                           init_method='ones')
+            data_node = tk.Node(shape=(i + 2, 1),  # Shape of batch index is irrelevant
+                                axes_names=('feature', 'batch'),
+                                name='data_node',
+                                network=net,
+                                init_method='ones',
+                                data=True)
+            node['input'] ^ data_node['feature']
+        
+        for i in range(3):
+            net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
+
+        assert len(net.nodes) == 8
+        assert len(net.leaf_nodes) == 4
+        assert len(net.data_nodes) == 4
+        assert len(net.virtual_nodes) == 0
+        
+        net.unset_data_nodes()
+        assert len(net.nodes) == 4
+        assert len(net.leaf_nodes) == 4
+        assert len(net.data_nodes) == 0
+        assert len(net.virtual_nodes) == 0
+        
+    def test_add_data_diff_shape(self):
+        net = tk.TensorNetwork(name='net')
+        data = []
+        for i in range(4):
+            node = tk.Node(shape=(2, i + 2, 2),
+                           axes_names=('left', 'input', 'right'),
+                           name='node',
+                           network=net,
+                           init_method='ones')
+            data_node = tk.Node(shape=(i + 2, 1),  # Shape of batch index is irrelevant
+                                axes_names=('feature', 'batch'),
+                                name='data',
+                                network=net,
+                                init_method='ones',
+                                data=True)
+            node['input'] ^ data_node['feature']
+            data.append(torch.randn(i + 2, 100))
+        
+        for i in range(3):
+            net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
+
+        net._add_data(data)
+        for i in range(4):
+            assert torch.equal(net.data_nodes[f'data_{i}'].tensor, data[i])
+
+        # This does not raise error because indexing data[i] works
+        # the same for lists or tensors where the "node" index is the
+        # first dimension. Besides, the "feature" dimension has to be
+        # greater than any of the "feature" dimensions used in data nodes,
+        # since we are cropping
+        data = torch.randn(4, 6, 100)
+        net._add_data(data)
+        
+        # If feature dimension is small, it would raise an error
+        data = torch.randn(4, 4, 100)
+        with pytest.raises(ValueError):
+            net._add_data(data)
+
+        # Add data with no data nodes raises error
+        net.unset_data_nodes()
+        with pytest.raises(ValueError):
+            net._add_data(data)
         
     def test_copy_tn(self):
-        net = tn.TensorNetwork(name='net')
+        net = tk.TensorNetwork(name='net')
         for i in range(4):
-            _ = tn.Node(shape=(2, 5, 2),
+            _ = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node',
                         network=net,
@@ -1548,7 +1722,7 @@ class TestTensorNetwork:
         for i in range(3):
             net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
             
-        copy_net = copy.deepcopy(net)
+        copy_net = net.copy()
         assert copy_net != net
         assert copy_net.nodes != net.nodes
         assert copy_net.edges != net.edges
@@ -1560,9 +1734,9 @@ class TestTensorNetwork:
         assert len(copy_net.edges) == 6
         
     def test_delete_nodes(self):
-        net = tn.TensorNetwork(name='net')
+        net = tk.TensorNetwork(name='net')
         for i in range(4):
-            _ = tn.Node(shape=(2, 5, 2),
+            _ = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node',
                         network=net,
@@ -1592,9 +1766,9 @@ class TestTensorNetwork:
         assert len(net.edges) == 5
         
     def test_delete_non_leaf(self):
-        net = tn.TensorNetwork(name='net')
+        net = tk.TensorNetwork(name='net')
         for i in range(4):
-            _ = tn.Node(shape=(2, 5, 2),
+            _ = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node',
                         network=net,
@@ -1605,8 +1779,8 @@ class TestTensorNetwork:
         assert len(net.nodes) == 4
         assert len(net.edges) == 6
         
-        stack_node1 = tn.stack([net['node_0'], net['node_2']])
-        stack_node2 = tn.stack([net['node_1'], net['node_3']])
+        stack_node1 = tk.stack([net['node_0'], net['node_2']])
+        stack_node2 = tk.stack([net['node_1'], net['node_3']])
         stack_node1['right'] ^ stack_node2['left']
         assert len(net.nodes) == 6
         assert len(net.leaf_nodes) == 4
@@ -1626,9 +1800,9 @@ class TestTensorNetwork:
         assert len(net.edges) == 6
         
     def test_automemory(self):
-        net = tn.TensorNetwork(name='net')
+        net = tk.TensorNetwork(name='net')
         for i in range(4):
-            _ = tn.Node(shape=(2, 5, 2),
+            _ = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node',
                         network=net,
@@ -1644,7 +1818,7 @@ class TestTensorNetwork:
         assert net.automemory == False
         assert net.unbind_mode == True
         
-        stack = tn.stack(list(net.nodes.values()))
+        stack = tk.stack(list(net.nodes.values()))
         # All nodes still have their own memory
         for node in net.leaf_nodes.values():
             assert node._tensor_info['address'] is not None
@@ -1655,7 +1829,7 @@ class TestTensorNetwork:
         assert net.automemory == True
         assert net.unbind_mode == True
         
-        stack = tn.stack(list(net.nodes.values()))
+        stack = tk.stack(list(net.nodes.values()))
         # Now leaf nodes have their emory stored in the stack
         for node in net.leaf_nodes.values():
             assert node._tensor_info['address'] is None
@@ -1663,9 +1837,9 @@ class TestTensorNetwork:
             assert node._tensor_info['address'] is not None
             
     def test_unbind_mode(self):
-        net = tn.TensorNetwork(name='net')
+        net = tk.TensorNetwork(name='net')
         for i in range(4):
-            _ = tn.Node(shape=(2, 5, 2),
+            _ = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node',
                         network=net,
@@ -1681,9 +1855,9 @@ class TestTensorNetwork:
         assert net.automemory == False
         assert net.unbind_mode == True
         
-        stack1 = tn.stack(list(net.nodes.values()))
-        unbinded = tn.unbind(stack1)
-        stack2 = tn.stack(unbinded)
+        stack1 = tk.stack(list(net.nodes.values()))
+        unbinded = tk.unbind(stack1)
+        stack2 = tk.stack(unbinded)
         # All nodes still have their own memory
         for node in net.leaf_nodes.values():
             assert node._tensor_info['address'] is not None
@@ -1699,9 +1873,9 @@ class TestTensorNetwork:
         assert net.automemory == False
         assert net.unbind_mode == False
         
-        stack1 = tn.stack(list(net.nodes.values()))
-        unbinded = tn.unbind(stack1)
-        stack2 = tn.stack(unbinded)
+        stack1 = tk.stack(list(net.nodes.values()))
+        unbinded = tk.unbind(stack1)
+        stack2 = tk.stack(unbinded)
         # Now leaf nodes have their emory stored in the stack
         for node in net.leaf_nodes.values():
             assert node._tensor_info['address'] is not None
@@ -1719,12 +1893,12 @@ class TestTensorNetwork:
 
 # def test_is_updated():
 #     # TODO: no lo uso
-#     node1 = tn.Node(shape=(2, 3),
+#     node1 = tk.Node(shape=(2, 3),
 #                     axes_names=('left', 'right'),
 #                     name='node1',
 #                     param_edges=True,
 #                     init_method='ones')
-#     node2 = tn.Node(shape=(3, 4),
+#     node2 = tk.Node(shape=(3, 4),
 #                     axes_names=('left', 'right'),
 #                     name='node2',
 #                     param_edges=True,

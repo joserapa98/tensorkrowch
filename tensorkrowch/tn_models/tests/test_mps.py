@@ -6,7 +6,7 @@ import pytest
 
 import torch
 import torch.nn as nn
-import tensorkrowch as tn
+import tensorkrowch as tk
 
 from typing import Sequence
 import time
@@ -16,7 +16,7 @@ class TestMPS:
     
     def test_mps1(self):
         # boundary = obc, param_bond = False
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=5, boundary='obc')
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=5, boundary='obc')
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -30,7 +30,7 @@ class TestMPS:
         
     def test_mps2(self):
         # boundary = obc, param_bond = False
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='obc')
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='obc')
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -42,7 +42,7 @@ class TestMPS:
         
     def test_mps3(self):
         # boundary = obc, param_bond = False
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=1, boundary='obc')
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=1, boundary='obc')
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -54,7 +54,7 @@ class TestMPS:
         
     def test_mps4(self):
         # boundary = obc, param_bond = False
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=9, boundary='obc')
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=9, boundary='obc')
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -66,7 +66,7 @@ class TestMPS:
         
     def test_mps5(self):
         # boundary = obc, param_bond = False
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=10, boundary='obc')
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=10, boundary='obc')
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -78,7 +78,7 @@ class TestMPS:
         
     def test_mps6(self):
         # boundary = obc, param_bond = True
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=5, boundary='obc', param_bond=True)
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=5, boundary='obc', param_bond=True)
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -90,7 +90,7 @@ class TestMPS:
         
     def test_mps7(self):
         # boundary = obc, param_bond = True
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='obc', param_bond=True)
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='obc', param_bond=True)
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -102,7 +102,7 @@ class TestMPS:
         
     def test_mps8(self):
         # boundary = obc, param_bond = True
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=1, boundary='obc', param_bond=True)
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=1, boundary='obc', param_bond=True)
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -114,7 +114,7 @@ class TestMPS:
     
     def test_mps9(self):
         # boundary = obc, param_bond = True
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=9, boundary='obc', param_bond=True)
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=9, boundary='obc', param_bond=True)
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -126,7 +126,7 @@ class TestMPS:
 
     def test_mps10(self):
         # boundary = obc, param_bond = True
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=10, boundary='obc', param_bond=True)
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=10, boundary='obc', param_bond=True)
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -138,7 +138,7 @@ class TestMPS:
 
     def test_mps11(self):
         # boundary = pbc, param_bond = False
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=5, boundary='pbc')
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=5, boundary='pbc')
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -150,7 +150,7 @@ class TestMPS:
 
     def test_mps12(self):
         # boundary = pbc, param_bond = False
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='pbc')
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='pbc')
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -162,7 +162,7 @@ class TestMPS:
 
     def test_mps13(self):
         # boundary = pbc, param_bond = False
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=1, boundary='pbc')
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=1, boundary='pbc')
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -174,7 +174,7 @@ class TestMPS:
 
     def test_mps14(self):
         # boundary = pbc, param_bond = False
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=9, boundary='pbc')
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=9, boundary='pbc')
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -186,7 +186,7 @@ class TestMPS:
 
     def test_mps15(self):
         # boundary = pbc, param_bond = False
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=10, boundary='pbc')
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=10, boundary='pbc')
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -198,7 +198,7 @@ class TestMPS:
 
     def test_mps16(self):
         # boundary = pbc, param_bond = True
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=5, boundary='pbc', param_bond=True)
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=5, boundary='pbc', param_bond=True)
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -210,7 +210,7 @@ class TestMPS:
 
     def test_mps17(self):
         # boundary = pbc, param_bond = True
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='pbc', param_bond=True)
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='pbc', param_bond=True)
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -222,7 +222,7 @@ class TestMPS:
 
     def test_mps18(self):
         # boundary = pbc, param_bond = True
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=1, boundary='pbc', param_bond=True)
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=1, boundary='pbc', param_bond=True)
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -234,7 +234,7 @@ class TestMPS:
 
     def test_mps19(self):
         # boundary = pbc, param_bond = True
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=9, boundary='pbc', param_bond=True)
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=9, boundary='pbc', param_bond=True)
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -246,7 +246,7 @@ class TestMPS:
 
     def test_mps20(self):
         # boundary = pbc, param_bond = True
-        mps = tn.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=10, boundary='pbc', param_bond=True)
+        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=10, boundary='pbc', param_bond=True)
 
         data = torch.randn(1000, 5, 10)
         result = mps.forward(data)
@@ -258,15 +258,15 @@ class TestMPS:
 
     def test_extreme_cases(self):
         # Extreme cases
-        mps = tn.MPS(n_sites=2, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='obc', param_bond=True)
+        mps = tk.MPS(n_sites=2, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='obc', param_bond=True)
 
-        mps = tn.MPS(n_sites=2, d_phys=5, n_labels=10, d_bond=2, l_position=1, boundary='obc', param_bond=True)
+        mps = tk.MPS(n_sites=2, d_phys=5, n_labels=10, d_bond=2, l_position=1, boundary='obc', param_bond=True)
 
-        mps = tn.MPS(n_sites=1, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='pbc', param_bond=True)
+        mps = tk.MPS(n_sites=1, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='pbc', param_bond=True)
 
 
 def test_example_mps():
-    mps = tn.MPS(n_sites=2, d_phys=2, n_labels=2, d_bond=2, l_position=1, boundary='obc').cuda()
+    mps = tk.MPS(n_sites=2, d_phys=2, n_labels=2, d_bond=2, l_position=1, boundary='obc').cuda()
 
     data = torch.randn(1, 2, 1).cuda()
     result = mps.forward(data)
@@ -286,7 +286,7 @@ def test_example_mps():
 
 
 def test_example2_mps():
-    mps = tn.MPS(n_sites=5, d_phys=2, n_labels=2, d_bond=2, boundary='obc')
+    mps = tk.MPS(n_sites=5, d_phys=2, n_labels=2, d_bond=2, boundary='obc')
     for node in mps.nodes.values():
         node.set_tensor(init_method='ones')
 
@@ -333,13 +333,13 @@ def test_convnode():
     patches = patches.permute(3, 0, 1, 2)
     print(patches.shape) # num_input, batch_size, nb_windows, channels
 
-    class ConvNode(tn.TensorNetwork):
+    class ConvNode(tk.TensorNetwork):
         
         def __init__(self, kernel_size, input_dim, output_dim):
             super().__init__(name='ConvTN')
             
             num_input = kernel_size[0] * kernel_size[1]
-            node = tn.ParamNode(shape=(*([input_dim]*num_input), output_dim),
+            node = tk.ParamNode(shape=(*([input_dim]*num_input), output_dim),
                                 axes_names=(*(['input']*num_input), 'output'),
                                 network=self,
                                 name='node')
@@ -372,8 +372,8 @@ def test_convnode():
 
 
 def test_param_non_leaf():
-    node1 = tn.randn(shape=(2, 3, 2))
-    node2 = tn.randn(shape=(2, 3, 2))
+    node1 = tk.randn(shape=(2, 3, 2))
+    node2 = tk.randn(shape=(2, 3, 2))
     
     node1[2] ^ node2[0]
     node3 = node1 @ node2
@@ -384,14 +384,14 @@ def test_param_non_leaf():
 
 
 def test_conv_mps():
-    class MPSLayer(tn.TensorNetwork):
+    class MPSLayer(tk.TensorNetwork):
     
         def __init__(self, in_channels, out_channels, kernel_size, bond_dim=10):
             super().__init__(name='MPS')
             
             input_nodes = []
             for _ in range(kernel_size[0] * kernel_size[1]):
-                node = tn.ParamNode(shape=(bond_dim, in_channels, bond_dim),
+                node = tk.ParamNode(shape=(bond_dim, in_channels, bond_dim),
                                     axes_names=('left', 'input', 'right'),
                                     name='input_node',
                                     network=self)
@@ -400,7 +400,7 @@ def test_conv_mps():
             for i in range(len(input_nodes) - 1):
                 input_nodes[i]['right'] ^ input_nodes[i + 1]['left']
                 
-            output_node = tn.ParamNode(shape=(bond_dim, out_channels, bond_dim),
+            output_node = tk.ParamNode(shape=(bond_dim, out_channels, bond_dim),
                                     axes_names=('left', 'output', 'right'),
                                     name='output_node',
                                     network=self)
@@ -438,14 +438,14 @@ def test_conv_mps():
                     data_node.axes[1].name = 'stack_patches'
         
         def contract(self):
-            stack_input = tn.stack(self.input_nodes)
-            stack_data = tn.stack(list(self.data_nodes.values()))
+            stack_input = tk.stack(self.input_nodes)
+            stack_data = tk.stack(list(self.data_nodes.values()))
             
             stack_input['input'] ^ stack_data['feature']
             stack_result = stack_input @ stack_data
             
             # stack_result = stack_result.permute((0, 3, 1, 2))
-            stack_result = tn.unbind(stack_result)
+            stack_result = tk.unbind(stack_result)
             
             result = stack_result[0]
             for node in stack_result[1:]:

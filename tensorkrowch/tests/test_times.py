@@ -6,7 +6,7 @@ import pytest
 
 import torch
 import torch.nn as nn
-import tensorkrowch as tn
+import tensorkrowch as tk
 
 import time
 import opt_einsum
@@ -116,9 +116,9 @@ def test_time_unbind():
 # TODO: remove later
 def test_define_class():
     class succesor:
-        parents = [tn.randn(shape=(3, 4)) for _ in range(100)]
+        parents = [tk.randn(shape=(3, 4)) for _ in range(100)]
         op = 'stack'
-        child = tn.randn(shape=(10, 3, 4))
+        child = tk.randn(shape=(10, 3, 4))
 
     succ_obj = succesor()
     print()
@@ -127,9 +127,9 @@ def test_define_class():
     print(time.time() - start)
     print('=' * 200)
 
-    succ_dict = {'parents': [tn.randn(shape=(3, 4)) for _ in range(100)],
+    succ_dict = {'parents': [tk.randn(shape=(3, 4)) for _ in range(100)],
                  'op': 'stack',
-                 'child': tn.randn(shape=(10, 3, 4))}
+                 'child': tk.randn(shape=(10, 3, 4))}
     print()
     start = time.time()
     print(succ_obj.parents, succ_obj.op, succ_obj.child)
@@ -140,8 +140,8 @@ def test_define_class():
 
 # TODO: remove later
 def test_time_contraction_methods():
-    node1 = tn.Node(shape=(100, 10, 100, 10), name='node1', param_edges=True, init_method='randn')
-    node2 = tn.Node(shape=(100, 10, 100, 10), name='node2', param_edges=True, init_method='randn')
+    node1 = tk.Node(shape=(100, 10, 100, 10), name='node1', param_edges=True, init_method='randn')
+    node2 = tk.Node(shape=(100, 10, 100, 10), name='node2', param_edges=True, init_method='randn')
     node1[0] ^ node2[0]
     node1[2] ^ node2[2]
 
@@ -153,8 +153,8 @@ def test_time_contraction_methods():
     # New contraction method: 0.0045
     # Mucho mejor el nuevo
 
-    node1 = tn.Node(shape=(100, 10, 100, 10), name='node1', init_method='randn')
-    node2 = tn.Node(shape=(100, 10, 100, 10), name='node2', init_method='randn')
+    node1 = tk.Node(shape=(100, 10, 100, 10), name='node1', init_method='randn')
+    node2 = tk.Node(shape=(100, 10, 100, 10), name='node2', init_method='randn')
     node1[0] ^ node2[0]
     node1[2] ^ node2[2]
 
@@ -213,21 +213,21 @@ def test_time_stacks():
 
     lst = [torch.randn(100, 100, 100) for _ in range(1000)]
     start = time.time()
-    s = tn.stack_unequal_tensors(lst)
+    s = tk.stack_unequal_tensors(lst)
     print(time.time() - start)
 
     lst = [torch.randn(torch.randint(low=1, high=100, size=(1,)).long().item(), 100, 100) for _ in range(1000)]
     start = time.time()
-    s = tn.stack_unequal_tensors(lst)
+    s = tk.stack_unequal_tensors(lst)
     print(time.time() - start)
 
 
 def test_time_check_kwargs():
     print()
-    lst = [tn.randn((20, 30)) for _ in range(100)]
+    lst = [tk.randn((20, 30)) for _ in range(100)]
     h1 = hash(tuple(lst))
 
-    lst2 = [tn.randn((20, 30)) for _ in range(100)]
+    lst2 = [tk.randn((20, 30)) for _ in range(100)]
     h2 = hash(tuple(lst2))
 
     # Con listas

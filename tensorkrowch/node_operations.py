@@ -563,18 +563,18 @@ def _contract_edges_first(edges: List[AbstractEdge],
         # TODO: creo que inv_permutation no hace nada, porque dejamos los batches
         # al principio y los edges no contraidos de sejan en el mismo orden en que lo encontramos
         # NOTE: Dejamos los batches al principio
-        inv_permutation_batches = list(range(len(batch_edges)))
-        inv_permutation_0 = inverse_permutation(list(non_contract_edges[0].values()))
-        inv_permutation_0 = inv_permutation_batches + \
-            list(map(lambda x: x + len(inv_permutation_batches), inv_permutation_0))
+        # inv_permutation_batches = list(range(len(batch_edges)))
+        # inv_permutation_0 = inverse_permutation(list(non_contract_edges[0].values()))
+        # inv_permutation_0 = inv_permutation_batches + \
+        #     list(map(lambda x: x + len(inv_permutation_batches), inv_permutation_0))
         
-        inv_permutation_1 = inverse_permutation(list(non_contract_edges[1].values()))
-        inv_permutation_dims = inv_permutation_0 + \
-            list(map(lambda x: x + len(inv_permutation_0), inv_permutation_1))
-        # NOTE: Dejamos los batches al principio
+        # inv_permutation_1 = inverse_permutation(list(non_contract_edges[1].values()))
+        # inv_permutation_dims = inv_permutation_0 + \
+        #     list(map(lambda x: x + len(inv_permutation_0), inv_permutation_1))
+        # # NOTE: Dejamos los batches al principio
         
-        if inv_permutation_dims == list(range(len(inv_permutation_dims))):
-            inv_permutation_dims = []
+        # if inv_permutation_dims == list(range(len(inv_permutation_dims))):
+        #     inv_permutation_dims = []
 
         # aux_shape = [None, None]
         # if batch_edges:
@@ -656,8 +656,8 @@ def _contract_edges_first(edges: List[AbstractEdge],
         result = tensors[0] @ tensors[1]
         if new_shape:
             result = result.view(new_shape)
-        if inv_permutation_dims:
-            result = result.permute(inv_permutation_dims)
+        # if inv_permutation_dims:
+        #     result = result.permute(inv_permutation_dims)
 
         # indices = [None, None]
         # indices[0] = permute_list(list(map(lambda l: l[1], batch_edges.values())) +
@@ -695,7 +695,7 @@ def _contract_edges_first(edges: List[AbstractEdge],
         #     aux_shape[1] = []
 
         hints = {'permutation_dims': permutation_dims,
-                 'inv_permutation_dims': inv_permutation_dims,
+                #  'inv_permutation_dims': inv_permutation_dims,
                  'aux_shape': aux_shape,
                  #'new_shape': new_shape,
                  'shape_limits': shape_limits}
@@ -866,8 +866,8 @@ def _contract_edges_next(successor: Successor,
         #     new_shape += list(tensors[1].shape[hints['new_shape_hint'][1]:])
             
         for i in [0, 1]:
-            if hints['aux_shape'][i]:
-                tensors[i] = tensors[i].reshape(hints['aux_shape'][i])
+            if aux_shape[i]:
+                tensors[i] = tensors[i].reshape(aux_shape[i])
         # torch.cuda.synchronize()
         if PRINT_MODE: print('\t\t\t\tCheckpoint 4.1:', time.time() - total_time)
         total_time = time.time()
@@ -886,8 +886,8 @@ def _contract_edges_next(successor: Successor,
         #     result = result.view(hints['new_shape'])
         if new_shape:
             result = result.view(new_shape)
-        if hints['inv_permutation_dims']:
-            result = result.permute(hints['inv_permutation_dims'])
+        # if hints['inv_permutation_dims']:
+        #     result = result.permute(hints['inv_permutation_dims'])
         # result = result.view(hints['new_shape']).permute(hints['inv_permutation_dims'])
         if PRINT_MODE: print('\t\t\t\tCheckpoint 5:', time.time() - total_time)
         total_time = time.time()

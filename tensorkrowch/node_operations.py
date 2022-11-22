@@ -226,7 +226,9 @@ def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
                        name=f'mul',
                        network=node1._network,
                        leaf=False,
-                       tensor=new_tensor)
+                       tensor=new_tensor,
+                       edges=node1._edges,
+                       node1_list=node1.is_node1())  # NOTE: edges resultant from operation always inherit edges
 
     net = node1._network
     successor = Successor(kwargs={'node1': node1,
@@ -275,7 +277,9 @@ def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
                        name=f'add',
                        network=node1._network,
                        leaf=False,
-                       tensor=new_tensor)
+                       tensor=new_tensor,
+                       edges=node1._edges,
+                       node1_list=node1.is_node1())
 
     net = node1._network
     successor = Successor(kwargs={'node1': node1,
@@ -324,7 +328,9 @@ def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
                        name=f'sub',
                        network=node1._network,
                        leaf=False,
-                       tensor=new_tensor)
+                       tensor=new_tensor,
+                       edges=node1._edges,
+                       node1_list=node1.is_node1())
 
     net = node1._network
     successor = Successor(kwargs={'node1': node1,
@@ -344,7 +350,7 @@ def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
 
 
 def _sub_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) -> Node:
-    new_tensor = node1.tensor * node2.tensor
+    new_tensor = node1.tensor - node2.tensor
     child = successor.child
     child._unrestricted_set_tensor(new_tensor)
     
@@ -471,6 +477,10 @@ def _contract_edges_first(edges: List[AbstractEdge],
         non_contract_edges = [dict(), dict()]
         batch_edges = dict()
         contract_edges = dict()
+        
+        # TODO: Guardar mejor lo de batch _edges y demás, se puede hacer más simple.
+        # Usamos new_shape_hint y en next leemos dimensiones para hacer tanto
+        # new_shape como aux_shape
 
         for i in [0, 1]:
             for j, edge in enumerate(nodes[i]._edges):
@@ -494,7 +504,7 @@ def _contract_edges_first(edges: List[AbstractEdge],
                                 tensors[i] = tensors[i] @ edge.matrix
                             tensors[i] = tensors[i].permute(inv_permutation_dims)
 
-                        contract_edges[edge] = [tensors[i].shape[j]]
+                        contract_edges[edge] = []
 
                     contract_edges[edge].append(j)
 
@@ -503,40 +513,43 @@ def _contract_edges_first(edges: List[AbstractEdge],
                         batch_in_node2 = False
                         for aux_edge in nodes[1]._edges:
                             if aux_edge.is_batch() and (edge.axis1._name == aux_edge.axis1._name):
-                                if 'batch' in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!
-                                    batch_edges[edge.axis1._name] = [-1, j]
-                                else:
-                                    # Cuando es una stack
-                                    batch_edges[edge.axis1._name] = [tensors[0].shape[j], j]
+                                batch_edges[edge.axis1._name] = [j]
+                                # if 'batch' in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!
+                                #     batch_edges[edge.axis1._name] = [-1, j]
+                                # else:
+                                #     # Cuando es una stack
+                                #     batch_edges[edge.axis1._name] = [tensors[0].shape[j], j]
                                 batch_in_node2 = True
                                 break
 
                         if not batch_in_node2:
-                            if 'batch' in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!
-                                non_contract_edges[i][edge] = [-1, j]
-                            else:
-                                non_contract_edges[i][edge] = [tensors[i].shape[j], j]
+                            non_contract_edges[i][edge] = j
+                            # if 'batch' in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!
+                            #     non_contract_edges[i][edge] = [j]
+                            # else:
+                            #     non_contract_edges[i][edge] = [tensors[i].shape[j], j]
 
                     else:
                         if edge.axis1._name in batch_edges:
                             batch_edges[edge.axis1._name].append(j)
                         else:
-                            if 'batch' in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!
-                                non_contract_edges[i][edge] = [-1, j]
-                            else:
-                                non_contract_edges[i][edge] = [tensors[i].shape[j], j]
+                            non_contract_edges[i][edge] = j
+                            # if 'batch' in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!
+                            #     non_contract_edges[i][edge] = [-1, j]
+                            # else:
+                            #     non_contract_edges[i][edge] = [tensors[i].shape[j], j]
 
                 else:
-                    non_contract_edges[i][edge] = [tensors[i].shape[j], j]
+                    non_contract_edges[i][edge] = j
 
         # TODO: esto seguro que se puede hacer mejor
         permutation_dims = [None, None]
-        permutation_dims[0] = list(map(lambda l: l[1], batch_edges.values())) + \
-                              list(map(lambda l: l[1], non_contract_edges[0].values())) + \
-                              list(map(lambda l: l[1], contract_edges.values()))
-        permutation_dims[1] = list(map(lambda l: l[2], batch_edges.values())) + \
-                              list(map(lambda l: l[2], contract_edges.values())) + \
-                              list(map(lambda l: l[1], non_contract_edges[1].values()))
+        permutation_dims[0] = list(map(lambda l: l[0], batch_edges.values())) + \
+                              list(non_contract_edges[0].values()) + \
+                              list(map(lambda l: l[0], contract_edges.values()))
+        permutation_dims[1] = list(map(lambda l: l[1], batch_edges.values())) + \
+                              list(map(lambda l: l[1], contract_edges.values())) + \
+                              list(non_contract_edges[1].values())
         
         for i in [0, 1]:
             if permutation_dims[i] == list(range(len(permutation_dims[i]))):
@@ -551,11 +564,11 @@ def _contract_edges_first(edges: List[AbstractEdge],
         # al principio y los edges no contraidos de sejan en el mismo orden en que lo encontramos
         # NOTE: Dejamos los batches al principio
         inv_permutation_batches = list(range(len(batch_edges)))
-        inv_permutation_0 = inverse_permutation(list(map(lambda l: l[1], non_contract_edges[0].values())))
+        inv_permutation_0 = inverse_permutation(list(non_contract_edges[0].values()))
         inv_permutation_0 = inv_permutation_batches + \
             list(map(lambda x: x + len(inv_permutation_batches), inv_permutation_0))
         
-        inv_permutation_1 = inverse_permutation(list(map(lambda l: l[1], non_contract_edges[1].values())))
+        inv_permutation_1 = inverse_permutation(list(non_contract_edges[1].values()))
         inv_permutation_dims = inv_permutation_0 + \
             list(map(lambda x: x + len(inv_permutation_0), inv_permutation_1))
         # NOTE: Dejamos los batches al principio
@@ -563,43 +576,80 @@ def _contract_edges_first(edges: List[AbstractEdge],
         if inv_permutation_dims == list(range(len(inv_permutation_dims))):
             inv_permutation_dims = []
 
-        aux_shape = [None, None]
-        aux_shape[0] = [torch.tensor(list(map(lambda l: l[0], batch_edges.values()))),
-                        torch.tensor(list(map(lambda l: l[0], non_contract_edges[0].values()))),
-                        torch.tensor(list(map(lambda l: l[0], contract_edges.values())))]
-
-        aux_shape[1] = [torch.tensor(list(map(lambda l: l[0], batch_edges.values()))),
-                        torch.tensor(list(map(lambda l: l[0], contract_edges.values()))),
-                        torch.tensor(list(map(lambda l: l[0], non_contract_edges[1].values())))]
+        # aux_shape = [None, None]
+        # if batch_edges:
+        #     aux_shape[0] = [torch.tensor(list(map(lambda l: l[0], batch_edges.values()))),
+        #                     torch.tensor(list(map(lambda l: l[0], non_contract_edges[0].values()))),
+        #                     torch.tensor(list(map(lambda l: l[0], contract_edges.values())))]
+# 
+        #     aux_shape[1] = [torch.tensor(list(map(lambda l: l[0], batch_edges.values()))),
+        #                     torch.tensor(list(map(lambda l: l[0], contract_edges.values()))),
+        #                     torch.tensor(list(map(lambda l: l[0], non_contract_edges[1].values())))]
+        # else:
+        #     aux_shape[0] = [torch.tensor(list(map(lambda l: l[0], non_contract_edges[0].values()))),
+        #                     torch.tensor(list(map(lambda l: l[0], contract_edges.values())))]
+# 
+        #     aux_shape[1] = [torch.tensor(list(map(lambda l: l[0], contract_edges.values()))),
+        #                     torch.tensor(list(map(lambda l: l[0], non_contract_edges[1].values())))]
+        #     
+        # for i in [0, 1]:
+        #     for j in range(len(aux_shape[i])):
+        #         if (aux_shape[i][j] < 0).any():
+        #             aux_shape[i][j] = torch.tensor(-1)  # Por si hemos hecho producto de -1 por otra dim
+        #             
+        # for i in [0, 1]:
+        #     for j in range(len(aux_shape[i])):
+        #         aux_shape[i][j] = aux_shape[i][j].prod().long().item()
+        #             
+        # for i in [0, 1]:
+        #     if tensors[i].reshape(aux_shape[i]).shape == tensors[i].shape:
+        #         aux_shape[i] = []
+                
         for i in [0, 1]:
-            for j in [0, 1, 2]:
-                if (aux_shape[i][j] < 0).any():
-                    aux_shape[i][j] = torch.tensor(-1)  # Por si hemos hecho producto de -1 por otra dim
-                    
-        for i in [0, 1]:
-            for j in [0, 1, 2]:
-                aux_shape[i][j] = aux_shape[i][j].prod().long().item()
-                    
-        for i in [0, 1]:
-            if tensors[i].reshape(aux_shape[i]).shape == tensors[i].shape:
-                aux_shape[i] = []
-
+            if permutation_dims[i]:
+                tensors[i] = tensors[i].permute(permutation_dims[i])
+                
         # TODO: solo contemplo 1 batch de tipo batch, y el resto pueden
         # ser stacks, ya que los batches son los que pueden tener dims
         # distintas cada vez, los stacks supongo que no. Si hay alg'un
         # caso en el que haya que usar dos edges distintos de batch,
         # hay que implementarlo. Ahora, en ese caso, `new_shape` tendr'ia
         # varios -1 y dar'ia error
-        new_shape = list(map(lambda l: l[0], batch_edges.values())) + \
-                    list(map(lambda l: l[0], non_contract_edges[0].values())) + \
-                    list(map(lambda l: l[0], non_contract_edges[1].values()))
-                
-        if (aux_shape[0] == []) and (aux_shape[1] == []):
-            new_shape = []
-
+        
+        # new_shape = list(map(lambda l: l[0], batch_edges.values())) + \
+        #             list(map(lambda l: l[0], non_contract_edges[0].values())) + \
+        #             list(map(lambda l: l[0], non_contract_edges[1].values()))
+        
+        # new_shape_hint = [len(batch_edges) + len(non_contract_edges[0]),
+        #                   len(batch_edges) + len(contract_edges)]
+        shape_limits = {'batch': len(batch_edges),
+                        'non_contract': len(non_contract_edges[0]),
+                        'contract': len(contract_edges)}
+        
+        aux_shape = [None, None]
+        aux_shape[0] = [torch.tensor(tensors[0].shape[:shape_limits['batch']])] +\
+            [torch.tensor(tensors[0].shape[shape_limits['batch']:
+                (shape_limits['batch'] + shape_limits['non_contract'])])] +\
+            [torch.tensor(tensors[0].shape[(shape_limits['batch'] + shape_limits['non_contract']):])]
+        aux_shape[1] = [torch.tensor(tensors[1].shape[:shape_limits['batch']])] +\
+            [torch.tensor(tensors[1].shape[shape_limits['batch']:
+                (shape_limits['batch'] + shape_limits['contract'])])] +\
+            [torch.tensor(tensors[1].shape[(shape_limits['batch'] + shape_limits['contract']):])]
+        
+        new_shape = aux_shape[0][0].tolist() + aux_shape[0][1].tolist() + aux_shape[1][2].tolist()
+        
         for i in [0, 1]:
-            if permutation_dims[i]:
-                tensors[i] = tensors[i].permute(permutation_dims[i])
+            for j in range(len(aux_shape[i])):
+                aux_shape[i][j] = aux_shape[i][j].prod().long().item()
+        
+            
+        # if (aux_shape[0] != []) or (aux_shape[1] != []):
+        #     # NOTE: new way of doing new_shape!!
+        #     new_shape = []
+        #     new_shape += list(tensors[0].shape[:new_shape_hint[0]])
+        #     new_shape += list(tensors[1].shape[new_shape_hint[1]:])
+                
+        for i in [0, 1]:
             if aux_shape[i]:
                 tensors[i] = tensors[i].reshape(aux_shape[i])
 
@@ -617,10 +667,9 @@ def _contract_edges_first(edges: List[AbstractEdge],
         
         # NOTE: Dejamos los batches al principio
         indices = [None, None]
-        indices[0] = permute_list(list(map(lambda l: l[1], batch_edges.values())) +
-                                  list(map(lambda l: l[1], non_contract_edges[0].values())),
-                                  inv_permutation_0)
-        indices[1] = list(map(lambda l: l[1], non_contract_edges[1].values()))
+        indices[0] = list(map(lambda l: l[0], batch_edges.values())) + \
+            list(non_contract_edges[0].values())
+        indices[1] = list(non_contract_edges[1].values())
         # NOTE: Dejamos los batches al principio
 
         new_axes_names = []
@@ -648,7 +697,8 @@ def _contract_edges_first(edges: List[AbstractEdge],
         hints = {'permutation_dims': permutation_dims,
                  'inv_permutation_dims': inv_permutation_dims,
                  'aux_shape': aux_shape,
-                 'new_shape': new_shape}
+                 #'new_shape': new_shape,
+                 'shape_limits': shape_limits}
         
         node1._record_in_inverse_memory()
         node2._record_in_inverse_memory()
@@ -787,12 +837,41 @@ def _contract_edges_next(successor: Successor,
             # TODO: save time if transformations don't occur
             if hints['permutation_dims'][i]:
                 tensors[i] = tensors[i].permute(hints['permutation_dims'][i])
+            
+        # NOTE: new way of computing shapes
+        shape_limits = hints['shape_limits']
+            
+        aux_shape = [None, None]
+        aux_shape[0] = [torch.tensor(tensors[0].shape[:shape_limits['batch']])] +\
+            [torch.tensor(tensors[0].shape[shape_limits['batch']:
+                (shape_limits['batch'] + shape_limits['non_contract'])])] +\
+            [torch.tensor(tensors[0].shape[(shape_limits['batch'] + shape_limits['non_contract']):])]
+        aux_shape[1] = [torch.tensor(tensors[1].shape[:shape_limits['batch']])] +\
+            [torch.tensor(tensors[1].shape[shape_limits['batch']:
+                (shape_limits['batch'] + shape_limits['contract'])])] +\
+            [torch.tensor(tensors[1].shape[(shape_limits['batch'] + shape_limits['contract']):])]
+        
+        new_shape = aux_shape[0][0].tolist() + aux_shape[0][1].tolist() + aux_shape[1][2].tolist()
+        
+        for i in [0, 1]:
+            for j in range(len(aux_shape[i])):
+                aux_shape[i][j] = aux_shape[i][j].prod().long().item()
+            
+            
+        # new_shape = []
+        # if (hints['aux_shape'][0] != []) or (hints['aux_shape'][1] != []):
+        #     # NOTE: new way of doing new_shape!!
+        #     new_shape = []
+        #     new_shape += list(tensors[0].shape[:hints['new_shape_hint'][0]])
+        #     new_shape += list(tensors[1].shape[hints['new_shape_hint'][1]:])
+            
+        for i in [0, 1]:
             if hints['aux_shape'][i]:
                 tensors[i] = tensors[i].reshape(hints['aux_shape'][i])
         # torch.cuda.synchronize()
         if PRINT_MODE: print('\t\t\t\tCheckpoint 4.1:', time.time() - total_time)
         total_time = time.time()
-
+        
         result = tensors[0] @ tensors[1]
         # torch.cuda.synchronize()
         if PRINT_MODE: print('\t\t\t\tCheckpoint 4.2:', time.time() - total_time)
@@ -803,8 +882,10 @@ def _contract_edges_next(successor: Successor,
         # if PRINT_MODE: print('\t\t\t\tCheckpoint 4.2:', time.time() - total_time)
 
         # TODO: save time if transformations don't occur
-        if hints['new_shape']:
-            result = result.view(hints['new_shape'])
+        # if hints['new_shape']:
+        #     result = result.view(hints['new_shape'])
+        if new_shape:
+            result = result.view(new_shape)
         if hints['inv_permutation_dims']:
             result = result.permute(hints['inv_permutation_dims'])
         # result = result.view(hints['new_shape']).permute(hints['inv_permutation_dims'])

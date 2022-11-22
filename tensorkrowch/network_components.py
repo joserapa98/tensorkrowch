@@ -239,8 +239,10 @@ class AbstractNode(ABC):
             network = TensorNetwork()
             
         # check leaf and data
-        if leaf and data:
-            raise ValueError('`leaf` and `data` arguments cannot be both True')
+        if data and virtual:
+            raise ValueError('`data` and `virtual` arguments cannot be both True')
+        elif data or virtual:
+            leaf = False
 
         # Set attributes
         self._tensor_info = None
@@ -1224,6 +1226,14 @@ class ParamNode(AbstractNode):
             is not provided
         kwargs: keyword arguments for the init_method
         """
+
+        # data and virtual
+        if data or virtual:
+            raise ValueError('ParamNode cannot be a data node nor a virtual node')
+        
+        # leaf
+        if not leaf:
+            raise ValueError('ParamNode is always a leaf node. Cannot set leaf to False')
 
         # shape and tensor
         if (shape is None) == (tensor is None):
@@ -2670,6 +2680,9 @@ class TensorNetwork(nn.Module):
         if erase_enum(name) != erase_enum(node.name):
             self._unassign_node_name(node)
             self._assign_node_name(node, name)
+            
+    def copy(self) -> 'TensorNetwork':
+        return copy.deepcopy(self)
 
     def parameterize(self,
                      set_param: bool = True,
@@ -2684,18 +2697,21 @@ class TensorNetwork(nn.Module):
         override: boolean indicating if the TN must be copied before
                   parameterized (False) or not (True)
         """
-        if not override:
-            new_net = copy.deepcopy(self)
-            for node in new_net.nodes.values():
-                param_node = node.parameterize(set_param)
-                param_node.param_edges(set_param)
-            return new_net
+        if override:
+            net = self
         else:
-            nodes = list(self.nodes.values())
-            for node in nodes:
-                param_node = node.parameterize(set_param)
-                param_node.param_edges(set_param)
-            return self
+            net = self.copy()
+            
+        if self.non_leaf_nodes:
+            warnings.warn('Non-leaf nodes will be removed before parameterizing '
+                          'the TN')
+            self.delete_non_leaf()
+            
+        for node in list(net.leaf_nodes.values()):
+            param_node = node.parameterize(set_param)
+            param_node.param_edges(set_param)
+        
+        return net
 
     def initialize(self) -> None:
         """
@@ -2708,7 +2724,7 @@ class TensorNetwork(nn.Module):
 
     def set_data_nodes(self,
                        input_edges: Union[List[int], List[AbstractEdge]],
-                       num_batch_edges: int,
+                       #num_batch_edges: int,
                        names_batch_edges: Optional[Sequence[Text]] = None) -> None:
         """
         Create data nodes and connect them to the list of specified edges of the TN.
@@ -2719,42 +2735,43 @@ class TensorNetwork(nn.Module):
         ----------
         input_edges: list of edges in the same order as they are expected to be
             contracted with each feature node of the input data_nodes
-        num_batch_edges: number of batch edges in the input data
+        # num_batch_edges: number of batch edges in the input data
         names_batch_edges: sequence of names for the batch edges
         """
+        if input_edges == []:
+            raise ValueError('`input_edges` is empty. Cannot set data nodes if no edges are provided')
         if self.data_nodes:
             raise ValueError('Tensor network data nodes should be unset in order to set new ones')
+        
+        num_batch_edges = len(names_batch_edges)
 
         # TODO: Stack data node donde se guardan los datos, se supone que todas las features tienen la misma dim
         stack_node = Node(shape=(len(input_edges), *([1]*num_batch_edges), input_edges[0].size()),  # TODO: supongo edge es AbstractEdge
                           axes_names=('n_features',
-                                      *[f'batch_{j}' for j in range(num_batch_edges)],
+                                      *names_batch_edges, #[f'batch_{j}' for j in range(num_batch_edges)],
                                       'feature'),
                           name=f'stack_data_memory',  # TODO: guardo aqui la memory, no uso memory_data_nodes
                           network=self,
-                          leaf=False,
                           virtual=True)
         n_features_node = Node(shape=(stack_node.shape[0],),
                                axes_names=('n_features',),
                                name='virtual_n_features',
                                network=self,
-                               leaf=False,
                                virtual=True)
         feature_node = Node(shape=(stack_node.shape[-1],),
                             axes_names=('feature',),
                             name='virtual_feature',
                             network=self,
-                            leaf=False,
                             virtual=True)
         stack_node['n_features'] ^ n_features_node['n_features']
         stack_node['feature'] ^ feature_node['feature']
 
-        if names_batch_edges is not None:
-            if len(names_batch_edges) != num_batch_edges:
-                raise ValueError(f'`names_batch_edges` should have exactly '
-                                 f'{num_batch_edges} names')
-        else:
-            names_batch_edges = [f'batch_{j}' for j in range(num_batch_edges)]
+        # if names_batch_edges is not None:
+        #     if len(names_batch_edges) != num_batch_edges:
+        #         raise ValueError(f'`names_batch_edges` should have exactly '
+        #                          f'{num_batch_edges} names')
+        # else:
+        #     names_batch_edges = [f'batch_{j}' for j in range(num_batch_edges)]
 
         data_nodes = []
         for i, edge in enumerate(input_edges):
@@ -2770,7 +2787,6 @@ class TensorNetwork(nn.Module):
                                     'feature'),
                         name=f'data_{i}',
                         network=self,
-                        leaf=False,
                         data=True)
             node['feature'] ^ edge
             data_nodes.append(node)
@@ -2788,11 +2804,13 @@ class TensorNetwork(nn.Module):
             for node in list(self.data_nodes.values()):
                 self.delete_node(node)
             self._data_nodes = dict()
-            self.delete_node(self.nodes['stack_data_memory'])
-            self.delete_node(self.nodes['virtual_n_features'])
-            self.delete_node(self.nodes['virtual_feature'])
+            
+            if 'stack_data_memory' in self.virtual_nodes:
+                self.delete_node(self.virtual_nodes['stack_data_memory'])
+                self.delete_node(self.virtual_nodes['virtual_n_features'])
+                self.delete_node(self.virtual_nodes['virtual_feature'])
 
-    def _add_data(self, data: Tensor) -> None:
+    def _add_data(self, data: Union[Tensor, Sequence[Tensor]]) -> None:
         """
         Add data to data nodes, that is, change their tensors by new data tensors given a new data set.
         
@@ -2815,8 +2833,16 @@ class TensorNetwork(nn.Module):
         #     raise IndexError(f'Number of data nodes does not match number of features '
         #                      f'for input data with {len(data)} features')
 
-        stack_node = self['stack_data_memory']
-        stack_node._unrestricted_set_tensor(data)
+
+        stack_node = self.virtual_nodes.get('stack_data_memory')
+        
+        if stack_node is not None:
+            stack_node._unrestricted_set_tensor(data)
+        elif self.data_nodes:
+            for i, data_node in enumerate(list(self.data_nodes.values())):
+                data_node._unrestricted_set_tensor(data[i])
+        else:
+            raise ValueError('Cannot add data if no data nodes are set')
 
     def contract(self) -> Tensor:
         """

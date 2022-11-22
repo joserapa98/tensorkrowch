@@ -583,12 +583,11 @@ class MPS(TensorNetwork):
         if self.right_node is not None:
             input_edges.append(self.right_node['input'])
             
-        names_batches = None
+        names_batches = ['batch']
         if self.num_batches == 2:
             names_batches = ['batch', 'stack']
             
         super().set_data_nodes(input_edges=input_edges,
-                               num_batch_edges=self.num_batches,
                                names_batch_edges=names_batches) # TODO: we could choose this when instantiating an MPS
         self._permanent_nodes += list(self.data_nodes.values())
         
@@ -1143,7 +1142,7 @@ class MPS(TensorNetwork):
         start = time.time()
         # TODO: cuidado, era self.same_d_phys() y self.same_d_bond()
         # TODO: update self._same_d_bond after canonical form
-        if not self.param_bond() and self._same_d_phys and self._same_d_bond:
+        if True:#not self.param_bond() and self._same_d_phys and self._same_d_bond:
             left_env_contracted, right_env_contracted = self._pairwise_contraction(left_env, right_env)
         else:
             # TODO: if left_node/right_node is not None

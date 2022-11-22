@@ -2120,7 +2120,7 @@ class ParamStackNode(ParamNode):
         super().__init__(axes_names=['stack'] + nodes[0].axes_names,
                          name=name,
                          network=nodes[0]._network,
-                         leaf=False,
+                        #  leaf=False,
                          override_node=override_node,
                          tensor=tensor)
 
@@ -2870,13 +2870,13 @@ class TensorNetwork(nn.Module):
             return output.tensor
         
         else:
-            # output = self.contract()
+            output = self.contract()
             
             # total = time.time()
-            for op in self._seq_ops:
-                # start = time.time()
-                output = self.operations[op[0]](**op[1])
-                # print(f'Time {op[0]}: {time.time() - start:.4f}')
+            # for op in self._seq_ops:
+            #     # start = time.time()
+            #     output = self.operations[op[0]](**op[1])
+            #     # print(f'Time {op[0]}: {time.time() - start:.4f}')
             # print(f'Total time: {time.time() - total:.4f}')
                 
             return output.tensor

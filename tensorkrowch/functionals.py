@@ -91,7 +91,7 @@ foo = Foo(_func1, _func2)
 #
 #
 # def test_foo():
-#     a = tn.Node(tensor=torch.randn(2, 3))
+#     a = tk.Node(tensor=torch.randn(2, 3))
 #     a.foo(0)
 #     with tn_mode():
 #         a.foo(0)

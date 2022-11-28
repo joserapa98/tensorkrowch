@@ -43,7 +43,8 @@ import torch
 import torch.nn as nn
 import opt_einsum
 
-from tensorkrowch.utils import is_permutation, permute_list, inverse_permutation
+from tensorkrowch.utils import (is_permutation, permute_list,
+                                inverse_permutation, list_to_slice)
 
 from tensorkrowch.network_components import *
 
@@ -432,7 +433,14 @@ def _contract_edges_first(edges: List[AbstractEdge],
 
                     # Send multiplication dimension to the end, multiply, recover original shape
                     result = result.permute(permutation_dims)
-                    result = result @ edge.matrix
+                    if isinstance(edge, ParamStackEdge):
+                        mat = edge.matrix
+                        # TODO: comprobar si en cualquier situacion el orden del stack edge es asi
+                        result = result @ mat.view(mat.shape[0],
+                                                   *[1]*(len(result.shape) - 3),
+                                                   *mat.shape[1:])  # First dim is stack, last 2 dims are
+                    else:
+                        result = result @ edge.matrix
                     result = result.permute(inv_permutation_dims)
 
         axes_nums = dict(zip(range(node1.rank), range(node1.rank)))
@@ -702,15 +710,27 @@ def _contract_edges_first(edges: List[AbstractEdge],
         
         node1._record_in_inverse_memory()
         node2._record_in_inverse_memory()
-
-    new_node = Node(axes_names=new_axes_names,
-                       name=f'contract',
-                       network=node1._network,
-                       leaf=False,
-                       param_edges=False,
-                       tensor=result,
-                       edges=new_edges,
-                       node1_list=new_node1_list)
+        
+    node1_is_stack = isinstance(node1, (StackNode, ParamStackNode))
+    node2_is_stack = isinstance(node2, (StackNode, ParamStackNode))
+    if node1_is_stack and node2_is_stack:
+            new_node = StackNode(axes_names=new_axes_names,
+                                 name=f'contract',
+                                 network=node1._network,
+                                 tensor=result,
+                                 edges=new_edges,
+                                 node1_list=new_node1_list)
+    elif node1_is_stack or node2_is_stack:
+        raise TypeError('Can only contract (Param)StackNode with other (Param)StackNode')
+    else:
+        new_node = Node(axes_names=new_axes_names,
+                        name=f'contract',
+                        network=node1._network,
+                        leaf=False,
+                        param_edges=False,
+                        tensor=result,
+                        edges=new_edges,
+                        node1_list=new_node1_list)
 
     net = node1._network
     successor = Successor(kwargs={'edges': edges,
@@ -750,7 +770,14 @@ def _contract_edges_next(successor: Successor,
 
                     # Send multiplication dimension to the end, multiply, recover original shape
                     result = result.permute(permutation_dims)
-                    result = result @ edge.matrix
+                    if isinstance(edge, ParamStackEdge):
+                        mat = edge.matrix
+                        # TODO: comprobar si en cualquier situacion el orden del stack edge es asi
+                        result = result @ mat.view(mat.shape[0],
+                                                   *[1]*(len(result.shape) - 3),
+                                                   *mat.shape[1:])  # First dim is stack, last 2 dims are
+                    else:
+                        result = result @ edge.matrix
                     result = result.permute(inv_permutation_dims)
 
         axes_nums = dict(zip(range(node1.rank), range(node1.rank)))
@@ -1007,6 +1034,10 @@ AbstractNode.__matmul__ = contract_between
 ###################   STACK   ##################
 def _check_first_stack(nodes: List[AbstractNode], name: Optional[Text] = None) -> Optional[Successor]:
     kwargs = {'nodes': nodes}  # TODO: mejor si es set(nodes) por si acaso, o llevarlo controlado
+    
+    if not nodes:
+        raise ValueError('`nodes` should be a non-empty sequence of nodes')
+    
     if 'stack' in nodes[0]._successors:
         for succ in nodes[0]._successors['stack']:
             if succ.kwargs == kwargs:
@@ -1017,7 +1048,7 @@ def _check_first_stack(nodes: List[AbstractNode], name: Optional[Text] = None) -
 # TODO: hacer optimizacion: si todos los nodos tienen memoria que hace referencia a un nodo
 #  (sus memorias estaban guardadas en la misma pila), entonces no hay que crear nueva stack,
 #  solo indexar en la previa
-def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> StackNode:
+def _stack_first(nodes: Sequence[AbstractNode], name: Optional[Text] = None) -> StackNode:
     """
     Stack nodes into a StackNode or ParamStackNode. The stack dimension will be the
     first one in the resultant node.
@@ -1033,6 +1064,9 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
     stack_indices_slice = [None, None, None]  # TODO: intentar convertir lista de indices a slice
     # indices = []          # In the case above, indices of each node in the reference node's memory
     
+    if not isinstance(nodes, (list, tuple)):
+        raise TypeError('`nodes` should be a list or tuple of nodes')
+    
     net = nodes[0]._network
     for node in nodes:
         if not node._leaf:
@@ -1042,6 +1076,8 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
             all_non_param = False
         else:
             all_param = False
+
+        # TODO: Creo que el mix index mode ya no sirve denada
 
         # NOTE: index mode / mix index mode
         # if node._tensor_info['address'] is None or node.name.startswith('unbind'):
@@ -1058,45 +1094,55 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
                 node.name.startswith('unbind')
         
         if condition:
+            # TODO: recursion en node_ref
+            # TODO: hacer stack_slice despues de haber leiod todos, por si vienen en otro orden
+            aux_node_ref = node
+            address = node._tensor_info['address']
+            while address is None:
+                aux_node_ref = aux_node_ref._tensor_info['node_ref']
+                address = aux_node_ref._tensor_info['address']
+                
             if node_ref is None:
-                node_ref = node._tensor_info['node_ref']
+                node_ref = aux_node_ref
             else:
-                if node._tensor_info['node_ref'] != node_ref:
+                if aux_node_ref != node_ref:
                     all_same_ref = False
 
             stack_indices.append(node._tensor_info['stack_idx'])
 
-            if use_slice:
-                if stack_indices_slice[0] is None:
-                    stack_indices_slice[0] = node._tensor_info['stack_idx']
-                    stack_indices_slice[1] = node._tensor_info['stack_idx']
-                elif stack_indices_slice[2] == None:
-                    stack_indices_slice[1] = node._tensor_info['stack_idx']
-                    stack_indices_slice[2] = stack_indices_slice[1] - stack_indices_slice[0]
-                    # TODO: cuidado con ir al revés, step < 0
-                else:
-                    if (node._tensor_info['stack_idx'] - stack_indices_slice[1]) == stack_indices_slice[2]:
-                        stack_indices_slice[1] = node._tensor_info['stack_idx']
-                    else:
-                        use_slice = False
+            # if use_slice:
+            #     if stack_indices_slice[0] is None:
+            #         stack_indices_slice[0] = node._tensor_info['stack_idx']
+            #         stack_indices_slice[1] = node._tensor_info['stack_idx']
+            #     elif stack_indices_slice[2] == None:
+            #         stack_indices_slice[1] = node._tensor_info['stack_idx']
+            #         stack_indices_slice[2] = stack_indices_slice[1] - stack_indices_slice[0]
+            #         # TODO: cuidado con ir al revés, step < 0
+            #     else:
+            #         if (node._tensor_info['stack_idx'] - stack_indices_slice[1]) == stack_indices_slice[2]:
+            #             stack_indices_slice[1] = node._tensor_info['stack_idx']
+            #         else:
+            #             use_slice = False
 
             # indices.append(node._tensor_info['index'])
         else:
             all_same_ref = False
 
-    if stack_indices_slice[0] is not None and use_slice:
-        stack_indices_slice[1] += 1
-        stack_indices = slice(stack_indices_slice[0],
-                              stack_indices_slice[1],
-                              stack_indices_slice[2])
+    # if (stack_indices_slice[0] is not None) and use_slice:
+    #     stack_indices_slice[1] += 1
+    #     stack_indices = slice(stack_indices_slice[0],
+    #                           stack_indices_slice[1],
+    #                           stack_indices_slice[2])
+    
+    stack_indices = list_to_slice(stack_indices)
 
     if all_param and net._automemory:
-        stack_node = ParamStackNode(nodes, name=name)
+        stack_node = ParamStackNode(nodes=nodes, name=name)
     else:
-        stack_node = StackNode(nodes, name=name)
+        stack_node = StackNode(nodes=nodes, name=name)
 
     if all_same_ref: # NOTE: entra aqui en index mode, no entra en if ni else en unbind mode
-        # TODO: make distinction here between unbind or index mode
+        # TODO: make distinction here between unbind or index mode -> solo se entra aqui en index mode
         # This memory management can happen always, even not in contracting mode
         del net._memory_nodes[stack_node._tensor_info['address']]
         stack_node._tensor_info['address'] = None
@@ -1104,6 +1150,10 @@ def _stack_first(nodes: List[AbstractNode], name: Optional[Text] = None) -> Stac
         stack_node._tensor_info['full'] = False
         stack_node._tensor_info['stack_idx'] = stack_indices
         stack_node._tensor_info['index'] = stack_indices  #list(zip(*indices))
+        
+        stack_node._shape = (stack_node._shape[0], *node_ref._shape[1:])
+        for edge, size in zip(stack_node._edges[1:], stack_node._shape[1:]):
+            edge._size = size
         
         # stack_node._record_in_inverse_memory()
 
@@ -1204,6 +1254,9 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
     Unbind stacked node. It is assumed that the stacked dimension
     is the first one.
     """
+    if not isinstance(node, (StackNode, ParamStackNode)):
+        raise TypeError('Cannot unbind node if it is not a (Param)StackNode')
+    
     tensors = torch.unbind(node.tensor)
     nodes = []
 
@@ -1235,20 +1288,51 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
                            edges=list(edges),
                            node1_list=list(node1_list))
         nodes.append(new_node)
-
+        
     if not net.unbind_mode: # TODO: organizar mas simple
         # TODO: originalmente borramos informacion y solo hacemos referencia a la pila
         # This memory management can happen always, even not in contracting mode
         # NOTE: index mode
         for i, new_node in enumerate(nodes):
+            # shape = new_node.shape
+            # if new_node._tensor_info['address'] is not None:
+            #     del new_node.network._memory_nodes[new_node._tensor_info['address']]
+            # new_node._tensor_info['address'] = None
+            # new_node._tensor_info['node_ref'] = node
+            # new_node._tensor_info['full'] = False
+            # new_node._tensor_info['stack_idx'] = i
+            # index = [i]
+            # for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo
+            #     index.append(slice(max_dim - dim, max_dim))
+            # new_node._tensor_info['index'] = index
+            
             shape = new_node.shape
             if new_node._tensor_info['address'] is not None:
                 del new_node.network._memory_nodes[new_node._tensor_info['address']]
             new_node._tensor_info['address'] = None
-            new_node._tensor_info['node_ref'] = node
+            
+            aux_node_ref = node
+            address = node._tensor_info['address']
+            while address is None:
+                aux_node_ref = aux_node_ref._tensor_info['node_ref']
+                address = aux_node_ref._tensor_info['address']
+            
+            new_node._tensor_info['node_ref'] = aux_node_ref
             new_node._tensor_info['full'] = False
-            new_node._tensor_info['stack_idx'] = i
-            index = [i]
+            
+            aux_slice = node._tensor_info['stack_idx']
+            if aux_slice is None:
+                new_node._tensor_info['stack_idx'] = i
+                index = [i]
+            elif isinstance(aux_slice, list):
+                new_node._tensor_info['stack_idx'] = aux_slice[i]
+                index = [new_node._tensor_info['stack_idx']]
+            else:    
+                new_node._tensor_info['stack_idx'] = range(aux_slice.start,
+                                                           aux_slice.stop,
+                                                           aux_slice.step)[i]
+                index = [new_node._tensor_info['stack_idx']]
+                
             for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo
                 index.append(slice(max_dim - dim, max_dim))
             new_node._tensor_info['index'] = index
@@ -1258,17 +1342,46 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
         # This memory management can happen always, even not in contracting mode
         # NOTE: unbind mode / mix index mode
         for i, new_node in enumerate(nodes):
+            # shape = new_node.shape
+            # # if new_node._tensor_info['address'] is not None:
+            # #     del new_node.network._memory_nodes[new_node._tensor_info['address']]
+            # # new_node._tensor_info['address'] = None
+            # new_node._tensor_info['node_ref'] = node
+            # new_node._tensor_info['full'] = False
+            # new_node._tensor_info['stack_idx'] = i
+            # index = [i]
+            # for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo -> no si apilo de distintas dims
+            #     index.append(slice(max_dim - dim, max_dim))
+            # new_node._tensor_info['index'] = index
+            
             shape = new_node.shape
-            # if new_node._tensor_info['address'] is not None:
-            #     del new_node.network._memory_nodes[new_node._tensor_info['address']]
-            # new_node._tensor_info['address'] = None
-            new_node._tensor_info['node_ref'] = node
+            
+            aux_node_ref = node
+            address = node._tensor_info['address']
+            while address is None:
+                aux_node_ref = aux_node_ref._tensor_info['node_ref']
+                address = aux_node_ref._tensor_info['address']
+            
+            new_node._tensor_info['node_ref'] = aux_node_ref
             new_node._tensor_info['full'] = False
-            new_node._tensor_info['stack_idx'] = i
-            index = [i]
-            for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo -> no si apilo de distintas dims
+            
+            aux_slice = node._tensor_info['stack_idx']
+            if aux_slice is None:
+                new_node._tensor_info['stack_idx'] = i
+                index = [i]
+            elif isinstance(aux_slice, list):
+                new_node._tensor_info['stack_idx'] = aux_slice[i]
+                index = [new_node._tensor_info['stack_idx']]
+            else:    
+                new_node._tensor_info['stack_idx'] = range(aux_slice.start,
+                                                           aux_slice.stop,
+                                                           aux_slice.step)[i]
+                index = [new_node._tensor_info['stack_idx']]
+                
+            for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo
                 index.append(slice(max_dim - dim, max_dim))
             new_node._tensor_info['index'] = index
+            
         # NOTE: unbind mode / mix index mode
         
     node._record_in_inverse_memory()
@@ -1309,10 +1422,16 @@ def _unbind_next(successor: Successor, node: AbstractNode) -> List[Node]:
         # puedo poner tensores con distintas dims en el nodo
         batch_idx = successor.hints
         children = successor.child
+        
+        if batch_idx is None:
+            node._record_in_inverse_memory()
+            return children[:]
+        
         new_dim = node.shape[batch_idx + 1]
         child_dim = children[0].shape[batch_idx]
         
         if new_dim == child_dim:
+            node._record_in_inverse_memory()
             return children[:]  # TODO: añadimos [:] para no poder modificar la lista de hijos desde fuera
         
         for i, child in enumerate(children):
@@ -1330,6 +1449,10 @@ unbind = Operation(_check_first_unbind, _unbind_first, _unbind_next)
 def _check_first_einsum(string: Text, *nodes: AbstractNode) -> Optional[Successor]:
     kwargs = {'string': string,
               'nodes': nodes}
+    
+    if not nodes:
+        raise ValueError('No nodes were provided')
+    
     if 'einsum' in nodes[0]._successors:
         for succ in nodes[0]._successors['einsum']:
             if succ.kwargs == kwargs:
@@ -1350,6 +1473,11 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
     -------
     new_node: node resultant from the einsum operation
     """
+    
+    for i in range(len(nodes[:-1])):
+        if nodes[i].network != nodes[i + 1].network:
+            raise ValueError('All `nodes` must be in the same network')
+    
     if '->' not in string:
         raise ValueError('Einsum `string` should have an arrow `->` separating '
                          'inputs and output strings')
@@ -1362,7 +1490,8 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
         output_string = ''
 
     # Check string and collect information from involved edges
-    matrices = []
+    which_matrices = []
+    # matrices = []
     matrices_strings = []
     output_dict = dict(zip(output_string, [0] * len(output_string)))
     # Used for counting appearances of output subscripts in the input strings
@@ -1378,6 +1507,8 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
     node1_list = dict(zip(range(len(output_string)),
                           [None] * len(output_string)))
     for i, input_string in enumerate(input_strings):
+        if isinstance(nodes[i], (StackNode, ParamStackNode)):
+            stack_char = input_string[0]  # TODO: nodes can have ParamStackEdge if they are result of operation with stacks
         for j, char in enumerate(input_string):
             if char not in output_dict:
                 edge = nodes[i][j]
@@ -1395,19 +1526,36 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
                         else:
                             raise ValueError(f'Subscript {char} appears in two nodes that do not '
                                              f'share a connected edge at the specified axis')
-                    contracted_edges[char] += [edge]
-                if isinstance(edge, ParamEdge):
-                    in_matrices = False
-                    for mat in matrices:
-                        if torch.equal(edge.matrix, mat):
-                            in_matrices = True
-                            break
-                    if not in_matrices:
+                    contracted_edges[char].append(edge)
+                if isinstance(edge, ParamStackEdge):
+                    if edge not in which_matrices:
+                        matrices_strings.append(stack_char + (2 * char))
+                        which_matrices.append(edge)
+                        
+                    # in_matrices = False
+                    # for mat in matrices:
+                    #     if torch.equal(edge.matrix, mat):
+                    #         in_matrices = True
+                    #         break
+                    # if not in_matrices:
+                    #     matrices_strings.append(stack_char + (2 * char))
+                    #     matrices.append(edge.matrix)
+                elif isinstance(edge, ParamEdge):
+                    if edge not in which_matrices:
                         matrices_strings.append(2 * char)
-                        matrices.append(edge.matrix)
+                        which_matrices.append(edge)
+                        
+                    # in_matrices = False
+                    # for mat in matrices:
+                    #     if torch.equal(edge.matrix, mat):
+                    #         in_matrices = True
+                    #         break
+                    # if not in_matrices:
+                    #     matrices_strings.append(2 * char)
+                    #     matrices.append(edge.matrix)
             else:
+                edge = nodes[i][j]
                 if output_dict[char] == 0:
-                    edge = nodes[i][j]
                     if edge.is_batch():
                         batch_edges[char] = 0
                     k = output_char_index[char]
@@ -1415,7 +1563,7 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
                     edges[k] = edge
                     node1_list[k] = nodes[i].axes[j].is_node1()
                 output_dict[char] += 1
-                if char in batch_edges:
+                if (char in batch_edges) and edge.is_batch():
                     batch_edges[char] += 1
 
     for char in output_dict:
@@ -1439,24 +1587,49 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
     input_string = ','.join(input_strings + matrices_strings)
     einsum_string = input_string + '->' + output_string
     tensors = [node.tensor for node in nodes]
+    matrices = [edge.matrix for edge in which_matrices]
     path, _ = opt_einsum.contract_path(einsum_string, *(tensors + matrices))
     new_tensor = opt_einsum.contract(einsum_string, *(tensors + matrices),
                                      optimize=path)
 
-    # We assume all nodes belong to the same network
-    new_node = Node(axes_names=list(axes_names.values()),
-                    name='einsum',
-                    network=nodes[0].network,
-                    leaf=False,
-                    param_edges=False,
-                    tensor=new_tensor,
-                    edges=list(edges.values()),
-                    node1_list=list(node1_list.values()))
+    all_stack = True
+    all_non_stack = True
+    for node in nodes:
+        if isinstance(node, (StackNode, ParamStackNode)):
+            all_stack &= True
+            all_non_stack &= False
+        else:
+            all_stack &= False
+            all_non_stack &= True
+            
+    if all_stack and all_non_stack:
+        raise TypeError('Cannot operate (Param)StackNode\'s with '
+                        'other (non-stack) nodes')
+        
+    if all_stack:
+        new_node = StackNode(axes_names=list(axes_names.values()),
+                             name='einsum',
+                             network=nodes[0].network,
+                             tensor=new_tensor,
+                             edges=list(edges.values()),
+                             node1_list=list(node1_list.values()))
+    else:
+        # TODO: We assume all nodes belong to the same network
+        new_node = Node(axes_names=list(axes_names.values()),
+                        name='einsum',
+                        network=nodes[0].network,
+                        leaf=False,
+                        param_edges=False,
+                        tensor=new_tensor,
+                        edges=list(edges.values()),
+                        node1_list=list(node1_list.values()))
     
     successor = Successor(kwargs = {'string': string,
                                     'nodes': nodes},
                           child=new_node,
-                          hints=path)
+                          hints={'einsum_string': einsum_string,
+                                 'which_matrices': which_matrices,
+                                 'path': path})
     if 'einsum' in nodes[0]._successors:
         nodes[0]._successors['einsum'].append(successor)
     else:
@@ -1482,99 +1655,12 @@ def _einsum_next(successor: Successor, string: Text, *nodes: AbstractNode) -> No
     -------
     new_node: node resultant from the einsum operation
     """
-    if '->' not in string:
-        raise ValueError('Einsum `string` should have an arrow `->` separating '
-                         'inputs and output strings')
-    input_strings = string.split('->')[0].split(',')
-    if len(input_strings) != len(nodes):
-        raise ValueError('Number of einsum subscripts must be equal to the number of operands')
-    if len(string.split('->')) >= 2:
-        output_string = string.split('->')[1]
-    else:
-        output_string = ''
-
-    # Check string and collect information from involved edges
-    matrices = []
-    matrices_strings = []
-    output_dict = dict(zip(output_string, [0] * len(output_string)))
-    # Used for counting appearances of output subscripts in the input strings
-    output_char_index = dict(zip(output_string, range(len(output_string))))
-    contracted_edges = dict()
-    # Used for counting how many times a contracted edge's subscript appears among input strings
-    batch_edges = dict()
-    # Used for counting how many times a batch edge's subscript appears among input strings
-    axes_names = dict(zip(range(len(output_string)),
-                          [None] * len(output_string)))
-    edges = dict(zip(range(len(output_string)),
-                     [None] * len(output_string)))
-    node1_list = dict(zip(range(len(output_string)),
-                          [None] * len(output_string)))
-    for i, input_string in enumerate(input_strings):
-        for j, char in enumerate(input_string):
-            if char not in output_dict:
-                edge = nodes[i][j]
-                if char not in contracted_edges:
-                    contracted_edges[char] = [edge]
-                else:
-                    if len(contracted_edges[char]) >= 2:
-                        raise ValueError(f'Subscript {char} appearing more than once in the '
-                                         f'input should be a batch index, but it does not '
-                                         f'appear among the output subscripts')
-                    if edge != contracted_edges[char][0]:
-                        if isinstance(edge, AbstractStackEdge) and \
-                                isinstance(contracted_edges[char][0], AbstractStackEdge):
-                            edge = edge ^ contracted_edges[char][0]
-                        else:
-                            raise ValueError(f'Subscript {char} appears in two nodes that do not '
-                                             f'share a connected edge at the specified axis')
-                    contracted_edges[char] += [edge]
-                if isinstance(edge, ParamEdge):
-                    in_matrices = False
-                    for mat in matrices:
-                        if torch.equal(edge.matrix, mat):
-                            in_matrices = True
-                            break
-                    if not in_matrices:
-                        matrices_strings.append(2 * char)
-                        matrices.append(edge.matrix)
-            else:
-                if output_dict[char] == 0:
-                    edge = nodes[i][j]
-                    if edge.is_batch():
-                        batch_edges[char] = 0
-                    k = output_char_index[char]
-                    axes_names[k] = nodes[i].axes[j].name
-                    edges[k] = edge
-                    node1_list[k] = nodes[i].axes[j].is_node1()
-                output_dict[char] += 1
-                if char in batch_edges:
-                    batch_edges[char] += 1
-
-    for char in output_dict:
-        if output_dict[char] == 0:
-            raise ValueError(f'Output subscript {char} must appear among '
-                             f'the input subscripts')
-        if output_dict[char] > 1:
-            if char in batch_edges:
-                if batch_edges[char] < output_dict[char]:
-                    raise ValueError(f'Subscript {char} used as batch, but some '
-                                     f'of those edges are not batch edges')
-            else:
-                raise ValueError(f'Subscript {char} used as batch, but none '
-                                 f'of those edges is a batch edge')
-
-    for char in contracted_edges:
-        if len(contracted_edges[char]) == 1:
-            raise ValueError(f'Subscript {char} appears only once in the input '
-                             f'but none among the output subscripts')
-
-    input_string = ','.join(input_strings + matrices_strings)
-    einsum_string = input_string + '->' + output_string
+    hints = successor.hints
+    
     tensors = [node.tensor for node in nodes]
-    # for node in nodes:
-    #     node._record_in_inverse_memory()
-    new_tensor = opt_einsum.contract(einsum_string, *(tensors + matrices),
-                                     optimize=successor.hints)
+    matrices = [edge.matrix for edge in hints['which_matrices']]
+    new_tensor = opt_einsum.contract(hints['einsum_string'], *(tensors + matrices),
+                                     optimize=hints['path'])
     
     child = successor.child
     child._unrestricted_set_tensor(new_tensor)
@@ -1582,7 +1668,6 @@ def _einsum_next(successor: Successor, string: Text, *nodes: AbstractNode) -> No
 
 
 einsum = Operation(_check_first_einsum, _einsum_first, _einsum_next)
-
 
 
 def stacked_einsum(string: Text, *nodes_lists: List[AbstractNode]) -> List[Node]:

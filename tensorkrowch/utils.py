@@ -12,7 +12,7 @@ This script contains:
     * comb_num
 """
 
-from typing import List, Sequence, Text
+from typing import List, Sequence, Text, Union
 import torch
 import torch.nn as nn
 
@@ -173,3 +173,37 @@ def stack_unequal_tensors(lst_tensors: List[torch.Tensor]) -> torch.Tensor:  # T
                     pad.reverse()
                     lst_tensors[idx] = nn.functional.pad(tensor, pad)
         return torch.stack(lst_tensors)
+    
+    
+def list2slice(lst: List) -> Union[List, slice]:
+    """
+    Given a list (of indices) returns, if possible, an
+    object slice containing the same indices
+    """
+    
+    # lst.sort()
+    aux_slice = [None, None, None]
+    use_slice = False
+    
+    if len(lst) >= 1:
+        use_slice = True
+        
+        for el in lst:
+            if aux_slice[0] is None:
+                aux_slice[0] = el
+                aux_slice[1] = el
+            elif aux_slice[2] == None:
+                aux_slice[1] = el
+                aux_slice[2] = aux_slice[1] - aux_slice[0]
+                # TODO: cuidado con ir al revés, step < 0
+            else:
+                if (el - aux_slice[1]) == aux_slice[2]:
+                    aux_slice[1] = el
+                else:
+                    use_slice = False
+                    break
+            
+    if use_slice:
+        aux_slice[1] += 1
+        return slice(*aux_slice)
+    return lst

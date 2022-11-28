@@ -44,7 +44,7 @@ import torch.nn as nn
 import opt_einsum
 
 from tensorkrowch.utils import (is_permutation, permute_list,
-                                inverse_permutation, list_to_slice)
+                                inverse_permutation, list2slice)
 
 from tensorkrowch.network_components import *
 
@@ -1134,7 +1134,7 @@ def _stack_first(nodes: Sequence[AbstractNode], name: Optional[Text] = None) -> 
     #                           stack_indices_slice[1],
     #                           stack_indices_slice[2])
     
-    stack_indices = list_to_slice(stack_indices)
+    stack_indices = list2slice(stack_indices)
 
     if all_param and net._automemory:
         stack_node = ParamStackNode(nodes=nodes, name=name)

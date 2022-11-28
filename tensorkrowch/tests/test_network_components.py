@@ -44,16 +44,38 @@ class TestAxis:
         assert node['batch'].is_batch()
         assert not node['axis'].is_batch()
         
+    def test_stack_axis(self):
+        # Cannot put name 'stack' to an axis, that is reserved
+        # for edges in StackNoes
+        with pytest.raises(ValueError):
+            node = tk.Node(shape=(3, 3),
+                           axes_names=('stack', 'axis'),
+                           name='my_node',
+                           init_method='randn')
+            
+        node = tk.Node(shape=(3,),
+                       axes_names=('axis',),
+                       name='my_node',
+                       init_method='randn')
+        stack = tk.stack([node])
+        
+        assert stack.axes_names == ['stack', 'axis']
+        assert stack['stack'].is_batch()
+        assert not stack['axis'].is_batch()
+        
+        with pytest.raises(ValueError):
+            stack.get_axis('axis').name = 'other_stack'
+        
     def test_change_axis_name(self):
         node = tk.Node(shape=(3, 3),
                        axes_names=('axis', 'axis1'),
                        name='my_node')
         assert node.axes_names == ['axis', 'axis1']
         
-        node.axes[1].name = 'axis2'
+        node.get_axis('axis1').name = 'axis2'
         assert node.axes_names == ['axis', 'axis2']
         
-        node.axes[1].name = 'axis'
+        node.get_axis('axis2').name = 'axis'
         assert node.axes_names == ['axis_0', 'axis_1']
         
     def test_change_name_batch(self):
@@ -61,21 +83,21 @@ class TestAxis:
                        axes_names=('batch', 'axis'),
                        name='my_node')
         assert node.axes_names == ['batch', 'axis']
-        assert node.axes[0].is_batch()
-        assert not node.axes[1].is_batch()
+        assert node.get_axis('batch').is_batch()
+        assert not node.get_axis('axis').is_batch()
             
         # batch attribute depends on the name,
         # only axis with word `batch` or `stack`
         # in the name are batch axis
-        node.axes[0].name = 'new_axis'
+        node.get_axis('batch').name = 'new_axis'
         assert node.axes_names == ['new_axis', 'axis']
-        assert not node.axes[0].is_batch()
-        assert not node.axes[1].is_batch()
+        assert not node.get_axis('new_axis').is_batch()
+        assert not node.get_axis('axis').is_batch()
         
-        node.axes[1].name = 'new_batch'
+        node.get_axis('axis').name = 'new_batch'
         assert node.axes_names == ['new_axis', 'new_batch']
-        assert not node.axes[0].is_batch()
-        assert node.axes[1].is_batch()
+        assert not node.get_axis('new_axis').is_batch()
+        assert node.get_axis('new_batch').is_batch()
         
     
 class TestInitNode:
@@ -412,7 +434,7 @@ class TestNodeName:
                         network=net)
         
         node1['right'] ^ node2['left']
-        net.set_data_nodes([node1['input'], node2['input']], ['batch'])
+        net.set_data_nodes([node1['input'], node2['input']], 1)
         
         return net
     
@@ -473,16 +495,16 @@ class TestNodeName:
         assert data_node.is_data()
 
 
-class TestSetTensor:
+class TestSetTensorNode:
     
     @pytest.fixture
     def setup(self):
         node1 = tk.Node(shape=(2, 5, 2),
-                        axes_names=('left', 'input', 'right'),
+                        axes_names=('left', 'batch', 'right'),
                         name='node1')
         
         tensor = torch.randn(2, 5, 2)
-        node2 = tk.Node(axes_names=('left', 'input', 'right'),
+        node2 = tk.Node(axes_names=('left', 'batch', 'right'),
                         name='node2',
                         tensor=tensor)
         return node1, node2, tensor
@@ -540,20 +562,60 @@ class TestSetTensor:
         
     def test_set_diff_shape(self, setup):
         node1, node2, tensor = setup
+        node1['left'] ^ node2['left']
+        
         assert node1.tensor is None
         assert node1.shape == (2, 5, 2)
         assert node1['left'].size() == 2
-        assert node1['input'].size() == 5
+        assert node1['batch'].size() == 5
+        assert node1['right'].size() == 2
+        
+        # If edges are batch edges, we can set a
+        # tensor with different size in those axes
+        diff_tensor = torch.randn(2, 10, 2)
+        node1.tensor = diff_tensor
+        assert node1.shape == (2, 10, 2)
+        assert node1['left'].size() == 2
+        assert node1['batch'].size() == 10
         assert node1['right'].size() == 2
         
         # If edges are non-dangling, we can set a
-        # tensor with different size in those axes
-        diff_tensor = torch.randn(2, 5, 5)
+        # tensor with different size but it is cropped
+        # to match the size in the connected edges
+        diff_tensor = torch.randn(5, 20, 5)
         node1.tensor = diff_tensor
+        assert node1.shape == (2, 20, 2)
+        assert node1['left'].size() == 2
+        assert node1['batch'].size() == 20
+        assert node1['right'].size() == 2
+        
+    def test_set_diff_shape_unrestricted(self, setup):
+        node1, node2, tensor = setup
+        node1['left'] ^ node2['left']
+        
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        assert node1['left'].size() == 2
+        assert node1['batch'].size() == 5
+        assert node1['right'].size() == 2
+        
+        # If using _unrestricted_set_tensor, used for
+        # setting tensors in non-leaf nodes, size of
+        # edges is not updated, so that we don't change
+        # the original shapes
+        diff_tensor = torch.randn(2, 10, 2)
+        node1._unrestricted_set_tensor(diff_tensor)
+        assert node1.shape == (2, 10, 2)
+        assert node1['left'].size() == 2
+        assert node1['batch'].size() == 5
+        assert node1['right'].size() == 2
+        
+        diff_tensor = torch.randn(2, 5, 5)
+        node1._unrestricted_set_tensor(diff_tensor, allow_diff_shape=True)
         assert node1.shape == (2, 5, 5)
         assert node1['left'].size() == 2
-        assert node1['input'].size() == 5
-        assert node1['right'].size() == 5
+        assert node1['batch'].size() == 5
+        assert node1['right'].size() == 2
         
     def test_set_init_method(self, setup):
         node1, node2, tensor = setup
@@ -570,6 +632,151 @@ class TestSetTensor:
         # Changing node1's tensor changes node2's tensor
         node1.tensor[0, 0, 0] = 1000
         assert node2.tensor[0, 0, 0] == 1000
+        
+        
+class TestSetTensorParamNode:
+    
+    @pytest.fixture
+    def setup(self):
+        node1 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'batch', 'right'),
+                             name='node1',
+                             param_edges=True)
+        
+        tensor = torch.randn(2, 5, 2)
+        node2 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'batch', 'right'),
+                             name='node1',
+                             param_edges=True,
+                             tensor=tensor)
+        return node1, node2, tensor
+    
+    def test_set_tensor(self, setup):
+        node1, node2, tensor = setup
+        
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        
+        node1.tensor = tensor
+        assert torch.equal(node1.tensor, node2.tensor)
+        assert node1.shape == (2, 5, 2)
+        
+        assert isinstance(node1.tensor, nn.Parameter)
+        assert isinstance(node2.tensor, nn.Parameter)
+        
+    def test_change_tensor(self, setup):
+        node1, node2, tensor = setup
+        assert node1.tensor is None
+        
+        # Changing tensor changes node1's and node2's tensor
+        node1.tensor = tensor
+        tensor[0, 0, 0] = 1000
+        assert node1.tensor[0, 0, 0] == 1000
+        assert node2.tensor[0, 0, 0] == 1000
+        
+    def test_unset_tensor(self, setup):
+        node1, node2, tensor = setup
+        assert node1.tensor is None
+        
+        # Using unset_tensor method
+        node1.tensor = tensor
+        assert torch.equal(node1.tensor, tensor)
+        assert node1.shape == (2, 5, 2)
+        
+        node1.unset_tensor()
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        
+        # Using tensor.setter
+        node1.tensor = tensor
+        assert torch.equal(node1.tensor, tensor)
+        assert node1.shape == (2, 5, 2)
+        
+        node1.tensor = None
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        
+        # Using set_tensor method
+        node1.tensor = tensor
+        assert torch.equal(node1.tensor, tensor)
+        assert node1.shape == (2, 5, 2)
+        
+        node1.set_tensor(None)
+        assert torch.equal(node1.tensor, torch.zeros(node1.shape))
+        assert node1.shape == (2, 5, 2)
+        
+    def test_set_diff_shape(self, setup):
+        node1, node2, tensor = setup
+        node1['left'] ^ node2['left']
+        
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        assert node1['left'].size() == 2
+        assert node1['batch'].size() == 5
+        assert node1['right'].size() == 2
+        
+        # If edges are batch edges, we can set a
+        # tensor with different size in those axes
+        diff_tensor = torch.randn(2, 10, 2)
+        node1.tensor = diff_tensor
+        assert node1.shape == (2, 10, 2)
+        assert node1['left'].size() == 2
+        assert node1['batch'].size() == 10
+        assert node1['right'].size() == 2
+        
+        # If edges are non-dangling, we can set a
+        # tensor with different size but it is cropped
+        # to match the size in the connected edges
+        diff_tensor = torch.randn(5, 20, 5)
+        node1.tensor = diff_tensor
+        assert node1.shape == (2, 20, 2)
+        assert node1['left'].size() == 2
+        assert node1['batch'].size() == 20
+        assert node1['right'].size() == 2
+        
+    def test_set_diff_shape_unrestricted(self, setup):
+        node1, node2, tensor = setup
+        node1['left'] ^ node2['left']
+        
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        assert node1['left'].size() == 2
+        assert node1['batch'].size() == 5
+        assert node1['right'].size() == 2
+        
+        # If using _unrestricted_set_tensor, used for
+        # setting tensors in non-leaf nodes, size of
+        # edges is not updated, so that we don't change
+        # the original shapes
+        diff_tensor = torch.randn(2, 10, 2)
+        node1._unrestricted_set_tensor(diff_tensor)
+        assert node1.shape == (2, 10, 2)
+        assert node1['left'].size() == 2
+        assert node1['batch'].size() == 5
+        assert node1['right'].size() == 2
+        
+        diff_tensor = torch.randn(2, 5, 5)
+        node1._unrestricted_set_tensor(diff_tensor, allow_diff_shape=True)
+        assert node1.shape == (2, 5, 5)
+        assert node1['left'].size() == 2
+        assert node1['batch'].size() == 5
+        assert node1['right'].size() == 2
+        
+    def test_set_init_method(self, setup):
+        node1, node2, tensor = setup
+        assert node1.tensor is None
+        
+        # Initialize tensor of node1
+        node1.set_tensor(init_method='randn', mean=1., std=2.)
+        assert node1.tensor is not None
+
+        # Set node1's tensor as node2's tensor
+        node2.tensor = node1.tensor
+        assert torch.equal(node1.tensor, node2.tensor)
+
+        # Cannot change element of Parameter
+        with pytest.raises(RuntimeError):
+            node1.tensor[0, 0, 0] = 1000
         
     def test_set_parametric(self, setup):
         node1, node2, tensor = setup
@@ -1297,7 +1504,242 @@ class TestCopy:
                 edge._nodes[copy.is_node1(i)]
             
         assert node2['left'].node1 == node1
+
+
+class TestStack:
+    
+    def test_stack_nodes_in_stacknode(self):
+        net = tk.TensorNetwork()
+        nodes = []
+        for _ in range(5):
+            node = tk.Node(shape=(3, 2),
+                           axes_names=('input', 'output'),
+                           name='node',
+                           network=net,
+                           init_method='randn')
+            nodes.append(node)
             
+        stack = tk.StackNode(nodes)
+        
+        assert isinstance(stack, tk.StackNode)
+        assert stack.axes_names == ['stack', 'input', 'output']
+        assert isinstance(stack['stack'], tk.Edge)
+        assert isinstance(stack['input'], tk.StackEdge)
+        assert isinstance(stack['output'], tk.StackEdge)
+        
+    def test_stack_paramnodes_in_stacknode(self):
+        net = tk.TensorNetwork()
+        nodes = []
+        for _ in range(5):
+            node = tk.ParamNode(shape=(3, 2),
+                                axes_names=('input', 'output'),
+                                name='node',
+                                network=net,
+                                init_method='randn',
+                                param_edges=True)
+            nodes.append(node)
+            
+        stack = tk.StackNode(nodes)
+        
+        assert isinstance(stack, tk.StackNode)
+        assert stack.axes_names == ['stack', 'input', 'output']
+        assert isinstance(stack['stack'], tk.Edge)
+        assert isinstance(stack['input'], tk.ParamStackEdge)
+        assert isinstance(stack['output'], tk.ParamStackEdge)
+        
+    def test_stack_nodes_in_paramstacknode(self):
+        net = tk.TensorNetwork()
+        nodes = []
+        for _ in range(5):
+            node = tk.Node(shape=(3, 2),
+                           axes_names=('input', 'output'),
+                           name='node',
+                           network=net,
+                           init_method='randn')
+            nodes.append(node)
+            
+        stack = tk.ParamStackNode(nodes)
+        
+        assert isinstance(stack, tk.ParamStackNode)
+        assert stack.axes_names == ['stack', 'input', 'output']
+        assert isinstance(stack['stack'], tk.Edge)
+        assert isinstance(stack['input'], tk.StackEdge)
+        assert isinstance(stack['output'], tk.StackEdge)
+        
+    def test_stack_paramnodes_in_paramstacknode(self):
+        net = tk.TensorNetwork()
+        nodes = []
+        for _ in range(5):
+            node = tk.ParamNode(shape=(3, 2),
+                                axes_names=('input', 'output'),
+                                name='node',
+                                network=net,
+                                init_method='randn',
+                                param_edges=True)
+            nodes.append(node)
+            
+        stack = tk.ParamStackNode(nodes)
+        
+        assert isinstance(stack, tk.ParamStackNode)
+        assert stack.axes_names == ['stack', 'input', 'output']
+        assert isinstance(stack['stack'], tk.Edge)
+        assert isinstance(stack['input'], tk.ParamStackEdge)
+        assert isinstance(stack['output'], tk.ParamStackEdge)
+        
+    def test_error_stack_node(self):
+        node = tk.Node(shape=(3, 2),
+                       axes_names=('input', 'output'),
+                       init_method='randn',
+                       param_edges=True)
+        
+        # Be careful! You have to pass a list or tuple of nodes as input
+        with pytest.raises(TypeError):
+            stack = tk.StackNode(node)
+            
+        with pytest.raises(TypeError):
+            stack = tk.ParamStackNode(node)
+            
+        stack = tk.StackNode([node])
+        stack = tk.ParamStackNode([node])
+        
+    def test_error_stack_stacks(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 2),
+                        axes_names=('input', 'output'),
+                        network=net,
+                        init_method='randn',
+                        param_edges=True)
+        node2 = tk.Node(shape=(3, 2),
+                        axes_names=('input', 'output'),
+                        network=net,
+                        init_method='randn',
+                        param_edges=True)
+        
+        # Create Stack with just one node
+        stack = tk.StackNode([node1])
+        with pytest.raises(TypeError):
+            stack_stack = tk.StackNode([stack])
+        with pytest.raises(TypeError):
+            stack_stack = tk.ParamStackNode([stack])
+            
+        # Create Stack with two nodes
+        stack = tk.StackNode([node1, node2])
+        with pytest.raises(TypeError):
+            stack_stack = tk.StackNode([stack])
+        with pytest.raises(TypeError):
+            stack_stack = tk.ParamStackNode([stack])
+            
+        # Create ParamStack with just one node
+        stack = tk.ParamStackNode([node1])
+        with pytest.raises(TypeError):
+            stack_stack = tk.StackNode([stack])
+        with pytest.raises(TypeError):
+            stack_stack = tk.ParamStackNode([stack])
+            
+        # Create ParamStack with two nodes
+        stack = tk.ParamStackNode([node1, node2])
+        with pytest.raises(TypeError):
+            stack_stack = tk.StackNode([stack])
+        with pytest.raises(TypeError):
+            stack_stack = tk.ParamStackNode([stack])
+            
+    def test_error_diff_type(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 2),
+                        axes_names=('input', 'output'),
+                        network=net,
+                        init_method='randn',
+                        param_edges=True)
+        node2 = tk.ParamNode(shape=(3, 2),
+                             axes_names=('input', 'output'),
+                             network=net,
+                             init_method='randn',
+                             param_edges=True)
+        
+        # Cannot stack Node's with ParamNode's
+        with pytest.raises(TypeError):
+            stack = tk.StackNode([node1, node2])
+        with pytest.raises(TypeError):
+            stack = tk.ParamStackNode([node1, node2])
+            
+    def test_error_diff_axes_names(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 2),
+                        axes_names=('input1', 'output1'),
+                        network=net,
+                        init_method='randn',
+                        param_edges=True)
+        node2 = tk.Node(shape=(3, 2),
+                        axes_names=('input2', 'output2'),
+                        network=net,
+                        init_method='randn',
+                        param_edges=True)
+        
+        # Cannot stack nodes with different axes names
+        with pytest.raises(ValueError):
+            stack = tk.StackNode([node1, node2])
+        with pytest.raises(ValueError):
+            stack = tk.ParamStackNode([node1, node2])
+            
+    def test_error_diff_network(self):
+        node1 = tk.Node(shape=(3, 2),
+                        axes_names=('input', 'output'),
+                        init_method='randn',
+                        param_edges=True)
+        node2 = tk.Node(shape=(3, 2),
+                        axes_names=('input', 'output'),
+                        init_method='randn',
+                        param_edges=True)
+        
+        assert node1.network != node2.network
+        
+        # Cannot stack nodes in different networks
+        with pytest.raises(ValueError):
+            stack = tk.StackNode([node1, node2])
+        with pytest.raises(ValueError):
+            stack = tk.ParamStackNode([node1, node2])
+            
+    def test_error_diff_edge_type(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 2),
+                        axes_names=('input', 'output'),
+                        network=net,
+                        init_method='randn',
+                        param_edges=True)
+        node2 = tk.Node(shape=(3, 2),
+                        axes_names=('input', 'output'),
+                        network=net,
+                        init_method='randn',
+                        param_edges=False)
+        
+        assert isinstance(node1['input'], tk.ParamEdge)
+        assert isinstance(node2['input'], tk.Edge)
+        
+        # Cannot stack nodes with different type of edges
+        with pytest.raises(TypeError):
+            stack = tk.StackNode([node1, node2])
+        with pytest.raises(TypeError):
+            stack = tk.ParamStackNode([node1, node2])  
+            
+    def test_stack_change_stack_name(self):
+        net = tk.TensorNetwork()
+        nodes = []
+        for _ in range(5):
+            node = tk.ParamNode(shape=(3, 2),
+                                axes_names=('input', 'output'),
+                                name='node',
+                                network=net,
+                                init_method='randn',
+                                param_edges=True)
+            nodes.append(node)
+            
+        stack = tk.ParamStackNode(nodes)
+        assert stack.axes_names == ['stack', 'input', 'output']
+        
+        # Name of stack edge cannot be changed
+        with pytest.raises(ValueError):
+            stack.get_axis('stack').name = 'other_name'
+
 
 class TestTensorNetwork:
     
@@ -1573,7 +2015,7 @@ class TestTensorNetwork:
         input_edges = []
         for i in range(4):
             input_edges.append(net[f'node_{i}']['input'])
-        net.set_data_nodes(input_edges, ['batch'])
+        net.set_data_nodes(input_edges, 1)
         
         # 4 leaf nodes, 4 data nodes, and the
         # stack_data_memory (+2 virtual nodes)
@@ -1586,7 +2028,7 @@ class TestTensorNetwork:
         for i in range(3):
             input_edges.append(net[f'node_{i}']['input'])
         with pytest.raises(ValueError):
-            net.set_data_nodes(input_edges, ['batch'])
+            net.set_data_nodes(input_edges, 1)
 
         net.unset_data_nodes()
         assert len(net.nodes) == 4
@@ -1595,7 +2037,7 @@ class TestTensorNetwork:
         input_edges = []
         for i in range(2):
             input_edges.append(net[f'node_{i}']['input'])
-        net.set_data_nodes(input_edges, ['batch'])
+        net.set_data_nodes(input_edges, 1)
         assert len(net.nodes) == 9
         assert len(net.leaf_nodes) == 4
         assert len(net.data_nodes) == 2
@@ -1615,7 +2057,7 @@ class TestTensorNetwork:
         input_edges = []
         for i in range(2):
             input_edges.append(net[f'node_{i}']['input'])
-        net.set_data_nodes(input_edges, ['batch'])
+        net.set_data_nodes(input_edges, 1)
 
         # data shape = n_features x batch_dim x feature_dim
         data = torch.randn(2, 10, 5)

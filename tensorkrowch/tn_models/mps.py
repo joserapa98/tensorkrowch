@@ -583,12 +583,12 @@ class MPS(TensorNetwork):
         if self.right_node is not None:
             input_edges.append(self.right_node['input'])
             
-        names_batches = ['batch']
-        if self.num_batches == 2:
-            names_batches = ['batch', 'stack']
+        # names_batches = ['batch']
+        # if self.num_batches == 2:
+        #     names_batches = ['batch', 'stack']
             
         super().set_data_nodes(input_edges=input_edges,
-                               names_batch_edges=names_batches) # TODO: we could choose this when instantiating an MPS
+                               num_batch_edges=self.num_batches) # TODO: we could choose this when instantiating an MPS
         self._permanent_nodes += list(self.data_nodes.values())
         
         if self.left_env + self.right_env:

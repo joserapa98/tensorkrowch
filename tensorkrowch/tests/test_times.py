@@ -708,7 +708,7 @@ def test_scipy():
     sparse_mat2 = csr_array(tensor2.permute(1, 2, 0).reshape(300, -1))
 
     start = time.time()
-    res = sparse_mat1.multiply(sparse_mat2)
+    # res = sparse_mat1.multiply(sparse_mat2)
 
     a_memory = a.data.nbytes + a.indptr.nbytes + a.indices.nbytes
     print(f'Memory of a: {a_memory / 1024 ** 2:.2f} Mb')

@@ -1029,6 +1029,28 @@ def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
     return contract_edges(edges, node1, node2)
 
 AbstractNode.__matmul__ = contract_between
+AbstractNode.contract_between = contract_between
+
+
+def contract_between_(node1: AbstractNode, node2: AbstractNode) -> Node:
+    """
+    Contract all shared edges between two nodes, also performing batch contraction
+    between batch edges that share name in both nodes
+    """
+    result = contract_between(node1, node2)
+    result._reattach_edges(True)
+    
+    net = result.network
+    net.delete_node(node1)
+    net.delete_node(node2)
+    net._change_node_type(result, 'leaf')
+    
+    node1._successors = dict()
+    node2._successors = dict()
+    
+    return result
+
+AbstractNode.contract_between_ = contract_between_
 
 
 ###################   STACK   ##################

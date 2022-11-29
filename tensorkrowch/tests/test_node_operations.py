@@ -684,6 +684,50 @@ class TestContractBetween:
         assert node3 == node4
         assert torch.equal(result_tensor, node4.tensor)
         
+    def test_contract_with_contract_between(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node2 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        init_method='randn',
+                        network=net)
+        node1['left'] ^ node2['left']
+        node1['right'] ^ node2['right']
+        
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 0
+        
+        assert node1.successors == dict()
+        assert node2.successors == dict()
+        
+        # Contract nodes
+        node3 = node1.contract_between(node2)
+        assert node3.shape == (5, 5)
+        assert node3.axes_names == ['input_0', 'input_1']
+        assert node3.edges == [node1['input'], node2['input']]
+        assert node3.network == net
+        
+        assert len(net.nodes) == 3
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 1
+        
+        assert node1.successors != dict()
+        assert node1.successors['contract_edges'][0].child == node3
+        assert node2.successors == dict()
+        
+        result_tensor = node3.tensor
+
+        # Repeat contraction
+        node4 = node1.contract_between(node2)
+        assert node3 == node4
+        assert torch.equal(result_tensor, node4.tensor)
+        
     def test_contract_paramnodes(self):
         net = tk.TensorNetwork()
         node1 = tk.ParamNode(shape=(2, 5, 2),
@@ -954,6 +998,126 @@ class TestContractBetween:
         node4 = node1 @ node2
         assert node3 == node4
         assert torch.equal(result_tensor, node4.tensor)
+        
+    def test_contract_nodes_in_place(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node2 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        init_method='randn',
+                        network=net)
+        node3 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node3',
+                        init_method='randn',
+                        network=net)
+        node1['right'] ^ node2['left']
+        node2['right'] ^ node3['left']
+        
+        assert len(net.nodes) == 3
+        assert len(net.leaf_nodes) == 3
+        assert len(net.non_leaf_nodes) == 0
+        
+        assert node1.successors == dict()
+        assert node2.successors == dict()
+        
+        # Contract nodes in_place
+        node4 = node1.contract_between_(node2)
+        assert isinstance(node4, tk.Node)
+        assert node4.shape == (2, 5, 5, 2)
+        assert node4.axes_names == ['left', 'input_0', 'input_1', 'right']
+        
+        assert node4['left'] != node1['left']
+        assert node4['input_0'] != node1['input']
+        assert node4['input_1'] != node2['input']
+        assert node4['right'] != node2['right']
+        
+        assert node4['right'] == node3['left']
+        
+        assert node4.network == net
+        assert node1.network != net
+        assert node2.network != net
+        
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 0
+        
+        assert node1.successors == dict()
+        assert node2.successors == dict()
+
+        # Repeat contraction -> Now node1 and node2 are
+        # disconnected and are not in the same network
+        with pytest.raises(ValueError):
+            node4 = node1.contract_between_(node2)
+            
+    def test_contract_paramnodes_in_place(self):
+        net = tk.TensorNetwork()
+        node1 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'input', 'right'),
+                             name='node1',
+                             init_method='randn',
+                             network=net)
+        node2 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'input', 'right'),
+                             name='node2',
+                             init_method='randn',
+                             network=net)
+        node3 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'input', 'right'),
+                             name='node3',
+                             init_method='randn',
+                             network=net)
+        node1['right'] ^ node2['left']
+        node2['right'] ^ node3['left']
+        
+        assert len(net.nodes) == 3
+        assert len(net.leaf_nodes) == 3
+        assert len(net.non_leaf_nodes) == 0
+        
+        assert node1.successors == dict()
+        assert node2.successors == dict()
+        
+        # Contract nodes in_place
+        node4 = node1.contract_between_(node2)
+        
+        # Careful! even in in_place mode, it returns a Node,
+        # not a ParamNode
+        assert isinstance(node4, tk.Node)
+        
+        # We can parameterize the node later
+        node4 = node4.parameterize()
+        assert isinstance(node4, tk.ParamNode)
+        
+        assert node4.shape == (2, 5, 5, 2)
+        assert node4.axes_names == ['left', 'input_0', 'input_1', 'right']
+        
+        assert node4['left'] != node1['left']
+        assert node4['input_0'] != node1['input']
+        assert node4['input_1'] != node2['input']
+        assert node4['right'] != node2['right']
+        
+        assert node4['right'] == node3['left']
+        
+        assert node4.network == net
+        assert node1.network != net
+        assert node2.network != net
+        
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 0
+        
+        assert node1.successors == dict()
+        assert node2.successors == dict()
+
+        # Repeat contraction -> Now node1 and node2 are
+        # disconnected and are not in the same network
+        with pytest.raises(ValueError):
+            node4 = node1.contract_between_(node2)
 
 
 class TestStackUnbind:

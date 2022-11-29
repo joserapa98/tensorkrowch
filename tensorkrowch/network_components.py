@@ -1553,14 +1553,14 @@ class AbstractEdge(ABC):
         pass
 
     @abstractmethod
-    def __xor__(self, other: 'AbstractEdge') -> 'AbstractEdge':
+    def connect(self, other: 'AbstractEdge') -> 'AbstractEdge':
         """
         Connect two edges
         """
         pass
 
     @abstractmethod
-    def __or__(self, other: 'AbstractEdge') -> List['AbstractEdge']:
+    def disconnect(self) -> List['AbstractEdge']:
         """
         Disconnect one edge (from itself)
         """
@@ -1699,6 +1699,16 @@ class AbstractEdge(ABC):
         self.change_size(rank)
         self.node1.tensor = u
         self.node2.tensor = vh
+        
+    def __xor__(self, other: 'AbstractEdge') -> 'AbstractEdge':
+        return self.connect(other)
+
+    def __or__(self, other: 'AbstractEdge') -> List['AbstractEdge']:
+        if other == self:
+            return self.disconnect()
+        else:
+            raise ValueError('Cannot disconnect one edge from another, different one. '
+                             'Edge should be disconnected from itself')
 
     def __str__(self) -> Text:
         return self.name
@@ -1758,22 +1768,18 @@ class Edge(AbstractEdge):
         return new_edge
 
     @overload
-    def __xor__(self, other: 'Edge') -> 'Edge':
+    def connect(self, other: 'Edge') -> 'Edge':
         pass
 
     @overload
-    def __xor__(self, other: 'ParamEdge') -> 'ParamEdge':
+    def connect(self, other: 'ParamEdge') -> 'ParamEdge':
         pass
 
-    def __xor__(self, other: Union['Edge', 'ParamEdge']) -> Union['Edge', 'ParamEdge']:
+    def connect(self, other: Union['Edge', 'ParamEdge']) -> Union['Edge', 'ParamEdge']:
         return connect(self, other)
 
-    def __or__(self, other: 'Edge') -> Tuple['Edge', 'Edge']:
-        if other == self:
-            return disconnect(self)
-        else:
-            raise ValueError('Cannot disconnect one edge from another, different one. '
-                             'Edge should be disconnected from itself')
+    def disconnect(self) -> Tuple['Edge', 'Edge']:
+        return disconnect(self)
 
 
 class ParamEdge(AbstractEdge, nn.Module):
@@ -2000,22 +2006,18 @@ class ParamEdge(AbstractEdge, nn.Module):
         return new_edge
 
     @overload
-    def __xor__(self, other: Edge) -> 'ParamEdge':
+    def connect(self, other: Edge) -> 'ParamEdge':
         pass
 
     @overload
-    def __xor__(self, other: 'ParamEdge') -> 'ParamEdge':
+    def connect(self, other: 'ParamEdge') -> 'ParamEdge':
         pass
 
-    def __xor__(self, other: Union['Edge', 'ParamEdge']) -> 'ParamEdge':
+    def connect(self, other: Union['Edge', 'ParamEdge']) -> 'ParamEdge':
         return connect(self, other)
 
-    def __or__(self, other: 'ParamEdge') -> Tuple['ParamEdge', 'ParamEdge']:
-        if other == self:
-            return disconnect(self)
-        else:
-            raise ValueError('Cannot disconnect one edge from another, different one. '
-                             'Edge should be disconnected from itself')
+    def disconnect(self) -> Tuple['ParamEdge', 'ParamEdge']:
+        return disconnect(self)
 
 
 ################################################
@@ -2802,6 +2804,29 @@ class TensorNetwork(nn.Module):
             self._unassign_node_name(node)
             self._assign_node_name(node, name)
             
+    def _change_node_type(self, node: AbstractNode, type: Text) -> None:
+        """
+        Used to change node from leaf, non_leaf, data or virtual
+        types to another
+        """
+        if type not in ['leaf', 'non_leaf', 'data', 'virtual']:
+            raise ValueError('`type` can only be \'leaf\', \'non_leaf\', '
+                             '\'data\' or \'virtual\'')
+        
+        prev_dict = self._which_dict(node)
+        
+        if type == 'leaf':
+            new_dict = self._leaf_nodes
+        elif type == 'non_leaf':
+            new_dict = self._non_leaf_nodes
+        elif type == 'data':
+            new_dict = self._data_nodes
+        elif type == 'virtual':
+            new_dict = self._virtual_nodes
+        
+        del prev_dict[node.name]    
+        new_dict[node.name] = node   
+            
     def copy(self) -> 'TensorNetwork':
         return copy.deepcopy(self)
 
@@ -3150,60 +3175,56 @@ def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
     """
     if edge.is_dangling():
         raise ValueError('Cannot disconnect a dangling edge')
-
-    node1, node2 = edge.node1, edge.node2
-    axis1, axis2 = edge.axis1, edge.axis2
-    if isinstance(edge, Edge):
-        if isinstance(edge, StackEdge):
-            new_edge1 = StackEdge(edges=edge.edges,
-                                  node1_lists=edge.node1_lists,
-                                  node1=node1,
-                                  axis1=axis1)
-            new_edge2 = StackEdge(edges=edge.edges,
-                                  node1_lists=edge.node1_lists,
-                                  node1=node2,
-                                  axis1=axis2)
-            net = edge.node1._network
-            # net._add_edge(new_edge1)
-            # net._add_edge(new_edge2)
+    
+    nodes = []
+    axes = []
+    for axis, node in zip(edge._axes, edge._nodes):
+        if edge in node._edges:
+            nodes.append(node)
+            axes.append(axis)
             
+    new_edges = []
+    first = True
+    for axis, node in zip(axes, nodes):
+        if isinstance(edge, Edge):
+            if isinstance(edge, StackEdge):
+                new_edge = StackEdge(edges=edge.edges,
+                                    node1_lists=edge.node1_lists,
+                                    node1=node,
+                                    axis1=axis)
+                new_edges.append(new_edge)
+                
+            else:
+                new_edge = Edge(node1=node, axis1=axis)
+                new_edges.append(new_edge)
+                
+                net = node._network
+                net._add_edge(new_edge)
         else:
-            new_edge1 = Edge(node1=node1, axis1=axis1)
-            new_edge2 = Edge(node1=node2, axis1=axis2)
-            net = edge.node1._network
-            net._add_edge(new_edge1)
-            net._add_edge(new_edge2)
-    else:
-        # assert isinstance(edge, ParamEdge)
-        if isinstance(edge, ParamStackEdge):
-            new_edge1 = ParamStackEdge(edges=edge.edges,
-                                       node1_lists=edge.node1_lists,
-                                       node1=node1,
-                                       axis1=axis1)
-            new_edge2 = ParamStackEdge(edges=edge.edges,
-                                       node1_lists=edge.node1_lists,
-                                       node1=node2,
-                                       axis1=axis2)
-            net = edge.node1._network
-            # net._remove_edge(edge)
-            # net._add_edge(new_edge1)
-            # net._add_edge(new_edge2)
-            
-        else:  
-            shift = edge.shift
-            slope = edge.slope
-            new_edge1 = ParamEdge(node1=node1, axis1=axis1,
-                                  shift=shift, slope=slope)
-            new_edge2 = ParamEdge(node1=node2, axis1=axis2,
-                                  shift=shift, slope=slope)
-            net = edge.node1._network
-            net._remove_edge(edge)
-            net._add_edge(new_edge1)
-            net._add_edge(new_edge2)
-
-    node1._add_edge(new_edge1, axis1, True)
-    node2._add_edge(new_edge2, axis2, True)
-    return new_edge1, new_edge2
+            if isinstance(edge, ParamStackEdge):
+                new_edge = ParamStackEdge(edges=edge.edges,
+                                        node1_lists=edge.node1_lists,
+                                        node1=node,
+                                        axis1=axis)
+                new_edges.append(new_edge)
+                
+            else:  
+                shift = edge.shift
+                slope = edge.slope
+                new_edge = ParamEdge(node1=node, axis1=axis,
+                                    shift=shift, slope=slope)
+                new_edges.append(new_edge)
+                
+                net = node._network
+                if first:
+                    net._remove_edge(edge)
+                    first = False
+                net._add_edge(new_edge)
+                
+    for axis, node, new_edge in zip(axes, nodes, new_edges):
+        node._add_edge(new_edge, axis, True)
+        
+    return tuple(new_edges)
 
 
 # ################################################

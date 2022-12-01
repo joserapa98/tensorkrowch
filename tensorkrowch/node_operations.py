@@ -93,7 +93,7 @@ class Operation:
             return self.func2(*args, **kwargs)
 
 
-#################   BASIC OP   #################
+#################   BASIC OPS  #################
 def _check_first_permute(node: AbstractNode, axes: Sequence[Ax]) -> Optional[Successor]:
     kwargs = {'node': node,
               'axes': axes}
@@ -107,7 +107,7 @@ def _check_first_permute(node: AbstractNode, axes: Sequence[Ax]) -> Optional[Suc
 def _permute_first(node: AbstractNode, axes: Sequence[Ax]) -> Node:
     axes_nums = []
     for axis in axes:
-        axes_nums.append(node.get_axis_number(axis))
+        axes_nums.append(node.get_axis_num(axis))
 
     if not is_permutation(list(range(len(axes_nums))), axes_nums):
         raise ValueError('The provided list of axis is not a permutation of the'
@@ -380,6 +380,559 @@ AbstractNode.__add__ = add_node
 sub = Operation(_check_first_sub, _sub_first, _sub_next)
 def sub_node(node1, node2): return sub(node1, node2)
 AbstractNode.__sub__ = sub_node
+
+
+#################     SPLIT    #################
+def _check_first_split(node: AbstractNode,
+                       node1_axes: Optional[Sequence[Ax]] = None,
+                       node2_axes: Optional[Sequence[Ax]] = None,
+                       #  node1: Optional[AbstractNode] = None,
+                       #  node2: Optional[AbstractNode] = None,
+                       side = 'left',
+                       rank: Optional[int] = None,
+                       cum_percentage: Optional[float] = None) -> Optional[Successor]:
+    kwargs={'node': node,
+            'node1_axes': node1_axes,
+            'node2_axes': node2_axes,
+            'side': side,
+            'rank': rank,
+            'cum_percentage': cum_percentage}
+    if 'split' in node._successors:
+        for succ in node._successors['split']:
+            if succ.kwargs == kwargs:
+                return succ
+    return None
+
+
+def _split_first(node: AbstractNode,
+                 node1_axes: Optional[Sequence[Ax]] = None,
+                 node2_axes: Optional[Sequence[Ax]] = None,
+                #  node1: Optional[AbstractNode] = None,
+                #  node2: Optional[AbstractNode] = None,
+                 side = 'left',
+                 rank: Optional[int] = None,
+                 cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
+    """
+    Split one node in two via SVD. The set of edges has to be split in two sets,
+    corresponding to the edges of the first and second resultant nodes. Batch
+    edges that don't appear in any of the lists will be repeated in both nodes
+
+    Args:
+        node: node we are splitting
+        node1_axes: sequence of axes from `node` whose attached edges will
+            go to `node1`
+        node2_axes: sequence of axes from `node` whose attached edges will
+            go to `node2`
+        node1: if `node1_axes` is None, a `node` is the already created node
+            in which we will put the first part of the splitted tensor of `node`.
+            Used only for svd
+        node2: if `node2_axes` is None, a `node` is the already created node
+            in which we will put the second part of the splitted tensor of `node`.
+            Used only for svd
+        side: when performing SVD, the singular values matrix has to be absorbed
+            by either the "left" (U) or "right" (Vh) matrix 
+        rank: number of singular values to keep
+        cum_percentage: if rank is None, number of singular values to keep will
+            be the amount of values whose sum with respect to the total sum of
+            singular values is greater than `cum_percentage`
+            
+    Returns:
+        node1, node2: nodes that store both parts of the splitted tensor
+    """
+    if node1_axes is not None:
+        if node2_axes is None:
+            raise ValueError('If `node1_edges` is provided `node2_edges` '
+                             'should also be provided')
+    else:
+        if node2_axes is not None:
+            raise ValueError('If `node2_edges` is provided `node1_edges` '
+                             'should also be provided')
+        # else:
+        #     if (node1 is None) or (node2 is None):
+        #         raise ValueError('If nodes edges are not provided, both '
+        #                          '`node1` and `node2` have to be provided')
+                
+    # if (rank is None) and (cum_percentage is None):
+    #     raise ValueError('One of `rank` and `cum_percentage` should '
+    #                      'be provided')
+    if (rank is not None) and (cum_percentage is not None):
+        raise ValueError('Only one of `rank` and `cum_percentage` should '
+                         'be provided')
+    
+    if node1_axes is not None:
+        if not isinstance(node1_axes, (list, tuple)):
+            raise TypeError('`node1_edges` should be list or tuple type')
+        if not isinstance(node2_axes, (list, tuple)):
+            raise TypeError('`node2_edges` should be list or tuple type')
+        
+        kwargs = {'node': node,
+                  'node1_axes': node1_axes,
+                  'node2_axes': node2_axes,
+                  'side': side,
+                  'rank': rank,
+                  'cum_percentage': cum_percentage}
+        
+        node1_axes = [node.get_axis_num(axis) for axis in node1_axes]
+        node2_axes = [node.get_axis_num(axis) for axis in node2_axes]
+        
+        batch_axes = []
+        all_axes = node1_axes + node2_axes
+        all_axes.sort()
+        diff = 0
+        for i, j in enumerate(all_axes):
+            if (i + diff) < j:
+                for k in range(i, j):
+                    if not node._edges[k].is_batch():
+                        raise ValueError(f'Edge {node._edges[k]} is not a batch'
+                                         'edge but it\'s not included in `node1_axes`'
+                                         'neither in `node2_axes`')
+                    else:
+                        batch_axes.append(k)
+                diff = j - i
+        
+        batch_shape = torch.tensor(node.shape)[batch_axes].tolist()
+        node1_shape = torch.tensor(node.shape)[node1_axes]
+        node2_shape = torch.tensor(node.shape)[node2_axes]
+        
+        permutation_dims = batch_axes + node1_axes + node2_axes
+        if permutation_dims == list(range(node.rank)):
+            permutation_dims = []
+            
+        if permutation_dims:
+            node_tensor = node.tensor\
+                .permute(*(batch_axes + node1_axes + node2_axes))\
+                .reshape(*(batch_shape +
+                        [node1_shape.prod().item()] +
+                        [node2_shape.prod().item()]))
+        else:
+            node_tensor = node.tensor\
+                .reshape(*(batch_shape +
+                        [node1_shape.prod().item()] +
+                        [node2_shape.prod().item()]))
+    
+    else: # TODO: not used, just case 1
+        lst_permute_all = []
+        lst_permute1 = []
+        lst_permute2 = [] # TODO: inverse_permute
+        
+        lst_batches = []
+        lst_batches_names = []
+        
+        for i, edge in enumerate(node._edges):
+            in_node1 = False
+            in_node2 = False
+            
+            for j, edge1 in enumerate(node1._edges):
+                if edge == edge1:
+                    in_node1 = True
+                    if edge.is_batch() and (node1._axes[j]._name in node2.axes_names):
+                        lst_permute_all = [i] + lst_permute_all
+                        lst_permute1 = [j] + lst_permute1
+                        lst_batches = [edge.size()] + lst_batches
+                        lst_batches_names = [edge.axis1.name] + lst_batches_names
+                    else:
+                        lst_permute_all.append(i)
+                        lst_permute1.append(j)
+                    break
+                        
+            for j, edge2 in enumerate(node2._edges):
+                if edge == edge2:
+                    in_node2 = True
+                    lst_permute_all.append(i)
+                    lst_permute2.append(j)
+                    break
+                        
+            if not in_node1 and not in_node2:
+                raise ValueError('The node has an edge that is not present in '
+                                 'either `node1` nor `node2`')
+            
+        # NOTE: there should only be one contracted_edge, since we only use
+        # `node1` and `node2` from svd, after contracting a single edge
+        contracted_edge = None
+        for edge in node1._edges:
+            if edge not in node._edges:
+                if edge in node2._edges:
+                    contracted_edge = edge
+                    break
+                
+        reshape_edges1 = torch.tensor(node.shape)[lst_permute1]
+        reshape_edges2 = torch.tensor(node.shape)[lst_permute2]
+
+        node_tensor = node.tensor.permute(*lst_permute_all).reshape(
+            *(lst_batches +
+            [reshape_edges1.prod().item()] +
+            [reshape_edges2.prod().item()]))
+        
+        
+    u, s, vh = torch.linalg.svd(node_tensor, full_matrices=False)
+
+    if cum_percentage is not None:
+        if rank is not None:
+            raise ValueError('Only one of `rank` and `cum_percentage` should be provided')
+        percentages = s.cumsum(-1) / s.sum(-1).view(*s.shape[:-1], 1).expand(s.shape)
+        cum_percentage_tensor = torch.tensor(cum_percentage).repeat(percentages.shape[:-1])
+        rank = 0
+        for i in range(percentages.shape[-1]):
+            p = percentages[..., i]
+            rank += 1
+            if torch.ge(p, cum_percentage_tensor).all():  # TODO: while
+                break
+
+    if rank is None:
+        # raise ValueError('One of `rank` and `cum_percentage` should be provided')
+        rank = len(s)
+    else:
+        if rank < len(s):
+            u = u[..., :rank]
+            s = s[..., :rank]
+            vh = vh[..., :rank, :]
+        else:
+            rank = len(s)
+
+    if side == 'left':
+        u = u @ torch.diag_embed(s)
+    elif side == 'right':
+        vh = torch.diag_embed(s) @ vh
+    else:
+        # TODO: could be changed to bool or "node1"/"node2"
+        raise ValueError('`side` can only be "left" or "right"')
+
+    u = u.reshape(*(batch_shape + node1_shape.tolist() + [rank]))
+    vh = vh.reshape(*(batch_shape + [rank] + node2_shape.tolist()))
+           
+    # u = u.permute(*(inverse_permutation(batch_axes + node1_axes) +
+    #                 [len(u.shape) - 1]))
+    
+    # rank_axis = len(batch_shape)
+    # aux_node2_axes = inverse_permutation(batch_axes + node2_axes)
+    # aux_node2_axes = [x + 1 if x >= rank_axis else x for x in aux_node2_axes]
+    # vh = vh.permute(*(aux_node2_axes + [rank_axis]))
+    
+    net = node._network
+    
+    node1_axes_names = permute_list(node.axes_names,
+                                    batch_axes + node1_axes) + \
+                       ['splitted']
+    node1 = Node(axes_names=node1_axes_names,
+                 name='split',
+                 network=net,
+                 leaf=False,
+                 param_edges=node.param_edges(),
+                 tensor=u)
+    
+    node2_axes_names = permute_list(node.axes_names, batch_axes) + \
+                       ['splitted'] + \
+                       permute_list(node.axes_names, node2_axes)
+    node2 = Node(axes_names=node2_axes_names,
+                 name='split',
+                 network=net,
+                 leaf=False,
+                 param_edges=node.param_edges(),
+                 tensor=vh)
+    
+    n_batches = len(batch_axes)
+    for edge in node1._edges[n_batches:-1]:
+        net._remove_edge(edge)
+    for edge in node2._edges[(n_batches + 1):]:
+        net._remove_edge(edge)
+    
+    trace_node2_axes = []
+    for i, axis1 in enumerate(node1_axes):
+        edge1 = node._edges[axis1]
+        
+        in_node2 = False
+        for j, axis2 in enumerate(node2_axes):
+            edge2 = node._edges[axis2]
+            if edge1 == edge2:
+                in_node2 = True
+                trace_node2_axes.append(axis2)
+                
+                node1_is_node1 = node.is_node1(axis1)
+                if node1_is_node1:
+                    new_edge = edge1.__class__(node1=node1, axis1=n_batches + i,
+                                               node2=node2, axis2=n_batches + j + 1)
+                else:
+                    new_edge = edge1.__class__(node1=node2, axis1=n_batches + j + 1,
+                                               node2=node1, axis2=n_batches + i)
+                    
+                node1._add_edge(edge=new_edge,
+                                axis=n_batches + i,
+                                node1=node1_is_node1)
+                node2._add_edge(edge=new_edge,
+                                axis=n_batches + j + 1,
+                                node1=not node1_is_node1)
+        
+        if not in_node2:
+            node1._add_edge(edge=edge1,
+                            axis=n_batches + i,
+                            node1=node.is_node1(axis1))
+            
+    for j, axis2 in enumerate(node2_axes):
+        if axis2 not in trace_node2_axes:
+            node2._add_edge(edge=node._edges[axis2],
+                            axis=n_batches + j + 1,
+                            node1=node.is_node1(axis2))
+            
+    
+    # node1._edges[len(batch_axes):-1] = permute_list(node._edges, node1_axes)
+    # node1_list = permute_list(node.is_node1(), node1_axes)
+    # for axis, is_node1 in zip(node1._axes[len(batch_axes):-1], node1_list):
+    #     axis._node1 = is_node1
+        
+    # node1._node1_list[len(batch_axes):-1] = permute_list(node._node1_list, node1_axes)
+    # for edge in node1._edges[:len(batch_axes)]:
+    #     net._remove_edge(edge)
+    # net._remove_edge(node1._edges[-1]) # NOTE: creo que esto no afecta
+    
+    # for edge in node2._edges[(len(batch_axes) + 1):]:
+    #     net._remove_edge(edge)
+    # node2._edges[(len(batch_axes) + 1):] = permute_list(node._edges, node2_axes)
+    # node1_list = permute_list(node.is_node1(), node2_axes)
+    # for axis, is_node1 in zip(node1._axes[len(batch_axes):-1], node1_list):
+    #     axis._node1 = is_node1
+        
+    # node2._node1_list[(len(batch_axes) + 1):] = permute_list(node._node1_list, node2_axes)
+    # for edge in node1._edges[:(len(batch_axes) + 1)]:
+    #     net._remove_edge(edge)
+        
+    splitted_edge = node1['splitted'] ^ node2['splitted']
+    net._remove_edge(splitted_edge)
+    
+    successor = Successor(kwargs=kwargs,
+                          child=[node1, node2],
+                          hints={'batch_axes': batch_axes,
+                                 'node1_axes': node1_axes,
+                                 'node2_axes': node2_axes,
+                                 'permutation_dims': permutation_dims,
+                                 'splitted_edge': splitted_edge})
+    if 'split' in node._successors:
+        node._successors['split'].append(successor)
+    else:
+        node._successors['split'] = [successor]
+
+    net._list_ops.append((node, 'permute', len(node._successors['split']) - 1))
+    
+    node._record_in_inverse_memory()
+
+    return node1, node2
+
+
+def _split_next(successor: Successor,
+                node: AbstractNode,
+                node1_axes: Optional[Sequence[Ax]] = None,
+                node2_axes: Optional[Sequence[Ax]] = None,
+                # node1: Optional[AbstractNode] = None,
+                # node2: Optional[AbstractNode] = None,
+                side = 'left',
+                rank: Optional[int] = None,
+                cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
+    
+    batch_axes = successor.hints['batch_axes']
+    node1_axes = successor.hints['node1_axes']
+    node2_axes = successor.hints['node2_axes']
+    permutation_dims = successor.hints['permutation_dims']
+    splitted_edge = successor.hints['splitted_edge']
+    
+    batch_shape = torch.tensor(node.shape)[batch_axes].tolist()
+    node1_shape = torch.tensor(node.shape)[node1_axes]
+    node2_shape = torch.tensor(node.shape)[node2_axes]
+        
+    if permutation_dims:
+        node_tensor = node.tensor\
+            .permute(*(batch_axes + node1_axes + node2_axes))\
+            .reshape(*(batch_shape +
+                    [node1_shape.prod().item()] +
+                    [node2_shape.prod().item()]))
+    else:
+        node_tensor = node.tensor\
+            .reshape(*(batch_shape +
+                    [node1_shape.prod().item()] +
+                    [node2_shape.prod().item()]))
+            
+    u, s, vh = torch.linalg.svd(node_tensor, full_matrices=False)
+
+    if cum_percentage is not None:
+        if rank is not None:
+            raise ValueError('Only one of `rank` and `cum_percentage` should be provided')
+        percentages = s.cumsum(-1) / s.sum(-1).view(*s.shape[:-1], 1).expand(s.shape)
+        cum_percentage_tensor = torch.tensor(cum_percentage).repeat(percentages.shape[:-1])
+        rank = 0
+        for i in range(percentages.shape[-1]):
+            p = percentages[..., i]
+            rank += 1
+            if torch.ge(p, cum_percentage_tensor).all():  # TODO: while
+                break
+
+    if rank is None:
+        # raise ValueError('One of `rank` and `cum_percentage` should be provided')
+        rank = len(s)
+    else:
+        if rank < len(s):
+            u = u[..., :rank]
+            s = s[..., :rank]
+            vh = vh[..., :rank, :]
+        else:
+            rank = len(s)
+
+    if side == 'left':
+        u = u @ torch.diag_embed(s)
+    elif side == 'right':
+        vh = torch.diag_embed(s) @ vh
+    else:
+        # TODO: could be changed to bool or "node1"/"node2"
+        raise ValueError('`side` can only be "left" or "right"')
+
+    u = u.reshape(*(batch_shape + node1_shape.tolist() + [rank]))
+    vh = vh.reshape(*(batch_shape + [rank] + node2_shape.tolist()))
+    
+    splitted_edge._size = rank
+    
+    children = successor.child
+    children[0]._unrestricted_set_tensor(u)
+    children[1]._unrestricted_set_tensor(vh)
+    
+    node._record_in_inverse_memory()
+    
+    return children[0], children[1]
+
+
+split = Operation(_check_first_split, _split_first, _split_next)
+
+def split_node(node: AbstractNode,
+                 node1_axes: Optional[Sequence[Ax]] = None,
+                 node2_axes: Optional[Sequence[Ax]] = None,
+                #  node1: Optional[AbstractNode] = None,
+                #  node2: Optional[AbstractNode] = None,
+                 side = 'left',
+                 rank: Optional[int] = None,
+                 cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
+    return split(node, node1_axes, node2_axes, side, rank, cum_percentage)
+
+AbstractNode.split = split_node
+
+
+def split_(node: AbstractNode,
+           node1_axes: Optional[Sequence[Ax]] = None,
+           node2_axes: Optional[Sequence[Ax]] = None,
+           # node1: Optional[AbstractNode] = None,
+           # node2: Optional[AbstractNode] = None,
+           side = 'left',
+           rank: Optional[int] = None,
+           cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
+    """
+    Contract only one edge
+    """
+    node1, node2 = split(node, node1_axes, node2_axes,
+                         side, rank, cum_percentage)
+    node1._reattach_edges(True)
+    node2._reattach_edges(True)
+    
+    # Delete node (and its edges) from the TN
+    net = node.network
+    net.delete_node(node)
+    
+    # Add edges of result to the TN
+    for res_edge in node1._edges + node2._edges:
+        net._add_edge(res_edge)
+    
+    net._change_node_type(node1, 'leaf')
+    net._change_node_type(node2, 'leaf')
+    
+    node._successors = dict()
+    
+    # Remove non-leaf names
+    node1.name = 'split_ip'
+    node2.name = 'split_ip'
+    
+    return node1, node2
+
+AbstractNode.split_ = split_
+
+
+def svd(edge,
+        side = 'left',
+        rank: Optional[int] = None,
+        cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
+    
+    if edge.is_dangling():
+        raise ValueError('Edge should be connected to perform SVD')
+    
+    node1, node2 = edge.node1, edge.node2
+    node1_name, node2_name = node1.name, node2.name
+    axis1, axis2 = edge.axis1, edge.axis2
+    axis1_name, axis2_name = edge.axis1.name, edge.axis2.name
+    
+    batch_axes = []
+    for axis in node1._axes:
+        if axis.is_batch() and (axis.name in node2.axes_names):
+            batch_axes.append(axis)
+    
+    n_batches = len(batch_axes)
+    n_axes1 = len(node1._axes) - n_batches - 1
+    n_axes2 = len(node2._axes) - n_batches - 1
+    
+    contracted = edge.contract()
+    new_node1, new_node2 = split(node=contracted,
+                                 node1_axes=list(range(n_batches,
+                                                       n_batches + n_axes1)),
+                                 node2_axes=list(range(n_batches + n_axes1,
+                                                       n_batches + n_axes1 + n_axes2)),
+                                 side=side,
+                                 rank=rank,
+                                 cum_percentage=cum_percentage)
+    
+    new_node1.name = 'svd'
+    new_node1.get_axis(axis1.num).name = axis1_name
+    
+    new_node2.name = 'svd'
+    new_node2.get_axis(axis2.num).name = axis2_name
+    
+    return new_node1, new_node2
+    
+AbstractEdge.svd = svd
+
+
+def svd_(edge,
+         side = 'left',
+         rank: Optional[int] = None,
+         cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
+    
+    if edge.is_dangling():
+        raise ValueError('Edge should be connected to perform SVD')
+    
+    node1, node2 = edge.node1, edge.node2
+    node1_name, node2_name = node1.name, node2.name
+    axis1, axis2 = edge.axis1, edge.axis2
+    axis1_name, axis2_name = edge.axis1.name, edge.axis2.name
+    
+    batch_axes = []
+    for axis in node1._axes:
+        if axis.is_batch() and (axis.name in node2.axes_names):
+            batch_axes.append(axis)
+    
+    n_batches = len(batch_axes)
+    n_axes1 = len(node1._axes) - n_batches - 1
+    n_axes2 = len(node2._axes) - n_batches - 1
+    
+    contracted = edge.contract_()
+    new_node1, new_node2 = split_(node=contracted,
+                                  node1_axes=list(range(n_batches,
+                                                        n_batches + n_axes1)),
+                                  node2_axes=list(range(n_batches + n_axes1,
+                                                        n_batches + n_axes1 + n_axes2)),
+                                  side=side,
+                                  rank=rank,
+                                  cum_percentage=cum_percentage)
+    
+    new_node1.name = node1_name
+    new_node1.get_axis(axis1.num).name = axis1_name
+    
+    new_node2.name = node2_name
+    new_node2.get_axis(axis2.num).name = axis2_name
+    
+    return new_node1, new_node2
+    
+AbstractEdge.svd_ = svd_
 
 
 #################   CONTRACT   #################
@@ -724,7 +1277,7 @@ def _contract_edges_first(edges: List[AbstractEdge],
         raise TypeError('Can only contract (Param)StackNode with other (Param)StackNode')
     else:
         new_node = Node(axes_names=new_axes_names,
-                        name=f'contract',
+                        name=f'contract_edges',
                         network=node1._network,
                         leaf=False,
                         param_edges=False,
@@ -946,6 +1499,35 @@ def contract(edge: AbstractEdge) -> Node:
 AbstractEdge.contract = contract
 
 
+def contract_(edge: AbstractEdge) -> Node:
+    """
+    Contract only one edge
+    """
+    result = contract_edges([edge], edge.node1, edge.node2)
+    result._reattach_edges(True)
+    
+    # Delete nodes (and their edges) from the TN
+    net = result.network
+    net.delete_node(edge.node1)
+    net.delete_node(edge.node2)
+    
+    # Add edges of result to the TN
+    for res_edge in result._edges:
+        net._add_edge(res_edge)
+    
+    net._change_node_type(result, 'leaf')
+    
+    edge.node1._successors = dict()
+    edge.node2._successors = dict()
+    
+    # Remove non-leaf name
+    result.name = 'contract_edges_ip'
+    
+    return result
+
+AbstractEdge.contract_ = contract_
+
+
 # NOTE: más rápido -> es una estuidez, al llamar a contract_edges el input
 # NOTE: ya estaba guardado siempre en kwargs del successor
 # def _check_first_get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> Optional[Successor]:
@@ -1040,13 +1622,22 @@ def contract_between_(node1: AbstractNode, node2: AbstractNode) -> Node:
     result = contract_between(node1, node2)
     result._reattach_edges(True)
     
+    # Delete nodes (and their edges) from the TN
     net = result.network
     net.delete_node(node1)
     net.delete_node(node2)
+    
+    # Add edges of result to the TN
+    for res_edge in result._edges:
+        net._add_edge(res_edge)
+    
     net._change_node_type(result, 'leaf')
     
     node1._successors = dict()
     node2._successors = dict()
+    
+    # Remove non-leaf name
+    result.name = 'contract_edges_ip'
     
     return result
 
@@ -1070,7 +1661,7 @@ def _check_first_stack(nodes: List[AbstractNode], name: Optional[Text] = None) -
 # TODO: hacer optimizacion: si todos los nodos tienen memoria que hace referencia a un nodo
 #  (sus memorias estaban guardadas en la misma pila), entonces no hay que crear nueva stack,
 #  solo indexar en la previa
-def _stack_first(nodes: Sequence[AbstractNode], name: Optional[Text] = None) -> StackNode:
+def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
     """
     Stack nodes into a StackNode or ParamStackNode. The stack dimension will be the
     first one in the resultant node.
@@ -1159,9 +1750,9 @@ def _stack_first(nodes: Sequence[AbstractNode], name: Optional[Text] = None) -> 
     stack_indices = list2slice(stack_indices)
 
     if all_param and net._automemory:
-        stack_node = ParamStackNode(nodes=nodes, name=name)
+        stack_node = ParamStackNode(nodes=nodes, name='virtual_stack', virtual=True)
     else:
-        stack_node = StackNode(nodes=nodes, name=name)
+        stack_node = StackNode(nodes=nodes, name='stack')
 
     if all_same_ref: # NOTE: entra aqui en index mode, no entra en if ni else en unbind mode
         # TODO: make distinction here between unbind or index mode -> solo se entra aqui en index mode
@@ -1751,6 +2342,7 @@ TensorNetwork.operations = {'permute': permute,
                             'mul': mul,
                             'add': add,
                             'sub': sub,
+                            'split': split,
                             'contract_edges': contract_edges,
                             'stack': stack,
                             'unbind': unbind}

@@ -433,7 +433,7 @@ class AbstractNode(ABC):
     def size(self, axis: Optional[Ax] = None) -> Union[Size, int]:
         if axis is None:
             return self.shape
-        axis_num = self.get_axis_number(axis)
+        axis_num = self.get_axis_num(axis)
         return self.shape[axis_num]
 
     def dim(self, axis: Optional[Ax] = None) -> Union[Size, int]:
@@ -445,13 +445,13 @@ class AbstractNode(ABC):
         """
         if axis is None:
             return Size(map(lambda edge: edge.dim(), self.edges))
-        axis_num = self.get_axis_number(axis)
+        axis_num = self.get_axis_num(axis)
         return self.edges[axis_num].dim()
 
     def is_node1(self, axis: Optional[Ax] = None) -> Union[bool, List[bool]]:
         if axis is None:
             return list(map(lambda ax: ax._node1, self._axes))
-        axis_num = self.get_axis_number(axis)
+        axis_num = self.get_axis_num(axis)
         return self.axes[axis_num]._node1
 
     def neighbours(self, axis: Optional[Ax] = None) -> Union[Optional['AbstractNode'],
@@ -461,7 +461,7 @@ class AbstractNode(ABC):
         """
         node1_list = self.is_node1()
         if axis is not None:
-            node2 = self[axis]._nodes[node1_list[self.get_axis_number(axis)]]
+            node2 = self[axis]._nodes[node1_list[self.get_axis_num(axis)]]
             return node2
         neighbours = set()
         for i, edge in enumerate(self._edges):
@@ -497,7 +497,7 @@ class AbstractNode(ABC):
         """
         if size <= 0:
             raise ValueError('new `size` should be greater than zero')
-        axis_num = self.get_axis_number(axis)
+        axis_num = self.get_axis_num(axis)
           
         tensor = self.tensor
         if tensor is None:
@@ -537,7 +537,7 @@ class AbstractNode(ABC):
                 self._shape = tuple(aux_shape)
                 self.tensor = nn.functional.pad(tensor, pad)
 
-    def get_axis_number(self, axis: Ax) -> int:
+    def get_axis_num(self, axis: Ax) -> int:
         if isinstance(axis, int):
             for ax in self._axes:
                 if axis == ax._num:
@@ -557,11 +557,11 @@ class AbstractNode(ABC):
             raise TypeError('`axis` should be int, str or Axis type')
 
     def get_axis(self, axis: Ax) -> 'AbstractEdge':
-        axis_num = self.get_axis_number(axis)
+        axis_num = self.get_axis_num(axis)
         return self._axes[axis_num]
     
     def get_edge(self, axis: Ax) -> 'AbstractEdge':
-        axis_num = self.get_axis_number(axis)
+        axis_num = self.get_axis_num(axis)
         return self._edges[axis_num]
 
     def _add_edge(self,
@@ -577,7 +577,7 @@ class AbstractNode(ABC):
         axis: axis to which the edge will be attached
         node1: boolean indicating if `self` is the node1 or node2 of `edge`
         """
-        axis_num = self.get_axis_number(axis)
+        axis_num = self.get_axis_num(axis)
         self._axes[axis_num]._node1 = node1
         self._edges[axis_num] = edge
 
@@ -644,18 +644,27 @@ class AbstractNode(ABC):
             node
         """
         for i, (edge, node1) in enumerate(zip(self._edges, self.is_node1())):
-            # New edges are always a copy, so that the original
-            # node has different edges than the new one
-            edge = edge.copy()
-            self._edges[i] = edge
-            
-            edge._nodes[1 - node1] = self
-            edge._axes[1 - node1] = self._axes[i]
-            
-            if override:
-                if not edge.is_dangling():
-                    other_node = edge._nodes[node1]
-                    other_node._add_edge(edge, edge._axes[node1], 1 - node1)
+            node = edge._nodes[1 - node1]
+            if node != self:
+                # New edges are always a copy, so that the original
+                # node has different edges than the new one
+                new_edge = edge.copy()
+                self._edges[i] = new_edge
+                
+                new_edge._nodes[1 - node1] = self
+                new_edge._axes[1 - node1] = self._axes[i]
+                
+                other_node = new_edge._nodes[node1]
+                if other_node == node:
+                    for j, other_edge in enumerate(self._edges):
+                        if (other_edge == edge) and (i != j):
+                            self._edges[j] = new_edge
+                            new_edge._nodes[node1] = self
+                            new_edge._axes[node1] = self._axes[j]
+                
+                if override:
+                    if not new_edge.is_dangling() and (other_node != node):
+                        other_node._add_edge(new_edge, new_edge._axes[node1], not node1)
 
     def disconnect(self, axis: Optional[Ax] = None) -> None:
         """
@@ -758,7 +767,7 @@ class AbstractNode(ABC):
                 else:
                     # TODO: or padding with zeros?
                     raise ValueError('Cannot crop tensor if its dimensions'
-                                    ' are smaller than node\'s dimensions')
+                                     ' are smaller than node\'s dimensions')
                     
             return tensor[index]
             
@@ -795,9 +804,9 @@ class AbstractNode(ABC):
             if not self._compatible_dims(tensor):
                 tensor = self._crop_tensor(tensor, allow_diff_shape)
                 # NOTE: case unbind nodes that had different shapes
-                warnings.warn('`tensor` dimensions are not compatible with the'
-                              ' node\'s dimensions. `tensor` has been cropped '
-                              'before setting it to the node')
+                # warnings.warn('`tensor` dimensions are not compatible with the'
+                #               ' node\'s dimensions. `tensor` has been cropped '
+                #               'before setting it to the node')
             correct_format_tensor = self._set_tensor_format(tensor)
 
         elif init_method is not None:
@@ -1008,28 +1017,28 @@ class AbstractNode(ABC):
         axis_num = []
         if axis is not None:
             for ax in axis:
-                axis_num.append(self.get_axis_number(ax))
+                axis_num.append(self.get_axis_num(ax))
         return self.tensor.sum(dim=axis_num)
 
     def mean(self, axis: Optional[Sequence[Ax]] = None) -> Tensor:
         axis_num = []
         if axis is not None:
             for ax in axis:
-                axis_num.append(self.get_axis_number(ax))
+                axis_num.append(self.get_axis_num(ax))
         return self.tensor.mean(dim=axis_num)
 
     def std(self, axis: Optional[Sequence[Ax]] = None) -> Tensor:
         axis_num = []
         if axis is not None:
             for ax in axis:
-                axis_num.append(self.get_axis_number(ax))
+                axis_num.append(self.get_axis_num(ax))
         return self.tensor.std(dim=axis_num)
 
     def norm(self, p=2, axis: Optional[Sequence[Ax]] = None) -> Tensor:
         axis_num = []
         if axis is not None:
             for ax in axis:
-                axis_num.append(self.get_axis_number(ax))
+                axis_num.append(self.get_axis_num(ax))
         return self.tensor.norm(p=p, dim=axis_num)
 
     # ---------------
@@ -1223,7 +1232,7 @@ class Node(AbstractNode):
     #     """
     #     axes_nums = []
     #     for axis in axes:
-    #         axes_nums.append(self.get_axis_number(axis))
+    #         axes_nums.append(self.get_axis_num(axis))
     #
     #     if not is_permutation(list(range(len(axes_nums))), axes_nums):
     #         raise ValueError('The provided list of axis is not a permutation of the'
@@ -1287,9 +1296,13 @@ class ParamNode(AbstractNode):
         kwargs: keyword arguments for the init_method
         """
 
-        # data and virtual
-        if data or virtual:
-            raise ValueError('ParamNode cannot be a data node nor a virtual node')
+        # # data and virtual  # TODO: remove this
+        # if data or virtual:
+        #     raise ValueError('ParamNode cannot be a data node nor a virtual node')
+        
+        # data 
+        if data:
+            raise ValueError('ParamNode cannot be a data node')
         
         # leaf
         if not leaf:
@@ -1416,7 +1429,7 @@ class ParamNode(AbstractNode):
     #     """
     #     axes_nums = []
     #     for axis in axes:
-    #         axes_nums.append(self.get_axis_number(axis))
+    #         axes_nums.append(self.get_axis_num(axis))
     #
     #     if not is_permutation(list(range(len(axes_nums))), axes_nums):
     #         raise ValueError('The provided list of axis is not a permutation of the'
@@ -1454,9 +1467,9 @@ class AbstractEdge(ABC):
 
     def __init__(self,
                  node1: AbstractNode,
-                 axis1: Axis,
+                 axis1: Ax,
                  node2: Optional[AbstractNode] = None,
-                 axis2: Optional[Axis] = None) -> None:
+                 axis2: Optional[Ax] = None) -> None:
         """
         Create an edge. Should be subclassed before usage and
         a limited number of abstract methods overridden.
@@ -1479,15 +1492,24 @@ class AbstractEdge(ABC):
         # check node1 and axis1
         if not isinstance(node1, AbstractNode):
             raise TypeError('`node1` should be AbstractNode type')
+        if not isinstance(axis1, (int, str, Axis)):
+            raise TypeError('`axis1` should be int, str or Axis type')
         if not isinstance(axis1, Axis):
-            raise TypeError('`axis1` should be Axis type')
+            axis1 = node1.get_axis(axis1)
 
         # check node2 and axis2
         if (node2 is None) != (axis2 is None):
             raise ValueError('`node2` and `axis2` must either be both None or both not be None')
         if node2 is not None:
+            if not isinstance(node2, AbstractNode):
+                raise TypeError('`node2` should be AbstractNode type')
+            if not isinstance(axis2, (int, str, Axis)):
+                raise TypeError('`axis2` should be int, str or Axis type')
+            if not isinstance(axis2, Axis):
+                axis2 = node2.get_axis(axis2)
+            
             if node1.shape[axis1.num] != node2.shape[axis2.num]:
-                raise ValueError('Shapes of `axis1` and `axis2` should match')
+                raise ValueError('Sizes of `axis1` and `axis2` should match')
             if (node2 == node1) and (axis2 == axis1):
                 raise ValueError('Cannot connect the same axis of the same node to itself')
 
@@ -1584,8 +1606,8 @@ class AbstractEdge(ABC):
     # def contract(self) -> Node:
     #     return nop.contract(self)
 
-    def svd(self,
-            side='left',
+    def svd_aux(self,
+            side = 'left',
             rank: Optional[int] = None,
             cum_percentage: Optional[float] = None) -> None:
         # TODO: problema del futuro xd
@@ -1799,6 +1821,8 @@ class ParamEdge(AbstractEdge, nn.Module):
 
         nn.Module.__init__(self)
         AbstractEdge.__init__(self, node1, axis1, node2, axis2)
+        
+        axis1, axis2 = self._axes[0], self._axes[1]
 
         # check batch
         if axis1._batch:
@@ -2058,8 +2082,8 @@ class StackNode(Node):
                 if not isinstance(nodes[i], type(nodes[i + 1])):
                     raise TypeError('Cannot stack nodes of different types. Nodes '
                                     'must be either all Node or all ParamNode type')
-                # if nodes[i].shape != nodes[i + 1].shape:
-                #     raise ValueError('Cannot stack nodes with different shapes')
+                if nodes[i].rank != nodes[i + 1].rank:
+                    raise ValueError('Cannot stack nodes with different number of edges')
                 if nodes[i].axes_names != nodes[i + 1].axes_names:
                     raise ValueError('Stacked nodes must have the same name for each axis')
                 if nodes[i].network != nodes[i + 1].network:
@@ -2190,6 +2214,7 @@ class ParamStackNode(ParamNode):
     def __init__(self,
                  nodes: Sequence[AbstractNode],
                  name: Optional[Text] = None,
+                 virtual: bool = False,
                  override_node: bool = False,
                  tensor: Optional[Tensor] = None) -> None:
 
@@ -2239,6 +2264,7 @@ class ParamStackNode(ParamNode):
         super().__init__(axes_names=['stack'] + nodes[0].axes_names,
                          name=name,
                          network=nodes[0]._network,
+                         virtual=virtual,
                         #  leaf=False,
                          override_node=override_node,
                          tensor=tensor)
@@ -2540,14 +2566,15 @@ class TensorNetwork(nn.Module):
                     # If ParamEdge is already a submodule, it is the case in which we are
                     # adding a node that "inherits" edges from previous nodes
                     self.add_module(edge.module_name, edge)
-            if edge.is_dangling() and not edge.is_batch() and (edge not in self.edges):
+            if edge.is_dangling() and not edge.is_batch() and (edge not in self._edges):
                 self._edges.append(edge)
 
     def _remove_edge(self, edge: AbstractEdge) -> None:
         if not isinstance(edge, AbstractStackEdge):  # TODO: evitar añadir los edges de los stacks a la TN
             if isinstance(edge, ParamEdge):
-                delattr(self, edge.module_name)
-            if edge in self.edges:
+                if hasattr(self, edge.module_name):
+                    delattr(self, edge.module_name)
+            if edge in self._edges:
                 self._edges.remove(edge)
                 
     def _which_dict(self, node: AbstractNode) -> Optional[Dict[Text, AbstractNode]]:
@@ -2601,7 +2628,7 @@ class TensorNetwork(nn.Module):
         # TODO: tarda mogoll'on, tengo que arreglarlo
         self._list_ops = []
         
-        if self._non_leaf_nodes:
+        if self._non_leaf_nodes or self._virtual_nodes:
             # TODO: pensar esto, igual no hace falta siempre cambiar los leaf nodes
             # TODO: solo poner memoria a sí mismos si su memoria estaba en un nodo non_leaf
             # (node_ref era nodo non_leaf), as'i podemos hacer Uniform TN guardando siempre
@@ -2609,7 +2636,11 @@ class TensorNetwork(nn.Module):
             aux_dict = dict()
             aux_dict.update(self._leaf_nodes)
             aux_dict.update(self._non_leaf_nodes)
+            aux_dict.update(self._virtual_nodes)
             for node in aux_dict.values():
+                if node.is_virtual() and node.name != 'virtual_stack':
+                    continue
+                
                 node._successors = dict()
                 
                 node._temp_tensor = node.tensor
@@ -2618,6 +2649,10 @@ class TensorNetwork(nn.Module):
                 node._tensor_info['full'] = True
                 node._tensor_info['stack_idx'] = None
                 node._tensor_info['index'] = None
+                
+                if isinstance(node._temp_tensor, Parameter):
+                    if hasattr(self, 'param_' + node.name):
+                        delattr(self, 'param_' + node.name)
                 
                 if node.name not in self._memory_nodes:
                     self._memory_nodes[node.name] = None
@@ -2630,7 +2665,12 @@ class TensorNetwork(nn.Module):
             for node in list(self._data_nodes.values()):
                 node._successors = dict()
                     
-            for node in list(self._non_leaf_nodes.values()):
+            aux_dict = dict()
+            aux_dict.update(self._non_leaf_nodes)
+            aux_dict.update(self._virtual_nodes)
+            for node in list(aux_dict.values()):
+                if node.is_virtual() and node.name != 'virtual_stack':
+                    continue
                 self.delete_node(node, False)
 
     def _add_param(self, param: Union[ParamNode, ParamEdge]) -> None:
@@ -2717,6 +2757,11 @@ class TensorNetwork(nn.Module):
         Used to assign a new name to a node in the network
         """
         non_enum_prev_name = erase_enum(name)
+        
+        if not node.is_non_leaf() and (non_enum_prev_name in self.operations):
+            raise ValueError(f'Node\'s name cannot be an operation name '
+                             f'{list(self.operations.keys())}')
+        
         if non_enum_prev_name in self._repeated_nodes_names:
             count = self._repeated_nodes_names[non_enum_prev_name]
             if count == 1:
@@ -2728,6 +2773,10 @@ class TensorNetwork(nn.Module):
             new_name = non_enum_prev_name
             self._repeated_nodes_names[non_enum_prev_name] = 0
         self._repeated_nodes_names[non_enum_prev_name] += 1
+        
+        for edge in node.edges:
+            if edge.is_attached_to(node):
+                self._remove_edge(edge)
 
         if first_time:
             nodes_dict = self._which_dict(node)
@@ -2817,12 +2866,24 @@ class TensorNetwork(nn.Module):
         
         if type == 'leaf':
             new_dict = self._leaf_nodes
-        elif type == 'non_leaf':
-            new_dict = self._non_leaf_nodes
+            node._leaf = True
+            node._data = False
+            node._virtual = False
         elif type == 'data':
             new_dict = self._data_nodes
+            node._leaf = False
+            node._data = True
+            node._virtual = False
         elif type == 'virtual':
             new_dict = self._virtual_nodes
+            node._leaf = False
+            node._data = False
+            node._virtual = True
+        elif type == 'non_leaf':
+            new_dict = self._non_leaf_nodes
+            node._leaf = False
+            node._data = False
+            node._virtual = False
         
         del prev_dict[node.name]    
         new_dict[node.name] = node   

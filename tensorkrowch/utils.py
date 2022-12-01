@@ -98,10 +98,16 @@ def permute_list(lst: List, dims: Sequence[int]) -> List:
     lst: list to be permuted
     dims: list of dimensions (indices) in the new order
     """
-    if len(dims) != len(lst):
-        raise ValueError('Number of `dims` must match number of elements in `lst`')
+    # if len(dims) != len(lst):
+    #     raise ValueError('Number of `dims` must match number of elements in `lst`')
+    # NOTE: no hace falta que tengan el mismo tamaño, si lst tiene mas elementos,
+    # solo se cogen los que aparecen en dims en ese orden
     new_lst = []
     for i in dims:
+        if i >= len(lst):
+            raise IndexError(f'Index out of bounds. `dims` given to permute `lst`'
+                             'according to contains index {i}, which exceeds length '
+                             'of `lst`')
         new_lst.append(lst[i])
     return new_lst
 

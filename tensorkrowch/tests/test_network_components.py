@@ -325,11 +325,12 @@ class TestInitParamNode:
                                 data=True)
             
     def test_init_paramnode_virtual(self):
-        with pytest.raises(ValueError):
-            node = tk.ParamNode(shape=(2, 5, 2),
-                                axes_names=('left', 'input', 'right'),
-                                network=tk.TensorNetwork('my_net'),
-                                virtual=True)
+        # ParamNodes can be virtual, to store memory of ParamNodes
+        # (e.g. in ParamStackNodes or in Uniform TN)
+        node = tk.ParamNode(shape=(2, 5, 2),
+                            axes_names=('left', 'input', 'right'),
+                            network=tk.TensorNetwork('my_net'),
+                            virtual=True)
         
     def test_init_paramnode_param_edges(self):
         tensor = torch.randn(2, 5, 2)
@@ -403,11 +404,6 @@ class TestInitParamNode:
         with pytest.raises(ValueError):
             node = tk.ParamNode(shape=(2, 5, 2),
                                 data=True)
-            
-        # Parametric Nodes cannot be virtual nodes
-        with pytest.raises(ValueError):
-            node = tk.ParamNode(shape=(2, 5, 2),
-                                virtual=True)
             
         # Parametric Nodes are always leaf nodes
         with pytest.raises(ValueError):
@@ -493,6 +489,82 @@ class TestNodeName:
         data_node.name = 'node'
         assert data_node.name == 'node'
         assert data_node.is_data()
+        
+    def test_put_non_leaf_name(self, setup):
+        net = setup
+        
+        node1 = net['node1']
+        node1.set_tensor()
+        
+        node2 = net['node2']
+        node2.set_tensor()
+        
+        # Names of operations cannot be used as names of leaf nodes
+        with pytest.raises(ValueError):
+            node1.name = 'contract_edges'
+            
+    def test_name_non_leaf(self, setup):
+        net = setup
+        
+        node1 = net['node1']
+        node1.set_tensor()
+        
+        node2 = net['node2']
+        node2.set_tensor()
+        
+        node3 = node1 @ node2
+        assert node3.name == 'contract_edges'
+        
+        # We can change the name of non_leaf nodes also
+        node3.name = 'node3'
+        assert node3.name == 'node3'
+            
+    @pytest.fixture
+    def setup_param(self):
+        net = tk.TensorNetwork()
+        node1 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'input', 'right'),
+                             name='node1',
+                             param_edges=True,
+                             network=net)
+        node2 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'input', 'right'),
+                             name='node2',
+                             param_edges=True,
+                             network=net)
+        
+        node1['right'] ^ node2['left']
+        net.set_data_nodes([node1['input'], node2['input']], 1)
+        
+        return net
+    
+    def test_change_name_paramedges(self, setup_param):
+        net = setup_param
+        
+        node1 = net['node1']
+        node2 = net['node2']
+        
+        node1['input'].parameterize(False)
+        node2['input'].parameterize(False)
+        
+        assert list(net._modules.keys()) == ['edge_node1_left',
+                                             'edge_node2_right',
+                                             'edge_node1_right_node2_left']
+        
+        node1.name = 'node'
+        assert list(net._modules.keys()) == ['edge_node2_right',
+                                             'edge_node_left',
+                                             'edge_node_right_node2_left']
+        
+        node2.name = 'node'
+        assert list(net._modules.keys()) == ['edge_node_0_left',
+                                             'edge_node_0_right_node_1_left',
+                                             'edge_node_1_right']
+        
+        node1.name = 'node1'
+        assert list(net._modules.keys()) == ['edge_node_right',
+                                             'edge_node1_left',
+                                             'edge_node1_right_node_left',]
 
 
 class TestSetTensorNode:
@@ -517,6 +589,16 @@ class TestSetTensorNode:
         
         node1.tensor = tensor
         assert torch.equal(node1.tensor, node2.tensor)
+        assert node1.shape == (2, 5, 2)
+        
+    def test_set_tensor_zeros(self, setup):
+        node1, node2, tensor = setup
+        
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        
+        node1.set_tensor()
+        assert torch.equal(node1.tensor, torch.zeros(node1.shape))
         assert node1.shape == (2, 5, 2)
         
     def test_change_tensor(self, setup):
@@ -1199,56 +1281,6 @@ class TestConnect:
         
         assert node3['left'].is_dangling()
         assert node3['left'].is_attached_to(node3)
-    
- 
-class TestSVD:
-    
-    @pytest.fixture
-    def setup(self):
-        net = tk.TensorNetwork()
-        node1 = tk.Node(shape=(3, 5, 3),
-                        axes_names=('left', 'input', 'right'),
-                        name='node1',
-                        network=net,
-                        init_method='randn')
-        node2 = tk.Node(shape=(3, 5, 3),
-                        axes_names=('left', 'input', 'right'),
-                        name='node2',
-                        network=net,
-                        init_method='randn')
-        
-        edge = node1['right'] ^ node2['left']
-        return edge
-    
-    def test_svd_edge(self, setup):
-        edge = setup
-        assert isinstance(edge, tk.Edge)
-        assert edge.size() == 3
-        assert edge.dim() == 3
-        
-        edge.svd(rank=2)
-        assert edge.node1.shape == (3, 5, 2)
-        assert edge.node2.shape == (2, 5, 3)
-        assert edge.size() == 2
-        assert edge.dim() == 2 
-        
-        edge.svd(cum_percentage=0.9)
-        
-    def test_svd_paramedge(self, setup):
-        edge = setup
-        paramedge = edge.parameterize()
-        
-        assert isinstance(paramedge, tk.ParamEdge)
-        assert paramedge.size() == 3
-        assert paramedge.dim() == 3
-        
-        paramedge.svd(rank=2)
-        assert paramedge.node1.shape == (3, 5, 2)
-        assert paramedge.node2.shape == (2, 5, 3)
-        assert paramedge.size() == 2
-        assert paramedge.dim() == 2 
-        
-        paramedge.svd(cum_percentage=0.9)
 
 
 class TestParameterize:
@@ -1270,12 +1302,14 @@ class TestParameterize:
         paramnode1 = node1.parameterize()
         assert len(net.nodes) == 2
         assert len(net.edges) == 4
+        assert net.edges == [node2['input'], node2['right'],
+                             paramnode1['left'], paramnode1['input']]
         
-        # Now `node2`` and `paramnode1`` share same edges
+        # Now `node2` and `paramnode1` share same edges
         assert paramnode1['right'] == node2['left']
         
-        # `node1`` still exists and has edges pointing to `node2``,
-        # but `node2`` cannot "see" it
+        # `node1` still exists and has edges pointing to `node2`,
+        # but `node2` cannot "see" it
         assert node1['right'] != node2['left']
         assert node1['right']._nodes[node1.is_node1('right')] == node2
         del node1
@@ -1301,12 +1335,14 @@ class TestParameterize:
         node1 = paramnode1.parameterize(False)
         assert len(net.nodes) == 2
         assert len(net.edges) == 4
+        assert net.edges == [node2['input'], node2['right'],
+                             node1['left'], node1['input']]
         
-        # Now `node2`` and `node1`` share same edges
+        # Now `node2` and `node1` share same edges
         assert node1['right'] == node2['left']
         
-        # `paramnode1`` still exists and has edges pointing to `node2``,
-        # but `node2`` cannot "see" it
+        # `paramnode1` still exists and has edges pointing to `node2`,
+        # but `node2` cannot "see" it
         assert paramnode1['right'] != node2['left']
         assert paramnode1['right']._nodes[paramnode1.is_node1('right')] == node2
         del paramnode1
@@ -1315,38 +1351,25 @@ class TestParameterize:
         assert node1['left'].node1 == node1
         assert isinstance(node1['left'], tk.Edge)
         
+    def test_parameterize_override_name(self):
+        node1 = tk.Node(axes_names=('left', 'input', 'right'),
+                        tensor=torch.randn(2, 5, 2))
+        node2 = tk.Node(axes_names=('left', 'input', 'right'),
+                        tensor=torch.randn(2, 5, 2))
+        node1['right'] ^ node2['left']
+        
+        assert node1.name == 'node_0'
+        assert node2.name == 'node_1'
+        
+        # Even though we are overriding a node with the same name,
+        # the enumeration can change
+        paramnode1 = node1.parameterize()
+        assert paramnode1.name == 'node_1'
+        assert node2.name == 'node_0'
+        
     def test_parameterize_dangling_edge(self):
         node = tk.Node(axes_names=('left', 'input', 'right'),
                        tensor=torch.randn(3, 5, 2))
-        net = node.network
-        
-        prev_edge = node['left']
-        assert prev_edge in net.edges
-
-        node['left'].parameterize(set_param=True, size=4)
-        assert isinstance(node['left'], tk.ParamEdge)
-        assert node.shape == (4, 5, 2)
-        assert node.dim() == (3, 5, 2)
-
-        assert prev_edge not in net.edges
-        assert node['left'] in net.edges
-
-        node['left'].parameterize(set_param=False)
-        assert isinstance(node['left'], tk.Edge)
-        assert node.shape == (3, 5, 2)
-        assert node.dim() == (3, 5, 2)
-
-        node['left'].parameterize(set_param=True, size=2)
-        assert node.shape == (2, 5, 2)
-        assert node.dim() == (2, 5, 2)
-
-        node['left'].parameterize(set_param=False)
-        assert node.shape == (2, 5, 2)
-        assert node.dim() == (2, 5, 2)
-        
-    def test_parameterize_dangling_edge2(self):
-        node = tk.Node(shape=(3, 5, 2),
-                       axes_names=('left', 'input', 'right'))
         net = node.network
         
         prev_edge = node['left']

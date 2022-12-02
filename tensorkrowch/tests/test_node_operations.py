@@ -498,7 +498,7 @@ class TestSplit:
                         init_method='randn',
                         network=net)
         edge = node1[3] ^ node2[1]
-        result = edge.contract()
+        result = node1.contract(3)
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
@@ -554,7 +554,7 @@ class TestSplit:
                         init_method='randn',
                         network=net)
         edge = node1['right'] ^ node2['left']
-        result = edge.contract()
+        result = node1.contract('right')
         
         assert result.edges == [node1['batch1'], node1['batch2'],
                                 node1['left'], node1['input'],
@@ -583,7 +583,7 @@ class TestSplit:
                         init_method='randn',
                         network=net)
         edge = node1[3] ^ node2[1]
-        result = edge.contract()
+        result = node1.contract(3)
         
         # Split result
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
@@ -623,7 +623,7 @@ class TestSplit:
                         init_method='randn',
                         network=net)
         edge = node1[3] ^ node2[1]
-        result = edge.contract()
+        result = node1.contract(3)
         
         high_rank_tensor = torch.eye(10, 15).expand(10, 10, 15).reshape(10, 2, 5, 5, 3)
         result._unrestricted_set_tensor(high_rank_tensor)
@@ -675,7 +675,7 @@ class TestSplit:
                              param_edges=True,
                              network=net)
         edge = node1[3] ^ node2[1]
-        result = edge.contract()
+        result = node1.contract(3)
         
         high_rank_tensor = torch.eye(10, 15).expand(10, 10, 15).reshape(10, 2, 5, 5, 3)
         result._unrestricted_set_tensor(high_rank_tensor)
@@ -736,7 +736,7 @@ class TestSplit:
         assert len(net.leaf_nodes) == 3
         assert len(net.non_leaf_nodes) == 0
         
-        result = edge.contract_()
+        result = node1.contract_('right')
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
@@ -957,10 +957,10 @@ class TestSVD:
                         init_method='randn')
         
         edge = node1['right'] ^ node2['left']
-        return net, edge
+        return net, edge, node1
     
     def test_svd_edge_rank(self, setup):
-        net, edge = setup
+        net, edge, node1 = setup
         assert isinstance(edge, tk.Edge)
         assert edge.size() == 3
         assert edge.dim() == 3
@@ -969,7 +969,7 @@ class TestSVD:
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 0
         
-        new_node1, new_node2 = edge.svd(rank=2)
+        new_node1, new_node2 = node1.svd(axis='right', rank=2)
         
         assert tk.utils.erase_enum(new_node1.name) == 'svd'
         assert tk.utils.erase_enum(new_node2.name) == 'svd'
@@ -991,10 +991,10 @@ class TestSVD:
         assert len(net.non_leaf_nodes) == 3
         
         # Repeat operation
-        new_node1, new_node2 = edge.svd(rank=2)
+        new_node1, new_node2 = node1.svd(axis='right', rank=2)
         
     def test_svd_edge_cum_percentage(self, setup):
-        net, edge = setup
+        net, edge, node1 = setup
         assert isinstance(edge, tk.Edge)
         assert edge.size() == 3
         assert edge.dim() == 3
@@ -1009,7 +1009,7 @@ class TestSVD:
         tensor2 = torch.eye(3, 15).reshape(3, 5, 3)
         edge.node2.tensor = tensor2
         
-        new_node1, new_node2 = edge.svd(cum_percentage=0.5)
+        new_node1, new_node2 = node1.svd(axis='right', cum_percentage=0.5)
         
         assert tk.utils.erase_enum(new_node1.name) == 'svd'
         assert tk.utils.erase_enum(new_node2.name) == 'svd'
@@ -1031,10 +1031,10 @@ class TestSVD:
         assert len(net.non_leaf_nodes) == 3
         
         # Repeat operation
-        new_node1, new_node2 = edge.svd(cum_percentage=0.5)
+        new_node1, new_node2 = node1.svd(axis='right', cum_percentage=0.5)
         
     def test_svd_paramedge_rank(self, setup):
-        net, edge = setup
+        net, edge, node1 = setup
         edge = edge.parameterize()
         
         assert isinstance(edge, tk.ParamEdge)
@@ -1045,7 +1045,7 @@ class TestSVD:
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 0
         
-        new_node1, new_node2 = edge.svd(rank=2)
+        new_node1, new_node2 = node1.svd(axis='right', rank=2)
         
         assert tk.utils.erase_enum(new_node1.name) == 'svd'
         assert tk.utils.erase_enum(new_node2.name) == 'svd'
@@ -1067,10 +1067,10 @@ class TestSVD:
         assert len(net.non_leaf_nodes) == 3
         
         # Repeat operation
-        new_node1, new_node2 = edge.svd(rank=2)
+        new_node1, new_node2 = node1.svd(axis='right', rank=2)
         
     def test_svd_paramedge_cum_percentage(self, setup):
-        net, edge = setup
+        net, edge, node1 = setup
         edge = edge.parameterize()
         
         assert isinstance(edge, tk.ParamEdge)
@@ -1087,7 +1087,7 @@ class TestSVD:
         tensor2 = torch.eye(3, 15).reshape(3, 5, 3)
         edge.node2.tensor = tensor2
         
-        new_node1, new_node2 = edge.svd(cum_percentage=0.5)
+        new_node1, new_node2 = node1.svd(axis='right', cum_percentage=0.5)
         
         assert tk.utils.erase_enum(new_node1.name) == 'svd'
         assert tk.utils.erase_enum(new_node2.name) == 'svd'
@@ -1109,10 +1109,10 @@ class TestSVD:
         assert len(net.non_leaf_nodes) == 3
         
         # Repeat operation
-        new_node1, new_node2 = edge.svd(cum_percentage=0.5)
+        new_node1, new_node2 = node1.svd(axis='right', cum_percentage=0.5)
         
     def test_svd_edge_rank_inplace(self, setup):
-        net, edge = setup
+        net, edge, node1 = setup
         assert isinstance(edge, tk.Edge)
         assert edge.size() == 3
         assert edge.dim() == 3
@@ -1121,7 +1121,7 @@ class TestSVD:
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 0
         
-        new_node1, new_node2 = edge.svd_(rank=2)
+        new_node1, new_node2 = node1.svd_(axis='right', rank=2)
         
         assert tk.utils.erase_enum(new_node1.name) == \
             tk.utils.erase_enum(edge.node1.name)
@@ -1140,7 +1140,7 @@ class TestSVD:
         assert len(net.non_leaf_nodes) == 0
         
     def test_svd_edge_cum_percentage_inplace(self, setup):
-        net, edge = setup
+        net, edge, node1 = setup
         assert isinstance(edge, tk.Edge)
         assert edge.size() == 3
         assert edge.dim() == 3
@@ -1155,7 +1155,7 @@ class TestSVD:
         tensor2 = torch.eye(3, 15).reshape(3, 5, 3)
         edge.node2.tensor = tensor2
         
-        new_node1, new_node2 = edge.svd_(cum_percentage=0.5)
+        new_node1, new_node2 = node1.svd_(axis='right', cum_percentage=0.5)
         
         assert tk.utils.erase_enum(new_node1.name) == \
             tk.utils.erase_enum(edge.node1.name)
@@ -1174,7 +1174,7 @@ class TestSVD:
         assert len(net.non_leaf_nodes) == 0
         
     def test_svd_paramedge_rank_inplace(self, setup):
-        net, edge = setup
+        net, edge, node1 = setup
         edge = edge.parameterize()
         
         assert isinstance(edge, tk.ParamEdge)
@@ -1185,7 +1185,7 @@ class TestSVD:
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 0
         
-        new_node1, new_node2 = edge.svd_(rank=2)
+        new_node1, new_node2 = node1.svd_(axis='right', rank=2)
         
         assert tk.utils.erase_enum(new_node1.name) == \
             tk.utils.erase_enum(edge.node1.name)
@@ -1204,7 +1204,7 @@ class TestSVD:
         assert len(net.non_leaf_nodes) == 0
         
     def test_svd_paramedge_cum_percentage_inplace(self, setup):
-        net, edge = setup
+        net, edge, node1 = setup
         edge = edge.parameterize()
         
         assert isinstance(edge, tk.ParamEdge)
@@ -1221,7 +1221,7 @@ class TestSVD:
         tensor2 = torch.eye(3, 15).reshape(3, 5, 3)
         edge.node2.tensor = tensor2
         
-        new_node1, new_node2 = edge.svd_(cum_percentage=0.5)
+        new_node1, new_node2 = node1.svd_(axis='right', cum_percentage=0.5)
         
         assert tk.utils.erase_enum(new_node1.name) == \
             tk.utils.erase_enum(edge.node1.name)
@@ -1238,9 +1238,33 @@ class TestSVD:
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 0
+        
+    def test_svd_result_from_operation(self, setup):
+        net, edge, node1 = setup
+        node2 = net['node2']
+        
+        stacked = tk.stack([node1, node2])
+        unbinded = tk.unbind(stacked)
+        
+        new_node1, new_node2 = unbinded[0].svd('right', rank=2)
+        
+        assert new_node1.shape == (3, 5, 2)
+        assert new_node2.shape == (2, 5, 3)
+        assert new_node1['right'].size() == 2
+        
+        assert unbinded[0].shape == (3, 5, 3)
+        assert unbinded[1].shape == (3, 5, 3)
+        assert unbinded[0]['right'].size() == 3
+        
+        assert node1.shape == (3, 5, 3)
+        assert node2.shape == (3, 5, 3)
+        assert node1['right'].size() == 3
+        
+        assert node1['right'] == unbinded[0]['right']
+        assert node1['right'] != new_node1['right']
 
 
-class TestContractEdge:
+class TestContract:
     
     def test_contract_edge(self):
         net = tk.TensorNetwork()
@@ -1264,7 +1288,7 @@ class TestContractEdge:
         assert node2.successors == dict()
         
         # Contract edge
-        node3 = edge.contract()
+        node3 = node1.contract(2)  # We could use 2 or 'right'
         assert node3['left'] == node1['left']
         assert node3['input_0'] == node1['input']
         assert node3['right'] == node2['right']
@@ -1306,7 +1330,7 @@ class TestContractEdge:
         assert node2.successors == dict()
         
         # Contract edge
-        node3 = edge.contract()
+        node3 = node1.contract(2)
         assert node3['left'] == node1['left']
         assert node3['input_0'] == node1['input']
         assert node3['right'] == node2['right']
@@ -1349,7 +1373,7 @@ class TestContractEdge:
         assert node1.successors == dict()
         
         # Contract edge
-        node2 = edge.contract()
+        node2 = node1.contract(2)
         assert len(node2.edges) == 1
         assert node2[0].axis1.name == 'input'
         
@@ -1375,7 +1399,7 @@ class TestContractEdge:
         assert node1.successors == dict()
         
         # Contract edge
-        node2 = edge.contract()
+        node2 = node1.contract(2)
         assert len(node2.edges) == 1
         assert node2[0].axis1.name == 'input'
         
@@ -1416,7 +1440,7 @@ class TestContractEdge:
         assert node2.successors == dict()
         
         # Contract edge
-        node3 = edge.contract_()
+        node3 = node1.contract_(2)
         assert node3['left'] != node1['left']
         assert node3['input_0'] != node1['input']
         assert node3['right'] != node2['right']
@@ -1453,7 +1477,7 @@ class TestContractEdge:
         assert node2.successors == dict()
         
         # Contract edge
-        node3 = edge.contract_()
+        node3 = node1.contract_(2)
         assert node3['left'] != node1['left']
         assert node3['input_0'] != node1['input']
         assert node3['right'] != node2['right']
@@ -2010,7 +2034,7 @@ class TestStackUnbind:
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack # TODO: bastará con que sea None en unbind mode
+            assert node._tensor_info['node_ref'] is None
         
         # Re-stack
         restack = tk.stack(unbinded)
@@ -2023,7 +2047,7 @@ class TestStackUnbind:
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are non-leaf nodes, so memory is not optimized
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
             
         # Repeat operations
         stack = tk.stack(nodes)
@@ -2039,7 +2063,7 @@ class TestStackUnbind:
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
         
         restack = tk.stack(unbinded)
         assert isinstance(restack, tk.StackNode)
@@ -2050,7 +2074,7 @@ class TestStackUnbind:
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
             
     def test_stack_all_leaf_all_non_param_unbind(self, setup):
         net, nodes = setup
@@ -2075,7 +2099,7 @@ class TestStackUnbind:
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack  # TODO:
+            assert node._tensor_info['node_ref'] is None
         
         # Re-stack
         restack = tk.stack(unbinded)
@@ -2088,7 +2112,7 @@ class TestStackUnbind:
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are non-leaf nodes, so memory is not optimized
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
             
         # Repeat operations
         stack = tk.stack(nodes)
@@ -2104,7 +2128,7 @@ class TestStackUnbind:
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
         
         restack = tk.stack(unbinded)
         assert isinstance(restack, tk.StackNode)
@@ -2115,7 +2139,7 @@ class TestStackUnbind:
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
             
     def test_stack_all_leaf_all_non_param_automemory(self, setup):
         net, nodes = setup
@@ -2288,7 +2312,7 @@ class TestStackUnbind:
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack # TODO: bastará con que sea None en unbind mode
+            assert node._tensor_info['node_ref'] is None
         
         # Re-stack
         restack = tk.stack(unbinded)
@@ -2301,7 +2325,7 @@ class TestStackUnbind:
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are non-leaf nodes, so memory is not optimized
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
             
         # Repeat operations
         stack = tk.stack(nodes)
@@ -2317,7 +2341,7 @@ class TestStackUnbind:
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
         
         restack = tk.stack(unbinded)
         assert isinstance(restack, tk.StackNode)
@@ -2328,7 +2352,7 @@ class TestStackUnbind:
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
             
     def test_stack_all_leaf_all_param_unbind(self, setup_param):
         net, nodes = setup_param
@@ -2353,7 +2377,7 @@ class TestStackUnbind:
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack  # TODO:
+            assert node._tensor_info['node_ref'] is None
         
         # Re-stack
         restack = tk.stack(unbinded)
@@ -2366,7 +2390,7 @@ class TestStackUnbind:
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are non-leaf nodes, so memory is not optimized
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
             
         # Repeat operations
         stack = tk.stack(nodes)
@@ -2382,7 +2406,7 @@ class TestStackUnbind:
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
         
         restack = tk.stack(unbinded)
         assert isinstance(restack, tk.StackNode)
@@ -2393,7 +2417,7 @@ class TestStackUnbind:
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
             
     def test_stack_all_leaf_all_param_automemory(self, setup_param):
         net, nodes = setup_param
@@ -2584,7 +2608,7 @@ class TestStackUnbind:
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack # TODO: bastará con que sea None en unbind mode
+            assert node._tensor_info['node_ref'] is None
         
         # Re-stack
         restack = tk.stack(unbinded)
@@ -2598,7 +2622,7 @@ class TestStackUnbind:
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are non-leaf nodes, so memory is not optimized
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
             
         # Re-unbind
         reunbinded = tk.unbind(restack)
@@ -2606,7 +2630,7 @@ class TestStackUnbind:
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == restack
+            assert node._tensor_info['node_ref'] is None
             
         # Repeat operations
         stack = tk.stack(nodes)
@@ -2627,7 +2651,7 @@ class TestStackUnbind:
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
         
         restack = tk.stack(unbinded)
         assert isinstance(restack, tk.StackNode)
@@ -2639,14 +2663,14 @@ class TestStackUnbind:
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
             
         reunbinded = tk.unbind(restack)
         for i, node in enumerate(reunbinded):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == restack
+            assert node._tensor_info['node_ref'] is None
             
     def test_stack_diff_shapes_all_leaf_all_param_unbind(self, setup_diff_shapes):
         net, nodes, shapes = setup_diff_shapes
@@ -2676,7 +2700,7 @@ class TestStackUnbind:
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack  # TODO:
+            assert node._tensor_info['node_ref'] is None
         
         # Re-stack
         restack = tk.stack(unbinded)
@@ -2690,7 +2714,7 @@ class TestStackUnbind:
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are non-leaf nodes, so memory is not optimized
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
             
         # Re-unbind
         reunbinded = tk.unbind(restack)
@@ -2698,7 +2722,7 @@ class TestStackUnbind:
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == restack
+            assert node._tensor_info['node_ref'] is None
             
         # Repeat operations
         stack = tk.stack(nodes)
@@ -2719,7 +2743,7 @@ class TestStackUnbind:
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
         
         restack = tk.stack(unbinded)
         assert isinstance(restack, tk.StackNode)
@@ -2731,14 +2755,14 @@ class TestStackUnbind:
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == stack
+            assert node._tensor_info['node_ref'] is None
             
         reunbinded = tk.unbind(restack)
         for i, node in enumerate(reunbinded):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
-            assert node._tensor_info['node_ref'] == restack
+            assert node._tensor_info['node_ref'] is None
             
     def test_stack_diff_shapes_all_leaf_all_param_automemory(self, setup_diff_shapes):
         net, nodes, shapes = setup_diff_shapes
@@ -3727,6 +3751,367 @@ class TestEinsum:
         assert node2.shape == (10, 5)
         assert torch.allclose(node1.tensor, node2.tensor, atol=1e-7, rtol=1e-3)
         
+
+class TestTNModels:
+    
+    def test_mps(self):
+        
+        class MPS(tk.TensorNetwork):
+    
+            def __init__(self, image_size):
+                super().__init__(name='MPS')
+                
+                # Create TN
+                input_nodes = []
+                for _ in range(image_size[0] * image_size[1]):
+                    node = tk.ParamNode(shape=(10, 3, 10),
+                                        axes_names=('left', 'input', 'right'),
+                                        name='input_node',
+                                        network=self)
+                    input_nodes.append(node)
+                    
+                for i in range(len(input_nodes) - 1):
+                    input_nodes[i]['right'] ^ input_nodes[i + 1]['left']
+                    
+                output_node = tk.ParamNode(shape=(10, 10, 10),
+                                        axes_names=('left', 'output', 'right'),
+                                        name='output_node',
+                                        network=self)
+                output_node['right'] ^ input_nodes[0]['left']
+                output_node['left'] ^ input_nodes[-1]['right']
+                
+                # Initialize nodes
+                std = 1e-9
+                for node in input_nodes:
+                    tensor = torch.randn(node.shape) * std
+                    random_eye = torch.randn(tensor.shape[0], tensor.shape[2]) * std
+                    random_eye  = random_eye + torch.eye(tensor.shape[0], tensor.shape[2])
+                    tensor[:, 0, :] = random_eye
+                    
+                    node.tensor = tensor
+                        
+                eye_tensor = torch.eye(output_node.shape[0], output_node.shape[2])\
+                    .view([output_node.shape[0], 1, output_node.shape[2]])
+                eye_tensor = eye_tensor.expand(output_node.shape)
+                tensor = eye_tensor + std * torch.randn(output_node.shape)
+                
+                output_node.tensor = tensor
+                
+                self.input_nodes = input_nodes
+                self.output_node = output_node
+                
+            def set_data_nodes(self) -> None:
+                input_edges = []
+                for node in self.input_nodes:
+                    input_edges.append(node['input'])
+                        
+                super().set_data_nodes(input_edges, 1)
+            
+            def contract(self):
+                stack_input = tk.stack(self.input_nodes)
+                stack_data = tk.stack(list(self.data_nodes.values()))
+                
+                stack_input['input'] ^ stack_data['feature']
+                stack_result = stack_input @ stack_data
+                
+                stack_result = tk.unbind(stack_result)
+                
+                result = stack_result[0]
+                for node in stack_result[1:]:
+                    result @= node
+                result @= self.output_node
+                
+                return result
+        
+        image_size = (10, 10)
+        mps = MPS(image_size=image_size)
+
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        mps = mps.to(device)
+
+        # batch_size x height x width
+        image = torch.randn(500, image_size[0], image_size[1])
+
+        def embedding(image: torch.Tensor) -> torch.Tensor:
+            return torch.stack([torch.ones_like(image),
+                                image,
+                                1 - image], dim=1)
+            
+        image = embedding(image)
+        image = image.to(device)
+        image = image.view(500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
+        
+        mps.automemory = True
+        mps.unbind_mode = True
+        mps.trace(image)
+        
+        # Forward
+        for _ in range(5):
+            result = mps(image)
+            
+    def test_uniform_mps(self):
+        
+        class UMPS(tk.TensorNetwork):
+    
+            def __init__(self, image_size):
+                super().__init__(name='UMPS')
+                
+                # Create TN
+                input_nodes = []
+                for _ in range(image_size[0] * image_size[1]):
+                    node = tk.ParamNode(shape=(10, 3, 10),
+                                        axes_names=('left', 'input', 'right'),
+                                        name='input_node',
+                                        network=self)
+                    input_nodes.append(node)
+                    
+                for i in range(len(input_nodes) - 1):
+                    input_nodes[i]['right'] ^ input_nodes[i + 1]['left']
+                    
+                output_node = tk.ParamNode(shape=(10, 10, 10),
+                                        axes_names=('left', 'output', 'right'),
+                                        name='output_node',
+                                        network=self)
+                output_node['right'] ^ input_nodes[0]['left']
+                output_node['left'] ^ input_nodes[-1]['right']
+                
+                uniform_memory = tk.ParamNode(shape=(10, 3, 10),
+                                              axes_names=('left', 'input', 'right'),
+                                              name='virtual_uniform',
+                                              network=self,
+                                              virtual=True)
+                
+                # Initialize nodes
+                std = 1e-9
+                tensor = torch.randn(uniform_memory.shape) * std
+                random_eye = torch.randn(tensor.shape[0], tensor.shape[2]) * std
+                random_eye  = random_eye + torch.eye(tensor.shape[0], tensor.shape[2])
+                tensor[:, 0, :] = random_eye
+                
+                uniform_memory._unrestricted_set_tensor(tensor)
+                
+                for node in input_nodes:
+                    node._tensor_info['address'] = None
+                    node._tensor_info['node_ref'] = uniform_memory
+                    node._tensor_info['full'] = True
+                    node._tensor_info['stack_idx'] = None
+                    node._tensor_info['index'] = None
+                        
+                eye_tensor = torch.eye(output_node.shape[0], output_node.shape[2])\
+                    .view([output_node.shape[0], 1, output_node.shape[2]])
+                eye_tensor = eye_tensor.expand(output_node.shape)
+                tensor = eye_tensor + std * torch.randn(output_node.shape)
+                
+                output_node.tensor = tensor
+                
+                self.input_nodes = input_nodes
+                self.output_node = output_node
+                self.uniform_memory = uniform_memory
+                
+            def set_data_nodes(self) -> None:
+                input_edges = []
+                for node in self.input_nodes:
+                    input_edges.append(node['input'])
+                        
+                super().set_data_nodes(input_edges, 1)
+            
+            def contract(self):
+                stack_input = tk.stack(self.input_nodes)
+                stack_data = tk.stack(list(self.data_nodes.values()))
+                
+                stack_input['input'] ^ stack_data['feature']
+                stack_result = stack_input @ stack_data
+                
+                stack_result = tk.unbind(stack_result)
+                
+                result = stack_result[0]
+                for node in stack_result[1:]:
+                    result @= node
+                result @= self.output_node
+                
+                return result
+        
+        image_size = (10, 10)
+        mps = UMPS(image_size=image_size)
+
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        mps = mps.to(device)
+
+        # batch_size x height x width
+        image = torch.randn(500, image_size[0], image_size[1])
+
+        def embedding(image: torch.Tensor) -> torch.Tensor:
+            return torch.stack([torch.ones_like(image),
+                                image,
+                                1 - image], dim=1)
+            
+        image = embedding(image)
+        image = image.to(device)
+        image = image.view(500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
+        
+        mps.automemory = True
+        mps.unbind_mode = True
+        mps.trace(image)
+        
+        # Forward
+        for _ in range(5):
+            result = mps(image)
+            
+    def test_peps(self):
+        
+        class PEPS(tk.TensorNetwork):
+    
+            def __init__(self, image_size):
+                super().__init__(name='PEPS')
+                
+                # Create TN
+                input_nodes = []
+                for i in range(image_size[0]):
+                    aux_lst = []
+                    for j in range(image_size[1]):
+                        node = tk.ParamNode(shape=(2, 2, 2, 2, 3),
+                                            axes_names=('left', 'right', 'up', 'down', 'input'),
+                                            name=f'input_node_[{i},{j}]',
+                                            network=self)
+                        aux_lst.append(node)
+                    input_nodes.append(aux_lst)
+                    
+                for i in range(len(input_nodes)):
+                    for j in range(len(input_nodes[i])):
+                        if i == (len(input_nodes) - 1):
+                            input_nodes[i][j]['down'] ^ input_nodes[0][j]['up']
+                        else:
+                            input_nodes[i][j]['down'] ^ input_nodes[i + 1][j]['up']
+                            
+                        if j == (len(input_nodes[i]) - 1):
+                            input_nodes[i][j]['right'] ^ input_nodes[i][0]['left']
+                        else:
+                            input_nodes[i][j]['right'] ^ input_nodes[i][j + 1]['left']
+                        
+                # j = len(input_nodes[0]) - 1
+                # for i in range(len(input_nodes) - 1):
+                #     input_nodes[i][j]['right'] ^ input_nodes[i][0]['left']
+                        
+                # i = len(input_nodes) - 1
+                # for j in range(len(input_nodes[i]) - 1):
+                #     input_nodes[i][j]['down'] ^ input_nodes[0][j]['up']
+                
+                # Initialize nodes
+                std = 1e-9
+                for lst in input_nodes:
+                    for node in lst:
+                        tensor = torch.randn(node.shape) * std
+                        # random_eye = torch.randn(tensor.shape[0], tensor.shape[2]) * std
+                        # random_eye  = random_eye + torch.eye(tensor.shape[0], tensor.shape[2])
+                        # tensor[:, 0, :] = random_eye
+                        
+                        node.tensor = tensor
+                
+                self.input_nodes = input_nodes
+                
+            def set_data_nodes(self) -> None:
+                input_edges = []
+                for lst in self.input_nodes:
+                    for node in lst:
+                        input_edges.append(node['input'])
+                        
+                super().set_data_nodes(input_edges, 1)
+            
+            def contract(self):
+                all_input_nodes = []
+                for lst in self.input_nodes:
+                    for node in lst:
+                        all_input_nodes.append(node)
+                      
+                # Contract with data  
+                stack_input = tk.stack(all_input_nodes)
+                stack_data = tk.stack(list(self.data_nodes.values()))
+                
+                stack_input['input'] ^ stack_data['feature']
+                stack_result = stack_input @ stack_data
+                
+                result = tk.unbind(stack_result)
+                
+                # Contract TN
+                n_rows = len(self.input_nodes)
+                n_cols = len(self.input_nodes[0])
+                current_2_lines = [result[:n_cols], result[n_cols:(2 * n_cols)]]
+                for i in range(n_rows):
+                    if i > 0:
+                        for j in range(n_cols):
+                            if j == 0:
+                                aux_result = current_2_lines[0][j] @ current_2_lines[0][j + 1]
+                                new_node1, new_node2 = aux_result.split(node1_axes=['left_0', 'left_1', 'up_0', 'down_0'],
+                                                                        node2_axes=['right_0', 'right_1', 'up_1', 'down_1'],
+                                                                        rank=2)
+                                new_node1.get_axis('splitted').name = 'right'
+                                new_node2.get_axis('splitted').name = 'left'
+                                current_2_lines[0][j] = new_node1
+                                current_2_lines[0][j + 1] = new_node2
+                            elif j < (n_cols - 1):
+                                aux_result = current_2_lines[0][j] @ current_2_lines[0][j + 1]
+                                new_node1, new_node2 = aux_result.split(node1_axes=['left', 'up_0', 'down_0'],
+                                                                        node2_axes=['right_0', 'right_1', 'up_1', 'down_1'],
+                                                                        rank=2)
+                                new_node1.get_axis('splitted').name = 'right'
+                                new_node2.get_axis('splitted').name = 'left'
+                                current_2_lines[0][j] = new_node1
+                                current_2_lines[0][j + 1] = new_node2
+                            else:
+                                aux_result = current_2_lines[0][j] @ current_2_lines[0][0]
+                                new_node1, new_node2 = aux_result.split(node1_axes=['left', 'up_0', 'down_0'],
+                                                                        node2_axes=['right', 'up_1', 'down_1'],
+                                                                        rank=2)
+                                new_node1.get_axis('splitted').name = 'right'
+                                new_node2.get_axis('splitted').name = 'left'
+                                current_2_lines[0][j] = new_node1
+                                current_2_lines[0][0] = new_node2
+                    if i < (n_rows - 1):
+                        for j in range(n_cols):
+                            current_2_lines[1][j] = current_2_lines[0][j] @ current_2_lines[1][j]
+                            
+                    current_2_lines[0] = current_2_lines[1]
+                    current_2_lines[1] = result[(i + 1) * n_cols:((i + 2) * n_cols)]
+                            
+                result = current_2_lines[0][0]
+                for node in current_2_lines[0][1:]:
+                    result @= result
+                    result @= node
+                result @= result
+                
+                return result
+        
+        image_size = (3, 3)
+        mps = PEPS(image_size=image_size)
+
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        mps = mps.to(device)
+
+        # batch_size x height x width
+        image = torch.randn(500, image_size[0], image_size[1])
+
+        def embedding(image: torch.Tensor) -> torch.Tensor:
+            return torch.stack([torch.ones_like(image),
+                                image,
+                                1 - image], dim=1)
+            
+        image = embedding(image)
+        image = image.to(device)
+        image = image.view(500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
+        
+        mps.automemory = True
+        mps.unbind_mode = True
+        mps.trace(image)
+        
+        # Forward
+        for _ in range(5):
+            result = mps(image)
+        
+        
+        
+        
+    
+
 
 def test_for_peps():
     node1 = tk.ParamNode(shape=(3, 4),

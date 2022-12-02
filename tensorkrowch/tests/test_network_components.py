@@ -2446,10 +2446,7 @@ class TestTensorNetwork:
             assert node._tensor_info['address'] is not None
             assert node._tensor_info['node_ref'] is None
         for node in net.non_leaf_nodes.values():
-            if node.name.startswith('unbind'):
-                assert node._tensor_info['node_ref'] is not None
-            else:
-                assert node._tensor_info['node_ref'] is None
+            assert node._tensor_info['node_ref'] is None
             assert node._tensor_info['address'] is not None
             
         net.unbind_mode = False

@@ -287,7 +287,7 @@ class AbstractNode(ABC):
         address = self._tensor_info['address']
         node_ref = self._tensor_info['node_ref']
         full = self._tensor_info['full']
-        stack_idx = self._tensor_info['stack_idx']
+        stack_idx = self._tensor_info['stack_idx']  # TODO: do i use stack_idx for anything??
         index = self._tensor_info['index']
         
         if address is None:
@@ -563,6 +563,11 @@ class AbstractNode(ABC):
     def get_edge(self, axis: Ax) -> 'AbstractEdge':
         axis_num = self.get_axis_num(axis)
         return self._edges[axis_num]
+    
+    def in_which_axis(self, edge: 'AbstractEdge') -> Axis:
+        for ax, ed in zip(self._axes, self._edges):
+            if ed == edge:
+                return ax
 
     def _add_edge(self,
                   edge: 'AbstractEdge',
@@ -2230,8 +2235,8 @@ class ParamStackNode(ParamNode):
             if not isinstance(nodes[i], type(nodes[i + 1])):
                 raise TypeError('Cannot stack nodes of different types. Nodes '
                                 'must be either all Node or all ParamNode type')
-            # if nodes[i].shape != nodes[i + 1].shape:
-            #     raise ValueError('Cannot stack nodes with different shapes')
+            if nodes[i].rank != nodes[i + 1].rank:
+                    raise ValueError('Cannot stack nodes with different number of edges')
             if nodes[i].axes_names != nodes[i + 1].axes_names:
                 raise ValueError('Stacked nodes must have the same name for each axis')
             if nodes[i].network != nodes[i + 1].network:
@@ -2638,10 +2643,15 @@ class TensorNetwork(nn.Module):
             aux_dict.update(self._non_leaf_nodes)
             aux_dict.update(self._virtual_nodes)
             for node in aux_dict.values():
-                if node.is_virtual() and node.name != 'virtual_stack':
+                if node.is_virtual() and ('virtual_stack' not in node.name):
                     continue
                 
                 node._successors = dict()
+                
+                node_ref = node._tensor_info['node_ref']
+                if node_ref is not None:
+                    if node_ref.is_virtual() and ('virtual_uniform' in node_ref.name):
+                        continue
                 
                 node._temp_tensor = node.tensor
                 node._tensor_info['address'] = node.name
@@ -2669,7 +2679,7 @@ class TensorNetwork(nn.Module):
             aux_dict.update(self._non_leaf_nodes)
             aux_dict.update(self._virtual_nodes)
             for node in list(aux_dict.values()):
-                if node.is_virtual() and node.name != 'virtual_stack':
+                if node.is_virtual() and ('virtual_stack' not in node.name):
                     continue
                 self.delete_node(node, False)
 

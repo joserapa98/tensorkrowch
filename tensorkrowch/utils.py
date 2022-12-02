@@ -41,7 +41,7 @@ def check_name_style(name: Text) -> bool:
     """
     for char in name:
         if (not char.isalpha()) and (not char.isnumeric()) and (char != '_'):
-            return False
+            return True #False
     return True
 
 

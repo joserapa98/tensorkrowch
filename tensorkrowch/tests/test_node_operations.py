@@ -498,7 +498,7 @@ class TestSplit:
                         init_method='randn',
                         network=net)
         edge = node1[3] ^ node2[1]
-        result = node1.contract(3)
+        result = node1 @ node2
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
@@ -554,7 +554,7 @@ class TestSplit:
                         init_method='randn',
                         network=net)
         edge = node1['right'] ^ node2['left']
-        result = node1.contract('right')
+        result = node1 @ node2
         
         assert result.edges == [node1['batch1'], node1['batch2'],
                                 node1['left'], node1['input'],
@@ -583,7 +583,7 @@ class TestSplit:
                         init_method='randn',
                         network=net)
         edge = node1[3] ^ node2[1]
-        result = node1.contract(3)
+        result = node1 @ node2
         
         # Split result
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
@@ -623,7 +623,7 @@ class TestSplit:
                         init_method='randn',
                         network=net)
         edge = node1[3] ^ node2[1]
-        result = node1.contract(3)
+        result = node1 @ node2
         
         high_rank_tensor = torch.eye(10, 15).expand(10, 10, 15).reshape(10, 2, 5, 5, 3)
         result._unrestricted_set_tensor(high_rank_tensor)
@@ -675,7 +675,7 @@ class TestSplit:
                              param_edges=True,
                              network=net)
         edge = node1[3] ^ node2[1]
-        result = node1.contract(3)
+        result = node1 @ node2
         
         high_rank_tensor = torch.eye(10, 15).expand(10, 10, 15).reshape(10, 2, 5, 5, 3)
         result._unrestricted_set_tensor(high_rank_tensor)
@@ -736,7 +736,7 @@ class TestSplit:
         assert len(net.leaf_nodes) == 3
         assert len(net.non_leaf_nodes) == 0
         
-        result = node1.contract_('right')
+        result = node1.contract_between_(node2)
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
@@ -958,159 +958,8 @@ class TestSVD:
         
         edge = node1['right'] ^ node2['left']
         return net, edge, node1
-    
-    def test_svd_edge_rank(self, setup):
-        net, edge, node1 = setup
-        assert isinstance(edge, tk.Edge)
-        assert edge.size() == 3
-        assert edge.dim() == 3
         
-        assert len(net.nodes) == 2
-        assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
-        
-        new_node1, new_node2 = node1.svd(axis='right', rank=2)
-        
-        assert tk.utils.erase_enum(new_node1.name) == 'svd'
-        assert tk.utils.erase_enum(new_node2.name) == 'svd'
-        assert new_node1.axes_names == edge.node1.axes_names
-        assert new_node1.axes_names == edge.node1.axes_names
-        
-        assert edge.node1.shape == (3, 5, 3)
-        assert edge.node2.shape == (3, 5, 3)
-        assert edge.size() == 3
-        assert edge.dim() == 3
-        
-        assert new_node1.shape == (3, 5, 2)
-        assert new_node2.shape == (2, 5, 3)
-        assert new_node1['right'].size() == 2
-        assert new_node1['right'].dim() == 2
-        
-        assert len(net.nodes) == 5
-        assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
-        
-        # Repeat operation
-        new_node1, new_node2 = node1.svd(axis='right', rank=2)
-        
-    def test_svd_edge_cum_percentage(self, setup):
-        net, edge, node1 = setup
-        assert isinstance(edge, tk.Edge)
-        assert edge.size() == 3
-        assert edge.dim() == 3
-        
-        assert len(net.nodes) == 2
-        assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
-        
-        tensor1 = torch.eye(15, 3).reshape(3, 5, 3)
-        edge.node1.tensor = tensor1
-        
-        tensor2 = torch.eye(3, 15).reshape(3, 5, 3)
-        edge.node2.tensor = tensor2
-        
-        new_node1, new_node2 = node1.svd(axis='right', cum_percentage=0.5)
-        
-        assert tk.utils.erase_enum(new_node1.name) == 'svd'
-        assert tk.utils.erase_enum(new_node2.name) == 'svd'
-        assert new_node1.axes_names == edge.node1.axes_names
-        assert new_node1.axes_names == edge.node1.axes_names
-        
-        assert edge.node1.shape == (3, 5, 3)
-        assert edge.node2.shape == (3, 5, 3)
-        assert edge.size() == 3
-        assert edge.dim() == 3
-        
-        assert new_node1.shape == (3, 5, 2)
-        assert new_node2.shape == (2, 5, 3)
-        assert new_node1['right'].size() == 2
-        assert new_node1['right'].dim() == 2
-        
-        assert len(net.nodes) == 5
-        assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
-        
-        # Repeat operation
-        new_node1, new_node2 = node1.svd(axis='right', cum_percentage=0.5)
-        
-    def test_svd_paramedge_rank(self, setup):
-        net, edge, node1 = setup
-        edge = edge.parameterize()
-        
-        assert isinstance(edge, tk.ParamEdge)
-        assert edge.size() == 3
-        assert edge.dim() == 3
-        
-        assert len(net.nodes) == 2
-        assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
-        
-        new_node1, new_node2 = node1.svd(axis='right', rank=2)
-        
-        assert tk.utils.erase_enum(new_node1.name) == 'svd'
-        assert tk.utils.erase_enum(new_node2.name) == 'svd'
-        assert new_node1.axes_names == edge.node1.axes_names
-        assert new_node1.axes_names == edge.node1.axes_names
-        
-        assert edge.node1.shape == (3, 5, 3)
-        assert edge.node2.shape == (3, 5, 3)
-        assert edge.size() == 3
-        assert edge.dim() == 3
-        
-        assert new_node1.shape == (3, 5, 2)
-        assert new_node2.shape == (2, 5, 3)
-        assert new_node1['right'].size() == 2
-        assert new_node1['right'].dim() == 2
-        
-        assert len(net.nodes) == 5
-        assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
-        
-        # Repeat operation
-        new_node1, new_node2 = node1.svd(axis='right', rank=2)
-        
-    def test_svd_paramedge_cum_percentage(self, setup):
-        net, edge, node1 = setup
-        edge = edge.parameterize()
-        
-        assert isinstance(edge, tk.ParamEdge)
-        assert edge.size() == 3
-        assert edge.dim() == 3
-        
-        assert len(net.nodes) == 2
-        assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
-        
-        tensor1 = torch.eye(15, 3).reshape(3, 5, 3)
-        edge.node1.tensor = tensor1
-        
-        tensor2 = torch.eye(3, 15).reshape(3, 5, 3)
-        edge.node2.tensor = tensor2
-        
-        new_node1, new_node2 = node1.svd(axis='right', cum_percentage=0.5)
-        
-        assert tk.utils.erase_enum(new_node1.name) == 'svd'
-        assert tk.utils.erase_enum(new_node2.name) == 'svd'
-        assert new_node1.axes_names == edge.node1.axes_names
-        assert new_node1.axes_names == edge.node1.axes_names
-        
-        assert edge.node1.shape == (3, 5, 3)
-        assert edge.node2.shape == (3, 5, 3)
-        assert edge.size() == 3
-        assert edge.dim() == 3
-        
-        assert new_node1.shape == (3, 5, 2)
-        assert new_node2.shape == (2, 5, 3)
-        assert new_node1['right'].size() == 2
-        assert new_node1['right'].dim() == 2
-        
-        assert len(net.nodes) == 5
-        assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
-        
-        # Repeat operation
-        new_node1, new_node2 = node1.svd(axis='right', cum_percentage=0.5)
-        
+    # SVD can only be done in-place 
     def test_svd_edge_rank_inplace(self, setup):
         net, edge, node1 = setup
         assert isinstance(edge, tk.Edge)
@@ -1121,7 +970,7 @@ class TestSVD:
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 0
         
-        new_node1, new_node2 = node1.svd_(axis='right', rank=2)
+        new_node1, new_node2 = node1['right'].svd_(rank=2)
         
         assert tk.utils.erase_enum(new_node1.name) == \
             tk.utils.erase_enum(edge.node1.name)
@@ -1155,7 +1004,7 @@ class TestSVD:
         tensor2 = torch.eye(3, 15).reshape(3, 5, 3)
         edge.node2.tensor = tensor2
         
-        new_node1, new_node2 = node1.svd_(axis='right', cum_percentage=0.5)
+        new_node1, new_node2 = node1['right'].svd_(cum_percentage=0.5)
         
         assert tk.utils.erase_enum(new_node1.name) == \
             tk.utils.erase_enum(edge.node1.name)
@@ -1185,7 +1034,7 @@ class TestSVD:
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 0
         
-        new_node1, new_node2 = node1.svd_(axis='right', rank=2)
+        new_node1, new_node2 = node1['right'].svd_(rank=2)
         
         assert tk.utils.erase_enum(new_node1.name) == \
             tk.utils.erase_enum(edge.node1.name)
@@ -1221,7 +1070,7 @@ class TestSVD:
         tensor2 = torch.eye(3, 15).reshape(3, 5, 3)
         edge.node2.tensor = tensor2
         
-        new_node1, new_node2 = node1.svd_(axis='right', cum_percentage=0.5)
+        new_node1, new_node2 = node1['right'].svd_(cum_percentage=0.5)
         
         assert tk.utils.erase_enum(new_node1.name) == \
             tk.utils.erase_enum(edge.node1.name)
@@ -1239,6 +1088,203 @@ class TestSVD:
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 0
         
+    # To perform SVD as operation, we first contract and the split
+    def test_svd_edge_rank(self, setup):
+        net, edge, node1 = setup
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
+        assert edge.dim() == 3
+        
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 0
+        
+        node2 = net['node2']
+        contracted = node1 @ node2
+        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
+                                                node2_axes=['input_1', 'right'],
+                                                rank=2)
+        new_node1.name = 'svd'
+        new_node2.name = 'svd'
+        new_node1.get_axis('splitted').name = 'right'
+        new_node2.get_axis('splitted').name = 'left'
+        
+        assert tk.utils.erase_enum(new_node1.name) == 'svd'
+        assert tk.utils.erase_enum(new_node2.name) == 'svd'
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
+        
+        assert edge.node1.shape == (3, 5, 3)
+        assert edge.node2.shape == (3, 5, 3)
+        assert edge.size() == 3
+        assert edge.dim() == 3
+        
+        assert new_node1.shape == (3, 5, 2)
+        assert new_node2.shape == (2, 5, 3)
+        assert new_node1['right'].size() == 2
+        assert new_node1['right'].dim() == 2
+        
+        assert len(net.nodes) == 5
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 3
+        
+        # Repeat operation
+        contracted = node1 @ node2
+        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
+                                                node2_axes=['input_1', 'right'],
+                                                rank=2)
+        
+    def test_svd_edge_cum_percentage(self, setup):
+        net, edge, node1 = setup
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
+        assert edge.dim() == 3
+        
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 0
+        
+        tensor1 = torch.eye(15, 3).reshape(3, 5, 3)
+        edge.node1.tensor = tensor1
+        
+        tensor2 = torch.eye(3, 15).reshape(3, 5, 3)
+        edge.node2.tensor = tensor2
+        
+        node2 = net['node2']
+        contracted = node1 @ node2
+        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
+                                                node2_axes=['input_1', 'right'],
+                                                cum_percentage=0.5)
+        new_node1.name = 'svd'
+        new_node2.name = 'svd'
+        new_node1.get_axis('splitted').name = 'right'
+        new_node2.get_axis('splitted').name = 'left'
+        
+        assert tk.utils.erase_enum(new_node1.name) == 'svd'
+        assert tk.utils.erase_enum(new_node2.name) == 'svd'
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
+        
+        assert edge.node1.shape == (3, 5, 3)
+        assert edge.node2.shape == (3, 5, 3)
+        assert edge.size() == 3
+        assert edge.dim() == 3
+        
+        assert new_node1.shape == (3, 5, 2)
+        assert new_node2.shape == (2, 5, 3)
+        assert new_node1['right'].size() == 2
+        assert new_node1['right'].dim() == 2
+        
+        assert len(net.nodes) == 5
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 3
+        
+        # Repeat operation
+        contracted = node1 @ node2
+        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
+                                                node2_axes=['input_1', 'right'],
+                                                cum_percentage=0.5)
+        
+    def test_svd_paramedge_rank(self, setup):
+        net, edge, node1 = setup
+        edge = edge.parameterize()
+        
+        assert isinstance(edge, tk.ParamEdge)
+        assert edge.size() == 3
+        assert edge.dim() == 3
+        
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 0
+        
+        node2 = net['node2']
+        contracted = node1 @ node2
+        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
+                                                node2_axes=['input_1', 'right'],
+                                                rank=2)
+        new_node1.name = 'svd'
+        new_node2.name = 'svd'
+        new_node1.get_axis('splitted').name = 'right'
+        new_node2.get_axis('splitted').name = 'left'
+        
+        assert tk.utils.erase_enum(new_node1.name) == 'svd'
+        assert tk.utils.erase_enum(new_node2.name) == 'svd'
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
+        
+        assert edge.node1.shape == (3, 5, 3)
+        assert edge.node2.shape == (3, 5, 3)
+        assert edge.size() == 3
+        assert edge.dim() == 3
+        
+        assert new_node1.shape == (3, 5, 2)
+        assert new_node2.shape == (2, 5, 3)
+        assert new_node1['right'].size() == 2
+        assert new_node1['right'].dim() == 2
+        
+        assert len(net.nodes) == 5
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 3
+        
+        # Repeat operation
+        contracted = node1 @ node2
+        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
+                                                node2_axes=['input_1', 'right'],
+                                                rank=2)
+        
+    def test_svd_paramedge_cum_percentage(self, setup):
+        net, edge, node1 = setup
+        edge = edge.parameterize()
+        
+        assert isinstance(edge, tk.ParamEdge)
+        assert edge.size() == 3
+        assert edge.dim() == 3
+        
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 0
+        
+        tensor1 = torch.eye(15, 3).reshape(3, 5, 3)
+        edge.node1.tensor = tensor1
+        
+        tensor2 = torch.eye(3, 15).reshape(3, 5, 3)
+        edge.node2.tensor = tensor2
+        
+        node2 = net['node2']
+        contracted = node1 @ node2
+        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
+                                                node2_axes=['input_1', 'right'],
+                                                cum_percentage=0.5)
+        new_node1.name = 'svd'
+        new_node2.name = 'svd'
+        new_node1.get_axis('splitted').name = 'right'
+        new_node2.get_axis('splitted').name = 'left'
+        
+        assert tk.utils.erase_enum(new_node1.name) == 'svd'
+        assert tk.utils.erase_enum(new_node2.name) == 'svd'
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
+        
+        assert edge.node1.shape == (3, 5, 3)
+        assert edge.node2.shape == (3, 5, 3)
+        assert edge.size() == 3
+        assert edge.dim() == 3
+        
+        assert new_node1.shape == (3, 5, 2)
+        assert new_node2.shape == (2, 5, 3)
+        assert new_node1['right'].size() == 2
+        assert new_node1['right'].dim() == 2
+        
+        assert len(net.nodes) == 5
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 3
+        
+        # Repeat operation
+        contracted = node1 @ node2
+        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
+                                                node2_axes=['input_1', 'right'],
+                                                cum_percentage=0.5)
+        
     def test_svd_result_from_operation(self, setup):
         net, edge, node1 = setup
         node2 = net['node2']
@@ -1246,7 +1292,14 @@ class TestSVD:
         stacked = tk.stack([node1, node2])
         unbinded = tk.unbind(stacked)
         
-        new_node1, new_node2 = unbinded[0].svd('right', rank=2)
+        contracted = unbinded[0] @ unbinded[1]
+        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
+                                                node2_axes=['input_1', 'right'],
+                                                cum_percentage=0.5)
+        new_node1.name = 'svd'
+        new_node2.name = 'svd'
+        new_node1.get_axis('splitted').name = 'right'
+        new_node2.get_axis('splitted').name = 'left'
         
         assert new_node1.shape == (3, 5, 2)
         assert new_node2.shape == (2, 5, 3)
@@ -1264,7 +1317,7 @@ class TestSVD:
         assert node1['right'] != new_node1['right']
 
 
-class TestContract:
+class TestContractEdge:
     
     def test_contract_edge(self):
         net = tk.TensorNetwork()
@@ -1288,7 +1341,9 @@ class TestContract:
         assert node2.successors == dict()
         
         # Contract edge
-        node3 = node1.contract(2)  # We could use 2 or 'right'
+        # To contract only one edge we have to call contract_between
+        # with the particular list of shared edges we want to contract
+        node3 = node1.contract_between(node2, ['right'])  # We could use 2 or 'right'
         assert node3['left'] == node1['left']
         assert node3['input_0'] == node1['input']
         assert node3['right'] == node2['right']
@@ -1330,7 +1385,7 @@ class TestContract:
         assert node2.successors == dict()
         
         # Contract edge
-        node3 = node1.contract(2)
+        node3 = node1.contract_between(node2, [2])
         assert node3['left'] == node1['left']
         assert node3['input_0'] == node1['input']
         assert node3['right'] == node2['right']
@@ -1373,7 +1428,7 @@ class TestContract:
         assert node1.successors == dict()
         
         # Contract edge
-        node2 = node1.contract(2)
+        node2 = node1.contract_between(node1, [2])
         assert len(node2.edges) == 1
         assert node2[0].axis1.name == 'input'
         
@@ -1399,7 +1454,7 @@ class TestContract:
         assert node1.successors == dict()
         
         # Contract edge
-        node2 = node1.contract(2)
+        node2 = node1.contract_between(node1, [2])
         assert len(node2.edges) == 1
         assert node2[0].axis1.name == 'input'
         
@@ -1440,7 +1495,7 @@ class TestContract:
         assert node2.successors == dict()
         
         # Contract edge
-        node3 = node1.contract_(2)
+        node3 = edge.contract_()  # Same as node1.contract_between_(node2, [2])
         assert node3['left'] != node1['left']
         assert node3['input_0'] != node1['input']
         assert node3['right'] != node2['right']
@@ -1477,7 +1532,7 @@ class TestContract:
         assert node2.successors == dict()
         
         # Contract edge
-        node3 = node1.contract_(2)
+        node3 = edge.contract_()  # Same as node1.contract_between_(node2, [2])
         assert node3['left'] != node1['left']
         assert node3['input_0'] != node1['input']
         assert node3['right'] != node2['right']
@@ -3754,11 +3809,12 @@ class TestEinsum:
 
 class TestTNModels:
     
-    def test_mps(self):
+    @pytest.fixture
+    def setup_mps(self):
         
         class MPS(tk.TensorNetwork):
     
-            def __init__(self, image_size):
+            def __init__(self, image_size, uniform=False, param_edges=False):
                 super().__init__(name='MPS')
                 
                 # Create TN
@@ -3767,6 +3823,7 @@ class TestTNModels:
                     node = tk.ParamNode(shape=(10, 3, 10),
                                         axes_names=('left', 'input', 'right'),
                                         name='input_node',
+                                        param_edges=param_edges,
                                         network=self)
                     input_nodes.append(node)
                     
@@ -3774,21 +3831,51 @@ class TestTNModels:
                     input_nodes[i]['right'] ^ input_nodes[i + 1]['left']
                     
                 output_node = tk.ParamNode(shape=(10, 10, 10),
-                                        axes_names=('left', 'output', 'right'),
-                                        name='output_node',
-                                        network=self)
+                                           axes_names=('left', 'output', 'right'),
+                                           name='output_node',
+                                           param_edges=param_edges,
+                                           network=self)
                 output_node['right'] ^ input_nodes[0]['left']
                 output_node['left'] ^ input_nodes[-1]['right']
                 
+                self.input_nodes = input_nodes
+                self.output_node = output_node
+                
+                if uniform:
+                    uniform_memory = tk.ParamNode(shape=(10, 3, 10),
+                                                  axes_names=('left', 'input', 'right'),
+                                                  name='virtual_uniform',
+                                                  network=self,
+                                                  virtual=True)
+                    self.uniform_memory = uniform_memory
+                
                 # Initialize nodes
-                std = 1e-9
-                for node in input_nodes:
-                    tensor = torch.randn(node.shape) * std
+                if uniform:
+                    std = 1e-9
+                    tensor = torch.randn(uniform_memory.shape) * std
                     random_eye = torch.randn(tensor.shape[0], tensor.shape[2]) * std
                     random_eye  = random_eye + torch.eye(tensor.shape[0], tensor.shape[2])
                     tensor[:, 0, :] = random_eye
                     
-                    node.tensor = tensor
+                    uniform_memory._unrestricted_set_tensor(tensor)
+                
+                    for node in input_nodes:
+                        del self._memory_nodes[node._tensor_info['address']]
+                        node._tensor_info['address'] = None
+                        node._tensor_info['node_ref'] = uniform_memory
+                        node._tensor_info['full'] = True
+                        node._tensor_info['stack_idx'] = None
+                        node._tensor_info['index'] = None
+                    
+                else:
+                    std = 1e-9
+                    for node in input_nodes:
+                        tensor = torch.randn(node.shape) * std
+                        random_eye = torch.randn(tensor.shape[0], tensor.shape[2]) * std
+                        random_eye  = random_eye + torch.eye(tensor.shape[0], tensor.shape[2])
+                        tensor[:, 0, :] = random_eye
+                        
+                        node.tensor = tensor
                         
                 eye_tensor = torch.eye(output_node.shape[0], output_node.shape[2])\
                     .view([output_node.shape[0], 1, output_node.shape[2]])
@@ -3822,6 +3909,11 @@ class TestTNModels:
                 result @= self.output_node
                 
                 return result
+            
+        return MPS
+    
+    def test_mps(self, setup_mps):
+        MPS = setup_mps
         
         image_size = (10, 10)
         mps = MPS(image_size=image_size)
@@ -3849,90 +3941,11 @@ class TestTNModels:
         for _ in range(5):
             result = mps(image)
             
-    def test_uniform_mps(self):
-        
-        class UMPS(tk.TensorNetwork):
-    
-            def __init__(self, image_size):
-                super().__init__(name='UMPS')
-                
-                # Create TN
-                input_nodes = []
-                for _ in range(image_size[0] * image_size[1]):
-                    node = tk.ParamNode(shape=(10, 3, 10),
-                                        axes_names=('left', 'input', 'right'),
-                                        name='input_node',
-                                        network=self)
-                    input_nodes.append(node)
-                    
-                for i in range(len(input_nodes) - 1):
-                    input_nodes[i]['right'] ^ input_nodes[i + 1]['left']
-                    
-                output_node = tk.ParamNode(shape=(10, 10, 10),
-                                        axes_names=('left', 'output', 'right'),
-                                        name='output_node',
-                                        network=self)
-                output_node['right'] ^ input_nodes[0]['left']
-                output_node['left'] ^ input_nodes[-1]['right']
-                
-                uniform_memory = tk.ParamNode(shape=(10, 3, 10),
-                                              axes_names=('left', 'input', 'right'),
-                                              name='virtual_uniform',
-                                              network=self,
-                                              virtual=True)
-                
-                # Initialize nodes
-                std = 1e-9
-                tensor = torch.randn(uniform_memory.shape) * std
-                random_eye = torch.randn(tensor.shape[0], tensor.shape[2]) * std
-                random_eye  = random_eye + torch.eye(tensor.shape[0], tensor.shape[2])
-                tensor[:, 0, :] = random_eye
-                
-                uniform_memory._unrestricted_set_tensor(tensor)
-                
-                for node in input_nodes:
-                    node._tensor_info['address'] = None
-                    node._tensor_info['node_ref'] = uniform_memory
-                    node._tensor_info['full'] = True
-                    node._tensor_info['stack_idx'] = None
-                    node._tensor_info['index'] = None
-                        
-                eye_tensor = torch.eye(output_node.shape[0], output_node.shape[2])\
-                    .view([output_node.shape[0], 1, output_node.shape[2]])
-                eye_tensor = eye_tensor.expand(output_node.shape)
-                tensor = eye_tensor + std * torch.randn(output_node.shape)
-                
-                output_node.tensor = tensor
-                
-                self.input_nodes = input_nodes
-                self.output_node = output_node
-                self.uniform_memory = uniform_memory
-                
-            def set_data_nodes(self) -> None:
-                input_edges = []
-                for node in self.input_nodes:
-                    input_edges.append(node['input'])
-                        
-                super().set_data_nodes(input_edges, 1)
-            
-            def contract(self):
-                stack_input = tk.stack(self.input_nodes)
-                stack_data = tk.stack(list(self.data_nodes.values()))
-                
-                stack_input['input'] ^ stack_data['feature']
-                stack_result = stack_input @ stack_data
-                
-                stack_result = tk.unbind(stack_result)
-                
-                result = stack_result[0]
-                for node in stack_result[1:]:
-                    result @= node
-                result @= self.output_node
-                
-                return result
+    def test_uniform_mps(self, setup_mps):
+        MPS = setup_mps
         
         image_size = (10, 10)
-        mps = UMPS(image_size=image_size)
+        mps = MPS(image_size=image_size, uniform=True)
 
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         mps = mps.to(device)
@@ -3957,11 +3970,70 @@ class TestTNModels:
         for _ in range(5):
             result = mps(image)
             
-    def test_peps(self):
+    def test_mps_paramedges(self, setup_mps):
+        MPS = setup_mps
+        
+        image_size = (10, 10)
+        mps = MPS(image_size=image_size, param_edges=True)
+
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        mps = mps.to(device)
+
+        # batch_size x height x width
+        image = torch.randn(500, image_size[0], image_size[1])
+
+        def embedding(image: torch.Tensor) -> torch.Tensor:
+            return torch.stack([torch.ones_like(image),
+                                image,
+                                1 - image], dim=1)
+            
+        image = embedding(image)
+        image = image.to(device)
+        image = image.view(500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
+        
+        mps.automemory = True
+        mps.unbind_mode = True
+        mps.trace(image)
+        
+        # Forward
+        for _ in range(5):
+            result = mps(image)
+            
+    def test_uniform_mps_paramedges(self, setup_mps):
+        MPS = setup_mps
+        
+        image_size = (10, 10)
+        mps = MPS(image_size=image_size, uniform=True, param_edges=True)
+
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        mps = mps.to(device)
+
+        # batch_size x height x width
+        image = torch.randn(500, image_size[0], image_size[1])
+
+        def embedding(image: torch.Tensor) -> torch.Tensor:
+            return torch.stack([torch.ones_like(image),
+                                image,
+                                1 - image], dim=1)
+            
+        image = embedding(image)
+        image = image.to(device)
+        image = image.view(500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
+        
+        mps.automemory = True
+        mps.unbind_mode = True
+        mps.trace(image)
+        
+        # Forward
+        for _ in range(5):
+            result = mps(image)
+            
+    @pytest.fixture
+    def setup_peps(self):
         
         class PEPS(tk.TensorNetwork):
     
-            def __init__(self, image_size):
+            def __init__(self, image_size, uniform=False, param_edges=False):
                 super().__init__(name='PEPS')
                 
                 # Create TN
@@ -3971,7 +4043,8 @@ class TestTNModels:
                     for j in range(image_size[1]):
                         node = tk.ParamNode(shape=(2, 2, 2, 2, 3),
                                             axes_names=('left', 'right', 'up', 'down', 'input'),
-                                            name=f'input_node_[{i},{j}]',
+                                            name=f'input_node_({i},{j})',
+                                            param_edges=param_edges,
                                             network=self)
                         aux_lst.append(node)
                     input_nodes.append(aux_lst)
@@ -3987,27 +4060,46 @@ class TestTNModels:
                             input_nodes[i][j]['right'] ^ input_nodes[i][0]['left']
                         else:
                             input_nodes[i][j]['right'] ^ input_nodes[i][j + 1]['left']
-                        
-                # j = len(input_nodes[0]) - 1
-                # for i in range(len(input_nodes) - 1):
-                #     input_nodes[i][j]['right'] ^ input_nodes[i][0]['left']
-                        
-                # i = len(input_nodes) - 1
-                # for j in range(len(input_nodes[i]) - 1):
-                #     input_nodes[i][j]['down'] ^ input_nodes[0][j]['up']
+                            
+                self.input_nodes = input_nodes
+                
+                if uniform:   
+                    uniform_memory = tk.ParamNode(shape=(2, 2, 2, 2, 3),
+                                                axes_names=('left', 'right', 'up', 'down', 'input'),
+                                                name='virtual_uniform',
+                                                network=self,
+                                                virtual=True)
+                    self.uniform_memory = uniform_memory
                 
                 # Initialize nodes
-                std = 1e-9
-                for lst in input_nodes:
-                    for node in lst:
-                        tensor = torch.randn(node.shape) * std
-                        # random_eye = torch.randn(tensor.shape[0], tensor.shape[2]) * std
-                        # random_eye  = random_eye + torch.eye(tensor.shape[0], tensor.shape[2])
-                        # tensor[:, 0, :] = random_eye
-                        
-                        node.tensor = tensor
-                
-                self.input_nodes = input_nodes
+                if uniform:
+                    std = 1e-9
+                    tensor = torch.randn(uniform_memory.shape) * std
+                    # random_eye = torch.randn(tensor.shape[0], tensor.shape[2]) * std
+                    # random_eye  = random_eye + torch.eye(tensor.shape[0], tensor.shape[2])
+                    # tensor[:, 0, :] = random_eye
+                    
+                    uniform_memory._unrestricted_set_tensor(tensor)
+                    
+                    for lst in input_nodes:
+                        for node in lst:
+                            del self._memory_nodes[node._tensor_info['address']]
+                            node._tensor_info['address'] = None
+                            node._tensor_info['node_ref'] = uniform_memory
+                            node._tensor_info['full'] = True
+                            node._tensor_info['stack_idx'] = None
+                            node._tensor_info['index'] = None
+                            
+                else:
+                    std = 1e-9
+                    for lst in input_nodes:
+                        for node in lst:
+                            tensor = torch.randn(node.shape) * std
+                            # random_eye = torch.randn(tensor.shape[0], tensor.shape[2]) * std
+                            # random_eye  = random_eye + torch.eye(tensor.shape[0], tensor.shape[2])
+                            # tensor[:, 0, :] = random_eye
+                            
+                            node.tensor = tensor
                 
             def set_data_nodes(self) -> None:
                 input_edges = []
@@ -4039,53 +4131,86 @@ class TestTNModels:
                 for i in range(n_rows):
                     if i > 0:
                         for j in range(n_cols):
-                            if j == 0:
-                                aux_result = current_2_lines[0][j] @ current_2_lines[0][j + 1]
-                                new_node1, new_node2 = aux_result.split(node1_axes=['left_0', 'left_1', 'up_0', 'down_0'],
-                                                                        node2_axes=['right_0', 'right_1', 'up_1', 'down_1'],
-                                                                        rank=2)
-                                new_node1.get_axis('splitted').name = 'right'
-                                new_node2.get_axis('splitted').name = 'left'
-                                current_2_lines[0][j] = new_node1
-                                current_2_lines[0][j + 1] = new_node2
-                            elif j < (n_cols - 1):
-                                aux_result = current_2_lines[0][j] @ current_2_lines[0][j + 1]
-                                new_node1, new_node2 = aux_result.split(node1_axes=['left', 'up_0', 'down_0'],
-                                                                        node2_axes=['right_0', 'right_1', 'up_1', 'down_1'],
-                                                                        rank=2)
-                                new_node1.get_axis('splitted').name = 'right'
-                                new_node2.get_axis('splitted').name = 'left'
-                                current_2_lines[0][j] = new_node1
-                                current_2_lines[0][j + 1] = new_node2
+                            if i < (n_rows - 1):
+                                if j == 0:
+                                    aux_result = current_2_lines[0][j] @ current_2_lines[0][j + 1]
+                                    new_node1, new_node2 = aux_result.split(node1_axes=['left_0', 'left_1', 'up_0', 'down_0'],
+                                                                            node2_axes=['right_0', 'right_1', 'up_1', 'down_1'],
+                                                                            rank=2)
+                                    new_node1.get_axis('splitted').name = 'right'
+                                    new_node2.get_axis('splitted').name = 'left'
+                                    current_2_lines[0][j] = new_node1
+                                    current_2_lines[0][j + 1] = new_node2
+                                elif j < (n_cols - 1):
+                                    aux_result = current_2_lines[0][j] @ current_2_lines[0][j + 1]
+                                    new_node1, new_node2 = aux_result.split(node1_axes=['left', 'up_0', 'down_0'],
+                                                                            node2_axes=['right_0', 'right_1', 'up_1', 'down_1'],
+                                                                            rank=2)
+                                    new_node1.get_axis('splitted').name = 'right'
+                                    new_node2.get_axis('splitted').name = 'left'
+                                    current_2_lines[0][j] = new_node1
+                                    current_2_lines[0][j + 1] = new_node2
+                                else:
+                                    aux_result = current_2_lines[0][j] @ current_2_lines[0][0]
+                                    new_node1, new_node2 = aux_result.split(node1_axes=['left', 'up_0', 'down_0'],
+                                                                            node2_axes=['right', 'up_1', 'down_1'],
+                                                                            rank=2)
+                                    new_node1.get_axis('splitted').name = 'right'
+                                    new_node2.get_axis('splitted').name = 'left'
+                                    current_2_lines[0][j] = new_node1
+                                    current_2_lines[0][0] = new_node2
                             else:
-                                aux_result = current_2_lines[0][j] @ current_2_lines[0][0]
-                                new_node1, new_node2 = aux_result.split(node1_axes=['left', 'up_0', 'down_0'],
-                                                                        node2_axes=['right', 'up_1', 'down_1'],
-                                                                        rank=2)
-                                new_node1.get_axis('splitted').name = 'right'
-                                new_node2.get_axis('splitted').name = 'left'
-                                current_2_lines[0][j] = new_node1
-                                current_2_lines[0][0] = new_node2
+                                if j == 0:
+                                    aux_result = current_2_lines[0][j] @ current_2_lines[0][j + 1]
+                                    new_node1, new_node2 = aux_result.split(node1_axes=['left_0', 'left_1'],
+                                                                            node2_axes=['right_0', 'right_1'],
+                                                                            rank=2)
+                                    new_node1.get_axis('splitted').name = 'right'
+                                    new_node2.get_axis('splitted').name = 'left'
+                                    current_2_lines[0][j] = new_node1
+                                    current_2_lines[0][j + 1] = new_node2
+                                elif j < (n_cols - 1):
+                                    aux_result = current_2_lines[0][j] @ current_2_lines[0][j + 1]
+                                    new_node1, new_node2 = aux_result.split(node1_axes=['left'],
+                                                                            node2_axes=['right_0', 'right_1'],
+                                                                            rank=2)
+                                    new_node1.get_axis('splitted').name = 'right'
+                                    new_node2.get_axis('splitted').name = 'left'
+                                    current_2_lines[0][j] = new_node1
+                                    current_2_lines[0][j + 1] = new_node2
+                                else:
+                                    aux_result = current_2_lines[0][j] @ current_2_lines[0][0]
+                                    new_node1, new_node2 = aux_result.split(node1_axes=['left'],
+                                                                            node2_axes=['right'],
+                                                                            rank=2)
+                                    new_node1.get_axis('splitted').name = 'right'
+                                    new_node2.get_axis('splitted').name = 'left'
+                                    current_2_lines[0][j] = new_node1
+                                    current_2_lines[0][0] = new_node2
                     if i < (n_rows - 1):
                         for j in range(n_cols):
                             current_2_lines[1][j] = current_2_lines[0][j] @ current_2_lines[1][j]
                             
-                    current_2_lines[0] = current_2_lines[1]
-                    current_2_lines[1] = result[(i + 1) * n_cols:((i + 2) * n_cols)]
+                        current_2_lines[0] = current_2_lines[1]
+                        if i < (n_rows - 2):
+                            current_2_lines[1] = result[(i + 2) * n_cols:((i + 3) * n_cols)]
                             
                 result = current_2_lines[0][0]
                 for node in current_2_lines[0][1:]:
-                    result @= result
                     result @= node
-                result @= result
                 
                 return result
+            
+        return PEPS
+            
+    def test_peps(self, setup_peps):
+        PEPS = setup_peps
         
         image_size = (3, 3)
-        mps = PEPS(image_size=image_size)
+        peps = PEPS(image_size=image_size)
 
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        mps = mps.to(device)
+        peps = peps.to(device)
 
         # batch_size x height x width
         image = torch.randn(500, image_size[0], image_size[1])
@@ -4099,19 +4224,101 @@ class TestTNModels:
         image = image.to(device)
         image = image.view(500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
         
-        mps.automemory = True
-        mps.unbind_mode = True
-        mps.trace(image)
+        peps.automemory = True
+        peps.unbind_mode = True
+        peps.trace(image)
         
         # Forward
         for _ in range(5):
-            result = mps(image)
+            result = peps(image)
+            
+    def test_uniform_peps(self, setup_peps):
+        PEPS = setup_peps
         
-        
-        
-        
-    
+        image_size = (3, 3)
+        peps = PEPS(image_size=image_size, uniform=True)
 
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        peps = peps.to(device)
+
+        # batch_size x height x width
+        image = torch.randn(500, image_size[0], image_size[1])
+
+        def embedding(image: torch.Tensor) -> torch.Tensor:
+            return torch.stack([torch.ones_like(image),
+                                image,
+                                1 - image], dim=1)
+            
+        image = embedding(image)
+        image = image.to(device)
+        image = image.view(500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
+        
+        peps.automemory = True
+        peps.unbind_mode = True
+        peps.trace(image)
+        
+        # Forward
+        for _ in range(5):
+            result = peps(image)
+            
+    def test_peps_paramedges(self, setup_peps):
+        PEPS = setup_peps
+        
+        image_size = (3, 3)
+        peps = PEPS(image_size=image_size, param_edges=True)
+
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        peps = peps.to(device)
+
+        # batch_size x height x width
+        image = torch.randn(500, image_size[0], image_size[1])
+
+        def embedding(image: torch.Tensor) -> torch.Tensor:
+            return torch.stack([torch.ones_like(image),
+                                image,
+                                1 - image], dim=1)
+            
+        image = embedding(image)
+        image = image.to(device)
+        image = image.view(500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
+        
+        peps.automemory = True
+        peps.unbind_mode = True
+        peps.trace(image)
+        
+        # Forward
+        for _ in range(5):
+            result = peps(image)
+            
+    def test_uniform_peps_paramedges(self, setup_peps):
+        PEPS = setup_peps
+        
+        image_size = (3, 3)
+        peps = PEPS(image_size=image_size, uniform=True, param_edges=True)
+
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        peps = peps.to(device)
+
+        # batch_size x height x width
+        image = torch.randn(500, image_size[0], image_size[1])
+
+        def embedding(image: torch.Tensor) -> torch.Tensor:
+            return torch.stack([torch.ones_like(image),
+                                image,
+                                1 - image], dim=1)
+            
+        image = embedding(image)
+        image = image.to(device)
+        image = image.view(500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
+        
+        peps.automemory = True
+        peps.unbind_mode = True
+        peps.trace(image)
+        
+        # Forward
+        for _ in range(5):
+            result = peps(image)
+            
 
 def test_for_peps():
     node1 = tk.ParamNode(shape=(3, 4),

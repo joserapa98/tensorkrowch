@@ -739,7 +739,7 @@ def _split_first(node: AbstractNode,
     else:
         node._successors['split'] = [successor]
 
-    net._list_ops.append((node, 'permute', len(node._successors['split']) - 1))
+    net._list_ops.append((node, 'split', len(node._successors['split']) - 1))
     
     node._record_in_inverse_memory()
 
@@ -879,99 +879,164 @@ AbstractNode.split_ = split_
 
 
 # TODO: HACER SVD OPERACION INDEPENDIENTE PARA NO TENER QUE REPETIR TANTOS CALCULOS
-def svd(node: AbstractNode,
-        axis: Ax,
-        side = 'left',
-        rank: Optional[int] = None,
-        cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
+# NOTE: svd solo puede ser operaciones in-place de edges
+# por lo mismo que contract
+# def svd(node: AbstractNode,
+#         axis: Ax,
+#         side = 'left',
+#         rank: Optional[int] = None,
+#         cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     
-    edge = node[axis]
+#     edge = node[axis]
     
-    if edge.is_dangling():
-        raise ValueError('Edge should be connected to perform SVD')
+#     if edge.is_dangling():
+#         raise ValueError('Edge should be connected to perform SVD')
     
-    node1, node2 = node, node.neighbours(axis)
-    node1_name, node2_name = node1.name, node2.name
-    axis1, axis2 = node1.get_axis(axis), node2.in_which_axis(edge)
-    axis1_name, axis2_name = axis1.name, axis2.name
+#     node1, node2 = node, node.neighbours(axis)
+#     node1_name, node2_name = node1.name, node2.name
+#     axis1, axis2 = node1.get_axis(axis), node2.in_which_axis(edge)
+#     axis1_name, axis2_name = axis1.name, axis2.name
     
-    batch_axes = []
-    for ax in node1._axes:
-        if ax.is_batch() and (ax.name in node2.axes_names):
-            batch_axes.append(ax)
+#     batch_axes = []
+#     for ax in node1._axes:
+#         if ax.is_batch() and (ax.name in node2.axes_names):
+#             batch_axes.append(ax)
     
-    n_batches = len(batch_axes)
-    n_axes1 = len(node1._axes) - n_batches - 1
-    n_axes2 = len(node2._axes) - n_batches - 1
+#     n_batches = len(batch_axes)
+#     n_axes1 = len(node1._axes) - n_batches - 1
+#     n_axes2 = len(node2._axes) - n_batches - 1
     
-    contracted = node.contract(axis)
-    new_node1, new_node2 = split(node=contracted,
-                                 node1_axes=list(range(n_batches,
-                                                       n_batches + n_axes1)),
-                                 node2_axes=list(range(n_batches + n_axes1,
-                                                       n_batches + n_axes1 + n_axes2)),
-                                 side=side,
-                                 rank=rank,
-                                 cum_percentage=cum_percentage)
+#     contracted = node.contract(axis)
+#     new_node1, new_node2 = split(node=contracted,
+#                                  node1_axes=list(range(n_batches,
+#                                                        n_batches + n_axes1)),
+#                                  node2_axes=list(range(n_batches + n_axes1,
+#                                                        n_batches + n_axes1 + n_axes2)),
+#                                  side=side,
+#                                  rank=rank,
+#                                  cum_percentage=cum_percentage)
     
-    # new_node1
-    prev_nums = [ax.num for ax in batch_axes]
-    for i in range(new_node1.rank):
-        if (i not in prev_nums) and (i != axis1.num):
-            prev_nums.append(i)
-    prev_nums += [axis1.num]
+#     # new_node1
+#     prev_nums = [ax.num for ax in batch_axes]
+#     for i in range(new_node1.rank):
+#         if (i not in prev_nums) and (i != axis1.num):
+#             prev_nums.append(i)
+#     prev_nums += [axis1.num]
     
-    if prev_nums != list(range(new_node1.rank)):
-        permutation = inverse_permutation(prev_nums)
-        new_node1 = new_node1.permute_(permutation)
+#     if prev_nums != list(range(new_node1.rank)):
+#         permutation = inverse_permutation(prev_nums)
+#         new_node1 = new_node1.permute_(permutation)
         
-    # new_node2 
-    prev_nums = [node2.in_which_axis(node1[ax]).num for ax in batch_axes] + [axis2.num]
-    for i in range(new_node2.rank):
-        if i not in prev_nums:
-            prev_nums.append(i)
+#     # new_node2 
+#     prev_nums = [node2.in_which_axis(node1[ax]).num for ax in batch_axes] + [axis2.num]
+#     for i in range(new_node2.rank):
+#         if i not in prev_nums:
+#             prev_nums.append(i)
             
-    if prev_nums != list(range(new_node2.rank)):
-        permutation = inverse_permutation(prev_nums)
-        new_node2 = new_node2.permute_(permutation)
+#     if prev_nums != list(range(new_node2.rank)):
+#         permutation = inverse_permutation(prev_nums)
+#         new_node2 = new_node2.permute_(permutation)
     
-    new_node1.name = 'svd'
-    new_node1.get_axis(axis1.num).name = axis1_name
+#     new_node1.name = 'svd'
+#     new_node1.get_axis(axis1.num).name = axis1_name
     
-    new_node2.name = 'svd'
-    new_node2.get_axis(axis2.num).name = axis2_name
+#     new_node2.name = 'svd'
+#     new_node2.get_axis(axis2.num).name = axis2_name
     
-    return new_node1, new_node2
+#     return new_node1, new_node2
     
-AbstractNode.svd = svd
+# AbstractNode.svd = svd
 
 
-def svd_(node: AbstractNode,
-         axis: Ax,
+# def svd_(node: AbstractNode,
+#          axis: Ax,
+#          side = 'left',
+#          rank: Optional[int] = None,
+#          cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
+    
+#     edge = node[axis]
+    
+#     if edge.is_dangling():
+#         raise ValueError('Edge should be connected to perform SVD')
+    
+#     node1, node2 = node, node.neighbours(axis)
+#     node1_name, node2_name = node1.name, node2.name
+#     axis1, axis2 = node1.get_axis(axis), node2.in_which_axis(edge)
+#     axis1_name, axis2_name = axis1.name, axis2.name
+    
+#     batch_axes = []
+#     for ax in node1._axes:
+#         if ax.is_batch() and (ax.name in node2.axes_names):
+#             batch_axes.append(ax)
+    
+#     n_batches = len(batch_axes)
+#     n_axes1 = len(node1._axes) - n_batches - 1
+#     n_axes2 = len(node2._axes) - n_batches - 1
+    
+#     contracted = node.contract_(axis)
+#     new_node1, new_node2 = split_(node=contracted,
+#                                   node1_axes=list(range(n_batches,
+#                                                         n_batches + n_axes1)),
+#                                   node2_axes=list(range(n_batches + n_axes1,
+#                                                         n_batches + n_axes1 + n_axes2)),
+#                                   side=side,
+#                                   rank=rank,
+#                                   cum_percentage=cum_percentage)
+    
+#     # new_node1
+#     prev_nums = [ax.num for ax in batch_axes]
+#     for i in range(new_node1.rank):
+#         if (i not in prev_nums) and (i != axis1.num):
+#             prev_nums.append(i)
+#     prev_nums += [axis1.num]
+    
+#     if prev_nums != list(range(new_node1.rank)):
+#         permutation = inverse_permutation(prev_nums)
+#         new_node1 = new_node1.permute_(permutation)
+        
+#     # new_node2 
+#     prev_nums = [node2.in_which_axis(node1[ax]).num for ax in batch_axes] + [axis2.num]
+#     for i in range(new_node2.rank):
+#         if i not in prev_nums:
+#             prev_nums.append(i)
+            
+#     if prev_nums != list(range(new_node2.rank)):
+#         permutation = inverse_permutation(prev_nums)
+#         new_node2 = new_node2.permute_(permutation)
+        
+#     new_node1.name = node1_name
+#     new_node1.get_axis(axis1.num).name = axis1_name
+    
+#     new_node2.name = node2_name
+#     new_node2.get_axis(axis2.num).name = axis2_name
+    
+#     return new_node1, new_node2
+    
+# AbstractNode.svd_ = svd_
+
+
+def svd_(edge,
          side = 'left',
          rank: Optional[int] = None,
          cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
     
-    edge = node[axis]
-    
     if edge.is_dangling():
         raise ValueError('Edge should be connected to perform SVD')
     
-    node1, node2 = node, node.neighbours(axis)
+    node1, node2 = edge.node1, edge.node2
     node1_name, node2_name = node1.name, node2.name
-    axis1, axis2 = node1.get_axis(axis), node2.in_which_axis(edge)
-    axis1_name, axis2_name = axis1.name, axis2.name
+    axis1, axis2 = edge.axis1, edge.axis2
     
     batch_axes = []
-    for ax in node1._axes:
-        if ax.is_batch() and (ax.name in node2.axes_names):
-            batch_axes.append(ax)
+    for axis in node1._axes:
+        if axis.is_batch() and (axis.name in node2.axes_names):
+            batch_axes.append(axis)
     
     n_batches = len(batch_axes)
     n_axes1 = len(node1._axes) - n_batches - 1
     n_axes2 = len(node2._axes) - n_batches - 1
     
-    contracted = node.contract_(axis)
+    contracted = edge.contract_()
     new_node1, new_node2 = split_(node=contracted,
                                   node1_axes=list(range(n_batches,
                                                         n_batches + n_axes1)),
@@ -1001,16 +1066,16 @@ def svd_(node: AbstractNode,
     if prev_nums != list(range(new_node2.rank)):
         permutation = inverse_permutation(prev_nums)
         new_node2 = new_node2.permute_(permutation)
-        
+    
     new_node1.name = node1_name
-    new_node1.get_axis(axis1.num).name = axis1_name
+    new_node1.get_axis(axis1.num).name = axis1.name
     
     new_node2.name = node2_name
-    new_node2.get_axis(axis2.num).name = axis2_name
+    new_node2.get_axis(axis2.num).name = axis2.name
     
     return new_node1, new_node2
     
-AbstractNode.svd_ = svd_
+AbstractEdge.svd_ = svd_
 
 
 #################   CONTRACT   #################
@@ -1568,6 +1633,11 @@ contract_edges = Operation(_check_first_contract_edges,
                            _contract_edges_next)
 
 
+# NOTE: contract for edges can only be in-place, since we
+# cannot know which node is the neighbour of another
+# through one edge, when we are performing operations,
+# because resultant nodes inherit edges that point to other
+# two leaf nodes
 # def contract(edge: AbstractEdge) -> Node:
 #     """
 #     Contract only one edge
@@ -1577,58 +1647,17 @@ contract_edges = Operation(_check_first_contract_edges,
 # AbstractEdge.contract = contract
 
 
-# def contract_(edge: AbstractEdge) -> Node:
-#     """
-#     Contract only one edge
-#     """
-#     result = contract_edges([edge], edge.node1, edge.node2)
-#     result._reattach_edges(True)
-    
-#     # Delete nodes (and their edges) from the TN
-#     net = result.network
-#     net.delete_node(edge.node1)
-#     net.delete_node(edge.node2)
-    
-#     # Add edges of result to the TN
-#     for res_edge in result._edges:
-#         net._add_edge(res_edge)
-    
-#     net._change_node_type(result, 'leaf')
-    
-#     edge.node1._successors = dict()
-#     edge.node2._successors = dict()
-    
-#     # Remove non-leaf name
-#     result.name = 'contract_edges_ip'
-    
-#     return result
-
-# AbstractEdge.contract_ = contract_
-
-
-def contract(node: AbstractNode, axis: Ax) -> Node:
+def contract_(edge: AbstractEdge) -> Node:
     """
     Contract only one edge
     """
-    return contract_edges([node[axis]], node, node.neighbours(axis))
-
-AbstractNode.contract = contract
-
-
-def contract_(node: AbstractNode, axis: Ax) -> Node:
-    """
-    Contract only one edge
-    """
-    node1 = node
-    node2 = node.neighbours(axis)
-    
-    result = contract_edges([node[axis]], node1, node2)
+    result = contract_edges([edge], edge.node1, edge.node2)
     result._reattach_edges(True)
     
     # Delete nodes (and their edges) from the TN
     net = result.network
-    net.delete_node(node1)
-    net.delete_node(node2)
+    net.delete_node(edge.node1)
+    net.delete_node(edge.node2)
     
     # Add edges of result to the TN
     for res_edge in result._edges:
@@ -1636,15 +1665,56 @@ def contract_(node: AbstractNode, axis: Ax) -> Node:
     
     net._change_node_type(result, 'leaf')
     
-    node1._successors = dict()
-    node2._successors = dict()
+    edge.node1._successors = dict()
+    edge.node2._successors = dict()
     
     # Remove non-leaf name
     result.name = 'contract_edges_ip'
     
     return result
 
-AbstractNode.contract_ = contract_
+AbstractEdge.contract_ = contract_
+
+
+# def contract(node: AbstractNode, axis: Ax) -> Node:
+#     """
+#     Contract only one edge
+#     """
+#     return contract_edges([node[axis]], node, node.neighbours(axis))
+
+# AbstractNode.contract = contract
+
+
+# def contract_(node: AbstractNode, axis: Ax) -> Node:
+#     """
+#     Contract only one edge
+#     """
+#     node1 = node
+#     node2 = node.neighbours(axis)
+    
+#     result = contract_edges([node[axis]], node1, node2)
+#     result._reattach_edges(True)
+    
+#     # Delete nodes (and their edges) from the TN
+#     net = result.network
+#     net.delete_node(node1)
+#     net.delete_node(node2)
+    
+#     # Add edges of result to the TN
+#     for res_edge in result._edges:
+#         net._add_edge(res_edge)
+    
+#     net._change_node_type(result, 'leaf')
+    
+#     node1._successors = dict()
+#     node2._successors = dict()
+    
+#     # Remove non-leaf name
+#     result.name = 'contract_edges_ip'
+    
+#     return result
+
+# AbstractNode.contract_ = contract_
 
 
 # NOTE: más rápido -> es una estuidez, al llamar a contract_edges el input
@@ -1716,13 +1786,18 @@ def get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> List[AbstractE
 # NOTE: modo no Operation
 
 
-def contract_between(node1: AbstractNode, node2: AbstractNode) -> Node:
+def contract_between(node1: AbstractNode,
+                     node2: AbstractNode,
+                     axes: Optional[Sequence[Ax]] = None) -> Node:
     """
     Contract all shared edges between two nodes, also performing batch contraction
     between batch edges that share name in both nodes
     """
     start = time.time()
-    edges = get_shared_edges(node1, node2)
+    if axes is None:
+        edges = get_shared_edges(node1, node2)
+    else:
+        edges = [node1.get_edge(ax) for ax in axes]
     if PRINT_MODE: print('Get edges:', time.time() - start)
     if not edges:
         raise ValueError(f'No batch edges neither shared edges between '
@@ -1733,12 +1808,14 @@ AbstractNode.__matmul__ = contract_between
 AbstractNode.contract_between = contract_between
 
 
-def contract_between_(node1: AbstractNode, node2: AbstractNode) -> Node:
+def contract_between_(node1: AbstractNode,
+                      node2: AbstractNode,
+                      axes: Optional[Sequence[Ax]] = None) -> Node:
     """
     Contract all shared edges between two nodes, also performing batch contraction
     between batch edges that share name in both nodes
     """
-    result = contract_between(node1, node2)
+    result = contract_between(node1, node2, axes)
     result._reattach_edges(True)
     
     # Delete nodes (and their edges) from the TN

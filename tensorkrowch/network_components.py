@@ -2538,9 +2538,9 @@ class TensorNetwork(nn.Module):
         with torch.no_grad():
             self._tracing = True
             self(example)
-            # self._tracing = True  # TODO: IMPORTANT! Solve this
-            # self(example)
-        self._tracing = False
+            self._tracing = False
+            self(example)
+        # self._tracing = False
 
     def _add_node(self, node: AbstractNode, override: bool = False) -> None:
         """
@@ -3087,13 +3087,13 @@ class TensorNetwork(nn.Module):
             return output.tensor
         
         else:
-            output = self.contract()
+            # output = self.contract()
             
             # total = time.time()
-            # for op in self._seq_ops:
-            #     # start = time.time()
-            #     output = self.operations[op[0]](**op[1])
-            #     # print(f'Time {op[0]}: {time.time() - start:.4f}')
+            for op in self._seq_ops:
+                # start = time.time()
+                output = self.operations[op[0]](**op[1])
+                # print(f'Time {op[0]}: {time.time() - start:.4f}')
             # print(f'Total time: {time.time() - total:.4f}')
                 
             return output.tensor

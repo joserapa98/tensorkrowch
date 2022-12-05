@@ -5,7 +5,7 @@ from tensorkrowch.network_components import AbstractStackEdge, StackEdge, ParamS
 from tensorkrowch.network_components import TensorNetwork
 
 from tensorkrowch.node_operations import (connect, disconnect, get_shared_edges,
-                                      contract_edges, contract,
+                                      contract_edges, #contract,
                                       contract_between)
 
 from tensorkrowch.node_operations import (permute, tprod, mul, add, sub,

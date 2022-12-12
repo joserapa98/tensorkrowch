@@ -2632,6 +2632,7 @@ class TensorNetwork(nn.Module):
     def delete_non_leaf(self):
         # TODO: tarda mogoll'on, tengo que arreglarlo
         self._list_ops = []
+        self._inverse_memory = dict()
         
         if self._non_leaf_nodes or self._virtual_nodes:
             # TODO: pensar esto, igual no hace falta siempre cambiar los leaf nodes

@@ -1411,7 +1411,7 @@ def _contract_edges_first(edges: List[AbstractEdge],
     node2_is_stack = isinstance(node2, (StackNode, ParamStackNode))
     if node1_is_stack and node2_is_stack:
             new_node = StackNode(axes_names=new_axes_names,
-                                 name=f'contract',
+                                 name=f'contract_edges',
                                  network=node1._network,
                                  tensor=result,
                                  edges=new_edges,

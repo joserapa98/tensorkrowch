@@ -14,247 +14,43 @@ import time
 
 class TestMPS:
     
-    def test_mps1(self):
-        # boundary = obc, param_bond = False
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=5, boundary='obc')
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21 # TODO: no uso permanent_nodes
-        # TODO: It is equal to 13 because it counts Stacknode edges,
-        #  should we have also references to the _leaf nodes??
-        assert len(mps.edges) == 1
+    def test_mps(self):
         
-    def test_mps2(self):
-        # boundary = obc, param_bond = False
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='obc')
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-        
-    def test_mps3(self):
-        # boundary = obc, param_bond = False
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=1, boundary='obc')
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-        
-    def test_mps4(self):
-        # boundary = obc, param_bond = False
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=9, boundary='obc')
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-        
-    def test_mps5(self):
-        # boundary = obc, param_bond = False
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=10, boundary='obc')
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-        
-    def test_mps6(self):
-        # boundary = obc, param_bond = True
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=5, boundary='obc', param_bond=True)
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-        
-    def test_mps7(self):
-        # boundary = obc, param_bond = True
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='obc', param_bond=True)
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-        
-    def test_mps8(self):
-        # boundary = obc, param_bond = True
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=1, boundary='obc', param_bond=True)
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-    
-    def test_mps9(self):
-        # boundary = obc, param_bond = True
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=9, boundary='obc', param_bond=True)
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-
-    def test_mps10(self):
-        # boundary = obc, param_bond = True
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=10, boundary='obc', param_bond=True)
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-
-    def test_mps11(self):
-        # boundary = pbc, param_bond = False
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=5, boundary='pbc')
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-
-    def test_mps12(self):
-        # boundary = pbc, param_bond = False
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='pbc')
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-
-    def test_mps13(self):
-        # boundary = pbc, param_bond = False
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=1, boundary='pbc')
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-
-    def test_mps14(self):
-        # boundary = pbc, param_bond = False
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=9, boundary='pbc')
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-
-    def test_mps15(self):
-        # boundary = pbc, param_bond = False
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=10, boundary='pbc')
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-
-    def test_mps16(self):
-        # boundary = pbc, param_bond = True
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=5, boundary='pbc', param_bond=True)
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-
-    def test_mps17(self):
-        # boundary = pbc, param_bond = True
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='pbc', param_bond=True)
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-
-    def test_mps18(self):
-        # boundary = pbc, param_bond = True
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=1, boundary='pbc', param_bond=True)
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-
-    def test_mps19(self):
-        # boundary = pbc, param_bond = True
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=9, boundary='pbc', param_bond=True)
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
-
-    def test_mps20(self):
-        # boundary = pbc, param_bond = True
-        mps = tk.MPS(n_sites=11, d_phys=5, n_labels=10, d_bond=2, l_position=10, boundary='pbc', param_bond=True)
-
-        data = torch.randn(1000, 5, 10)
-        result = mps.forward(data)
-        mean = result.mean(0)
-        mean[0].backward()
-        std = result.std(0)
-        assert len(mps.permanent_nodes) == 21
-        assert len(mps.edges) == 1
+        for boundary in ['obc', 'pbc']:
+            for param_bond in [True, False]:
+                for l_position in [0, 1, 5, 9, 10]:
+                    
+                    mps = tk.MPS(n_sites=11,
+                                 d_phys=5,
+                                 n_labels=12,
+                                 d_bond=2,
+                                 l_position=l_position,
+                                 boundary=boundary,
+                                 param_bond=param_bond)
+                    data = torch.randn(10, 100, 5)
+                    
+                    for automemory in [True, False]:
+                        for unbind_mode in [True, False]:
+                            for inline_input in [True, False]:
+                                for inline_mats in [True, False]:
+                                    print(boundary, param_bond, l_position,
+                                          automemory, unbind_mode, inline_input, inline_mats)
+                                    mps.automemory = automemory
+                                    mps.unbind_mode = unbind_mode
+                                    mps.inline_input = inline_input
+                                    mps.inline_mats = inline_mats
+                                    
+                                    mps.trace(data[:, 0, :].view(10, 1, 5))
+                                    result = mps(data)
+                                    
+                                    assert result.shape == (100, 12)
+                                    assert len(mps.edges) == 1
+                                    assert len(mps.leaf_nodes) == 11
+                                    assert len(mps.data_nodes) == 10
+                                    if not inline_input and automemory:
+                                        assert len(mps.virtual_nodes) == 4
+                                    else:
+                                        assert len(mps.virtual_nodes) == 3
 
     def test_extreme_cases(self):
         # Extreme cases
@@ -268,11 +64,11 @@ class TestMPS:
 def test_example_mps():
     mps = tk.MPS(n_sites=2, d_phys=2, n_labels=2, d_bond=2, l_position=1, boundary='obc').cuda()
 
-    data = torch.randn(1, 2, 1).cuda()
+    data = torch.randn(1, 1, 2).cuda()
     result = mps.forward(data)
     result[0, 0].backward()
 
-    I = data.squeeze(2)
+    I = data.squeeze(0)
     A = mps.left_node.tensor
     B = mps.output_node.tensor
     grad_A1 = mps.left_node.grad
@@ -290,8 +86,8 @@ def test_example2_mps():
     for node in mps.nodes.values():
         node.set_tensor(init_method='ones')
 
-    data = torch.ones(1, 4)
-    data = torch.stack([data, 1 - data], dim=1)
+    data = torch.ones(4, 1)
+    data = torch.stack([data, 1 - data], dim=2)
     result = mps.forward(data)
     result[0, 0].backward()
     result
@@ -355,8 +151,8 @@ def test_convnode():
                     input_edges.append(edge)
                     
             super().set_data_nodes(input_edges, 2)
-            for data_node in self.data_nodes.values():
-                data_node.axes[1].name = 'stack'
+            # for data_node in self.data_nodes.values():
+            #     data_node.axes[1].name = 'stack'
         
         def contract(self):
             result = self['node']
@@ -378,6 +174,7 @@ def test_param_non_leaf():
     node1[2] ^ node2[0]
     node3 = node1 @ node2
     
+    node3.name = 'paramnode3'
     paramnode3 = node3.parameterize()
     
     print()
@@ -417,12 +214,12 @@ def test_conv_mps():
                 
                 node.tensor = tensor
                     
-            eye_tensor = torch.eye(node.shape[0], node.shape[2]).view([node.shape[0], 1, node.shape[2]])
-            eye_tensor = eye_tensor.expand(node.shape)
-            tensor = eye_tensor + std * torch.randn(node.shape)
+            eye_tensor = torch.eye(output_node.shape[0], output_node.shape[2])
+            eye_tensor = eye_tensor.view([output_node.shape[0], 1, output_node.shape[2]])
+            eye_tensor = eye_tensor.expand(output_node.shape)
+            tensor = eye_tensor + std * torch.randn(output_node.shape)
             
             output_node.tensor = tensor
-            
             
             self.input_nodes = input_nodes
             self.output_node = output_node
@@ -434,8 +231,8 @@ def test_conv_mps():
                     input_edges.append(node['input'])
                         
                 super().set_data_nodes(input_edges, 2)
-                for data_node in self.data_nodes.values():
-                    data_node.axes[1].name = 'stack_patches'
+                # for data_node in self.data_nodes.values():
+                #     data_node.axes[1].name = 'stack_patches'
         
         def contract(self):
             stack_input = tk.stack(self.input_nodes)

@@ -2377,7 +2377,18 @@ class ParamStackEdge(AbstractStackEdge, ParamEdge):
         mats = []
         for edge in self.edges:
             mats.append(edge.matrix)
-        return stack_unequal_tensors(mats)
+        stacked_mats = stack_unequal_tensors(mats)
+        
+        # When stacking nodes that were previously stacked, and the memory of
+        # the current stack makes reference to the previous one with, possibly,
+        # a different size, the stacked_mats could have a size that is smaller
+        # from the current stack
+        if stacked_mats.shape[-2:] != (self._size, self._size):
+            pad = [self._size - stacked_mats.shape[-1], 0,
+                   self._size - stacked_mats.shape[-2], 0]
+            stacked_mats = nn.functional.pad(stacked_mats, pad)
+            
+        return stacked_mats
 
     def __xor__(self, other: 'ParamStackEdge') -> ParamEdge:
         return connect_stack(self, other)
@@ -2534,7 +2545,7 @@ class TensorNetwork(nn.Module):
         self.delete_non_leaf()
         self._unbind_mode = unbind
         
-    def trace(self, example: Tensor) -> None:
+    def trace(self, example: Optional[Tensor] = None) -> None:
         with torch.no_grad():
             self._tracing = True
             self(example)
@@ -2961,28 +2972,36 @@ class TensorNetwork(nn.Module):
         if self.data_nodes:
             raise ValueError('Tensor network data nodes should be unset in order to set new ones')
         
+        # Only make stack_data_memory if all the input edges have the same dimension
+        same_dim = True
+        for i in range(len(input_edges) - 1):
+            if input_edges[i].size() != input_edges[i + 1].size():
+                same_dim = False
+                break
+        
         # num_batch_edges = len(names_batch_edges)
 
-        # TODO: Stack data node donde se guardan los datos, se supone que todas las features tienen la misma dim
-        stack_node = Node(shape=(len(input_edges), *([1]*num_batch_edges), input_edges[0].size()),  # TODO: supongo edge es AbstractEdge
-                          axes_names=('n_features',
-                                      *(['batch']*num_batch_edges),
-                                      'feature'),
-                          name=f'stack_data_memory',  # TODO: guardo aqui la memory, no uso memory_data_nodes
-                          network=self,
-                          virtual=True)
-        n_features_node = Node(shape=(stack_node.shape[0],),
-                               axes_names=('n_features',),
-                               name='virtual_n_features',
-                               network=self,
-                               virtual=True)
-        feature_node = Node(shape=(stack_node.shape[-1],),
-                            axes_names=('feature',),
-                            name='virtual_feature',
+        if same_dim:
+            # TODO: Stack data node donde se guardan los datos, se supone que todas las features tienen la misma dim
+            stack_node = Node(shape=(len(input_edges), *([1]*num_batch_edges), input_edges[0].size()),  # TODO: supongo edge es AbstractEdge
+                            axes_names=('n_features',
+                                        *(['batch']*num_batch_edges),
+                                        'feature'),
+                            name=f'stack_data_memory',  # TODO: guardo aqui la memory, no uso memory_data_nodes
                             network=self,
                             virtual=True)
-        stack_node['n_features'] ^ n_features_node['n_features']
-        stack_node['feature'] ^ feature_node['feature']
+            n_features_node = Node(shape=(stack_node.shape[0],),
+                                axes_names=('n_features',),
+                                name='virtual_n_features',
+                                network=self,
+                                virtual=True)
+            feature_node = Node(shape=(stack_node.shape[-1],),
+                                axes_names=('feature',),
+                                name='virtual_feature',
+                                network=self,
+                                virtual=True)
+            stack_node['n_features'] ^ n_features_node['n_features']
+            stack_node['feature'] ^ feature_node['feature']
 
         # if names_batch_edges is not None:
         #     if len(names_batch_edges) != num_batch_edges:
@@ -3009,13 +3028,14 @@ class TensorNetwork(nn.Module):
             node['feature'] ^ edge
             data_nodes.append(node)
             
-        for i, node in enumerate(data_nodes):
-            del self._memory_nodes[node._tensor_info['address']]
-            node._tensor_info['address'] = None
-            node._tensor_info['node_ref'] = stack_node
-            node._tensor_info['full'] = False
-            node._tensor_info['stack_idx'] = i
-            node._tensor_info['index'] = i
+        if same_dim:
+            for i, node in enumerate(data_nodes):
+                del self._memory_nodes[node._tensor_info['address']]
+                node._tensor_info['address'] = None
+                node._tensor_info['node_ref'] = stack_node
+                node._tensor_info['full'] = False
+                node._tensor_info['stack_idx'] = i
+                node._tensor_info['index'] = i
 
     def unset_data_nodes(self) -> None:
         if self.data_nodes:
@@ -3069,14 +3089,15 @@ class TensorNetwork(nn.Module):
         # Custom, optimized contraction methods should be defined for each new subclass of TensorNetwork
         raise NotImplementedError('Contraction methods not implemented for generic TensorNetwork class')
 
-    def forward(self, data: Tensor) -> Tensor:
+    def forward(self, data: Optional[Tensor] = None) -> Tensor:
         """
         Contract Tensor Network with input data with shape batch x n_features x feature.
         """
         # NOTE: solo hay que definir de antemano set_data_nodes y contract
-        if not self.data_nodes:
-            self.set_data_nodes()
-        self._add_data(data=data)
+        if data is not None:
+            if not self.data_nodes:
+                self.set_data_nodes()
+            self._add_data(data=data)
         
         if not self.non_leaf_nodes:
             output = self.contract()

@@ -1289,6 +1289,12 @@ class TestSVD:
         net, edge, node1 = setup
         node2 = net['node2']
         
+        tensor1 = torch.eye(15, 3).reshape(3, 5, 3)
+        node1.tensor = tensor1
+        
+        tensor2 = torch.eye(3, 15).reshape(3, 5, 3)
+        node2.tensor = tensor2
+        
         stacked = tk.stack([node1, node2])
         unbinded = tk.unbind(stacked)
         
@@ -2609,8 +2615,8 @@ class TestStackUnbind:
         net = tk.TensorNetwork()
         nodes = []
         input_edges = []
-        for _ in range(10):
-            shape = torch.randint(low=2, high=5, size=(3,)).tolist()
+        for i in range(10):
+            shape = torch.arange(i + 2, i + 5).int().tolist()
             node = tk.ParamNode(shape=shape,
                                 axes_names=('left', 'input', 'right'),
                                 network=net,
@@ -2655,7 +2661,7 @@ class TestStackUnbind:
             
             assert node.shape == shapes[i]
             for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j]
+                assert shapes[i][j] <= stack.shape[j + 1]
             
         # Unbind
         unbinded = tk.unbind(stack)
@@ -2699,7 +2705,7 @@ class TestStackUnbind:
             
             assert node.shape == shapes[i]
             for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j]
+                assert shapes[i][j] <= stack.shape[j + 1]
         
         unbinded = tk.unbind(stack)
         for i, node in enumerate(unbinded):
@@ -2747,7 +2753,7 @@ class TestStackUnbind:
             
             assert node.shape == shapes[i]
             for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j]
+                assert shapes[i][j] <= stack.shape[j + 1]
             
         # Unbind
         unbinded = tk.unbind(stack)
@@ -2791,7 +2797,7 @@ class TestStackUnbind:
             
             assert node.shape == shapes[i]
             for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j]
+                assert shapes[i][j] <= stack.shape[j + 1]
         
         unbinded = tk.unbind(stack)
         for i, node in enumerate(unbinded):
@@ -2839,7 +2845,7 @@ class TestStackUnbind:
             
             assert node.shape == shapes[i]
             for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j]
+                assert shapes[i][j] <= stack.shape[j + 1]
             
         # Unbind
         unbinded = tk.unbind(stack)
@@ -2883,7 +2889,7 @@ class TestStackUnbind:
             
             assert node.shape == shapes[i]
             for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j]
+                assert shapes[i][j] <= stack.shape[j + 1]
         
         unbinded = tk.unbind(stack)
         for i, node in enumerate(unbinded):
@@ -2931,7 +2937,7 @@ class TestStackUnbind:
             
             assert node.shape == shapes[i]
             for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j]
+                assert shapes[i][j] <= stack.shape[j + 1]
             
         # Unbind
         unbinded = tk.unbind(stack)
@@ -2975,7 +2981,7 @@ class TestStackUnbind:
             
             assert node.shape == shapes[i]
             for j in range(node.rank):
-                assert shapes[i][j] <= stack.shape[j]
+                assert shapes[i][j] <= stack.shape[j + 1]
         
         unbinded = tk.unbind(stack)
         for i, node in enumerate(unbinded):
@@ -3033,7 +3039,9 @@ class TestStackUnbind:
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
         assert restack._tensor_info['stack_idx'] == slice(0, 9, 2)
-        assert restack._tensor_info['index'] == slice(0, 9, 2)
+        assert restack._tensor_info['index'][0] == slice(0, 9, 2)
+        # Here index is a list of slices, since the re-stack max shape is
+        # smaller than the shape of the original stack
             
         # Re-unbind
         reunbinded = tk.unbind(restack)
@@ -3052,7 +3060,7 @@ class TestStackUnbind:
         assert restack_all._tensor_info['address'] is None
         assert restack_all._tensor_info['node_ref'] == stack
         assert restack_all._tensor_info['stack_idx'] == new_index
-        assert restack_all._tensor_info['index'] == new_index
+        assert restack_all._tensor_info['index'] == [new_index]
         
         # Re-unbind all
         reunbinded_all = tk.unbind(restack_all)
@@ -3081,7 +3089,7 @@ class TestStackUnbind:
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
         assert restack._tensor_info['stack_idx'] == slice(0, 9, 2)
-        assert restack._tensor_info['index'] == slice(0, 9, 2)
+        assert restack._tensor_info['index'][0] == slice(0, 9, 2)
             
         reunbinded = tk.unbind(restack)
         new_index = range(0, 10, 2)
@@ -3098,7 +3106,7 @@ class TestStackUnbind:
         assert restack_all._tensor_info['address'] is None
         assert restack_all._tensor_info['node_ref'] == stack
         assert restack_all._tensor_info['stack_idx'] == new_index
-        assert restack_all._tensor_info['index'] == new_index
+        assert restack_all._tensor_info['index'] == [new_index]
         
         reunbinded_all = tk.unbind(restack_all)
         for i, node in enumerate(reunbinded_all):
@@ -3137,7 +3145,7 @@ class TestStackUnbind:
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
         assert restack._tensor_info['stack_idx'] == slice(0, 9, 2)
-        assert restack._tensor_info['index'] == slice(0, 9, 2)
+        assert restack._tensor_info['index'][0] == slice(0, 9, 2)
             
         # Re-unbind
         reunbinded = tk.unbind(restack)
@@ -3156,7 +3164,7 @@ class TestStackUnbind:
         assert restack_all._tensor_info['address'] is None
         assert restack_all._tensor_info['node_ref'] == stack
         assert restack_all._tensor_info['stack_idx'] == new_index
-        assert restack_all._tensor_info['index'] == new_index
+        assert restack_all._tensor_info['index'] == [new_index]
         
         # Re-unbind all
         reunbinded_all = tk.unbind(restack_all)
@@ -3185,7 +3193,7 @@ class TestStackUnbind:
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
         assert restack._tensor_info['stack_idx'] == slice(0, 9, 2)
-        assert restack._tensor_info['index'] == slice(0, 9, 2)
+        assert restack._tensor_info['index'][0] == slice(0, 9, 2)
             
         reunbinded = tk.unbind(restack)
         new_index = range(0, 10, 2)
@@ -3202,7 +3210,7 @@ class TestStackUnbind:
         assert restack_all._tensor_info['address'] is None
         assert restack_all._tensor_info['node_ref'] == stack
         assert restack_all._tensor_info['stack_idx'] == new_index
-        assert restack_all._tensor_info['index'] == new_index
+        assert restack_all._tensor_info['index'] == [new_index]
         
         reunbinded_all = tk.unbind(restack_all)
         for i, node in enumerate(reunbinded_all):

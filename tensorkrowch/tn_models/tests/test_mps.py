@@ -14,7 +14,9 @@ import time
 
 class TestMPS:
     
-    def test_mps(self):
+    def test_all_algorithms(self):
+        example = torch.randn(10, 1, 5)
+        data = torch.randn(10, 100, 5)
         
         for boundary in ['obc', 'pbc']:
             for param_bond in [True, False]:
@@ -27,7 +29,82 @@ class TestMPS:
                                  l_position=l_position,
                                  boundary=boundary,
                                  param_bond=param_bond)
-                    data = torch.randn(10, 100, 5)
+                    
+                    for automemory in [True, False]:
+                        for unbind_mode in [True, False]:
+                            for inline_input in [True, False]:
+                                for inline_mats in [True, False]:
+                                    mps.automemory = automemory
+                                    mps.unbind_mode = unbind_mode
+                                    mps.inline_input = inline_input
+                                    mps.inline_mats = inline_mats
+                                    
+                                    mps.trace(example)
+                                    result = mps(data)
+                                    
+                                    assert result.shape == (100, 12)
+                                    assert len(mps.edges) == 1
+                                    assert len(mps.leaf_nodes) == 11
+                                    assert len(mps.data_nodes) == 10
+                                    if not inline_input and automemory:
+                                        assert len(mps.virtual_nodes) == 4
+                                    else:
+                                        assert len(mps.virtual_nodes) == 3
+                                        
+    def test_all_algorithms_diff_d_phys(self):
+        d_phys = torch.randint(low=2, high=7, size=(10,)).tolist()
+        example = [torch.randn(1, d) for d in d_phys]
+        data = [torch.randn(100, d) for d in d_phys]
+        
+        for boundary in ['obc', 'pbc']:
+            for param_bond in [True, False]:
+                for l_position in [0, 1, 5, 9, 10]:
+                    
+                    mps = tk.MPS(n_sites=11,
+                                 d_phys=d_phys,
+                                 n_labels=12,
+                                 d_bond=2,
+                                 l_position=l_position,
+                                 boundary=boundary,
+                                 param_bond=param_bond)
+                    
+                    for automemory in [True, False]:
+                        for unbind_mode in [True, False]:
+                            for inline_input in [True, False]:
+                                for inline_mats in [True, False]:
+                                    mps.automemory = automemory
+                                    mps.unbind_mode = unbind_mode
+                                    mps.inline_input = inline_input
+                                    mps.inline_mats = inline_mats
+                                    
+                                    mps.trace(example)
+                                    result = mps(data)
+                                    
+                                    assert result.shape == (100, 12)
+                                    assert len(mps.edges) == 1
+                                    assert len(mps.leaf_nodes) == 11
+                                    assert len(mps.data_nodes) == 10
+                                    if not inline_input and automemory:
+                                        assert len(mps.virtual_nodes) == 1
+                                    else:
+                                        assert len(mps.virtual_nodes) == 0
+                                        
+    def test_all_algorithms_diff_d_bond(self):
+        d_bond = torch.randint(low=2, high=7, size=(11,)).tolist()
+        example = torch.randn(10, 1, 5)
+        data = torch.randn(10, 100, 5)
+        
+        for boundary in ['obc', 'pbc']:
+            for param_bond in [True, False]:
+                for l_position in [0, 1, 5, 9, 10]:
+                    
+                    mps = tk.MPS(n_sites=11,
+                                 d_phys=5,
+                                 n_labels=12,
+                                 d_bond=d_bond[:-1] if boundary == 'obc' else d_bond,
+                                 l_position=l_position,
+                                 boundary=boundary,
+                                 param_bond=param_bond)
                     
                     for automemory in [True, False]:
                         for unbind_mode in [True, False]:
@@ -40,7 +117,7 @@ class TestMPS:
                                     mps.inline_input = inline_input
                                     mps.inline_mats = inline_mats
                                     
-                                    mps.trace(data[:, 0, :].view(10, 1, 5))
+                                    mps.trace(example)
                                     result = mps(data)
                                     
                                     assert result.shape == (100, 12)
@@ -51,46 +128,175 @@ class TestMPS:
                                         assert len(mps.virtual_nodes) == 4
                                     else:
                                         assert len(mps.virtual_nodes) == 3
+                                        
+    def test_all_algorithms_diff_d_phys_d_bond(self):
+        d_phys = torch.randint(low=2, high=7, size=(10,)).tolist()
+        d_bond = torch.randint(low=2, high=7, size=(11,)).tolist()
+        example = [torch.randn(1, d) for d in d_phys]
+        data = [torch.randn(100, d) for d in d_phys]
+        
+        for boundary in ['obc', 'pbc']:
+            for param_bond in [True, False]:
+                for l_position in [0, 1, 5, 9, 10]:
+                    
+                    mps = tk.MPS(n_sites=11,
+                                 d_phys=d_phys,
+                                 n_labels=12,
+                                 d_bond=d_bond[:-1] if boundary == 'obc' else d_bond,
+                                 l_position=l_position,
+                                 boundary=boundary,
+                                 param_bond=param_bond)
+                    
+                    for automemory in [True, False]:
+                        for unbind_mode in [True, False]:
+                            for inline_input in [True, False]:
+                                for inline_mats in [True, False]:
+                                    print(boundary, param_bond, l_position,
+                                          automemory, unbind_mode, inline_input, inline_mats)
+                                    mps.automemory = automemory
+                                    mps.unbind_mode = unbind_mode
+                                    mps.inline_input = inline_input
+                                    mps.inline_mats = inline_mats
+                                    
+                                    mps.trace(example)
+                                    result = mps(data)
+                                    
+                                    assert result.shape == (100, 12)
+                                    assert len(mps.edges) == 1
+                                    assert len(mps.leaf_nodes) == 11
+                                    assert len(mps.data_nodes) == 10
+                                    if not inline_input and automemory:
+                                        assert len(mps.virtual_nodes) == 1
+                                    else:
+                                        assert len(mps.virtual_nodes) == 0
 
     def test_extreme_cases(self):
-        # Extreme cases
-        mps = tk.MPS(n_sites=2, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='obc', param_bond=True)
+        # Left node + Outpt node
+        mps = tk.MPS(n_sites=2,
+                     d_phys=5,
+                     n_labels=12,
+                     d_bond=2,
+                     l_position=0,
+                     boundary='obc',
+                     param_bond=True)
+        data = torch.randn(1, 100, 5)
+        
+        for automemory in [True, False]:
+            for unbind_mode in [True, False]:
+                for inline_input in [True, False]:
+                    for inline_mats in [True, False]:
+                        mps.automemory = automemory
+                        mps.unbind_mode = unbind_mode
+                        mps.inline_input = inline_input
+                        mps.inline_mats = inline_mats
+                        
+                        mps.trace(data[:, 0, :].view(1, 1, 5))
+                        result = mps(data)
+                        
+                        assert result.shape == (100, 12)
+                        assert len(mps.edges) == 1
+                        assert len(mps.leaf_nodes) == 2
+                        assert len(mps.data_nodes) == 1
+                        assert len(mps.virtual_nodes) == 3
 
-        mps = tk.MPS(n_sites=2, d_phys=5, n_labels=10, d_bond=2, l_position=1, boundary='obc', param_bond=True)
+        # Output node + Right node
+        mps = tk.MPS(n_sites=2,
+                     d_phys=5,
+                     n_labels=12,
+                     d_bond=2,
+                     l_position=1,
+                     boundary='obc',
+                     param_bond=True)
+        data = torch.randn(1, 100, 5)
+        
+        for automemory in [True, False]:
+            for unbind_mode in [True, False]:
+                for inline_input in [True, False]:
+                    for inline_mats in [True, False]:
+                        mps.automemory = automemory
+                        mps.unbind_mode = unbind_mode
+                        mps.inline_input = inline_input
+                        mps.inline_mats = inline_mats
+                        
+                        mps.trace(data[:, 0, :].view(1, 1, 5))
+                        result = mps(data)
+                        
+                        assert result.shape == (100, 12)
+                        assert len(mps.edges) == 1
+                        assert len(mps.leaf_nodes) == 2
+                        assert len(mps.data_nodes) == 1
+                        assert len(mps.virtual_nodes) == 3
 
-        mps = tk.MPS(n_sites=1, d_phys=5, n_labels=10, d_bond=2, l_position=0, boundary='pbc', param_bond=True)
+        # Outpt node
+        mps = tk.MPS(n_sites=1,
+                     d_phys=5,
+                     n_labels=12,
+                     d_bond=2,
+                     l_position=0,
+                     boundary='pbc',
+                     param_bond=True)
+        
+        for automemory in [True, False]:
+            for unbind_mode in [True, False]:
+                for inline_input in [True, False]:
+                    for inline_mats in [True, False]:
+                        mps.automemory = automemory
+                        mps.unbind_mode = unbind_mode
+                        mps.inline_input = inline_input
+                        mps.inline_mats = inline_mats
+                        
+                        # We shouldn't pass any data since the MPS only
+                        # has the output node
+                        mps.trace()
+                        result = mps()  # Same as mps.contract()
+                        
+                        assert result.shape == (12,)
+                        assert len(mps.edges) == 1
+                        assert len(mps.leaf_nodes) == 1
+                        assert len(mps.data_nodes) == 0
+                        assert len(mps.virtual_nodes) == 0
 
+    def test_check_grad(self):
+        mps = tk.MPS(n_sites=2,
+                     d_phys=2,
+                     n_labels=2,
+                     d_bond=2,
+                     l_position=1,
+                     boundary='obc').cuda()
 
-def test_example_mps():
-    mps = tk.MPS(n_sites=2, d_phys=2, n_labels=2, d_bond=2, l_position=1, boundary='obc').cuda()
+        data = torch.randn(1, 1, 2).cuda()
+        result = mps.forward(data)
+        result[0, 0].backward()
 
-    data = torch.randn(1, 1, 2).cuda()
-    result = mps.forward(data)
-    result[0, 0].backward()
+        I = data.squeeze(0)
+        A = mps.left_node.tensor
+        B = mps.output_node.tensor
+        grad_A1 = mps.left_node.grad
+        grad_B1 = mps.output_node.grad
 
-    I = data.squeeze(0)
-    A = mps.left_node.tensor
-    B = mps.output_node.tensor
-    grad_A1 = mps.left_node.grad
-    grad_B1 = mps.output_node.grad
+        grad_A2 = I.t() @ B[:, 0].view(2, 1).t()
+        grad_B2 = (I @ A).t() @ torch.tensor([[1., 0.]]).cuda()
 
-    grad_A2 = I.t() @ B[:, 0].view(2, 1).t()
-    grad_B2 = (I @ A).t() @ torch.tensor([[1., 0.]]).cuda()
+        assert torch.equal(grad_A1, grad_A2)
+        assert torch.equal(grad_B1, grad_B2)
+        
+        
 
-    assert torch.equal(grad_A1, grad_A2)
-    assert torch.equal(grad_B1, grad_B2)
+    def test_example2_mps(self):
+        mps = tk.MPS(n_sites=5,
+                     d_phys=2,
+                     n_labels=2,
+                     d_bond=2,
+                     boundary='obc')
+        
+        for node in mps.nodes.values():
+            node.set_tensor(init_method='ones')
 
-
-def test_example2_mps():
-    mps = tk.MPS(n_sites=5, d_phys=2, n_labels=2, d_bond=2, boundary='obc')
-    for node in mps.nodes.values():
-        node.set_tensor(init_method='ones')
-
-    data = torch.ones(4, 1)
-    data = torch.stack([data, 1 - data], dim=2)
-    result = mps.forward(data)
-    result[0, 0].backward()
-    result
+        data = torch.ones(4, 1)
+        data = torch.stack([data, 1 - data], dim=2)
+        result = mps.forward(data)
+        result[0, 0].backward()
+        result
 
 
 def test_convnode():

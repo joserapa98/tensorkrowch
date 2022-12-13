@@ -84,7 +84,7 @@ class MPS(TensorNetwork):
         self._n_sites = n_sites
         self._boundary = boundary
 
-        # d_phys and d_phys_l
+        # d_phys
         if isinstance(d_phys, (list, tuple)):
             if len(d_phys) != n_sites - 1:
                 raise ValueError('If `d_phys` is given as a sequence of int, '
@@ -94,6 +94,8 @@ class MPS(TensorNetwork):
         elif isinstance(d_phys, int):
             self._d_phys = [d_phys] * l_position + [n_labels] + \
                            [d_phys] * (n_sites - l_position - 1)
+        else:
+            raise TypeError('`d_phys` should be `int` type or a list/tuple of ints')
 
         # d_bond
         if isinstance(d_bond, (list, tuple)):
@@ -113,6 +115,8 @@ class MPS(TensorNetwork):
                 self._d_bond = [d_bond] * (n_sites - 1)
             elif boundary == 'pbc':
                 self._d_bond = [d_bond] * n_sites
+        else:
+            raise TypeError('`d_phys` should be `int` type or a list/tuple of ints')
 
         # param_bond
         self._param_bond = param_bond
@@ -286,20 +290,23 @@ class MPS(TensorNetwork):
                 periodic_edge = self.output_node['left']
 
         if self.l_position == self.n_sites - 1:
-            if self.n_sites - 1 != 0:
-                if self.boundary == 'obc':
+            # if self.n_sites - 1 != 0:
+            if self.boundary == 'obc':
+                if self.n_sites - 1 != 0:
                     self.output_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[-1]),
-                                                 axes_names=('left', 'output'),
-                                                 name='output_node',
-                                                 network=self)
-                                                 #param_edges=self.param_bond())
-                else:
+                                                    axes_names=('left', 'output'),
+                                                    name='output_node',
+                                                    network=self)
+                                                    #param_edges=self.param_bond())
+            else:
+                if self.n_sites - 1 != 0:
                     self.output_node = ParamNode(shape=(self.d_bond[-2], self.d_phys[-1], self.d_bond[-1]),
-                                                 axes_names=('left', 'output', 'right'),
-                                                 name='output_node',
-                                                 network=self)
-                                                 #param_edges=self.param_bond())
-                    self.output_node['right'] ^ periodic_edge
+                                                    axes_names=('left', 'output', 'right'),
+                                                    name='output_node',
+                                                    network=self)
+                                                    #param_edges=self.param_bond())
+                self.output_node['right'] ^ periodic_edge
+                    
             if self.left_env:
                 self.left_env[-1]['right'] ^ self.output_node['left']
             else:
@@ -1275,10 +1282,14 @@ class MPS(TensorNetwork):
 
         # NOTE: node mode
         result = self.output_node
-        if left_env_contracted:
+        if left_env_contracted and right_env_contracted:
+            result = left_env_contracted[0] @ result @ right_env_contracted[0]
+        elif left_env_contracted:
             result = left_env_contracted[0] @ result
-        if right_env_contracted:
+        elif right_env_contracted:
             result = right_env_contracted[0] @ result
+        else:
+            result @= result
             
         # result = left_env_contracted @ self.output_node @ right_env_contracted
         return result

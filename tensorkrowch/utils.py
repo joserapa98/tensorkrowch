@@ -165,7 +165,7 @@ def stack_unequal_tensors(lst_tensors: List[torch.Tensor]) -> torch.Tensor:  # T
         max_shape = list(lst_tensors[0].shape)
         for tensor in lst_tensors[1:]:
             for idx, dim in enumerate(tensor.shape):
-                if (dim != max_shape[idx]) and same_dims:
+                if same_dims and (dim != max_shape[idx]):
                     same_dims = False
                 if dim > max_shape[idx]:
                     max_shape[idx] = dim

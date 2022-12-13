@@ -1971,13 +1971,23 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
         stack_node._tensor_info['node_ref'] = node_ref
         stack_node._tensor_info['full'] = False
         stack_node._tensor_info['stack_idx'] = stack_indices
-        stack_node._tensor_info['index'] = stack_indices  #list(zip(*indices))
         
-        stack_node._shape = (stack_node._shape[0], *node_ref._shape[1:])
-        for edge, size in zip(stack_node._edges[1:], stack_node._shape[1:]):
-            edge._size = size
+        index = [stack_indices]
+        if node_ref.shape[1:] != stack_node.shape[1:]:
+            for i, (max_dim, dim) in enumerate(zip(node_ref.shape[1:], stack_node.shape[1:])):
+                if stack_node._axes[i + 1].is_batch():
+                    index.append(slice(0, None))
+                else:
+                    index.append(slice(max_dim - dim, max_dim))
+        stack_node._tensor_info['index'] = index
+            
+        # stack_node._tensor_info['index'] = stack_indices  #list(zip(*indices))
         
-        # stack_node._record_in_inverse_memory()
+        # stack_node._shape = (stack_node._shape[0], *node_ref._shape[1:])
+        # for edge, size in zip(stack_node._edges[1:], stack_node._shape[1:]):
+        #     edge._size = size
+        
+        # stack_node._record_in_inverse_memory()  # NOTE: no tocar
 
     else:
         # TODO: quitamos todos non-param por lo de la stack de data nodes, hay que
@@ -1996,8 +2006,11 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
                 node._tensor_info['full'] = False
                 node._tensor_info['stack_idx'] = i
                 index = [i]
-                for max_dim, dim in zip(stack_node.shape[1:], shape):
-                    index.append(slice(max_dim - dim, max_dim))
+                for j, (max_dim, dim) in enumerate(zip(stack_node.shape[1:], shape)):
+                    if node._axes[j].is_batch():
+                        index.append(slice(0, None))
+                    else:
+                        index.append(slice(max_dim - dim, max_dim))
                 node._tensor_info['index'] = index
 
                 if all_param:
@@ -2045,8 +2058,11 @@ def _stack_next(successor: Successor,
             node._tensor_info['full'] = False
             node._tensor_info['stack_idx'] = i
             index = [i]
-            for max_dim, dim in zip(stack_tensor.shape[1:], shape):
-                index.append(slice(max_dim - dim, max_dim))
+            for j, (max_dim, dim) in enumerate(zip(stack_tensor.shape[1:], shape)):
+                    if node._axes[j].is_batch():
+                        index.append(slice(0, None))
+                    else:
+                        index.append(slice(max_dim - dim, max_dim))
             node._tensor_info['index'] = index
 
         successor.hints['automemory'] = True
@@ -2116,6 +2132,12 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
         # TODO: originalmente borramos informacion y solo hacemos referencia a la pila
         # This memory management can happen always, even not in contracting mode
         # NOTE: index mode
+        aux_node_ref = node
+        address = node._tensor_info['address']
+        while address is None:
+            aux_node_ref = aux_node_ref._tensor_info['node_ref']
+            address = aux_node_ref._tensor_info['address']
+                
         for i, new_node in enumerate(nodes):
             # shape = new_node.shape
             # if new_node._tensor_info['address'] is not None:
@@ -2134,31 +2156,66 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
                 del new_node.network._memory_nodes[new_node._tensor_info['address']]
             new_node._tensor_info['address'] = None
             
-            aux_node_ref = node
-            address = node._tensor_info['address']
-            while address is None:
-                aux_node_ref = aux_node_ref._tensor_info['node_ref']
-                address = aux_node_ref._tensor_info['address']
-            
             new_node._tensor_info['node_ref'] = aux_node_ref
             new_node._tensor_info['full'] = False
             
-            aux_slice = node._tensor_info['stack_idx']
-            if aux_slice is None:
+            if aux_node_ref == node:
                 new_node._tensor_info['stack_idx'] = i
                 index = [i]
-            elif isinstance(aux_slice, list):
-                new_node._tensor_info['stack_idx'] = aux_slice[i]
-                index = [new_node._tensor_info['stack_idx']]
-            else:    
-                new_node._tensor_info['stack_idx'] = range(aux_slice.start,
-                                                           aux_slice.stop,
-                                                           aux_slice.step)[i]
-                index = [new_node._tensor_info['stack_idx']]
+                for j, (max_dim, dim) in enumerate(zip(node.shape[1:], shape)):  # TODO: max_dim == dim siempre creo
+                    if new_node._axes[j].is_batch():
+                        index.append(slice(0, None))
+                    else:
+                        index.append(slice(max_dim - dim, max_dim))
+                new_node._tensor_info['index'] = index
                 
-            for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo
-                index.append(slice(max_dim - dim, max_dim))
-            new_node._tensor_info['index'] = index
+            else:
+                node_index = node._tensor_info['index']
+                aux_slice = node_index[0]
+                if isinstance(aux_slice, list):
+                    new_node._tensor_info['stack_idx'] = aux_slice[i]
+                    index = [new_node._tensor_info['stack_idx']]
+                else:    
+                    new_node._tensor_info['stack_idx'] = range(aux_slice.start,
+                                                               aux_slice.stop,
+                                                               aux_slice.step)[i]
+                    index = [new_node._tensor_info['stack_idx']]
+                    
+                # If node is indexing from the original stack
+                if node_index[1:]:
+                    for j, (aux_slice, dim) in enumerate(zip(node_index[1:], shape)):
+                        if new_node._axes[j].is_batch():
+                            index.append(slice(0, None))
+                        else:
+                            index.append(slice(aux_slice.stop - dim, aux_slice.stop))
+                # If node has the same shape as the original stack
+                else:
+                    for j, (max_dim, dim) in enumerate(zip(node.shape[1:], shape)):  # TODO: max_dim == dim siempre creo
+                        if new_node._axes[j].is_batch():
+                            index.append(slice(0, None))
+                        else:
+                            index.append(slice(max_dim - dim, max_dim))
+                new_node._tensor_info['index'] = index
+                
+            # aux_slice = node._tensor_info['stack_idx']
+            # if aux_slice is None:
+            #     new_node._tensor_info['stack_idx'] = i
+            #     index = [i]
+            # elif isinstance(aux_slice, list):
+            #     new_node._tensor_info['stack_idx'] = aux_slice[i]
+            #     index = [new_node._tensor_info['stack_idx']]
+            # else:    
+            #     new_node._tensor_info['stack_idx'] = range(aux_slice.start,
+            #                                                aux_slice.stop,
+            #                                                aux_slice.step)[i]
+            #     index = [new_node._tensor_info['stack_idx']]
+                
+            # for j, (max_dim, dim) in enumerate(zip(node.shape[1:], shape)):  # TODO: max_dim == dim siempre creo
+            #     if new_node._axes[j].is_batch():
+            #         index.append(slice(0, None))
+            #     else:
+            #         index.append(slice(max_dim - dim, max_dim))
+            # new_node._tensor_info['index'] = index
         # NOTE: index mode
 
     # else:
@@ -2257,8 +2314,8 @@ def _unbind_next(successor: Successor, node: AbstractNode) -> List[Node]:
             node._record_in_inverse_memory()
             return children[:]  # TODO: añadimos [:] para no poder modificar la lista de hijos desde fuera
         
-        for i, child in enumerate(children):
-            child._tensor_info['index'][batch_idx + 1] = slice(0, new_dim)
+        # for i, child in enumerate(children):
+        #     child._tensor_info['index'][batch_idx + 1] = slice(0, new_dim)
         
         node._record_in_inverse_memory()
         return successor.child[:]  # TODO: cambia el tamaño del batch

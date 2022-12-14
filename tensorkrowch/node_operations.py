@@ -417,12 +417,14 @@ def _check_first_split(node: AbstractNode,
                        node2_axes: Optional[Sequence[Ax]] = None,
                        #  node1: Optional[AbstractNode] = None,
                        #  node2: Optional[AbstractNode] = None,
+                       mode = 'svd',
                        side = 'left',
                        rank: Optional[int] = None,
                        cum_percentage: Optional[float] = None) -> Optional[Successor]:
     kwargs={'node': node,
             'node1_axes': node1_axes,
             'node2_axes': node2_axes,
+            'mode': mode,
             'side': side,
             'rank': rank,
             'cum_percentage': cum_percentage}
@@ -438,6 +440,7 @@ def _split_first(node: AbstractNode,
                  node2_axes: Optional[Sequence[Ax]] = None,
                 #  node1: Optional[AbstractNode] = None,
                 #  node2: Optional[AbstractNode] = None,
+                 mode = 'svd',
                  side = 'left',
                  rank: Optional[int] = None,
                  cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
@@ -458,6 +461,10 @@ def _split_first(node: AbstractNode,
         node2: if `node2_axes` is None, a `node` is the already created node
             in which we will put the second part of the splitted tensor of `node`.
             Used only for svd
+        mode: available modes are `qr` (QR decomposition), `svd` (SVD
+            decomposition cutting off singular values according to `rank`
+            or `cum_percentage`) or `svdr` (like `svd` but multiplying with
+            random diagonal matrix of 1's and -1's)
         side: when performing SVD, the singular values matrix has to be absorbed
             by either the "left" (U) or "right" (Vh) matrix 
         rank: number of singular values to keep
@@ -497,6 +504,7 @@ def _split_first(node: AbstractNode,
         kwargs = {'node': node,
                   'node1_axes': node1_axes,
                   'node2_axes': node2_axes,
+                  'mode': mode,
                   'side': side,
                   'rank': rank,
                   'cum_percentage': cum_percentage}
@@ -592,50 +600,72 @@ def _split_first(node: AbstractNode,
             [reshape_edges1.prod().item()] +
             [reshape_edges2.prod().item()]))
         
-        
-    u, s, vh = torch.linalg.svd(node_tensor, full_matrices=False)
+    if (mode == 'svd') or (mode == 'svdr'):
+        u, s, vh = torch.linalg.svd(node_tensor, full_matrices=False)
 
-    if cum_percentage is not None:
-        if rank is not None:
-            raise ValueError('Only one of `rank` and `cum_percentage` should be provided')
-        percentages = s.cumsum(-1) / s.sum(-1).view(*s.shape[:-1], 1).expand(s.shape)
-        cum_percentage_tensor = torch.tensor(cum_percentage).repeat(percentages.shape[:-1])
-        rank = 0
-        for i in range(percentages.shape[-1]):
-            p = percentages[..., i]
-            rank += 1
-            if torch.ge(p, cum_percentage_tensor).all():  # TODO: while
-                break
+        if cum_percentage is not None:
+            if rank is not None:
+                raise ValueError('Only one of `rank` and `cum_percentage` should be provided')
+            percentages = s.cumsum(-1) / s.sum(-1).view(*s.shape[:-1], 1).expand(s.shape)
+            cum_percentage_tensor = torch.tensor(cum_percentage).repeat(percentages.shape[:-1])
+            rank = 0
+            for i in range(percentages.shape[-1]):
+                p = percentages[..., i]
+                rank += 1
+                if torch.ge(p, cum_percentage_tensor).all():  # TODO: while
+                    break
 
-    if rank is None:
-        # raise ValueError('One of `rank` and `cum_percentage` should be provided')
-        rank = len(s)
-    else:
-        if rank < len(s):
-            u = u[..., :rank]
-            s = s[..., :rank]
-            vh = vh[..., :rank, :]
-        else:
+        if rank is None:
+            # raise ValueError('One of `rank` and `cum_percentage` should be provided')
             rank = len(s)
+        else:
+            if rank < len(s):
+                u = u[..., :rank]
+                s = s[..., :rank]
+                vh = vh[..., :rank, :]
+            else:
+                rank = len(s)
+                
+        if mode == 'svdr':
+            phase = torch.sign(torch.randn(s.shape))
+            phase = torch.diag_embed(phase)
+            u = u @ phase
+            vh = phase @ vh
 
-    if side == 'left':
-        u = u @ torch.diag_embed(s)
-    elif side == 'right':
-        vh = torch.diag_embed(s) @ vh
-    else:
-        # TODO: could be changed to bool or "node1"/"node2"
-        raise ValueError('`side` can only be "left" or "right"')
+        if side == 'left':
+            u = u @ torch.diag_embed(s)
+        elif side == 'right':
+            vh = torch.diag_embed(s) @ vh
+        else:
+            # TODO: could be changed to bool or "node1"/"node2"
+            raise ValueError('`side` can only be "left" or "right"')
 
-    u = u.reshape(*(batch_shape + node1_shape.tolist() + [rank]))
-    vh = vh.reshape(*(batch_shape + [rank] + node2_shape.tolist()))
-           
-    # u = u.permute(*(inverse_permutation(batch_axes + node1_axes) +
-    #                 [len(u.shape) - 1]))
+        # u = u.reshape(*(batch_shape + node1_shape.tolist() + [rank]))
+        # vh = vh.reshape(*(batch_shape + [rank] + node2_shape.tolist()))
+        
+        node1_tensor = u
+        node2_tensor = vh
+            
+        # u = u.permute(*(inverse_permutation(batch_axes + node1_axes) +
+        #                 [len(u.shape) - 1]))
+        
+        # rank_axis = len(batch_shape)
+        # aux_node2_axes = inverse_permutation(batch_axes + node2_axes)
+        # aux_node2_axes = [x + 1 if x >= rank_axis else x for x in aux_node2_axes]
+        # vh = vh.permute(*(aux_node2_axes + [rank_axis]))
+        
+    elif mode == 'qr':
+        q, r = torch.linalg.qr(node_tensor)
+        rank = q.shape[-1]
+        
+        node1_tensor = q
+        node2_tensor = r
     
-    # rank_axis = len(batch_shape)
-    # aux_node2_axes = inverse_permutation(batch_axes + node2_axes)
-    # aux_node2_axes = [x + 1 if x >= rank_axis else x for x in aux_node2_axes]
-    # vh = vh.permute(*(aux_node2_axes + [rank_axis]))
+    else:
+        raise ValueError('`mode` can only be \'svd\', \'svdr\' or \'qr\'')
+    
+    node1_tensor = node1_tensor.reshape(*(batch_shape + node1_shape.tolist() + [rank]))
+    node2_tensor = node2_tensor.reshape(*(batch_shape + [rank] + node2_shape.tolist()))
     
     net = node._network
     
@@ -647,7 +677,7 @@ def _split_first(node: AbstractNode,
                  network=net,
                  leaf=False,
                  param_edges=node.param_edges(),
-                 tensor=u)
+                 tensor=node1_tensor)
     
     node2_axes_names = permute_list(node.axes_names, batch_axes) + \
                        ['splitted'] + \
@@ -657,7 +687,7 @@ def _split_first(node: AbstractNode,
                  network=net,
                  leaf=False,
                  param_edges=node.param_edges(),
-                 tensor=vh)
+                 tensor=node2_tensor)
     
     n_batches = len(batch_axes)
     for edge in node1._edges[n_batches:-1]:
@@ -752,6 +782,7 @@ def _split_next(successor: Successor,
                 node2_axes: Optional[Sequence[Ax]] = None,
                 # node1: Optional[AbstractNode] = None,
                 # node2: Optional[AbstractNode] = None,
+                mode = 'svd',
                 side = 'left',
                 rank: Optional[int] = None,
                 cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
@@ -778,47 +809,70 @@ def _split_next(successor: Successor,
                     [node1_shape.prod().item()] +
                     [node2_shape.prod().item()]))
             
-    u, s, vh = torch.linalg.svd(node_tensor, full_matrices=False)
+    if (mode == 'svd') or (mode == 'svdr'):
+        u, s, vh = torch.linalg.svd(node_tensor, full_matrices=False)
 
-    if cum_percentage is not None:
-        if rank is not None:
-            raise ValueError('Only one of `rank` and `cum_percentage` should be provided')
-        percentages = s.cumsum(-1) / s.sum(-1).view(*s.shape[:-1], 1).expand(s.shape)
-        cum_percentage_tensor = torch.tensor(cum_percentage).repeat(percentages.shape[:-1])
-        rank = 0
-        for i in range(percentages.shape[-1]):
-            p = percentages[..., i]
-            rank += 1
-            if torch.ge(p, cum_percentage_tensor).all():  # TODO: while
-                break
+        if cum_percentage is not None:
+            if rank is not None:
+                raise ValueError('Only one of `rank` and `cum_percentage` should be provided')
+            percentages = s.cumsum(-1) / s.sum(-1).view(*s.shape[:-1], 1).expand(s.shape)
+            cum_percentage_tensor = torch.tensor(cum_percentage).repeat(percentages.shape[:-1])
+            rank = 0
+            for i in range(percentages.shape[-1]):
+                p = percentages[..., i]
+                rank += 1
+                if torch.ge(p, cum_percentage_tensor).all():  # TODO: while
+                    break
 
-    if rank is None:
-        # raise ValueError('One of `rank` and `cum_percentage` should be provided')
-        rank = len(s)
-    else:
-        if rank < len(s):
-            u = u[..., :rank]
-            s = s[..., :rank]
-            vh = vh[..., :rank, :]
-        else:
+        if rank is None:
+            # raise ValueError('One of `rank` and `cum_percentage` should be provided')
             rank = len(s)
+        else:
+            if rank < len(s):
+                u = u[..., :rank]
+                s = s[..., :rank]
+                vh = vh[..., :rank, :]
+            else:
+                rank = len(s)
+                
+        if mode == 'svdr':
+            phase = torch.sign(torch.randn(s.shape))
+            phase = torch.diag_embed(phase)
+            u = u @ phase
+            vh = phase @ vh
 
-    if side == 'left':
-        u = u @ torch.diag_embed(s)
-    elif side == 'right':
-        vh = torch.diag_embed(s) @ vh
-    else:
-        # TODO: could be changed to bool or "node1"/"node2"
-        raise ValueError('`side` can only be "left" or "right"')
+        if side == 'left':
+            u = u @ torch.diag_embed(s)
+        elif side == 'right':
+            vh = torch.diag_embed(s) @ vh
+        else:
+            # TODO: could be changed to bool or "node1"/"node2"
+            raise ValueError('`side` can only be "left" or "right"')
 
-    u = u.reshape(*(batch_shape + node1_shape.tolist() + [rank]))
-    vh = vh.reshape(*(batch_shape + [rank] + node2_shape.tolist()))
+        # u = u.reshape(*(batch_shape + node1_shape.tolist() + [rank]))
+        # vh = vh.reshape(*(batch_shape + [rank] + node2_shape.tolist()))
+        
+        node1_tensor = u
+        node2_tensor = vh
     
-    splitted_edge._size = rank
+        splitted_edge._size = rank
+        
+    elif mode == 'qr':
+        q, r = torch.linalg.qr(node_tensor)
+        rank = q.shape[-1]
+        
+        node1_tensor = q
+        node2_tensor = r
+    
+    else:
+        raise ValueError('`mode` can only be \'svd\', \'svdr\' or \'qr\'')
+    
+    node1_tensor = node1_tensor.reshape(*(batch_shape + node1_shape.tolist() + [rank]))
+    node2_tensor = node2_tensor.reshape(*(batch_shape + [rank] + node2_shape.tolist()))
     
     children = successor.child
-    children[0]._unrestricted_set_tensor(u)
-    children[1]._unrestricted_set_tensor(vh)
+    children[0]._unrestricted_set_tensor(node1_tensor)
+    children[1]._unrestricted_set_tensor(node2_tensor)
     
     node._record_in_inverse_memory()
     
@@ -832,10 +886,11 @@ def split_node(node: AbstractNode,
                  node2_axes: Optional[Sequence[Ax]] = None,
                 #  node1: Optional[AbstractNode] = None,
                 #  node2: Optional[AbstractNode] = None,
+                mode = 'svd',
                  side = 'left',
                  rank: Optional[int] = None,
                  cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
-    return split(node, node1_axes, node2_axes, side, rank, cum_percentage)
+    return split(node, node1_axes, node2_axes, mode, side, rank, cum_percentage)
 
 AbstractNode.split = split_node
 
@@ -845,6 +900,7 @@ def split_(node: AbstractNode,
            node2_axes: Optional[Sequence[Ax]] = None,
            # node1: Optional[AbstractNode] = None,
            # node2: Optional[AbstractNode] = None,
+           mode = 'svd',
            side = 'left',
            rank: Optional[int] = None,
            cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
@@ -852,7 +908,7 @@ def split_(node: AbstractNode,
     Contract only one edge
     """
     node1, node2 = split(node, node1_axes, node2_axes,
-                         side, rank, cum_percentage)
+                         mode, side, rank, cum_percentage)
     node1._reattach_edges(True)
     node2._reattach_edges(True)
     
@@ -1042,6 +1098,7 @@ def svd_(edge,
                                                         n_batches + n_axes1)),
                                   node2_axes=list(range(n_batches + n_axes1,
                                                         n_batches + n_axes1 + n_axes2)),
+                                  mode='svd',
                                   side=side,
                                   rank=rank,
                                   cum_percentage=cum_percentage)
@@ -1076,6 +1133,134 @@ def svd_(edge,
     return new_node1, new_node2
     
 AbstractEdge.svd_ = svd_
+
+
+def svdr_(edge,
+         side = 'left',
+         rank: Optional[int] = None,
+         cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
+    
+    if edge.is_dangling():
+        raise ValueError('Edge should be connected to perform SVD')
+    
+    node1, node2 = edge.node1, edge.node2
+    node1_name, node2_name = node1.name, node2.name
+    axis1, axis2 = edge.axis1, edge.axis2
+    
+    batch_axes = []
+    for axis in node1._axes:
+        if axis.is_batch() and (axis.name in node2.axes_names):
+            batch_axes.append(axis)
+    
+    n_batches = len(batch_axes)
+    n_axes1 = len(node1._axes) - n_batches - 1
+    n_axes2 = len(node2._axes) - n_batches - 1
+    
+    contracted = edge.contract_()
+    new_node1, new_node2 = split_(node=contracted,
+                                  node1_axes=list(range(n_batches,
+                                                        n_batches + n_axes1)),
+                                  node2_axes=list(range(n_batches + n_axes1,
+                                                        n_batches + n_axes1 + n_axes2)),
+                                  mode='svdr',
+                                  side=side,
+                                  rank=rank,
+                                  cum_percentage=cum_percentage)
+    
+    # new_node1
+    prev_nums = [ax.num for ax in batch_axes]
+    for i in range(new_node1.rank):
+        if (i not in prev_nums) and (i != axis1.num):
+            prev_nums.append(i)
+    prev_nums += [axis1.num]
+    
+    if prev_nums != list(range(new_node1.rank)):
+        permutation = inverse_permutation(prev_nums)
+        new_node1 = new_node1.permute_(permutation)
+        
+    # new_node2 
+    prev_nums = [node2.in_which_axis(node1[ax]).num for ax in batch_axes] + [axis2.num]
+    for i in range(new_node2.rank):
+        if i not in prev_nums:
+            prev_nums.append(i)
+            
+    if prev_nums != list(range(new_node2.rank)):
+        permutation = inverse_permutation(prev_nums)
+        new_node2 = new_node2.permute_(permutation)
+    
+    new_node1.name = node1_name
+    new_node1.get_axis(axis1.num).name = axis1.name
+    
+    new_node2.name = node2_name
+    new_node2.get_axis(axis2.num).name = axis2.name
+    
+    return new_node1, new_node2
+    
+AbstractEdge.svdr_ = svdr_
+
+
+def qr_(edge,
+         side = 'left',
+         rank: Optional[int] = None,
+         cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
+    
+    if edge.is_dangling():
+        raise ValueError('Edge should be connected to perform SVD')
+    
+    node1, node2 = edge.node1, edge.node2
+    node1_name, node2_name = node1.name, node2.name
+    axis1, axis2 = edge.axis1, edge.axis2
+    
+    batch_axes = []
+    for axis in node1._axes:
+        if axis.is_batch() and (axis.name in node2.axes_names):
+            batch_axes.append(axis)
+    
+    n_batches = len(batch_axes)
+    n_axes1 = len(node1._axes) - n_batches - 1
+    n_axes2 = len(node2._axes) - n_batches - 1
+    
+    contracted = edge.contract_()
+    new_node1, new_node2 = split_(node=contracted,
+                                  node1_axes=list(range(n_batches,
+                                                        n_batches + n_axes1)),
+                                  node2_axes=list(range(n_batches + n_axes1,
+                                                        n_batches + n_axes1 + n_axes2)),
+                                  mode='qr',
+                                  side=side,
+                                  rank=rank,
+                                  cum_percentage=cum_percentage)
+    
+    # new_node1
+    prev_nums = [ax.num for ax in batch_axes]
+    for i in range(new_node1.rank):
+        if (i not in prev_nums) and (i != axis1.num):
+            prev_nums.append(i)
+    prev_nums += [axis1.num]
+    
+    if prev_nums != list(range(new_node1.rank)):
+        permutation = inverse_permutation(prev_nums)
+        new_node1 = new_node1.permute_(permutation)
+        
+    # new_node2 
+    prev_nums = [node2.in_which_axis(node1[ax]).num for ax in batch_axes] + [axis2.num]
+    for i in range(new_node2.rank):
+        if i not in prev_nums:
+            prev_nums.append(i)
+            
+    if prev_nums != list(range(new_node2.rank)):
+        permutation = inverse_permutation(prev_nums)
+        new_node2 = new_node2.permute_(permutation)
+    
+    new_node1.name = node1_name
+    new_node1.get_axis(axis1.num).name = axis1.name
+    
+    new_node2.name = node2_name
+    new_node2.get_axis(axis2.num).name = axis2.name
+    
+    return new_node1, new_node2
+    
+AbstractEdge.qr_ = qr_
 
 
 #################   CONTRACT   #################

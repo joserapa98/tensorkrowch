@@ -1165,7 +1165,7 @@ class Node(AbstractNode):
                     raise TypeError('`node1_list` should be List[bool] type')
                 axis._node1 = node1_list[i]
             self._edges = edges[:]
-            if self._leaf and not self._network._automemory:
+            if self._leaf:# and not self._network._automemory:
                 # TODO: parameterize, permute, copy, etc.
                 self._reattach_edges(override=override_edges) 
                 # TODO: no se para que puse eso, no es bueno,
@@ -1352,7 +1352,7 @@ class ParamNode(AbstractNode):
                     raise TypeError('`node1_list` should be List[bool] type')
                 axis._node1 = node1_list[i]
             self._edges = edges[:]
-            if self._leaf and not self._network._automemory:
+            if self._leaf:# and not self._network._automemory:
                 self._reattach_edges(override=override_edges)  # TODO: no estoy seguro que haya que hacerlo siempre
 
         # network
@@ -2030,7 +2030,7 @@ class ParamEdge(AbstractEdge, nn.Module):
 
     def copy(self) -> 'ParamEdge':
         new_edge = ParamEdge(node1=self.node1, axis1=self.axis1,
-                             shift=self.shift.item(), slope=self.slope.item(),
+                             shift=self.shift, slope=self.slope,
                              node2=self.node2, axis2=self.axis2)
         return new_edge
 

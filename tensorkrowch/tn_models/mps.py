@@ -122,7 +122,7 @@ class MPS(TensorNetwork):
         self.param_bond(set_param=param_bond)
         self.initialize()
         
-        self.num_batches = num_batches
+        self._num_batches = num_batches
         
         # Contraction algorithm
         self.inline_input = inline_input
@@ -372,7 +372,7 @@ class MPS(TensorNetwork):
             input_edges.append(self.right_node['input'])
             
         super().set_data_nodes(input_edges=input_edges,
-                               num_batch_edges=self.num_batches)
+                               num_batch_edges=self._num_batches)
         
         if self.left_env + self.right_env:
             self.lr_env_data = list(map(lambda node: node.neighbours('input'), self.left_env + self.right_env))
@@ -543,3 +543,75 @@ class MPS(TensorNetwork):
         else:
             result @= result
         return result
+    
+    def canonicalize(self,
+                     mode: Text = 'svd',
+                     rank: Optional[int] = None,
+                     cum_percentage: Optional[float] = None) -> None:
+        # Left
+        left_nodes = []
+        if self.left_node is not None:
+            left_nodes.append(self.left_node)
+        left_nodes += self.left_env
+        
+        if left_nodes:
+            new_left_nodes = []
+            node = left_nodes[0]
+            for _ in range(len(left_nodes)):
+                if mode == 'svd':
+                    result1, result2 = node['right'].svd_(side='right',
+                                                          rank=rank,
+                                                          cum_percentage=cum_percentage)
+                elif mode == 'svdr':
+                    result1, result2 = node['right'].svdr_(side='right',
+                                                           rank=rank,
+                                                           cum_percentage=cum_percentage)
+                elif mode == 'qr':
+                    result1, result2 = node['right'].qr_()
+                else:
+                    raise ValueError('`mode` can only be \'svd\', \'svdr\' or \'qr\'')
+                
+                node = result2
+                result1 = result1.parameterize()
+                new_left_nodes.append(result1)
+                
+            output_node = node
+                
+            if new_left_nodes:
+                self.left_node = new_left_nodes[0]
+            self.left_env = new_left_nodes[1:]
+
+        # Right
+        right_nodes = self.right_env[:]
+        right_nodes.reverse()
+        if self.right_node is not None:
+            right_nodes = [self.right_node] + right_nodes
+        
+        if right_nodes:
+            new_right_nodes = []
+            node = right_nodes[0]
+            for _ in range(len(right_nodes)):
+                if mode == 'svd':
+                    result1, result2 = node['left'].svd_(side='left',
+                                                         rank=rank,
+                                                         cum_percentage=cum_percentage)
+                elif mode == 'svdr':
+                    result1, result2 = node['left'].svdr_(side='left',
+                                                          rank=rank,
+                                                          cum_percentage=cum_percentage)
+                elif mode == 'qr':
+                    result1, result2 = node['left'].qr_()
+                else:
+                    raise ValueError('`mode` can only be \'svd\', \'svdr\' or \'qr\'')
+                
+                node = result1
+                result2 = result2.parameterize()
+                new_right_nodes = [result2] + new_right_nodes
+                
+            output_node = node
+                
+            if new_right_nodes:
+                self.right_node = new_right_nodes[-1]
+            self.right_env = new_right_nodes[:-1]
+            
+        self.output_node = output_node.parameterize()

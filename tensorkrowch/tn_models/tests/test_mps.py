@@ -51,6 +51,21 @@ class TestMPS:
                                     else:
                                         assert len(mps.virtual_nodes) == 3
                                         
+                                    # Canonicalize and continue
+                                    mps.delete_non_leaf()
+                                    mps.canonicalize(rank=2)
+                                    mps.trace(example)
+                                    result = mps(data)
+                                    
+                                    assert result.shape == (100, 12)
+                                    assert len(mps.edges) == 1
+                                    assert len(mps.leaf_nodes) == 11
+                                    assert len(mps.data_nodes) == 10
+                                    if not inline_input and automemory:
+                                        assert len(mps.virtual_nodes) == 4
+                                    else:
+                                        assert len(mps.virtual_nodes) == 3
+                                        
     def test_all_algorithms_diff_d_phys(self):
         d_phys = torch.randint(low=2, high=7, size=(10,)).tolist()
         example = [torch.randn(1, d) for d in d_phys]
@@ -77,6 +92,21 @@ class TestMPS:
                                     mps.inline_input = inline_input
                                     mps.inline_mats = inline_mats
                                     
+                                    mps.trace(example)
+                                    result = mps(data)
+                                    
+                                    assert result.shape == (100, 12)
+                                    assert len(mps.edges) == 1
+                                    assert len(mps.leaf_nodes) == 11
+                                    assert len(mps.data_nodes) == 10
+                                    if not inline_input and automemory:
+                                        assert len(mps.virtual_nodes) == 1
+                                    else:
+                                        assert len(mps.virtual_nodes) == 0
+                                        
+                                    # Canonicalize and continue
+                                    mps.delete_non_leaf()
+                                    mps.canonicalize(rank=2)
                                     mps.trace(example)
                                     result = mps(data)
                                     
@@ -129,6 +159,21 @@ class TestMPS:
                                     else:
                                         assert len(mps.virtual_nodes) == 3
                                         
+                                    # Canonicalize and continue
+                                    mps.delete_non_leaf()
+                                    mps.canonicalize(rank=2)
+                                    mps.trace(example)
+                                    result = mps(data)
+                                    
+                                    assert result.shape == (100, 12)
+                                    assert len(mps.edges) == 1
+                                    assert len(mps.leaf_nodes) == 11
+                                    assert len(mps.data_nodes) == 10
+                                    if not inline_input and automemory:
+                                        assert len(mps.virtual_nodes) == 4
+                                    else:
+                                        assert len(mps.virtual_nodes) == 3
+                                        
     def test_all_algorithms_diff_d_phys_d_bond(self):
         d_phys = torch.randint(low=2, high=7, size=(10,)).tolist()
         d_bond = torch.randint(low=2, high=7, size=(11,)).tolist()
@@ -158,6 +203,21 @@ class TestMPS:
                                     mps.inline_input = inline_input
                                     mps.inline_mats = inline_mats
                                     
+                                    mps.trace(example)
+                                    result = mps(data)
+                                    
+                                    assert result.shape == (100, 12)
+                                    assert len(mps.edges) == 1
+                                    assert len(mps.leaf_nodes) == 11
+                                    assert len(mps.data_nodes) == 10
+                                    if not inline_input and automemory:
+                                        assert len(mps.virtual_nodes) == 1
+                                    else:
+                                        assert len(mps.virtual_nodes) == 0
+                                        
+                                    # Canonicalize and continue
+                                    mps.delete_non_leaf()
+                                    mps.canonicalize(rank=2)
                                     mps.trace(example)
                                     result = mps(data)
                                     

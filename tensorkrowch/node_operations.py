@@ -34,7 +34,6 @@ This script contains:
         *einsum
         *stacked_einsum
 """
-# split, svd, qr, rq, etc. -> using einsum-like strings, useful
 
 from typing import Union, Optional, Text, List, Dict, Tuple, Any, Callable, Sequence
 from abc import abstractmethod
@@ -50,15 +49,8 @@ from tensorkrowch.network_components import *
 
 import time
 
-# Axis = Any
 Ax = Union[int, Text, Axis]
 
-# AbstractNode, Node, ParamNode = Any, Any, Any
-# AbstractEdge, Edge, ParamEdge = Any, Any, Any
-# StackNode = Any
-# AbstractStackEdge, StackEdge, ParamStackEdge = Any, Any, Any
-# Successor = Any
-# TODO: hacer import Tensor, Parameter?
 
 PRINT_MODE = False
 CHECK_TIMES = []
@@ -93,7 +85,7 @@ class Operation:
             return self.func2(*args, **kwargs)
 
 
-#################   BASIC OPS  #################
+#################   PERMUTE    #################
 def _check_first_permute(node: AbstractNode, axes: Sequence[Ax]) -> Optional[Successor]:
     kwargs = {'node': node,
               'axes': axes}
@@ -151,6 +143,37 @@ def _permute_next(successor: Successor, node: AbstractNode, axes: Sequence[Ax]) 
     return child
 
 
+permute = Operation(_check_first_permute, _permute_first, _permute_next)
+def permute_node(node, axes): return permute(node, axes)
+AbstractNode.permute = permute_node
+
+def permute_(node: AbstractNode, axes: Sequence[Ax]) -> Node:
+    axes_nums = []
+    for axis in axes:
+        axes_nums.append(node.get_axis_num(axis))
+
+    if not is_permutation(list(range(len(axes_nums))), axes_nums):
+        raise ValueError('The provided list of axis is not a permutation of the'
+                         ' axes of the node')
+    else:
+        # TODO: allow node.tenso be None?? -> nope, operations must be
+        # performed to a non empty node
+        new_node = Node(axes_names=permute_list(node.axes_names, axes_nums),
+                        name=node._name,
+                        override_node=True,
+                        network=node._network,
+                        param_edges=node.param_edges(),
+                        override_edges=True,
+                        tensor=node.tensor.permute(axes_nums),
+                        edges=permute_list(node._edges, axes_nums),
+                        node1_list=permute_list(node.is_node1(), axes_nums))
+        
+    return new_node
+
+AbstractNode.permute_ = permute_
+
+
+#################   BASIC OPS  #################
 def _check_first_tprod(node1: AbstractNode, node2: AbstractNode) -> Optional[Successor]:
     kwargs = {'node1': node1,
               'node2': node2}
@@ -359,36 +382,6 @@ def _sub_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) ->
     node2._record_in_inverse_memory()
     
     return child
-
-
-permute = Operation(_check_first_permute, _permute_first, _permute_next)
-def permute_node(node, axes): return permute(node, axes)
-AbstractNode.permute = permute_node
-
-def permute_(node: AbstractNode, axes: Sequence[Ax]) -> Node:
-    axes_nums = []
-    for axis in axes:
-        axes_nums.append(node.get_axis_num(axis))
-
-    if not is_permutation(list(range(len(axes_nums))), axes_nums):
-        raise ValueError('The provided list of axis is not a permutation of the'
-                         ' axes of the node')
-    else:
-        # TODO: allow node.tenso be None?? -> nope, operations must be
-        # performed to a non empty node
-        new_node = Node(axes_names=permute_list(node.axes_names, axes_nums),
-                        name=node._name,
-                        override_node=True,
-                        network=node._network,
-                        param_edges=node.param_edges(),
-                        override_edges=True,
-                        tensor=node.tensor.permute(axes_nums),
-                        edges=permute_list(node._edges, axes_nums),
-                        node1_list=permute_list(node.is_node1(), axes_nums))
-        
-    return new_node
-
-AbstractNode.permute_ = permute_
 
 
 tprod = Operation(_check_first_tprod, _tprod_first, _tprod_next)

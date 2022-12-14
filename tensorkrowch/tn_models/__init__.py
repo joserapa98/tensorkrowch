@@ -1,1 +1,1 @@
-from tensorkrowch.tn_models.mps import MPS
+from tensorkrowch.tn_models.mps_layer import MPSLayer, UMPSLayer

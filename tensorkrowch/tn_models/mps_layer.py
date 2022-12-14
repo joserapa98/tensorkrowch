@@ -25,12 +25,14 @@ from torchviz import make_dot
 PRINT_MODE = False
 
 
-class MPS(TensorNetwork):
+class MPSLayer(TensorNetwork):
 
     def __init__(self,
                  n_sites: int,
                  d_phys: Union[int, Sequence[int]],
+                 n_labels: int,
                  d_bond: Union[int, Sequence[int]],
+                 l_position: Optional[int] = None,
                  boundary: Text = 'obc',
                  param_bond: bool = False,
                  num_batches: int = 1,
@@ -43,8 +45,10 @@ class MPS(TensorNetwork):
         ----------
         n_sites: number of sites, including the input and output_node sites
         d_phys: physic dimension
+        n_labels: output_node label dimension
         d_bond: bond dimension. If given as a sequence, the i-th bond
             dimension is always the dimension of the right edge of th i-th node
+        l_position: position of output_node site
         boundary: string indicating whether we are using periodic or open
             boundary conditions
         param_bond: boolean indicating whether bond edges should be parametric
@@ -57,6 +61,11 @@ class MPS(TensorNetwork):
         """
 
         super().__init__(name='mps')
+
+        # l_position
+        if l_position is None:
+            l_position = n_sites // 2
+        self._l_position = l_position
 
         # boundary
         if boundary == 'obc':
@@ -74,12 +83,14 @@ class MPS(TensorNetwork):
 
         # d_phys
         if isinstance(d_phys, (list, tuple)):
-            if len(d_phys) != n_sites:
+            if len(d_phys) != n_sites - 1:
                 raise ValueError('If `d_phys` is given as a sequence of int, '
-                                 'its length should be equal to `n_sites`')
-            self._d_phys = list(d_phys)
+                                 'its length should be equal to `n_sites` - 1')
+            self._d_phys = list(d_phys[:l_position]) + [n_labels] + \
+                           list(d_phys[l_position:])
         elif isinstance(d_phys, int):
-            self._d_phys = [d_phys] * n_sites
+            self._d_phys = [d_phys] * l_position + [n_labels] + \
+                           [d_phys] * (n_sites - l_position - 1)
         else:
             raise TypeError('`d_phys` should be `int` type or a list/tuple of ints')
 
@@ -103,6 +114,12 @@ class MPS(TensorNetwork):
                 self._d_bond = [d_bond] * n_sites
         else:
             raise TypeError('`d_bond` should be `int` type or a list/tuple of ints')
+        
+        # n_labels
+        if isinstance(n_labels, int):
+            self._n_labels = n_labels
+        else:
+            raise TypeError('`n_labels` should be `int` type')
 
         # param_bond
         self._param_bond = param_bond
@@ -136,6 +153,10 @@ class MPS(TensorNetwork):
     @property
     def d_bond(self) -> List[int]:
         return self._d_bond
+    
+    @property
+    def n_labels(self) -> List[int]:
+        return self._n_labels
 
     def param_bond(self, set_param: Optional[bool] = None) -> Optional[bool]:
         """
@@ -605,7 +626,7 @@ class MPS(TensorNetwork):
         self.output_node = output_node.parameterize()
 
 
-class UMPS(TensorNetwork):
+class UMPSLayer(TensorNetwork):
 
     def __init__(self,
                  n_sites: int,

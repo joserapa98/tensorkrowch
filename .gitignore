@@ -1,6 +1,7 @@
 .vscode
 .pytest_cache
 __pycache__
+.ipynb_checkpoints
 
 /training_scripts
 /foo

@@ -22,13 +22,13 @@ class TestMPS:
             for param_bond in [True, False]:
                 for l_position in [0, 1, 5, 9, 10]:
                     
-                    mps = tk.MPS(n_sites=11,
-                                 d_phys=5,
-                                 n_labels=12,
-                                 d_bond=2,
-                                 l_position=l_position,
-                                 boundary=boundary,
-                                 param_bond=param_bond)
+                    mps = tk.MPSLayer(n_sites=11,
+                                      d_phys=5,
+                                      n_labels=12,
+                                      d_bond=2,
+                                      l_position=l_position,
+                                      boundary=boundary,
+                                      param_bond=param_bond)
                     
                     for automemory in [True, False]:
                         for unbind_mode in [True, False]:
@@ -75,13 +75,13 @@ class TestMPS:
             for param_bond in [True, False]:
                 for l_position in [0, 1, 5, 9, 10]:
                     
-                    mps = tk.MPS(n_sites=11,
-                                 d_phys=d_phys,
-                                 n_labels=12,
-                                 d_bond=2,
-                                 l_position=l_position,
-                                 boundary=boundary,
-                                 param_bond=param_bond)
+                    mps = tk.MPSLayer(n_sites=11,
+                                      d_phys=d_phys,
+                                      n_labels=12,
+                                      d_bond=2,
+                                      l_position=l_position,
+                                      boundary=boundary,
+                                      param_bond=param_bond)
                     
                     for automemory in [True, False]:
                         for unbind_mode in [True, False]:
@@ -128,13 +128,13 @@ class TestMPS:
             for param_bond in [True, False]:
                 for l_position in [0, 1, 5, 9, 10]:
                     
-                    mps = tk.MPS(n_sites=11,
-                                 d_phys=5,
-                                 n_labels=12,
-                                 d_bond=d_bond[:-1] if boundary == 'obc' else d_bond,
-                                 l_position=l_position,
-                                 boundary=boundary,
-                                 param_bond=param_bond)
+                    mps = tk.MPSLayer(n_sites=11,
+                                      d_phys=5,
+                                      n_labels=12,
+                                      d_bond=d_bond[:-1] if boundary == 'obc' else d_bond,
+                                      l_position=l_position,
+                                      boundary=boundary,
+                                      param_bond=param_bond)
                     
                     for automemory in [True, False]:
                         for unbind_mode in [True, False]:
@@ -184,13 +184,13 @@ class TestMPS:
             for param_bond in [True, False]:
                 for l_position in [0, 1, 5, 9, 10]:
                     
-                    mps = tk.MPS(n_sites=11,
-                                 d_phys=d_phys,
-                                 n_labels=12,
-                                 d_bond=d_bond[:-1] if boundary == 'obc' else d_bond,
-                                 l_position=l_position,
-                                 boundary=boundary,
-                                 param_bond=param_bond)
+                    mps = tk.MPSLayer(n_sites=11,
+                                      d_phys=d_phys,
+                                      n_labels=12,
+                                      d_bond=d_bond[:-1] if boundary == 'obc' else d_bond,
+                                      l_position=l_position,
+                                      boundary=boundary,
+                                      param_bond=param_bond)
                     
                     for automemory in [True, False]:
                         for unbind_mode in [True, False]:
@@ -230,15 +230,16 @@ class TestMPS:
                                     else:
                                         assert len(mps.virtual_nodes) == 0
 
-    def test_extreme_cases(self):
+    def test_extreme_case_left_output(self):
         # Left node + Outpt node
-        mps = tk.MPS(n_sites=2,
-                     d_phys=5,
-                     n_labels=12,
-                     d_bond=2,
-                     l_position=0,
-                     boundary='obc',
-                     param_bond=True)
+        mps = tk.MPSLayer(n_sites=2,
+                          d_phys=5,
+                          n_labels=12,
+                          d_bond=2,
+                          l_position=0,
+                          boundary='obc',
+                          param_bond=True)
+        example = torch.randn(1, 1, 5)
         data = torch.randn(1, 100, 5)
         
         for automemory in [True, False]:
@@ -250,7 +251,19 @@ class TestMPS:
                         mps.inline_input = inline_input
                         mps.inline_mats = inline_mats
                         
-                        mps.trace(data[:, 0, :].view(1, 1, 5))
+                        mps.trace(example)
+                        result = mps(data)
+                        
+                        assert result.shape == (100, 12)
+                        assert len(mps.edges) == 1
+                        assert len(mps.leaf_nodes) == 2
+                        assert len(mps.data_nodes) == 1
+                        assert len(mps.virtual_nodes) == 3
+                        
+                        # Canonicalize and continue
+                        mps.delete_non_leaf()
+                        mps.canonicalize(rank=2)
+                        mps.trace(example)
                         result = mps(data)
                         
                         assert result.shape == (100, 12)
@@ -259,14 +272,16 @@ class TestMPS:
                         assert len(mps.data_nodes) == 1
                         assert len(mps.virtual_nodes) == 3
 
+    def test_extreme_case_output_right(self):
         # Output node + Right node
-        mps = tk.MPS(n_sites=2,
-                     d_phys=5,
-                     n_labels=12,
-                     d_bond=2,
-                     l_position=1,
-                     boundary='obc',
-                     param_bond=True)
+        mps = tk.MPSLayer(n_sites=2,
+                          d_phys=5,
+                          n_labels=12,
+                          d_bond=2,
+                          l_position=1,
+                          boundary='obc',
+                          param_bond=True)
+        example = torch.randn(1, 1, 5)
         data = torch.randn(1, 100, 5)
         
         for automemory in [True, False]:
@@ -278,7 +293,19 @@ class TestMPS:
                         mps.inline_input = inline_input
                         mps.inline_mats = inline_mats
                         
-                        mps.trace(data[:, 0, :].view(1, 1, 5))
+                        mps.trace(example)
+                        result = mps(data)
+                        
+                        assert result.shape == (100, 12)
+                        assert len(mps.edges) == 1
+                        assert len(mps.leaf_nodes) == 2
+                        assert len(mps.data_nodes) == 1
+                        assert len(mps.virtual_nodes) == 3
+                        
+                        # Canonicalize and continue
+                        mps.delete_non_leaf()
+                        mps.canonicalize(rank=2)
+                        mps.trace(example)
                         result = mps(data)
                         
                         assert result.shape == (100, 12)
@@ -287,14 +314,15 @@ class TestMPS:
                         assert len(mps.data_nodes) == 1
                         assert len(mps.virtual_nodes) == 3
 
+    def test_extreme_case_output(self):
         # Outpt node
-        mps = tk.MPS(n_sites=1,
-                     d_phys=5,
-                     n_labels=12,
-                     d_bond=2,
-                     l_position=0,
-                     boundary='pbc',
-                     param_bond=True)
+        mps = tk.MPSLayer(n_sites=1,
+                          d_phys=5,
+                          n_labels=12,
+                          d_bond=2,
+                          l_position=0,
+                          boundary='pbc',
+                          param_bond=True)
         
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
@@ -317,12 +345,12 @@ class TestMPS:
                         assert len(mps.virtual_nodes) == 0
 
     def test_check_grad(self):
-        mps = tk.MPS(n_sites=2,
-                     d_phys=2,
-                     n_labels=2,
-                     d_bond=2,
-                     l_position=1,
-                     boundary='obc').cuda()
+        mps = tk.MPSLayer(n_sites=2,
+                          d_phys=2,
+                          n_labels=2,
+                          d_bond=2,
+                          l_position=1,
+                          boundary='obc').cuda()
 
         data = torch.randn(1, 1, 2).cuda()
         result = mps.forward(data)
@@ -343,11 +371,11 @@ class TestMPS:
         
 
     def test_example2_mps(self):
-        mps = tk.MPS(n_sites=5,
-                     d_phys=2,
-                     n_labels=2,
-                     d_bond=2,
-                     boundary='obc')
+        mps = tk.MPSLayer(n_sites=5,
+                          d_phys=2,
+                          n_labels=2,
+                          d_bond=2,
+                          boundary='obc')
         
         for node in mps.nodes.values():
             node.set_tensor(init_method='ones')
@@ -357,6 +385,141 @@ class TestMPS:
         result = mps.forward(data)
         result[0, 0].backward()
         result
+
+
+class TestUMPS:
+    
+    def test_all_algorithms(self):
+        example = torch.randn(10, 1, 5)
+        data = torch.randn(10, 100, 5)
+        
+        for param_bond in [True, False]:
+            for l_position in [0, 1, 5, 9, 10]:
+                
+                mps = tk.UMPSLayer(n_sites=11,
+                                   d_phys=5,
+                                   n_labels=12,
+                                   d_bond=2,
+                                   l_position=l_position,
+                                   param_bond=param_bond)
+                
+                for automemory in [True, False]:
+                    for unbind_mode in [True, False]:
+                        for inline_input in [True, False]:
+                            for inline_mats in [True, False]:
+                                mps.automemory = automemory
+                                mps.unbind_mode = unbind_mode
+                                mps.inline_input = inline_input
+                                mps.inline_mats = inline_mats
+                                
+                                mps.trace(example)
+                                result = mps(data)
+                                
+                                assert result.shape == (100, 12)
+                                assert len(mps.edges) == 1
+                                assert len(mps.leaf_nodes) == 11
+                                assert len(mps.data_nodes) == 10
+                                assert len(mps.virtual_nodes) == 4
+                                    
+                                # Canonicalize and continue
+                                # mps.delete_non_leaf()
+                                # mps.canonicalize(rank=2)
+                                # mps.trace(example)
+                                # result = mps(data)
+                                
+                                # assert result.shape == (100, 12)
+                                # assert len(mps.edges) == 1
+                                # assert len(mps.leaf_nodes) == 11
+                                # assert len(mps.data_nodes) == 10
+                                # if not inline_input and automemory:
+                                #     assert len(mps.virtual_nodes) == 4
+                                # else:
+                                #     assert len(mps.virtual_nodes) == 3
+                                
+    def test_extreme_case_left_output(self):
+        # Left node + Outpt node
+        mps = tk.UMPSLayer(n_sites=2,
+                           d_phys=5,
+                           n_labels=12,
+                           d_bond=2,
+                           l_position=0,
+                           param_bond=True)
+        data = torch.randn(1, 100, 5)
+        
+        for automemory in [True, False]:
+            for unbind_mode in [True, False]:
+                for inline_input in [True, False]:
+                    for inline_mats in [True, False]:
+                        mps.automemory = automemory
+                        mps.unbind_mode = unbind_mode
+                        mps.inline_input = inline_input
+                        mps.inline_mats = inline_mats
+                        
+                        mps.trace(data[:, 0, :].view(1, 1, 5))
+                        result = mps(data)
+                        
+                        assert result.shape == (100, 12)
+                        assert len(mps.edges) == 1
+                        assert len(mps.leaf_nodes) == 2
+                        assert len(mps.data_nodes) == 1
+                        assert len(mps.virtual_nodes) == 4
+
+    def test_extreme_case_output_right(self):
+        # Output node + Right node
+        mps = tk.UMPSLayer(n_sites=2,
+                           d_phys=5,
+                           n_labels=12,
+                           d_bond=2,
+                           l_position=1,
+                           param_bond=True)
+        data = torch.randn(1, 100, 5)
+        
+        for automemory in [True, False]:
+            for unbind_mode in [True, False]:
+                for inline_input in [True, False]:
+                    for inline_mats in [True, False]:
+                        mps.automemory = automemory
+                        mps.unbind_mode = unbind_mode
+                        mps.inline_input = inline_input
+                        mps.inline_mats = inline_mats
+                        
+                        mps.trace(data[:, 0, :].view(1, 1, 5))
+                        result = mps(data)
+                        
+                        assert result.shape == (100, 12)
+                        assert len(mps.edges) == 1
+                        assert len(mps.leaf_nodes) == 2
+                        assert len(mps.data_nodes) == 1
+                        assert len(mps.virtual_nodes) == 4
+
+    def test_extreme_case_output(self):
+        # Outpt node
+        mps = tk.UMPSLayer(n_sites=1,
+                           d_phys=5,
+                           n_labels=12,
+                           d_bond=2,
+                           l_position=0,
+                           param_bond=True)
+        
+        for automemory in [True, False]:
+            for unbind_mode in [True, False]:
+                for inline_input in [True, False]:
+                    for inline_mats in [True, False]:
+                        mps.automemory = automemory
+                        mps.unbind_mode = unbind_mode
+                        mps.inline_input = inline_input
+                        mps.inline_mats = inline_mats
+                        
+                        # We shouldn't pass any data since the MPS only
+                        # has the output node
+                        mps.trace()
+                        result = mps()  # Same as mps.contract()
+                        
+                        assert result.shape == (12,)
+                        assert len(mps.edges) == 1
+                        assert len(mps.leaf_nodes) == 1
+                        assert len(mps.data_nodes) == 0
+                        assert len(mps.virtual_nodes) == 1
 
 
 def test_convnode():

@@ -1736,6 +1736,330 @@ class TestSplitQR:
                                                node2['right']]
 
 
+class TestSplitRQ:
+    
+    def test_split_contracted_node(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(10, 2, 5, 4),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node2 = tk.Node(shape=(10, 4, 5, 3),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node2',
+                        init_method='randn',
+                        network=net)
+        edge = node1[3] ^ node2[1]
+        result = node1 @ node2
+        
+        assert len(net.nodes) == 3
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 1
+        assert node1.successors['contract_edges'][0].child == result
+        
+        # Split result
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            mode='rq')
+        
+        assert new_node1.shape == (10, 2, 5, 10)
+        assert new_node1['batch'].size() == 10
+        assert new_node1['left'].size() == 2
+        assert new_node1['input'].size() == 5
+        assert new_node1['splitted'].size() == 10
+        
+        assert new_node2.shape == (10, 10, 5, 3)
+        assert new_node2['batch'].size() == 10
+        assert new_node2['splitted'].size() == 10
+        assert new_node2['input'].size() == 5
+        assert new_node2['right'].size() == 3
+        
+        assert len(net.nodes) == 5
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 3
+        assert result.successors['split'][0].child == [new_node1, new_node2]
+        
+        assert net.edges == [node1['left'], node1['input'],
+                             node2['input'], node2['right']]
+        
+        # If a splitted node is deleted (or just the splitted edge is
+        # disconnected), the neighbour node's splitted edge joins the
+        # network's set of edges. This is something people shouldn't do
+        net.delete_node(new_node1)
+        assert net.edges == [node1['left'], node1['input'],
+                             node2['input'], node2['right'],
+                             new_node2['splitted']]
+        
+        net.delete_node(new_node2)
+        assert net.edges == [node1['left'], node1['input'],
+                             node2['input'], node2['right']]
+        
+    def test_split_contracted_node_disordered_axes(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(10, 2, 20, 5, 4),
+                        axes_names=('batch1', 'left', 'batch2', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node2 = tk.Node(shape=(20, 4, 5, 3, 10),
+                        axes_names=('batch2', 'left', 'input', 'right', 'batch1'),
+                        name='node2',
+                        init_method='randn',
+                        network=net)
+        edge = node1['right'] ^ node2['left']
+        result = node1 @ node2
+        
+        assert result.edges == [node1['batch1'], node1['batch2'],
+                                node1['left'], node1['input'],
+                                node2['input'], node2['right']]
+        
+        # Split result
+        new_node1, new_node2 = result.split(node1_axes=['input_0', 'left'],
+                                            node2_axes=['right', 'batch2', 'input_1'],
+                                            mode='rq')
+        
+        assert new_node1.shape == (10, 5, 2, 10)
+        assert new_node1.axes_names == ['batch1', 'input', 'left', 'splitted']
+        
+        assert new_node2.shape == (10, 10, 3, 20, 5)
+        assert new_node2.axes_names == ['batch1', 'splitted', 'right', 'batch2', 'input']
+        
+    def test_split_in_place(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(10, 2, 5, 4),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node2 = tk.Node(shape=(10, 4, 5, 3),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node2',
+                        init_method='randn',
+                        network=net)
+        node3 = tk.Node(shape=(10, 3, 5, 7),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node3',
+                        init_method='randn',
+                        network=net)
+        edge = node1['right'] ^ node2['left']
+        node2['right'] ^ node3['left']
+        
+        assert len(net.nodes) == 3
+        assert len(net.leaf_nodes) == 3
+        assert len(net.non_leaf_nodes) == 0
+        
+        result = node1.contract_between_(node2)
+        
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 0
+        assert node1.network != net
+        assert node2.network != net
+        
+        # Split result
+        new_node1, new_node2 = result.split_(node1_axes=['left', 'input_0'],
+                                             node2_axes=['input_1', 'right'],
+                                             mode='rq')
+        
+        assert new_node1.shape == (10, 2, 5, 10)
+        assert new_node1['batch'].size() == 10
+        assert new_node1['left'].size() == 2
+        assert new_node1['input'].size() == 5
+        assert new_node1['splitted'].size() == 10
+        
+        assert new_node2.shape == (10, 10, 5, 3)
+        assert new_node2['batch'].size() == 10
+        assert new_node2['splitted'].size() == 10
+        assert new_node2['input'].size() == 5
+        assert new_node2['right'].size() == 3
+        
+        assert len(net.nodes) == 3
+        assert len(net.leaf_nodes) == 3
+        assert len(net.non_leaf_nodes) == 0
+        assert result.network != net
+        
+    def test_split_paramnode(self):
+        node = tk.ParamNode(shape=(10, 7, 5, 4),
+                            axes_names=('left', 'right', 'left', 'right'),
+                            init_method='randn',
+                            param_edges=True)
+        net = node.network
+        
+        assert len(net.nodes) == 1
+        assert len(net.leaf_nodes) == 1
+        assert len(net.non_leaf_nodes) == 0
+        
+        # Split result
+        node1, node2 = node.split(node1_axes=['left_0', 'left_1'],
+                                  node2_axes=['right_0', 'right_1'],
+                                  mode='rq')
+        
+        assert node1.shape == (10, 5, 28)
+        assert node2.shape == (28, 7, 4)
+        
+        assert len(net.nodes) == 3
+        assert len(net.leaf_nodes) == 1
+        assert len(net.non_leaf_nodes) == 2
+        
+        assert net.edges == node.edges
+        
+    def test_split_paramnode_in_place(self):
+        node = tk.ParamNode(shape=(10, 7, 5, 4),
+                            axes_names=('left', 'right', 'left', 'right'),
+                            init_method='randn',
+                            param_edges=True)
+        net = node.network
+        
+        assert len(net.nodes) == 1
+        assert len(net.leaf_nodes) == 1
+        assert len(net.non_leaf_nodes) == 0
+        
+        # Split result
+        node1, node2 = node.split_(node1_axes=['left_0', 'left_1'],
+                                   node2_axes=['right_0', 'right_1'],
+                                   mode='rq')
+        
+        assert node1.shape == (10, 5, 28)
+        assert node2.shape == (28, 7, 4)
+        
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 0
+        
+        assert net.edges == node1.edges[:-1] + node2.edges[1:]
+        
+    def test_split_paramnode_with_trace(self):
+        node = tk.ParamNode(shape=(10, 7, 10, 7),
+                            axes_names=('left', 'right', 'left', 'right'),
+                            init_method='randn',
+                            param_edges=True)
+        node['left_0'] ^ node['left_1']
+        node['right_0'] ^ node['right_1']
+        net = node.network
+        
+        assert len(net.nodes) == 1
+        assert len(net.leaf_nodes) == 1
+        assert len(net.non_leaf_nodes) == 0
+        
+        # Split result
+        node1, node2 = node.split(node1_axes=['left_0', 'right_0'],
+                                  node2_axes=['left_1', 'right_1'],
+                                  mode='rq')
+        
+        assert node1.shape == (10, 7, 70)
+        assert node2.shape == (70, 10, 7)
+        
+        assert len(net.nodes) == 3
+        assert len(net.leaf_nodes) == 1
+        assert len(net.non_leaf_nodes) == 2
+        
+        assert net.edges == []
+        
+        # The splitted ParamEdge is not included
+        assert len(net._modules) == 2
+        assert list(net._modules.values()) == [node['left_0'],
+                                               node['right_0']]
+        
+    def test_split_paramnode_with_trace_in_node1(self):
+        node = tk.ParamNode(shape=(10, 10, 7, 7),
+                            axes_names=('left', 'right', 'left', 'right'),
+                            init_method='randn',
+                            param_edges=True)
+        node['left_0'] ^ node['right_0']
+        net = node.network
+        
+        assert len(net.nodes) == 1
+        assert len(net.leaf_nodes) == 1
+        assert len(net.non_leaf_nodes) == 0
+        
+        # Split result
+        node1, node2 = node.split(node1_axes=['left_0', 'right_0'],
+                                  node2_axes=['left_1', 'right_1'],
+                                  mode='rq')
+        
+        assert node1.shape == (10, 10, 49)
+        assert node2.shape == (49, 7, 7)
+        
+        assert len(net.nodes) == 3
+        assert len(net.leaf_nodes) == 1
+        assert len(net.non_leaf_nodes) == 2
+        
+        assert net.edges == [node['left_1'], node['right_1']]
+        
+        # The splitted ParamEdge is not included
+        assert len(net._modules) == 3
+        assert list(net._modules.values()) == [node['left_1'],
+                                               node['right_1'],
+                                               node['left_0']]
+        
+    def test_split_paramnode_with_trace_inplace(self):
+        node = tk.ParamNode(shape=(10, 7, 10, 7),
+                            axes_names=('left', 'right', 'left', 'right'),
+                            init_method='randn',
+                            param_edges=True)
+        node['left_0'] ^ node['left_1']
+        node['right_0'] ^ node['right_1']
+        net = node.network
+        
+        assert len(net.nodes) == 1
+        assert len(net.leaf_nodes) == 1
+        assert len(net.non_leaf_nodes) == 0
+        
+        # Split result
+        node1, node2 = node.split_(node1_axes=['left_0', 'right_0'],
+                                   node2_axes=['left_1', 'right_1'],
+                                   mode='rq')
+        
+        assert node1.shape == (10, 7, 70)
+        assert node2.shape == (70, 10, 7)
+        
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 0
+        
+        assert net.edges == []
+        
+        # The 2 original ParamEdge plus the splitted ParamEdge
+        assert len(net._modules) == 3
+        assert list(net._modules.values()) == [node1['splitted'],
+                                               node1['left'],
+                                               node1['right']]
+        
+    def test_split_paramnode_with_trace_in_node1_inplace(self):
+        node = tk.ParamNode(shape=(10, 10, 7, 7),
+                            axes_names=('left', 'right', 'left', 'right'),
+                            init_method='randn',
+                            param_edges=True)
+        node['left_0'] ^ node['right_0']
+        net = node.network
+        
+        assert len(net.nodes) == 1
+        assert len(net.leaf_nodes) == 1
+        assert len(net.non_leaf_nodes) == 0
+        
+        # Split result
+        node1, node2 = node.split_(node1_axes=['left_0', 'right_0'],
+                                   node2_axes=['left_1', 'right_1'],
+                                   mode='rq')
+        
+        assert node1.shape == (10, 10, 49)
+        assert node2.shape == (49, 7, 7)
+        
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 0
+        
+        assert net.edges == [node2['left'], node2['right']]
+        
+        # The splitted ParamEdge is not included
+        assert len(net._modules) == 4
+        assert list(net._modules.values()) == [node1['left'],
+                                               node1['splitted'],
+                                               node2['left'],
+                                               node2['right']]
+
+
 class TestSVD:
     
     @pytest.fixture
@@ -2693,6 +3017,209 @@ class TestQR:
         new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
                                                 node2_axes=['input_1', 'right'],
                                                 mode='qr')
+        new_node1.name = 'svd'
+        new_node2.name = 'svd'
+        new_node1.get_axis('splitted').name = 'right'
+        new_node2.get_axis('splitted').name = 'left'
+        
+        assert new_node1.shape == (3, 5, 15)
+        assert new_node2.shape == (15, 5, 3)
+        assert new_node1['right'].size() == 15
+        
+        assert unbinded[0].shape == (3, 5, 3)
+        assert unbinded[1].shape == (3, 5, 3)
+        assert unbinded[0]['right'].size() == 3
+        
+        assert node1.shape == (3, 5, 3)
+        assert node2.shape == (3, 5, 3)
+        assert node1['right'].size() == 3
+        
+        assert node1['right'] == unbinded[0]['right']
+        assert node1['right'] != new_node1['right']
+
+
+class TestRQ:
+    
+    @pytest.fixture
+    def setup(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+        node2 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        network=net,
+                        init_method='randn')
+        
+        edge = node1['right'] ^ node2['left']
+        return net, edge, node1
+        
+    # QR can only be done in-place 
+    def test_rq_edge_inplace(self, setup):
+        net, edge, node1 = setup
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
+        assert edge.dim() == 3
+        
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 0
+        
+        new_node1, new_node2 = node1['right'].rq_()
+        
+        assert tk.utils.erase_enum(new_node1.name) == \
+            tk.utils.erase_enum(edge.node1.name)
+        assert tk.utils.erase_enum(new_node2.name) == \
+            tk.utils.erase_enum(edge.node2.name)
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
+        
+        assert new_node1.shape == (3, 5, 15)
+        assert new_node2.shape == (15, 5, 3)
+        assert new_node1['right'].size() == 15
+        assert new_node1['right'].dim() == 15
+        
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 0
+        
+    def test_rq_paramedge_inplace(self, setup):
+        net, edge, node1 = setup
+        edge = edge.parameterize()
+        
+        assert isinstance(edge, tk.ParamEdge)
+        assert edge.size() == 3
+        assert edge.dim() == 3
+        
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 0
+        
+        new_node1, new_node2 = node1['right'].rq_()
+        
+        assert tk.utils.erase_enum(new_node1.name) == \
+            tk.utils.erase_enum(edge.node1.name)
+        assert tk.utils.erase_enum(new_node2.name) == \
+            tk.utils.erase_enum(edge.node2.name)
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
+        
+        assert new_node1.shape == (3, 5, 15)
+        assert new_node2.shape == (15, 5, 3)
+        assert new_node1['right'].size() == 15
+        assert new_node1['right'].dim() == 15
+        
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 0
+        
+    # To perform QR as operation, we first contract and then split
+    def test_rq_edge(self, setup):
+        net, edge, node1 = setup
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
+        assert edge.dim() == 3
+        
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 0
+        
+        node2 = net['node2']
+        contracted = node1 @ node2
+        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
+                                                node2_axes=['input_1', 'right'],
+                                                mode='rq')
+        new_node1.name = 'svd'
+        new_node2.name = 'svd'
+        new_node1.get_axis('splitted').name = 'right'
+        new_node2.get_axis('splitted').name = 'left'
+        
+        assert tk.utils.erase_enum(new_node1.name) == 'svd'
+        assert tk.utils.erase_enum(new_node2.name) == 'svd'
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
+        
+        assert edge.node1.shape == (3, 5, 3)
+        assert edge.node2.shape == (3, 5, 3)
+        assert edge.size() == 3
+        assert edge.dim() == 3
+        
+        assert new_node1.shape == (3, 5, 15)
+        assert new_node2.shape == (15, 5, 3)
+        assert new_node1['right'].size() == 15
+        assert new_node1['right'].dim() == 15
+        
+        assert len(net.nodes) == 5
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 3
+        
+        # Repeat operation
+        contracted = node1 @ node2
+        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
+                                                node2_axes=['input_1', 'right'],
+                                                mode='rq')
+        
+    def test_rq_paramedge(self, setup):
+        net, edge, node1 = setup
+        edge = edge.parameterize()
+        
+        assert isinstance(edge, tk.ParamEdge)
+        assert edge.size() == 3
+        assert edge.dim() == 3
+        
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 0
+        
+        node2 = net['node2']
+        contracted = node1 @ node2
+        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
+                                                node2_axes=['input_1', 'right'],
+                                                mode='rq')
+        new_node1.name = 'svd'
+        new_node2.name = 'svd'
+        new_node1.get_axis('splitted').name = 'right'
+        new_node2.get_axis('splitted').name = 'left'
+        
+        assert tk.utils.erase_enum(new_node1.name) == 'svd'
+        assert tk.utils.erase_enum(new_node2.name) == 'svd'
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
+        
+        assert edge.node1.shape == (3, 5, 3)
+        assert edge.node2.shape == (3, 5, 3)
+        assert edge.size() == 3
+        assert edge.dim() == 3
+        
+        assert new_node1.shape == (3, 5, 15)
+        assert new_node2.shape == (15, 5, 3)
+        assert new_node1['right'].size() == 15
+        assert new_node1['right'].dim() == 15
+        
+        assert len(net.nodes) == 5
+        assert len(net.leaf_nodes) == 2
+        assert len(net.non_leaf_nodes) == 3
+        
+        # Repeat operation
+        contracted = node1 @ node2
+        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
+                                                node2_axes=['input_1', 'right'],
+                                                mode='rq')
+        
+    def test_rq_result_from_operation(self, setup):
+        net, edge, node1 = setup
+        node2 = net['node2']
+        
+        stacked = tk.stack([node1, node2])
+        unbinded = tk.unbind(stacked)
+        
+        contracted = unbinded[0] @ unbinded[1]
+        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
+                                                node2_axes=['input_1', 'right'],
+                                                mode='rq')
         new_node1.name = 'svd'
         new_node2.name = 'svd'
         new_node1.get_axis('splitted').name = 'right'

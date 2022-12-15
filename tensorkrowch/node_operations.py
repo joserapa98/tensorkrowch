@@ -454,7 +454,7 @@ def _split_first(node: AbstractNode,
         node2: if `node2_axes` is None, a `node` is the already created node
             in which we will put the second part of the splitted tensor of `node`.
             Used only for svd
-        mode: available modes are `qr` (QR decomposition), `svd` (SVD
+        mode: available modes are `qr` (QR decomposition), `rq`, `svd` (SVD
             decomposition cutting off singular values according to `rank`
             or `cum_percentage`) or `svdr` (like `svd` but multiplying with
             random diagonal matrix of 1's and -1's)
@@ -653,9 +653,18 @@ def _split_first(node: AbstractNode,
         
         node1_tensor = q
         node2_tensor = r
+        
+    elif mode == 'rq':
+        q, r = torch.linalg.qr(node_tensor.transpose(-1, -2))
+        q = q.transpose(-1, -2)
+        r = r.transpose(-1, -2)
+        rank = r.shape[-1]
+        
+        node1_tensor = r
+        node2_tensor = q
     
     else:
-        raise ValueError('`mode` can only be \'svd\', \'svdr\' or \'qr\'')
+        raise ValueError('`mode` can only be \'svd\', \'svdr\', \'qr\' or \'rq\'')
     
     node1_tensor = node1_tensor.reshape(*(batch_shape + node1_shape.tolist() + [rank]))
     node2_tensor = node2_tensor.reshape(*(batch_shape + [rank] + node2_shape.tolist()))
@@ -857,8 +866,17 @@ def _split_next(successor: Successor,
         node1_tensor = q
         node2_tensor = r
     
+    elif mode == 'rq':
+        q, r = torch.linalg.qr(node_tensor.transpose(-1, -2))
+        q = q.transpose(-1, -2)
+        r = r.transpose(-1, -2)
+        rank = r.shape[-1]
+        
+        node1_tensor = r
+        node2_tensor = q
+    
     else:
-        raise ValueError('`mode` can only be \'svd\', \'svdr\' or \'qr\'')
+        raise ValueError('`mode` can only be \'svd\', \'svdr\', \'qr\' or \'rq\'')
     
     node1_tensor = node1_tensor.reshape(*(batch_shape + node1_shape.tolist() + [rank]))
     node2_tensor = node2_tensor.reshape(*(batch_shape + [rank] + node2_shape.tolist()))
@@ -1193,10 +1211,7 @@ def svdr_(edge,
 AbstractEdge.svdr_ = svdr_
 
 
-def qr_(edge,
-         side = 'left',
-         rank: Optional[int] = None,
-         cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
+def qr_(edge) -> Tuple[Node, Node]:
     
     if edge.is_dangling():
         raise ValueError('Edge should be connected to perform SVD')
@@ -1220,10 +1235,7 @@ def qr_(edge,
                                                         n_batches + n_axes1)),
                                   node2_axes=list(range(n_batches + n_axes1,
                                                         n_batches + n_axes1 + n_axes2)),
-                                  mode='qr',
-                                  side=side,
-                                  rank=rank,
-                                  cum_percentage=cum_percentage)
+                                  mode='qr')
     
     # new_node1
     prev_nums = [ax.num for ax in batch_axes]
@@ -1255,6 +1267,64 @@ def qr_(edge,
     return new_node1, new_node2
     
 AbstractEdge.qr_ = qr_
+
+
+def rq_(edge) -> Tuple[Node, Node]:
+    
+    if edge.is_dangling():
+        raise ValueError('Edge should be connected to perform SVD')
+    
+    node1, node2 = edge.node1, edge.node2
+    node1_name, node2_name = node1.name, node2.name
+    axis1, axis2 = edge.axis1, edge.axis2
+    
+    batch_axes = []
+    for axis in node1._axes:
+        if axis.is_batch() and (axis.name in node2.axes_names):
+            batch_axes.append(axis)
+    
+    n_batches = len(batch_axes)
+    n_axes1 = len(node1._axes) - n_batches - 1
+    n_axes2 = len(node2._axes) - n_batches - 1
+    
+    contracted = edge.contract_()
+    new_node1, new_node2 = split_(node=contracted,
+                                  node1_axes=list(range(n_batches,
+                                                        n_batches + n_axes1)),
+                                  node2_axes=list(range(n_batches + n_axes1,
+                                                        n_batches + n_axes1 + n_axes2)),
+                                  mode='rq')
+    
+    # new_node1
+    prev_nums = [ax.num for ax in batch_axes]
+    for i in range(new_node1.rank):
+        if (i not in prev_nums) and (i != axis1.num):
+            prev_nums.append(i)
+    prev_nums += [axis1.num]
+    
+    if prev_nums != list(range(new_node1.rank)):
+        permutation = inverse_permutation(prev_nums)
+        new_node1 = new_node1.permute_(permutation)
+        
+    # new_node2 
+    prev_nums = [node2.in_which_axis(node1[ax]).num for ax in batch_axes] + [axis2.num]
+    for i in range(new_node2.rank):
+        if i not in prev_nums:
+            prev_nums.append(i)
+            
+    if prev_nums != list(range(new_node2.rank)):
+        permutation = inverse_permutation(prev_nums)
+        new_node2 = new_node2.permute_(permutation)
+    
+    new_node1.name = node1_name
+    new_node1.get_axis(axis1.num).name = axis1.name
+    
+    new_node2.name = node2_name
+    new_node2.get_axis(axis2.num).name = axis2.name
+    
+    return new_node1, new_node2
+    
+AbstractEdge.rq_ = rq_
 
 
 #################   CONTRACT   #################

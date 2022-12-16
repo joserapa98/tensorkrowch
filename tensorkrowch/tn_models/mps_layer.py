@@ -609,7 +609,7 @@ class MPSLayer(TensorNetwork):
                                                           rank=rank,
                                                           cum_percentage=cum_percentage)
                 elif mode == 'qr':
-                    result1, result2 = node['left'].qr_()
+                    result1, result2 = node['left'].rq_()
                 else:
                     raise ValueError('`mode` can only be \'svd\', \'svdr\' or \'qr\'')
                 
@@ -624,6 +624,7 @@ class MPSLayer(TensorNetwork):
             self.right_env = new_right_nodes[:-1]
             
         self.output_node = output_node.parameterize()
+        self.param_bond(set_param=self._param_bond)
 
 
 class UMPSLayer(TensorNetwork):
@@ -1073,7 +1074,7 @@ class UMPSLayer(TensorNetwork):
     #                                                       rank=rank,
     #                                                       cum_percentage=cum_percentage)
     #             elif mode == 'qr':
-    #                 result1, result2 = node['left'].qr_()
+    #                 result1, result2 = node['left'].rq_()
     #             else:
     #                 raise ValueError('`mode` can only be \'svd\', \'svdr\' or \'qr\'')
                 
@@ -1088,3 +1089,4 @@ class UMPSLayer(TensorNetwork):
     #         self.right_env = new_right_nodes[:-1]
             
     #     self.output_node = output_node.parameterize()
+    #     self.param_bond(set_param=self._param_bond)

@@ -160,131 +160,67 @@ class MPS(TensorNetwork):
         if self.nodes:
             raise ValueError('Cannot create MPS nodes if the MPS already has nodes')
 
-        self.left_env = []
-        self.right_env = []
-
-        # Left
-        if self.l_position > 0:
-            # Left node
+        self.left_node = None
+        self.right_node = None
+        self.mats_env = []
+        
+        if self._n_sites == 1:
+            node = ParamNode(shape=(self.d_bond[0], self.d_phys[0], self.d_bond[0]),
+                             axes_names=('left', 'input', 'right'),
+                             name=f'mats_env_node',
+                             network=self)
+            node['right'] ^ node['left']
+            self.mats_env.append(node)
+            
+        else:
             if self.boundary == 'obc':
                 self.left_node = ParamNode(shape=(self.d_phys[0], self.d_bond[0]),
                                            axes_names=('input', 'right'),
                                            name='left_node',
                                            network=self)
-                                           #param_edges=self.param_bond())
-            else:
-                self.left_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[0], self.d_bond[0]),
-                                           axes_names=('left', 'input', 'right'),
-                                           name='left_node',
-                                           network=self)
-                                           #param_edges=self.param_bond())
-                periodic_edge = self.left_node['left']
-        else:
-            self.left_node = None
-
-        if self.l_position > 1:
-            # Left environment
-            for i in range(1, self.l_position):
-                node = ParamNode(shape=(self.d_bond[i - 1], self.d_phys[i], self.d_bond[i]),
-                                 axes_names=('left', 'input', 'right'),
-                                 name=f'left_env_node_({i})',
-                                 network=self)
-                                 #param_edges=self.param_bond())
-                self.left_env.append(node)
-                if i == 1:
-                    self.left_node['right'] ^ self.left_env[-1]['left']
-                else:
-                    self.left_env[-2]['right'] ^ self.left_env[-1]['left']
-
-        # Output
-        if self.l_position == 0:
-            if self.boundary == 'obc':
-                self.output_node = ParamNode(shape=(self.d_phys[0], self.d_bond[0]),
-                                             axes_names=('output', 'right'),
-                                             name='output_node',
-                                             network=self)
-                                             #param_edges=self.param_bond())
-            else:
-                self.output_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[0], self.d_bond[0]),
-                                             axes_names=('left', 'output', 'right'),
-                                             name='output_node',
-                                             network=self)
-                                             #param_edges=self.param_bond())
-                periodic_edge = self.output_node['left']
-
-        if self.l_position == self.n_sites - 1:
-            # if self.n_sites - 1 != 0:
-            if self.boundary == 'obc':
-                if self.n_sites - 1 != 0:
-                    self.output_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[-1]),
-                                                    axes_names=('left', 'output'),
-                                                    name='output_node',
-                                                    network=self)
-                                                    #param_edges=self.param_bond())
-            else:
-                if self.n_sites - 1 != 0:
-                    self.output_node = ParamNode(shape=(self.d_bond[-2], self.d_phys[-1], self.d_bond[-1]),
-                                                    axes_names=('left', 'output', 'right'),
-                                                    name='output_node',
-                                                    network=self)
-                                                    #param_edges=self.param_bond())
-                self.output_node['right'] ^ periodic_edge
+                
+                for i in range(self._n_sites - 2):
+                    node = ParamNode(shape=(self.d_bond[i],
+                                            self.d_phys[i + 1],
+                                            self.d_bond[i + 1]),
+                                     axes_names=('left', 'input', 'right'),
+                                     name=f'mats_env_node_({i})',
+                                     network=self)
+                    self.mats_env.append(node)
                     
-            if self.left_env:
-                self.left_env[-1]['right'] ^ self.output_node['left']
-            else:
-                if self.left_node:
-                    self.left_node['right'] ^ self.output_node['left']
-
-        if (self.l_position > 0) and (self.l_position < self.n_sites - 1):
-            self.output_node = ParamNode(shape=(self.d_bond[self.l_position - 1],
-                                                self.d_phys[self.l_position],
-                                                self.d_bond[self.l_position]),
-                                         axes_names=('left', 'output', 'right'),
-                                         name='output_node',
-                                         network=self)
-                                         #param_edges=self.param_bond())
-            if self.left_env:
-                self.left_env[-1]['right'] ^ self.output_node['left']
-            else:
-                self.left_node['right'] ^ self.output_node['left']
-
-        # Right
-        if self.l_position < self.n_sites - 2:
-            # Right environment
-            for i in range(self.l_position + 1, self.n_sites - 1):
-                node = ParamNode(shape=(self.d_bond[i - 1], self.d_phys[i], self.d_bond[i]),
-                                 axes_names=('left', 'input', 'right'),
-                                 name=f'right_env_node_({i})',
-                                 network=self)
-                                 #param_edges=self.param_bond())
-                self.right_env.append(node)
-                if i == self.l_position + 1:
-                    self.output_node['right'] ^ self.right_env[-1]['left']
-                else:
-                    self.right_env[-2]['right'] ^ self.right_env[-1]['left']
-
-        if self.l_position < self.n_sites - 1:
-            # Right node
-            if self.boundary == 'obc':
+                    if i == 0:
+                        self.left_node['right'] ^ self.mats_env[-1]['left']
+                    else:
+                        self.mats_env[-2]['right'] ^ self.mats_env[-1]['left']
+                        
+                    
                 self.right_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[-1]),
                                             axes_names=('left', 'input'),
                                             name='right_node',
                                             network=self)
-                                            #param_edges=self.param_bond())
+                
+                if self._n_sites > 2:
+                    self.mats_env[-1]['right'] ^ self.right_node['left']
+                else:
+                    self.left_node['right'] ^ self.right_node['left']
+                    
             else:
-                self.right_node = ParamNode(shape=(self.d_bond[-2], self.d_phys[-1], self.d_bond[-1]),
-                                            axes_names=('left', 'input', 'right'),
-                                            name='right_node',
-                                            network=self)
-                                            #param_edges=self.param_bond())
-                self.right_node['right'] ^ periodic_edge
-            if self.right_env:
-                self.right_env[-1]['right'] ^ self.right_node['left']
-            else:
-                self.output_node['right'] ^ self.right_node['left']
-        else:
-            self.right_node = None
+                for i in range(self._n_sites):
+                    node = ParamNode(shape=(self.d_bond[i - 1],
+                                            self.d_phys[i],
+                                            self.d_bond[i]),
+                                     axes_names=('left', 'input', 'right'),
+                                     name=f'mats_env_node_({i})',
+                                     network=self)
+                    self.mats_env.append(node)
+                    
+                    if i == 0:
+                        periodic_edge = self.mats_env[-1]['left']
+                    else:
+                        self.mats_env[-2]['right'] ^ self.mats_env[-1]['left']
+                    
+                    if i == self._n_sites - 1:
+                        self.mats_env[-1]['right'] ^ periodic_edge
 
     def initialize(self, std: float = 1e-9) -> None:
         # Left node
@@ -311,132 +247,79 @@ class MPS(TensorNetwork):
                 tensor[:, 0, :] = aux
             self.right_node.tensor = tensor
         
-        # Left env + Right env
-        for node in self.left_env + self.right_env:
+        # Mats env
+        for node in self.mats_env:
             tensor = torch.randn(node.shape) * std
             aux = torch.eye(tensor.shape[0], tensor.shape[2])  # NOTE: Add randn to eye?
             tensor[:, 0, :] = aux
             node.tensor = tensor
-            
-        # Output node
-        if self.l_position == 0:
-            if self.boundary == 'obc':
-                eye_tensor = torch.eye(self.output_node.shape[1])[0, :]
-                eye_tensor = eye_tensor.view([1, self.output_node.shape[1]])
-                eye_tensor = eye_tensor.expand(self.output_node.shape)
-            else:
-                eye_tensor = torch.eye(self.output_node.shape[0], self.output_node.shape[2])
-                eye_tensor = eye_tensor.view([self.output_node.shape[0], 1, self.output_node.shape[2]])
-                eye_tensor = eye_tensor.expand(self.output_node.shape)
-
-        elif self.l_position == self.n_sites - 1:
-            if self.boundary == 'obc':
-                eye_tensor = torch.eye(self.output_node.shape[0])[0, :]
-                eye_tensor = eye_tensor.view([self.output_node.shape[0], 1])
-                eye_tensor = eye_tensor.expand(self.output_node.shape)
-            else:
-                eye_tensor = torch.eye(self.output_node.shape[0], self.output_node.shape[2])
-                eye_tensor = eye_tensor.view([self.output_node.shape[0], 1, self.output_node.shape[2]])
-                eye_tensor = eye_tensor.expand(self.output_node.shape)
-        else:
-            # NOTE: trying other initializations
-            eye_tensor = torch.eye(self.output_node.shape[0], self.output_node.shape[2])
-            eye_tensor = eye_tensor.view([self.output_node.shape[0], 1, self.output_node.shape[2]])
-            eye_tensor = eye_tensor.expand(self.output_node.shape)
-            
-            # eye_tensor = torch.zeros(node.shape)
-            # eye_tensor[0, 0, 0] += 1.
-
-        # Add on a bit of random noise
-        tensor = eye_tensor + std * torch.randn(self.output_node.shape)
-        self.output_node.tensor = tensor
 
     def set_data_nodes(self) -> None:
         input_edges = []
         if self.left_node is not None:
             input_edges.append(self.left_node['input'])
-        input_edges += list(map(lambda node: node['input'],
-                                self.left_env + self.right_env))
+        input_edges += list(map(lambda node: node['input'], self.mats_env))
         if self.right_node is not None:
             input_edges.append(self.right_node['input'])
             
         super().set_data_nodes(input_edges=input_edges,
                                num_batch_edges=self._num_batches)
         
-        if self.left_env + self.right_env:
-            self.lr_env_data = list(map(lambda node: node.neighbours('input'),
-                                        self.left_env + self.right_env))
+        if self.mats_env:
+            self.mats_env_data = list(map(lambda node: node.neighbours('input'),
+                                          self.mats_env))
 
     def _input_contraction(self) -> Tuple[Optional[List[Node]],
                                           Optional[List[Node]]]:
         if self.inline_input:
-            left_result = []
-            for node in self.left_env:
-                left_result.append(node @ node.neighbours('input'))
-            right_result = []
-            for node in self.right_env:
-                right_result.append(node @ node.neighbours('input'))
-            return left_result, right_result
+            mats_result = []
+            for node in self.mats_env:
+                mats_result.append(node @ node.neighbours('input'))
+            return mats_result
 
         else:
             # start = time.time()
-            if self.left_env + self.right_env:
+            if self.mats_env:
                 # print('\t\tFind data:', time.time() - start)
                 start = time.time()
-                stack = tk.stack(self.left_env + self.right_env)
-                stack_data = tk.stack(self.lr_env_data)
+                stack = tk.stack(self.mats_env)
+                stack_data = tk.stack(self.mats_env_data)
                 stack['input'] ^ stack_data['feature']
                 result = stack @ stack_data
-                result = tk.unbind(result)
+                mats_result = tk.unbind(result)
                 if PRINT_MODE: print('\t\tResult:', time.time() - start)
-                start = time.time()
-                left_result = result[:len(self.left_env)]
-                right_result = result[len(self.left_env):]
-                if PRINT_MODE: print('\t\tLists:', time.time() - start)
-                return left_result, right_result
+                return mats_result
             else:
-                return [], []
+                return []
 
     @staticmethod
-    def _inline_contraction(nodes: List[Node], left) -> Node:
+    def _inline_contraction(nodes: List[Node]) -> Node:
         """
         Contract a sequence of MPS tensors that have
-        parameterized bond dimensions
-        """
-        if left:
-            result_node = nodes[0]
-            for node in nodes[1:]:
-                start = time.time()
-                result_node @= node
-                if PRINT_MODE: print('\t\t\tMatrix contraction (left):', time.time() - start)
-            return result_node
-        else:
-            result_node = nodes[0]
-            for node in nodes[1:]:
-                start = time.time()
-                result_node = node @ result_node
-                if PRINT_MODE: print('\t\t\tMatrix contraction (right):', time.time() - start)
-            return result_node
+        parameterized bond dimensions.
         
-    def _contract_envs_inline(self,
-                              left_env: List[Node],
-                              right_env: List[Node]) -> Tuple[List[Node],
-                                                              List[Node]]:
-        if left_env:
-            left_node = (self.left_node @ self.left_node.neighbours('input'))#.permute((1, 0))
-            left_env = [self._inline_contraction([left_node] + left_env, True)]
-        elif self.left_node is not None:
-            left_env = [self.left_node @ self.left_node.neighbours('input')]
-
-        if right_env:
+        Parameters
+        ----------
+        nodes: list of nodes (cannot be empty)
+        """
+        result_node = nodes[0]
+        for node in nodes[1:]:
+            start = time.time()
+            result_node @= node
+            if PRINT_MODE: print('\t\t\tMatrix contraction:', time.time() - start)
+        return result_node
+        
+    def _contract_envs_inline(self, mats_env: List[Node]) -> Node:
+        if self.boundary == 'obc':
+            left_node = self.left_node @ self.left_node.neighbours('input')
             right_node = self.right_node @ self.right_node.neighbours('input')
-            lst = right_env + [right_node]
-            lst.reverse()
-            right_env = [self._inline_contraction(lst, False)]
-        elif self.right_node is not None:
-            right_env = [self.right_node @ self.right_node.neighbours('input')]
-            
-        return left_env, right_env
+            contract_lst = [left_node] + mats_env + [right_node]
+        elif len(mats_env) > 1:
+            contract_lst = mats_env
+        else:
+            return mats_env[0] @ mats_env[0]
+        
+        return self._inline_contraction(contract_lst)
 
     def _aux_pairwise(self, nodes: List[Node]) -> Tuple[List[Node],
                                                         List[Node]]:
@@ -475,134 +358,111 @@ class MPS(TensorNetwork):
             return aux_nodes, leftover
         return nodes, []
 
-    def _pairwise_contraction(self,
-                              left_nodes: List[Node],
-                              right_nodes: List[Node]) -> Tuple[List[Node],
-                                                                List[Node]]:
+    def _pairwise_contraction(self, mats_nodes: List[Node]) -> Node:
         """
         Contract a sequence of MPS tensors that do not have
         parameterized bond dimensions, making the operation
         more efficient (from jemisjoki/TorchMPS)
         """
-        left_length = len(left_nodes)
-        left_aux_nodes = left_nodes
-        right_length = len(right_nodes)
-        right_aux_nodes = right_nodes
-        if left_length > 1 or right_length > 1:
-            left_leftovers = []
-            right_leftovers = []
-            while left_length > 1 or right_length > 1:
-                aux1, aux2 = self._aux_pairwise(left_aux_nodes)
-                left_aux_nodes = aux1
-                left_leftovers = aux2 + left_leftovers
-                left_length = len(aux1)
+        length = len(mats_nodes)
+        aux_nodes = mats_nodes
+        if length > 1:
+            leftovers = []
+            while length > 1:
+                aux1, aux2 = self._aux_pairwise(aux_nodes)
+                aux_nodes = aux1
+                leftovers = aux2 + leftovers
+                length = len(aux1)
 
-                aux1, aux2 = self._aux_pairwise(right_aux_nodes)
-                right_aux_nodes = aux1
-                right_leftovers = aux2 + right_leftovers
-                right_length = len(aux1)
+            aux_nodes = aux_nodes + leftovers
+            return self._pairwise_contraction(aux_nodes)
 
-            left_aux_nodes = left_aux_nodes + left_leftovers
-            right_aux_nodes = right_aux_nodes + right_leftovers
-            return self._pairwise_contraction(left_aux_nodes, right_aux_nodes)
-
-        return self._contract_envs_inline(left_aux_nodes, right_aux_nodes)
+        return self._contract_envs_inline(aux_nodes)
 
     def contract(self) -> Node:
         start = time.time()
-        left_env, right_env = self._input_contraction()
+        mats_env = self._input_contraction()
         if PRINT_MODE: print('\tInput:', time.time() - start)
 
         start = time.time()
         if self.inline_mats:
-            left_env_contracted, right_env_contracted = self._contract_envs_inline(left_env, right_env)
+            result = self._contract_envs_inline(mats_env)
         else:
-            left_env_contracted, right_env_contracted = self._pairwise_contraction(left_env, right_env)
+            result = self._pairwise_contraction(mats_env)
                     
         if PRINT_MODE: print('\tMatrices contraction:', time.time() - start)
         
-        result = self.output_node
-        if left_env_contracted and right_env_contracted:
-            result = left_env_contracted[0] @ result @ right_env_contracted[0]
-        elif left_env_contracted:
-            result = left_env_contracted[0] @ result
-        elif right_env_contracted:
-            result = right_env_contracted[0] @ result
-        else:
-            result @= result
         return result
     
     def canonicalize(self,
+                     oc: Optional[int] = None,
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
                      cum_percentage: Optional[float] = None) -> None:
-        # Left
-        left_nodes = []
-        if self.left_node is not None:
-            left_nodes.append(self.left_node)
-        left_nodes += self.left_env
+        """
+        Turns the MPS into canonical form
         
-        if left_nodes:
-            new_left_nodes = []
-            node = left_nodes[0]
-            for _ in range(len(left_nodes)):
-                if mode == 'svd':
-                    result1, result2 = node['right'].svd_(side='right',
+        Parameters
+        ----------
+        oc: orthogonality center position
+        mode: can be either 'svd', 'svdr' or 'qr'
+        """
+        if oc is None:
+            oc = self._n_sites - 1
+        elif oc >= self._n_sites:
+            raise ValueError(f'Orthogonality center position `oc` should be '
+                             f'between 0 and {self._n_sites - 1}')
+        
+        nodes = self.mats_env
+        if self.boundary == 'obc':
+            nodes = [self.left_node] + nodes + [self.right_node]
+        
+        for i in range(oc):
+            if mode == 'svd':
+                result1, result2 = nodes[i]['right'].svd_(side='right',
                                                           rank=rank,
                                                           cum_percentage=cum_percentage)
-                elif mode == 'svdr':
-                    result1, result2 = node['right'].svdr_(side='right',
+            elif mode == 'svdr':
+                result1, result2 = nodes[i]['right'].svdr_(side='right',
                                                            rank=rank,
                                                            cum_percentage=cum_percentage)
-                elif mode == 'qr':
-                    result1, result2 = node['right'].qr_()
-                else:
-                    raise ValueError('`mode` can only be \'svd\', \'svdr\' or \'qr\'')
-                
-                node = result2
-                result1 = result1.parameterize()
-                new_left_nodes.append(result1)
-                
-            output_node = node
-                
-            if new_left_nodes:
-                self.left_node = new_left_nodes[0]
-            self.left_env = new_left_nodes[1:]
-
-        # Right
-        right_nodes = self.right_env[:]
-        right_nodes.reverse()
-        if self.right_node is not None:
-            right_nodes = [self.right_node] + right_nodes
-        
-        if right_nodes:
-            new_right_nodes = []
-            node = right_nodes[0]
-            for _ in range(len(right_nodes)):
-                if mode == 'svd':
-                    result1, result2 = node['left'].svd_(side='left',
+            elif mode == 'qr':
+                result1, result2 = nodes[i]['right'].qr_()
+            else:
+                raise ValueError('`mode` can only be \'svd\', \'svdr\' or \'qr\'')
+            
+            result1 = result1.parameterize()
+            nodes[i] = result1
+            nodes[i + 1] = result2
+            
+        for i in range(len(nodes) - 1, oc, -1):
+            if mode == 'svd':
+                result1, result2 = nodes[i]['left'].svd_(side='left',
                                                          rank=rank,
                                                          cum_percentage=cum_percentage)
-                elif mode == 'svdr':
-                    result1, result2 = node['left'].svdr_(side='left',
+            elif mode == 'svdr':
+                result1, result2 = nodes[i]['left'].svdr_(side='left',
                                                           rank=rank,
                                                           cum_percentage=cum_percentage)
-                elif mode == 'qr':
-                    result1, result2 = node['left'].qr_()
-                else:
-                    raise ValueError('`mode` can only be \'svd\', \'svdr\' or \'qr\'')
-                
-                node = result1
-                result2 = result2.parameterize()
-                new_right_nodes = [result2] + new_right_nodes
-                
-            output_node = node
-                
-            if new_right_nodes:
-                self.right_node = new_right_nodes[-1]
-            self.right_env = new_right_nodes[:-1]
+            elif mode == 'qr':
+                result1, result2 = nodes[i]['left'].rq_()
+            else:
+                raise ValueError('`mode` can only be \'svd\', \'svdr\' or \'qr\'')
             
-        self.output_node = output_node.parameterize()
+            result2 = result2.parameterize()
+            nodes[i] = result2
+            nodes[i - 1] = result1
+            
+        nodes[oc] = nodes[oc].parameterize()
+        
+        if self.boundary == 'obc':
+            self.left_node = nodes[0]
+            self.mats_env = nodes[1:-1]
+            self.right_node = nodes[-1]
+        else:
+            self.mats_env = nodes
+            
+        self.param_bond(set_param=self._param_bond)
 
 
 class UMPS(TensorNetwork):
@@ -610,9 +470,7 @@ class UMPS(TensorNetwork):
     def __init__(self,
                  n_sites: int,
                  d_phys: int,
-                 n_labels: int,
                  d_bond: int,
-                 l_position: Optional[int] = None,
                  param_bond: bool = False,
                  num_batches: int = 1,
                  inline_input: bool = False,
@@ -624,10 +482,8 @@ class UMPS(TensorNetwork):
         ----------
         n_sites: number of sites, including the input and output_node sites
         d_phys: physic dimension
-        n_labels: output_node label dimension
         d_bond: bond dimension. If given as a sequence, the i-th bond
             dimension is always the dimension of the right edge of th i-th node
-        l_position: position of output_node site
         param_bond: boolean indicating whether bond edges should be parametric
         num_batches: number of batch edges of input data
         inline_input: boolean indicating whether input should be contracted
@@ -638,11 +494,6 @@ class UMPS(TensorNetwork):
         """
 
         super().__init__(name='mps')
-
-        # l_position
-        if l_position is None:
-            l_position = n_sites // 2
-        self._l_position = l_position
 
         # boundary
         if n_sites < 1:
@@ -661,12 +512,6 @@ class UMPS(TensorNetwork):
             self._d_bond = d_bond
         else:
             raise TypeError('`d_bond` should be `int` type')
-        
-        # n_labels
-        if isinstance(n_labels, int):
-            self._n_labels = n_labels
-        else:
-            raise TypeError('`n_labels` should be `int` type')
 
         # param_bond
         self._param_bond = param_bond
@@ -700,10 +545,6 @@ class UMPS(TensorNetwork):
     @property
     def d_bond(self) -> List[int]:
         return self._d_bond
-    
-    @property
-    def n_labels(self) -> List[int]:
-        return self._n_labels
 
     def param_bond(self, set_param: Optional[bool] = None) -> Optional[bool]:
         """
@@ -727,66 +568,26 @@ class UMPS(TensorNetwork):
     def _make_nodes(self) -> None:
         if self.nodes:
             raise ValueError('Cannot create MPS nodes if the MPS already has nodes')
-
-        self.left_env = []
-        self.right_env = []
-
-        # Left environment
-        if self.l_position > 0:
-            for i in range(self.l_position):
-                node = ParamNode(shape=(self.d_bond, self.d_phys, self.d_bond),
-                                 axes_names=('left', 'input', 'right'),
-                                 name=f'left_env_node_({i})',
-                                 network=self)
-                self.left_env.append(node)
-                if i == 0:
-                    periodic_edge = node['left']
-                else:
-                    self.left_env[-2]['right'] ^ self.left_env[-1]['left']
-
-        # Output
-        if self.l_position == 0:
-            self.output_node = ParamNode(shape=(self.d_bond, self.n_labels, self.d_bond),
-                                         axes_names=('left', 'output', 'right'),
-                                         name='output_node',
-                                         network=self)
-            periodic_edge = self.output_node['left']
-
-        if self.l_position == self.n_sites - 1:
-            if self.n_sites - 1 != 0:
-                self.output_node = ParamNode(shape=(self.d_bond, self.n_labels, self.d_bond),
-                                             axes_names=('left', 'output', 'right'),
-                                             name='output_node',
-                                             network=self)
-            self.output_node['right'] ^ periodic_edge
-                    
-            if self.left_env:
-                self.left_env[-1]['right'] ^ self.output_node['left']
-
-        if (self.l_position > 0) and (self.l_position < self.n_sites - 1):
-            self.output_node = ParamNode(shape=(self.d_bond, self.n_labels, self.d_bond),
-                                         axes_names=('left', 'output', 'right'),
-                                         name='output_node',
-                                         network=self)
-            if self.left_env:
-                self.left_env[-1]['right'] ^ self.output_node['left']
-
-        # Right environment
-        if self.l_position < self.n_sites - 1:
-            for i in range(self.l_position + 1, self.n_sites):
-                node = ParamNode(shape=(self.d_bond, self.d_phys, self.d_bond),
-                                 axes_names=('left', 'input', 'right'),
-                                 name=f'right_env_node_({i})',
-                                 network=self)
-                self.right_env.append(node)
-                if i == self.l_position + 1:
-                    self.output_node['right'] ^ self.right_env[-1]['left']
-                else:
-                    self.right_env[-2]['right'] ^ self.right_env[-1]['left']
-                    
-                if i == self.n_sites - 1:
-                    self.right_env[-1]['right'] ^ periodic_edge
-                    
+        
+        self.left_node = None
+        self.right_node = None
+        self.mats_env = []
+        
+        for i in range(self._n_sites):
+            node = ParamNode(shape=(self.d_bond, self.d_phys, self.d_bond),
+                             axes_names=('left', 'input', 'right'),
+                             name=f'mats_env_node_({i})',
+                             network=self)
+            self.mats_env.append(node)
+            
+            if i == 0:
+                periodic_edge = self.mats_env[-1]['left']
+            else:
+                self.mats_env[-2]['right'] ^ self.mats_env[-1]['left']
+            
+            if i == self._n_sites - 1:
+                self.mats_env[-1]['right'] ^ periodic_edge
+                        
         # Virtual node
         uniform_memory = tk.ParamNode(shape=(self.d_bond, self.d_phys, self.d_bond),
                                       axes_names=('left', 'input', 'right'),
@@ -807,100 +608,76 @@ class UMPS(TensorNetwork):
         
         self.uniform_memory._unrestricted_set_tensor(tensor)
     
-        for node in self.left_env + self.right_env:
+        for node in self.mats_env:
             del self._memory_nodes[node._tensor_info['address']]
             node._tensor_info['address'] = None
             node._tensor_info['node_ref'] = self.uniform_memory
             node._tensor_info['full'] = True
             node._tensor_info['stack_idx'] = None
             node._tensor_info['index'] = None
-            
-        # Output node
-        # NOTE: trying other initializations
-        eye_tensor = torch.eye(self.output_node.shape[0], self.output_node.shape[2])
-        eye_tensor = eye_tensor.view([self.output_node.shape[0], 1, self.output_node.shape[2]])
-        eye_tensor = eye_tensor.expand(self.output_node.shape)
-        
-        # eye_tensor = torch.zeros(node.shape)
-        # eye_tensor[0, 0, 0] += 1.
-
-        # Add on a bit of random noise
-        tensor = eye_tensor + std * torch.randn(self.output_node.shape)
-        self.output_node.tensor = tensor
 
     def set_data_nodes(self) -> None:
-        input_edges = list(map(lambda node: node['input'],
-                               self.left_env + self.right_env))
+        input_edges = []
+        if self.left_node is not None:
+            input_edges.append(self.left_node['input'])
+        input_edges += list(map(lambda node: node['input'], self.mats_env))
+        if self.right_node is not None:
+            input_edges.append(self.right_node['input'])
             
         super().set_data_nodes(input_edges=input_edges,
                                num_batch_edges=self._num_batches)
         
-        if self.left_env + self.right_env:
-            self.lr_env_data = list(map(lambda node: node.neighbours('input'),
-                                        self.left_env + self.right_env))
+        if self.mats_env:
+            self.mats_env_data = list(map(lambda node: node.neighbours('input'),
+                                          self.mats_env))
 
     def _input_contraction(self) -> Tuple[Optional[List[Node]],
                                           Optional[List[Node]]]:
         if self.inline_input:
-            left_result = []
-            for node in self.left_env:
-                left_result.append(node @ node.neighbours('input'))
-            right_result = []
-            for node in self.right_env:
-                right_result.append(node @ node.neighbours('input'))
-            return left_result, right_result
+            mats_result = []
+            for node in self.mats_env:
+                mats_result.append(node @ node.neighbours('input'))
+            return mats_result
 
         else:
             # start = time.time()
-            if self.left_env + self.right_env:
+            if self.mats_env:
                 # print('\t\tFind data:', time.time() - start)
                 start = time.time()
-                stack = tk.stack(self.left_env + self.right_env)
-                stack_data = tk.stack(self.lr_env_data)
+                stack = tk.stack(self.mats_env)
+                stack_data = tk.stack(self.mats_env_data)
                 stack['input'] ^ stack_data['feature']
                 result = stack @ stack_data
-                result = tk.unbind(result)
+                mats_result = tk.unbind(result)
                 if PRINT_MODE: print('\t\tResult:', time.time() - start)
-                start = time.time()
-                left_result = result[:len(self.left_env)]
-                right_result = result[len(self.left_env):]
-                if PRINT_MODE: print('\t\tLists:', time.time() - start)
-                return left_result, right_result
+                return mats_result
             else:
-                return [], []
+                return []
 
     @staticmethod
-    def _inline_contraction(nodes: List[Node], left) -> Node:
+    def _inline_contraction(nodes: List[Node]) -> Node:
         """
         Contract a sequence of MPS tensors that have
-        parameterized bond dimensions
-        """
-        if left:
-            result_node = nodes[0]
-            for node in nodes[1:]:
-                start = time.time()
-                result_node @= node
-                if PRINT_MODE: print('\t\t\tMatrix contraction (left):', time.time() - start)
-            return result_node
-        else:
-            result_node = nodes[0]
-            for node in nodes[1:]:
-                start = time.time()
-                result_node = node @ result_node
-                if PRINT_MODE: print('\t\t\tMatrix contraction (right):', time.time() - start)
-            return result_node
+        parameterized bond dimensions.
         
-    def _contract_envs_inline(self,
-                              left_env: List[Node],
-                              right_env: List[Node]) -> Tuple[List[Node],
-                                                              List[Node]]:
-        if left_env:
-            left_env = [self._inline_contraction(left_env, True)]
-
-        if right_env:
-            right_env = [self._inline_contraction(right_env, False)]
-            
-        return left_env, right_env
+        Parameters
+        ----------
+        nodes: list of nodes (cannot be empty)
+        """
+        result_node = nodes[0]
+        for node in nodes[1:]:
+            start = time.time()
+            result_node @= node
+            if PRINT_MODE: print('\t\t\tMatrix contraction:', time.time() - start)
+        return result_node
+        
+    def _contract_envs_inline(self, mats_env: List[Node]) -> Node:
+        if len(mats_env) > 1:
+            contract_lst = mats_env
+        else:
+            return mats_env[0] @ mats_env[0]
+        
+        return self._inline_contraction(contract_lst)
 
     def _aux_pairwise(self, nodes: List[Node]) -> Tuple[List[Node],
                                                         List[Node]]:
@@ -939,61 +716,40 @@ class UMPS(TensorNetwork):
             return aux_nodes, leftover
         return nodes, []
 
-    def _pairwise_contraction(self,
-                              left_nodes: List[Node],
-                              right_nodes: List[Node]) -> Tuple[List[Node],
-                                                                List[Node]]:
+    def _pairwise_contraction(self, mats_nodes: List[Node]) -> Node:
         """
         Contract a sequence of MPS tensors that do not have
         parameterized bond dimensions, making the operation
         more efficient (from jemisjoki/TorchMPS)
         """
-        left_length = len(left_nodes)
-        left_aux_nodes = left_nodes
-        right_length = len(right_nodes)
-        right_aux_nodes = right_nodes
-        if left_length > 1 or right_length > 1:
-            left_leftovers = []
-            right_leftovers = []
-            while left_length > 1 or right_length > 1:
-                aux1, aux2 = self._aux_pairwise(left_aux_nodes)
-                left_aux_nodes = aux1
-                left_leftovers = aux2 + left_leftovers
-                left_length = len(aux1)
+        length = len(mats_nodes)
+        aux_nodes = mats_nodes
+        if length > 1:
+            leftovers = []
+            while length > 1:
+                aux1, aux2 = self._aux_pairwise(aux_nodes)
+                aux_nodes = aux1
+                leftovers = aux2 + leftovers
+                length = len(aux1)
 
-                aux1, aux2 = self._aux_pairwise(right_aux_nodes)
-                right_aux_nodes = aux1
-                right_leftovers = aux2 + right_leftovers
-                right_length = len(aux1)
+            aux_nodes = aux_nodes + leftovers
+            return self._pairwise_contraction(aux_nodes)
 
-            left_aux_nodes = left_aux_nodes + left_leftovers
-            right_aux_nodes = right_aux_nodes + right_leftovers
-            return self._pairwise_contraction(left_aux_nodes, right_aux_nodes)
-
-        return self._contract_envs_inline(left_aux_nodes, right_aux_nodes)
+        return self._contract_envs_inline(aux_nodes)
 
     def contract(self) -> Node:
         start = time.time()
-        left_env, right_env = self._input_contraction()
+        mats_env = self._input_contraction()
         if PRINT_MODE: print('\tInput:', time.time() - start)
 
         start = time.time()
         if self.inline_mats:
-            left_env_contracted, right_env_contracted = self._contract_envs_inline(left_env, right_env)
+            result = self._contract_envs_inline(mats_env)
         else:
-            left_env_contracted, right_env_contracted = self._pairwise_contraction(left_env, right_env)
+            result = self._pairwise_contraction(mats_env)
                     
         if PRINT_MODE: print('\tMatrices contraction:', time.time() - start)
         
-        result = self.output_node
-        if left_env_contracted and right_env_contracted:
-            result = left_env_contracted[0] @ result @ right_env_contracted[0]
-        elif left_env_contracted:
-            result = left_env_contracted[0] @ result
-        elif right_env_contracted:
-            result = right_env_contracted[0] @ result
-        else:
-            result @= result
         return result
     
     # def canonicalize(self,

@@ -565,9 +565,17 @@ class AbstractNode(ABC):
         return self._edges[axis_num]
     
     def in_which_axis(self, edge: 'AbstractEdge') -> Axis:
+        lst = []
         for ax, ed in zip(self._axes, self._edges):
             if ed == edge:
-                return ax
+                lst.append(ax)
+        
+        if len(lst) == 0:
+            raise ValueError(f'Edge {edge} not in node {self}')
+        elif len(lst) == 1:
+            return lst[0]
+        else:
+            return lst
 
     def _add_edge(self,
                   edge: 'AbstractEdge',
@@ -3117,6 +3125,13 @@ class TensorNetwork(nn.Module):
                 output = self.operations[op[0]](**op[1])
                 # print(f'Time {op[0]}: {time.time() - start:.4f}')
             # print(f'Total time: {time.time() - total:.4f}')
+            
+            if not isinstance(output, Node):
+                if (op[0] == 'unbind') and (len(output) == 1):
+                    output = output[0]
+                else:
+                    raise ValueError('The last operation should be the one '
+                                     'returning a single resulting node')
                 
             return output.tensor
         

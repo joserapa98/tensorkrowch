@@ -1390,12 +1390,14 @@ def _contract_edges_first(edges: List[AbstractEdge],
 
         axes_nums = dict(zip(range(node1.rank), range(node1.rank)))
         for edge in edges:
+            axes = node1.in_which_axis(edge)
             result = torch.diagonal(result,
                                     offset=0,
-                                    dim1=axes_nums[edge.axis1.num],
-                                    dim2=axes_nums[edge.axis2.num]).sum(-1)
-            min_axis = min(edge.axis1.num, edge.axis2.num)
-            max_axis = max(edge.axis1.num, edge.axis2.num)
+                                    dim1=axes_nums[axes[0].num],
+                                    dim2=axes_nums[axes[1].num])
+            result = result.sum(-1)
+            min_axis = min(axes[0].num, axes[1].num)
+            max_axis = max(axes[0].num, axes[1].num)
             for num in axes_nums:
                 if num < min_axis:
                     continue
@@ -1436,7 +1438,8 @@ def _contract_edges_first(edges: List[AbstractEdge],
         # new_shape como aux_shape
 
         for i in [0, 1]:
-            for j, edge in enumerate(nodes[i]._edges):
+            for j, axis in enumerate(nodes[i]._axes):
+                edge = nodes[i]._edges[j]
                 if edge in edges:
                     if i == 0:
                         if isinstance(edge, ParamEdge):
@@ -1461,12 +1464,12 @@ def _contract_edges_first(edges: List[AbstractEdge],
 
                     contract_edges[edge].append(j)
 
-                elif edge.is_batch():
+                elif axis.is_batch():
                     if i == 0:
                         batch_in_node2 = False
-                        for aux_edge in nodes[1]._edges:
-                            if aux_edge.is_batch() and (edge.axis1._name == aux_edge.axis1._name):
-                                batch_edges[edge.axis1._name] = [j]
+                        for aux_axis in nodes[1]._axes:
+                            if aux_axis.is_batch() and (axis._name == aux_axis._name):
+                                batch_edges[axis._name] = [j]
                                 # if 'batch' in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!
                                 #     batch_edges[edge.axis1._name] = [-1, j]
                                 # else:
@@ -1476,24 +1479,24 @@ def _contract_edges_first(edges: List[AbstractEdge],
                                 break
 
                         if not batch_in_node2:
-                            non_contract_edges[i][edge] = j
+                            non_contract_edges[i][axis._name] = j
                             # if 'batch' in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!
                             #     non_contract_edges[i][edge] = [j]
                             # else:
                             #     non_contract_edges[i][edge] = [tensors[i].shape[j], j]
 
                     else:
-                        if edge.axis1._name in batch_edges:
-                            batch_edges[edge.axis1._name].append(j)
+                        if axis._name in batch_edges:
+                            batch_edges[axis._name].append(j)
                         else:
-                            non_contract_edges[i][edge] = j
+                            non_contract_edges[i][axis._name] = j
                             # if 'batch' in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!
                             #     non_contract_edges[i][edge] = [-1, j]
                             # else:
                             #     non_contract_edges[i][edge] = [tensors[i].shape[j], j]
 
                 else:
-                    non_contract_edges[i][edge] = j
+                    non_contract_edges[i][axis._name] = j
 
         # TODO: esto seguro que se puede hacer mejor
         permutation_dims = [None, None]
@@ -1727,12 +1730,14 @@ def _contract_edges_next(successor: Successor,
 
         axes_nums = dict(zip(range(node1.rank), range(node1.rank)))
         for edge in edges:
+            axes = node1.in_which_axis(edge)
             result = torch.diagonal(result,
                                     offset=0,
-                                    dim1=axes_nums[edge.axis1.num],
-                                    dim2=axes_nums[edge.axis2.num]).sum(-1)
-            min_axis = min(edge.axis1.num, edge.axis2.num)
-            max_axis = max(edge.axis1.num, edge.axis2.num)
+                                    dim1=axes_nums[axes[0].num],
+                                    dim2=axes_nums[axes[1].num])
+            result = result.sum(-1)
+            min_axis = min(axes[0].num, axes[1].num)
+            max_axis = max(axes[0].num, axes[1].num)
             for num in axes_nums:
                 if num < min_axis:
                     continue

@@ -1367,6 +1367,23 @@ class TestParameterize:
         assert paramnode1.name == 'node_1'
         assert node2.name == 'node_0'
         
+    def test_parameterize_non_leaf(self):
+        node1 = tk.randn(shape=(2, 3, 2))
+        node2 = tk.randn(shape=(2, 3, 2))
+        
+        node1[2] ^ node2[0]
+        node3 = node1 @ node2
+        
+        node3.name = 'paramnode3'
+        paramnode3 = node3.parameterize()
+        
+        assert paramnode3.name == 'paramnode3'
+        assert isinstance(paramnode3, tk.ParamNode)
+        assert paramnode3[0] != node1[0]
+        assert paramnode3[1] != node1[1]
+        assert paramnode3[1] != node2[1]
+        assert paramnode3[2] != node2[2]
+        
     def test_parameterize_dangling_edge(self):
         node = tk.Node(axes_names=('left', 'input', 'right'),
                        tensor=torch.randn(3, 5, 2))

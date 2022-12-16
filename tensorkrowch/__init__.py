@@ -15,7 +15,7 @@ from tensorkrowch.node_operations import CHECK_TIMES  # TODO
 
 from tensorkrowch.initializers import zeros, ones, copy, rand, randn
 
-from tensorkrowch.tn_models.mps_layer import MPSLayer, UMPSLayer
-from tensorkrowch.tn_models.mps import MPS, UMPS
+from tensorkrowch.tn_models.mps_layer import MPSLayer, UMPSLayer, ConvMPSLayer, ConvUMPSLayer
+from tensorkrowch.tn_models.mps import MPS, UMPS, ConvMPS, ConvUMPS
 
 #from tensorkrowch.functionals import tn_mode

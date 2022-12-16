@@ -7,6 +7,7 @@ from typing import (Union, Optional, Sequence,
 
 import torch
 from torch.nn.functional import pad
+import torch.nn as nn
 
 from tensorkrowch.network_components import (AbstractNode, Node, ParamNode,
                                          AbstractEdge)
@@ -823,3 +824,221 @@ class UMPS(TensorNetwork):
     #         self.right_env = new_right_nodes[:-1]
             
     #     self.output_node = output_node.parameterize()
+
+
+class ConvMPS(MPS):
+    
+    def __init__(self,
+                 in_channels: int,
+                 d_bond: Union[int, Sequence[int]],
+                 kernel_size: Union[int, Sequence],
+                 stride: int = 1,
+                 padding: int = 0,
+                 dilation: int = 1,
+                 boundary: Text = 'obc',
+                 param_bond: bool = False,
+                 inline_input: bool = False,
+                 inline_mats: bool = False):
+        
+        if isinstance(kernel_size, int):
+            kernel_size = (kernel_size, kernel_size)
+        elif not isinstance(kernel_size, Sequence):
+            raise TypeError('`kernel_size` must be int or Sequence')
+        
+        if isinstance(stride, int):
+            stride = (stride, stride)
+        elif not isinstance(stride, Sequence):
+            raise TypeError('`stride` must be int or Sequence')
+        
+        if isinstance(padding, int):
+            padding = (padding, padding)
+        elif not isinstance(padding, Sequence):
+            raise TypeError('`padding` must be int or Sequence')
+        
+        if isinstance(dilation, int):
+            dilation = (dilation, dilation)
+        elif not isinstance(dilation, Sequence):
+            raise TypeError('`dilation` must be int or Sequence')
+        
+        self._in_channels = in_channels
+        self._kernel_size = kernel_size
+        self._stride = stride
+        self._padding = padding
+        self._dilation = dilation
+        
+        super().__init__(n_sites=kernel_size[0] * kernel_size[1],
+                         d_phys=in_channels,
+                         d_bond=d_bond,
+                         boundary=boundary,
+                         param_bond=param_bond,
+                         num_batches=2,
+                         inline_input=inline_input,
+                         inline_mats=inline_mats)
+        
+        self.unfold = nn.Unfold(kernel_size=kernel_size,
+                                stride=stride,
+                                padding=padding,
+                                dilation=dilation)
+        
+    @property
+    def in_channels(self) -> int:
+        return self._in_channels
+    
+    @property
+    def kernel_size(self) -> Tuple[int, int]:
+        return self._kernel_size
+    
+    @property
+    def stride(self) -> Tuple[int, int]:
+        return self._stride
+    
+    @property
+    def padding(self) -> Tuple[int, int]:
+        return self._padding
+    
+    @property
+    def dilation(self) -> Tuple[int, int]:
+        return self._dilation
+    
+    def forward(self, image, mode='flat'):
+        """
+        Parameters
+        ----------
+        image: input image with shape batch_size x in_channels x height x width
+        mode: can be either 'flat' or 'snake', indicates the ordering of
+            the pixels in the MPS
+        """
+        # Input image shape: batch_size x in_channels x height x width
+        
+        patches = self.unfold(image).transpose(1, 2)
+        # batch_size x nb_windows x (in_channels * nb_pixels)
+        
+        patches = patches.view(*patches.shape[:-1], self.in_channels, -1)
+        # batch_size x nb_windows x in_channels x nb_pixels
+        
+        patches = patches.permute(3, 0, 1, 2)
+        # nb_pixels x batch_size x nb_windows x in_channels
+        
+        result = super().forward(patches)
+        # batch_size x nb_windows
+        
+        h_in = image.shape[2]
+        w_in = image.shape[3]
+        
+        h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] * \
+            (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
+        w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] * \
+                    (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
+        
+        result = result.view(*result.shape[:-1], h_out, w_out)
+        # batch_size x out_channels x height_out x width_out
+        
+        return result
+    
+    
+class ConvUMPS(UMPS):
+    
+    def __init__(self,
+                    in_channels: int,
+                    d_bond: int,
+                    kernel_size: Union[int, Sequence],
+                    stride: int = 1,
+                    padding: int = 0,
+                    dilation: int = 1,
+                    param_bond: bool = False,
+                    inline_input: bool = False,
+                    inline_mats: bool = False):
+        
+        if isinstance(kernel_size, int):
+            kernel_size = (kernel_size, kernel_size)
+        elif not isinstance(kernel_size, Sequence):
+            raise TypeError('`kernel_size` must be int or Sequence')
+        
+        if isinstance(stride, int):
+            stride = (stride, stride)
+        elif not isinstance(stride, Sequence):
+            raise TypeError('`stride` must be int or Sequence')
+        
+        if isinstance(padding, int):
+            padding = (padding, padding)
+        elif not isinstance(padding, Sequence):
+            raise TypeError('`padding` must be int or Sequence')
+        
+        if isinstance(dilation, int):
+            dilation = (dilation, dilation)
+        elif not isinstance(dilation, Sequence):
+            raise TypeError('`dilation` must be int or Sequence')
+        
+        self._in_channels = in_channels
+        self._kernel_size = kernel_size
+        self._stride = stride
+        self._padding = padding
+        self._dilation = dilation
+        
+        super().__init__(n_sites=kernel_size[0] * kernel_size[1],
+                         d_phys=in_channels,
+                         d_bond=d_bond,
+                         param_bond=param_bond,
+                         num_batches=2,
+                         inline_input=inline_input,
+                         inline_mats=inline_mats)
+        
+        self.unfold = nn.Unfold(kernel_size=kernel_size,
+                                stride=stride,
+                                padding=padding,
+                                dilation=dilation)
+        
+    @property
+    def in_channels(self) -> int:
+        return self._in_channels
+    
+    @property
+    def kernel_size(self) -> Tuple[int, int]:
+        return self._kernel_size
+    
+    @property
+    def stride(self) -> Tuple[int, int]:
+        return self._stride
+    
+    @property
+    def padding(self) -> Tuple[int, int]:
+        return self._padding
+    
+    @property
+    def dilation(self) -> Tuple[int, int]:
+        return self._dilation
+    
+    def forward(self, image, mode='flat'):
+        """
+        Parameters
+        ----------
+        image: input image with shape batch_size x in_channels x height x width
+        mode: can be either 'flat' or 'snake', indicates the ordering of
+            the pixels in the MPS
+        """
+        # Input image shape: batch_size x in_channels x height x width
+        
+        patches = self.unfold(image).transpose(1, 2)
+        # batch_size x nb_windows x (in_channels * nb_pixels)
+        
+        patches = patches.view(*patches.shape[:-1], self.in_channels, -1)
+        # batch_size x nb_windows x in_channels x nb_pixels
+        
+        patches = patches.permute(3, 0, 1, 2)
+        # nb_pixels x batch_size x nb_windows x in_channels
+        
+        result = super().forward(patches)
+        # batch_size x nb_windows
+        
+        h_in = image.shape[2]
+        w_in = image.shape[3]
+        
+        h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] * \
+            (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
+        w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] * \
+                    (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
+        
+        result = result.view(*result.shape[:-1], h_out, w_out)
+        # batch_size x out_channels x height_out x width_out
+        
+        return result

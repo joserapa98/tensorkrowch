@@ -415,29 +415,14 @@ class TestConvMPS:
                     for unbind_mode in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mps.automemory = automemory
-                                mps.unbind_mode = unbind_mode
-                                mps.inline_input = inline_input
-                                mps.inline_mats = inline_mats
-                                
-                                mps.trace(example)
-                                result = mps(data)
-                                
-                                assert result.shape == (100, 12, 12)
-                                assert len(mps.edges) == 0
-                                assert len(mps.leaf_nodes) == 9
-                                assert len(mps.data_nodes) == 9
-                                if not inline_input and automemory:
-                                    assert len(mps.virtual_nodes) == 4
-                                else:
-                                    assert len(mps.virtual_nodes) == 3
+                                for conv_mode in ['flat', 'snake']:
+                                    mps.automemory = automemory
+                                    mps.unbind_mode = unbind_mode
+                                    mps.inline_input = inline_input
+                                    mps.inline_mats = inline_mats
                                     
-                                # Canonicalize and continue
-                                for mode in ['svd', 'svdr', 'qr']:
-                                    mps.delete_non_leaf()
-                                    mps.canonicalize(mode=mode, rank=2)
                                     mps.trace(example)
-                                    result = mps(data)
+                                    result = mps(data, mode=conv_mode)
                                     
                                     assert result.shape == (100, 12, 12)
                                     assert len(mps.edges) == 0
@@ -447,6 +432,22 @@ class TestConvMPS:
                                         assert len(mps.virtual_nodes) == 4
                                     else:
                                         assert len(mps.virtual_nodes) == 3
+                                        
+                                    # Canonicalize and continue
+                                    for mode in ['svd', 'svdr', 'qr']:
+                                        mps.delete_non_leaf()
+                                        mps.canonicalize(mode=mode, rank=2)
+                                        mps.trace(example)
+                                        result = mps(data, mode=conv_mode)
+                                        
+                                        assert result.shape == (100, 12, 12)
+                                        assert len(mps.edges) == 0
+                                        assert len(mps.leaf_nodes) == 9
+                                        assert len(mps.data_nodes) == 9
+                                        if not inline_input and automemory:
+                                            assert len(mps.virtual_nodes) == 4
+                                        else:
+                                            assert len(mps.virtual_nodes) == 3
                                         
     def test_all_algorithms_diff_d_bond(self):
         def embedding(data: torch.Tensor) -> torch.Tensor:
@@ -469,29 +470,14 @@ class TestConvMPS:
                     for unbind_mode in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mps.automemory = automemory
-                                mps.unbind_mode = unbind_mode
-                                mps.inline_input = inline_input
-                                mps.inline_mats = inline_mats
-                                
-                                mps.trace(example)
-                                result = mps(data)
-                                
-                                assert result.shape == (100, 12, 12)
-                                assert len(mps.edges) == 0
-                                assert len(mps.leaf_nodes) == 9
-                                assert len(mps.data_nodes) == 9
-                                if not inline_input and automemory:
-                                    assert len(mps.virtual_nodes) == 4
-                                else:
-                                    assert len(mps.virtual_nodes) == 3
+                                for conv_mode in ['flat', 'snake']:
+                                    mps.automemory = automemory
+                                    mps.unbind_mode = unbind_mode
+                                    mps.inline_input = inline_input
+                                    mps.inline_mats = inline_mats
                                     
-                                # Canonicalize and continue
-                                for mode in ['svd', 'svdr', 'qr']:
-                                    mps.delete_non_leaf()
-                                    mps.canonicalize(mode=mode, rank=2)
                                     mps.trace(example)
-                                    result = mps(data)
+                                    result = mps(data, mode=conv_mode)
                                     
                                     assert result.shape == (100, 12, 12)
                                     assert len(mps.edges) == 0
@@ -501,6 +487,22 @@ class TestConvMPS:
                                         assert len(mps.virtual_nodes) == 4
                                     else:
                                         assert len(mps.virtual_nodes) == 3
+                                        
+                                    # Canonicalize and continue
+                                    for mode in ['svd', 'svdr', 'qr']:
+                                        mps.delete_non_leaf()
+                                        mps.canonicalize(mode=mode, rank=2)
+                                        mps.trace(example)
+                                        result = mps(data, mode=conv_mode)
+                                        
+                                        assert result.shape == (100, 12, 12)
+                                        assert len(mps.edges) == 0
+                                        assert len(mps.leaf_nodes) == 9
+                                        assert len(mps.data_nodes) == 9
+                                        if not inline_input and automemory:
+                                            assert len(mps.virtual_nodes) == 4
+                                        else:
+                                            assert len(mps.virtual_nodes) == 3
 
     def test_extreme_case_left_right(self):
         # Left node + Right node
@@ -521,33 +523,34 @@ class TestConvMPS:
             for unbind_mode in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
-                        mps.automemory = automemory
-                        mps.unbind_mode = unbind_mode
-                        mps.inline_input = inline_input
-                        mps.inline_mats = inline_mats
-                        
-                        mps.trace(example)
-                        result = mps(data)
-                        
-                        assert result.shape == (100, 14, 13)
-                        assert len(mps.edges) == 0
-                        assert len(mps.leaf_nodes) == 2
-                        assert len(mps.data_nodes) == 2
-                        assert len(mps.virtual_nodes) == 3
+                        for conv_mode in ['flat', 'snake']:
+                            mps.automemory = automemory
+                            mps.unbind_mode = unbind_mode
+                            mps.inline_input = inline_input
+                            mps.inline_mats = inline_mats
                             
-                        # Canonicalize and continue
-                        for oc in [0, 1]:
-                            for mode in ['svd', 'svdr', 'qr']:
-                                mps.delete_non_leaf()
-                                mps.canonicalize(oc=oc, mode=mode, rank=2)
-                                mps.trace(example)
-                                result = mps(data)
+                            mps.trace(example)
+                            result = mps(data, mode=conv_mode)
+                            
+                            assert result.shape == (100, 14, 13)
+                            assert len(mps.edges) == 0
+                            assert len(mps.leaf_nodes) == 2
+                            assert len(mps.data_nodes) == 2
+                            assert len(mps.virtual_nodes) == 3
                                 
-                                assert result.shape == (100, 14, 13)
-                                assert len(mps.edges) == 0
-                                assert len(mps.leaf_nodes) == 2
-                                assert len(mps.data_nodes) == 2
-                                assert len(mps.virtual_nodes) == 3
+                            # Canonicalize and continue
+                            for oc in [0, 1]:
+                                for mode in ['svd', 'svdr', 'qr']:
+                                    mps.delete_non_leaf()
+                                    mps.canonicalize(oc=oc, mode=mode, rank=2)
+                                    mps.trace(example)
+                                    result = mps(data, mode=conv_mode)
+                                    
+                                    assert result.shape == (100, 14, 13)
+                                    assert len(mps.edges) == 0
+                                    assert len(mps.leaf_nodes) == 2
+                                    assert len(mps.data_nodes) == 2
+                                    assert len(mps.virtual_nodes) == 3
 
     def test_extreme_case_one_node(self):
         # One node
@@ -568,29 +571,14 @@ class TestConvMPS:
             for unbind_mode in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
-                        mps.automemory = automemory
-                        mps.unbind_mode = unbind_mode
-                        mps.inline_input = inline_input
-                        mps.inline_mats = inline_mats
-                        
-                        mps.trace(example)
-                        result = mps(data)
-                        
-                        assert result.shape == (100, 14, 14)
-                        assert len(mps.edges) == 0
-                        assert len(mps.leaf_nodes) == 1
-                        assert len(mps.data_nodes) == 1
-                        if not inline_input and automemory:
-                            assert len(mps.virtual_nodes) == 4
-                        else:
-                            assert len(mps.virtual_nodes) == 3
+                        for conv_mode in ['flat', 'snake']:
+                            mps.automemory = automemory
+                            mps.unbind_mode = unbind_mode
+                            mps.inline_input = inline_input
+                            mps.inline_mats = inline_mats
                             
-                        # Canonicalize and continue
-                        for mode in ['svd', 'svdr', 'qr']:
-                            mps.delete_non_leaf()
-                            mps.canonicalize(oc=0, mode=mode, rank=2)
                             mps.trace(example)
-                            result = mps(data)
+                            result = mps(data, mode=conv_mode)
                             
                             assert result.shape == (100, 14, 14)
                             assert len(mps.edges) == 0
@@ -600,6 +588,22 @@ class TestConvMPS:
                                 assert len(mps.virtual_nodes) == 4
                             else:
                                 assert len(mps.virtual_nodes) == 3
+                                
+                            # Canonicalize and continue
+                            for mode in ['svd', 'svdr', 'qr']:
+                                mps.delete_non_leaf()
+                                mps.canonicalize(oc=0, mode=mode, rank=2)
+                                mps.trace(example)
+                                result = mps(data, mode=conv_mode)
+                                
+                                assert result.shape == (100, 14, 14)
+                                assert len(mps.edges) == 0
+                                assert len(mps.leaf_nodes) == 1
+                                assert len(mps.data_nodes) == 1
+                                if not inline_input and automemory:
+                                    assert len(mps.virtual_nodes) == 4
+                                else:
+                                    assert len(mps.virtual_nodes) == 3
 
 
 class TestConvUMPS:
@@ -622,19 +626,20 @@ class TestConvUMPS:
                 for unbind_mode in [True, False]:
                     for inline_input in [True, False]:
                         for inline_mats in [True, False]:
-                            mps.automemory = automemory
-                            mps.unbind_mode = unbind_mode
-                            mps.inline_input = inline_input
-                            mps.inline_mats = inline_mats
-                            
-                            mps.trace(example)
-                            result = mps(data)
-                            
-                            assert result.shape == (100, 12, 12)
-                            assert len(mps.edges) == 0
-                            assert len(mps.leaf_nodes) == 9
-                            assert len(mps.data_nodes) == 9
-                            assert len(mps.virtual_nodes) == 4
+                            for conv_mode in ['flat', 'snake']:
+                                mps.automemory = automemory
+                                mps.unbind_mode = unbind_mode
+                                mps.inline_input = inline_input
+                                mps.inline_mats = inline_mats
+                                
+                                mps.trace(example)
+                                result = mps(data, mode=conv_mode)
+                                
+                                assert result.shape == (100, 12, 12)
+                                assert len(mps.edges) == 0
+                                assert len(mps.leaf_nodes) == 9
+                                assert len(mps.data_nodes) == 9
+                                assert len(mps.virtual_nodes) == 4
                             
     def test_extreme_case_mats_env_2_nodes(self):
         # Two nodes
@@ -654,19 +659,20 @@ class TestConvUMPS:
             for unbind_mode in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
-                        mps.automemory = automemory
-                        mps.unbind_mode = unbind_mode
-                        mps.inline_input = inline_input
-                        mps.inline_mats = inline_mats
-                        
-                        mps.trace(example)
-                        result = mps(data)
-                        
-                        assert result.shape == (100, 14, 13)
-                        assert len(mps.edges) == 0
-                        assert len(mps.leaf_nodes) == 2
-                        assert len(mps.data_nodes) == 2
-                        assert len(mps.virtual_nodes) == 4
+                        for conv_mode in ['flat', 'snake']:
+                            mps.automemory = automemory
+                            mps.unbind_mode = unbind_mode
+                            mps.inline_input = inline_input
+                            mps.inline_mats = inline_mats
+                            
+                            mps.trace(example)
+                            result = mps(data, mode=conv_mode)
+                            
+                            assert result.shape == (100, 14, 13)
+                            assert len(mps.edges) == 0
+                            assert len(mps.leaf_nodes) == 2
+                            assert len(mps.data_nodes) == 2
+                            assert len(mps.virtual_nodes) == 4
 
     def test_extreme_case_mats_env_1_node(self):
         # One node
@@ -686,19 +692,20 @@ class TestConvUMPS:
             for unbind_mode in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
-                        mps.automemory = automemory
-                        mps.unbind_mode = unbind_mode
-                        mps.inline_input = inline_input
-                        mps.inline_mats = inline_mats
-                        
-                        mps.trace(example)
-                        result = mps(data)
-                        
-                        assert result.shape == (100, 14, 14)
-                        assert len(mps.edges) == 0
-                        assert len(mps.leaf_nodes) == 1
-                        assert len(mps.data_nodes) == 1
-                        assert len(mps.virtual_nodes) == 4
+                        for conv_mode in ['flat', 'snake']:
+                            mps.automemory = automemory
+                            mps.unbind_mode = unbind_mode
+                            mps.inline_input = inline_input
+                            mps.inline_mats = inline_mats
+                            
+                            mps.trace(example)
+                            result = mps(data, mode=conv_mode)
+                            
+                            assert result.shape == (100, 14, 14)
+                            assert len(mps.edges) == 0
+                            assert len(mps.leaf_nodes) == 1
+                            assert len(mps.data_nodes) == 1
+                            assert len(mps.virtual_nodes) == 4
 
 
 class TestMPSLayer:
@@ -1206,29 +1213,14 @@ class TestConvMPSLayer:
                         for unbind_mode in [True, False]:
                             for inline_input in [True, False]:
                                 for inline_mats in [True, False]:
-                                    mps.automemory = automemory
-                                    mps.unbind_mode = unbind_mode
-                                    mps.inline_input = inline_input
-                                    mps.inline_mats = inline_mats
-                                    
-                                    mps.trace(example)
-                                    result = mps(data)
-                                    
-                                    assert result.shape == (100, 5, 12, 12)
-                                    assert len(mps.edges) == 1
-                                    assert len(mps.leaf_nodes) == 10
-                                    assert len(mps.data_nodes) == 9
-                                    if not inline_input and automemory:
-                                        assert len(mps.virtual_nodes) == 4
-                                    else:
-                                        assert len(mps.virtual_nodes) == 3
+                                    for conv_mode in ['flat', 'snake']:
+                                        mps.automemory = automemory
+                                        mps.unbind_mode = unbind_mode
+                                        mps.inline_input = inline_input
+                                        mps.inline_mats = inline_mats
                                         
-                                    # Canonicalize and continue
-                                    for mode in ['svd', 'svdr', 'qr']:
-                                        mps.delete_non_leaf()
-                                        mps.canonicalize(mode=mode, rank=2)
                                         mps.trace(example)
-                                        result = mps(data)
+                                        result = mps(data, mode=conv_mode)
                                         
                                         assert result.shape == (100, 5, 12, 12)
                                         assert len(mps.edges) == 1
@@ -1238,6 +1230,22 @@ class TestConvMPSLayer:
                                             assert len(mps.virtual_nodes) == 4
                                         else:
                                             assert len(mps.virtual_nodes) == 3
+                                            
+                                        # Canonicalize and continue
+                                        for mode in ['svd', 'svdr', 'qr']:
+                                            mps.delete_non_leaf()
+                                            mps.canonicalize(mode=mode, rank=2)
+                                            mps.trace(example)
+                                            result = mps(data, mode=conv_mode)
+                                            
+                                            assert result.shape == (100, 5, 12, 12)
+                                            assert len(mps.edges) == 1
+                                            assert len(mps.leaf_nodes) == 10
+                                            assert len(mps.data_nodes) == 9
+                                            if not inline_input and automemory:
+                                                assert len(mps.virtual_nodes) == 4
+                                            else:
+                                                assert len(mps.virtual_nodes) == 3
                                         
     def test_all_algorithms_diff_d_bond(self):
         def embedding(data: torch.Tensor) -> torch.Tensor:
@@ -1263,29 +1271,14 @@ class TestConvMPSLayer:
                         for unbind_mode in [True, False]:
                             for inline_input in [True, False]:
                                 for inline_mats in [True, False]:
-                                    mps.automemory = automemory
-                                    mps.unbind_mode = unbind_mode
-                                    mps.inline_input = inline_input
-                                    mps.inline_mats = inline_mats
-                                    
-                                    mps.trace(example)
-                                    result = mps(data)
-                                    
-                                    assert result.shape == (100, 5, 12, 12)
-                                    assert len(mps.edges) == 1
-                                    assert len(mps.leaf_nodes) == 10
-                                    assert len(mps.data_nodes) == 9
-                                    if not inline_input and automemory:
-                                        assert len(mps.virtual_nodes) == 4
-                                    else:
-                                        assert len(mps.virtual_nodes) == 3
+                                    for conv_mode in ['flat', 'snake']:
+                                        mps.automemory = automemory
+                                        mps.unbind_mode = unbind_mode
+                                        mps.inline_input = inline_input
+                                        mps.inline_mats = inline_mats
                                         
-                                    # Canonicalize and continue
-                                    for mode in ['svd', 'svdr', 'qr']:
-                                        mps.delete_non_leaf()
-                                        mps.canonicalize(mode=mode, rank=2)
                                         mps.trace(example)
-                                        result = mps(data)
+                                        result = mps(data, mode=conv_mode)
                                         
                                         assert result.shape == (100, 5, 12, 12)
                                         assert len(mps.edges) == 1
@@ -1295,6 +1288,22 @@ class TestConvMPSLayer:
                                             assert len(mps.virtual_nodes) == 4
                                         else:
                                             assert len(mps.virtual_nodes) == 3
+                                            
+                                        # Canonicalize and continue
+                                        for mode in ['svd', 'svdr', 'qr']:
+                                            mps.delete_non_leaf()
+                                            mps.canonicalize(mode=mode, rank=2)
+                                            mps.trace(example)
+                                            result = mps(data, mode=conv_mode)
+                                            
+                                            assert result.shape == (100, 5, 12, 12)
+                                            assert len(mps.edges) == 1
+                                            assert len(mps.leaf_nodes) == 10
+                                            assert len(mps.data_nodes) == 9
+                                            if not inline_input and automemory:
+                                                assert len(mps.virtual_nodes) == 4
+                                            else:
+                                                assert len(mps.virtual_nodes) == 3
 
     def test_extreme_case_left_output(self):
         # Left node + Outpt node
@@ -1317,32 +1326,33 @@ class TestConvMPSLayer:
             for unbind_mode in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
-                        mps.automemory = automemory
-                        mps.unbind_mode = unbind_mode
-                        mps.inline_input = inline_input
-                        mps.inline_mats = inline_mats
-                        
-                        mps.trace(example)
-                        result = mps(data)
-                        
-                        assert result.shape == (100, 5, 14, 14)
-                        assert len(mps.edges) == 1
-                        assert len(mps.leaf_nodes) == 2
-                        assert len(mps.data_nodes) == 1
-                        assert len(mps.virtual_nodes) == 3
-                        
-                        # Canonicalize and continue
-                        for mode in ['svd', 'svdr', 'qr']:
-                            mps.delete_non_leaf()
-                            mps.canonicalize(mode=mode, rank=2)
+                        for conv_mode in ['flat', 'snake']:
+                            mps.automemory = automemory
+                            mps.unbind_mode = unbind_mode
+                            mps.inline_input = inline_input
+                            mps.inline_mats = inline_mats
+                            
                             mps.trace(example)
-                            result = mps(data)
+                            result = mps(data, mode=conv_mode)
                             
                             assert result.shape == (100, 5, 14, 14)
                             assert len(mps.edges) == 1
                             assert len(mps.leaf_nodes) == 2
                             assert len(mps.data_nodes) == 1
                             assert len(mps.virtual_nodes) == 3
+                            
+                            # Canonicalize and continue
+                            for mode in ['svd', 'svdr', 'qr']:
+                                mps.delete_non_leaf()
+                                mps.canonicalize(mode=mode, rank=2)
+                                mps.trace(example)
+                                result = mps(data, mode=conv_mode)
+                                
+                                assert result.shape == (100, 5, 14, 14)
+                                assert len(mps.edges) == 1
+                                assert len(mps.leaf_nodes) == 2
+                                assert len(mps.data_nodes) == 1
+                                assert len(mps.virtual_nodes) == 3
 
     def test_extreme_case_output_right(self):
         # Output node + Right node
@@ -1365,32 +1375,33 @@ class TestConvMPSLayer:
             for unbind_mode in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
-                        mps.automemory = automemory
-                        mps.unbind_mode = unbind_mode
-                        mps.inline_input = inline_input
-                        mps.inline_mats = inline_mats
-                        
-                        mps.trace(example)
-                        result = mps(data)
-                        
-                        assert result.shape == (100, 5, 14, 14)
-                        assert len(mps.edges) == 1
-                        assert len(mps.leaf_nodes) == 2
-                        assert len(mps.data_nodes) == 1
-                        assert len(mps.virtual_nodes) == 3
-                        
-                        # Canonicalize and continue
-                        for mode in ['svd', 'svdr', 'qr']:
-                            mps.delete_non_leaf()
-                            mps.canonicalize(mode=mode, rank=2)
+                        for conv_mode in ['flat', 'snake']:
+                            mps.automemory = automemory
+                            mps.unbind_mode = unbind_mode
+                            mps.inline_input = inline_input
+                            mps.inline_mats = inline_mats
+                            
                             mps.trace(example)
-                            result = mps(data)
+                            result = mps(data, mode=conv_mode)
                             
                             assert result.shape == (100, 5, 14, 14)
                             assert len(mps.edges) == 1
                             assert len(mps.leaf_nodes) == 2
                             assert len(mps.data_nodes) == 1
                             assert len(mps.virtual_nodes) == 3
+                            
+                            # Canonicalize and continue
+                            for mode in ['svd', 'svdr', 'qr']:
+                                mps.delete_non_leaf()
+                                mps.canonicalize(mode=mode, rank=2)
+                                mps.trace(example)
+                                result = mps(data, mode=conv_mode)
+                                
+                                assert result.shape == (100, 5, 14, 14)
+                                assert len(mps.edges) == 1
+                                assert len(mps.leaf_nodes) == 2
+                                assert len(mps.data_nodes) == 1
+                                assert len(mps.virtual_nodes) == 3
 
 
 class TestConvUMPSLayer:
@@ -1416,19 +1427,20 @@ class TestConvUMPSLayer:
                     for unbind_mode in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mps.automemory = automemory
-                                mps.unbind_mode = unbind_mode
-                                mps.inline_input = inline_input
-                                mps.inline_mats = inline_mats
-                                
-                                mps.trace(example)
-                                result = mps(data)
-                                
-                                assert result.shape == (100, 5, 12, 12)
-                                assert len(mps.edges) == 1
-                                assert len(mps.leaf_nodes) == 10
-                                assert len(mps.data_nodes) == 9
-                                assert len(mps.virtual_nodes) == 4
+                                for conv_mode in ['flat', 'snake']:
+                                    mps.automemory = automemory
+                                    mps.unbind_mode = unbind_mode
+                                    mps.inline_input = inline_input
+                                    mps.inline_mats = inline_mats
+                                    
+                                    mps.trace(example)
+                                    result = mps(data, mode=conv_mode)
+                                    
+                                    assert result.shape == (100, 5, 12, 12)
+                                    assert len(mps.edges) == 1
+                                    assert len(mps.leaf_nodes) == 10
+                                    assert len(mps.data_nodes) == 9
+                                    assert len(mps.virtual_nodes) == 4
                             
     def test_extreme_case_left_output(self):
         # Left node + Output node
@@ -1450,19 +1462,20 @@ class TestConvUMPSLayer:
             for unbind_mode in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
-                        mps.automemory = automemory
-                        mps.unbind_mode = unbind_mode
-                        mps.inline_input = inline_input
-                        mps.inline_mats = inline_mats
-                        
-                        mps.trace(example)
-                        result = mps(data)
-                        
-                        assert result.shape == (100, 5, 14, 14)
-                        assert len(mps.edges) == 1
-                        assert len(mps.leaf_nodes) == 2
-                        assert len(mps.data_nodes) == 1
-                        assert len(mps.virtual_nodes) == 4
+                        for conv_mode in ['flat', 'snake']:
+                            mps.automemory = automemory
+                            mps.unbind_mode = unbind_mode
+                            mps.inline_input = inline_input
+                            mps.inline_mats = inline_mats
+                            
+                            mps.trace(example)
+                            result = mps(data, mode=conv_mode)
+                            
+                            assert result.shape == (100, 5, 14, 14)
+                            assert len(mps.edges) == 1
+                            assert len(mps.leaf_nodes) == 2
+                            assert len(mps.data_nodes) == 1
+                            assert len(mps.virtual_nodes) == 4
 
     def test_extreme_case_output_right(self):
         # Output node + Right node
@@ -1484,16 +1497,17 @@ class TestConvUMPSLayer:
             for unbind_mode in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
-                        mps.automemory = automemory
-                        mps.unbind_mode = unbind_mode
-                        mps.inline_input = inline_input
-                        mps.inline_mats = inline_mats
-                        
-                        mps.trace(example)
-                        result = mps(data)
-                        
-                        assert result.shape == (100, 5, 14, 14)
-                        assert len(mps.edges) == 1
-                        assert len(mps.leaf_nodes) == 2
-                        assert len(mps.data_nodes) == 1
-                        assert len(mps.virtual_nodes) == 4
+                        for conv_mode in ['flat', 'snake']:
+                            mps.automemory = automemory
+                            mps.unbind_mode = unbind_mode
+                            mps.inline_input = inline_input
+                            mps.inline_mats = inline_mats
+                            
+                            mps.trace(example)
+                            result = mps(data, mode=conv_mode)
+                            
+                            assert result.shape == (100, 5, 14, 14)
+                            assert len(mps.edges) == 1
+                            assert len(mps.leaf_nodes) == 2
+                            assert len(mps.data_nodes) == 1
+                            assert len(mps.virtual_nodes) == 4

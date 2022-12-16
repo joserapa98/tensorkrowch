@@ -919,6 +919,22 @@ class ConvMPS(MPS):
         patches = patches.permute(3, 0, 1, 2)
         # nb_pixels x batch_size x nb_windows x in_channels
         
+        if mode == 'snake':
+            new_patches = patches[:self._kernel_size[1]]
+            for i in range(1, self._kernel_size[0]):
+                if i % 2 == 0:
+                    aux = patches[(i * self._kernel_size[1]):
+                                  ((i + 1) * self._kernel_size[1])]
+                else:
+                    aux = patches[(i * self._kernel_size[1]):
+                                  ((i + 1) * self._kernel_size[1])].flip(dims=[0])
+                new_patches = torch.cat([new_patches, aux], dim=0)
+                
+            patches = new_patches
+            
+        elif mode != 'flat':
+            raise ValueError('`mode` can only be \'flat\' or \'snake\'')
+        
         result = super().forward(patches)
         # batch_size x nb_windows
         
@@ -1026,6 +1042,22 @@ class ConvUMPS(UMPS):
         
         patches = patches.permute(3, 0, 1, 2)
         # nb_pixels x batch_size x nb_windows x in_channels
+        
+        if mode == 'snake':
+            new_patches = patches[:self._kernel_size[1]]
+            for i in range(1, self._kernel_size[0]):
+                if i % 2 == 0:
+                    aux = patches[(i * self._kernel_size[1]):
+                                  ((i + 1) * self._kernel_size[1])]
+                else:
+                    aux = patches[(i * self._kernel_size[1]):
+                                  ((i + 1) * self._kernel_size[1])].flip(dims=[0])
+                new_patches = torch.cat([new_patches, aux], dim=0)
+                
+            patches = new_patches
+            
+        elif mode != 'flat':
+            raise ValueError('`mode` can only be \'flat\' or \'snake\'')
         
         result = super().forward(patches)
         # batch_size x nb_windows

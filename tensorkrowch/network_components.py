@@ -2553,12 +2553,12 @@ class TensorNetwork(nn.Module):
         self.delete_non_leaf()
         self._unbind_mode = unbind
         
-    def trace(self, example: Optional[Tensor] = None) -> None:
+    def trace(self, example: Optional[Tensor] = None, *args, **kwargs) -> None:
         with torch.no_grad():
             self._tracing = True
-            self(example)
+            self(example, *args, **kwargs)
             self._tracing = False
-            self(example)
+            self(example, *args, **kwargs)
         # self._tracing = False
 
     def _add_node(self, node: AbstractNode, override: bool = False) -> None:
@@ -3097,7 +3097,7 @@ class TensorNetwork(nn.Module):
         # Custom, optimized contraction methods should be defined for each new subclass of TensorNetwork
         raise NotImplementedError('Contraction methods not implemented for generic TensorNetwork class')
 
-    def forward(self, data: Optional[Tensor] = None) -> Tensor:
+    def forward(self, data: Optional[Tensor] = None, *args, **kwargs) -> Tensor:
         """
         Contract Tensor Network with input data with shape batch x n_features x feature.
         """
@@ -3108,7 +3108,7 @@ class TensorNetwork(nn.Module):
             self._add_data(data=data)
         
         if not self.non_leaf_nodes:
-            output = self.contract()
+            output = self.contract(*args, **kwargs)
             
             self._seq_ops = []
             for op in self._list_ops:
@@ -3117,7 +3117,7 @@ class TensorNetwork(nn.Module):
             return output.tensor
         
         else:
-            # output = self.contract()
+            # output = self.contract(*args, **kwargs)
             
             # total = time.time()
             for op in self._seq_ops:

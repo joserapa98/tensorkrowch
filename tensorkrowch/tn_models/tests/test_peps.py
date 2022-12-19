@@ -12,57 +12,55 @@ from typing import Sequence
 import time
 
 
-class TestMPS:
+class TestPEPS:
     
     def test_all_algorithms(self):
-        example = torch.randn(10, 1, 5)
-        data = torch.randn(10, 100, 5)
+        example = torch.randn(3*4, 1, 5)
+        data = torch.randn(3*4, 100, 5)
         
-        for boundary in ['obc', 'pbc']:
-            for param_bond in [True, False]:
-                mps = tk.MPS(n_sites=10,
-                             d_phys=5,
-                             d_bond=2,
-                             boundary=boundary,
-                             param_bond=param_bond)
+        for boundary_0 in ['obc', 'pbc']:
+            for boundary_1 in ['pbc']:#['obc', 'pbc']:
+                for param_bond in [True, False]:
+                    peps = tk.PEPS(n_rows=3,
+                                   n_cols=4,
+                                   d_phys=5,
+                                   d_bond=[2, 3],
+                                   boundary=[boundary_0, boundary_1],
+                                   param_bond=param_bond)
                 
-                for automemory in [True, False]:
-                    for unbind_mode in [True, False]:
-                        for inline_input in [True, False]:
-                            for inline_mats in [True, False]:
-                                mps.automemory = automemory
-                                mps.unbind_mode = unbind_mode
-                                mps.inline_input = inline_input
-                                mps.inline_mats = inline_mats
-                                
-                                mps.trace(example)
-                                result = mps(data)
-                                
-                                assert result.shape == (100,)
-                                assert len(mps.edges) == 0
-                                assert len(mps.leaf_nodes) == 10
-                                assert len(mps.data_nodes) == 10
-                                if not inline_input and automemory:
-                                    assert len(mps.virtual_nodes) == 4
-                                else:
-                                    assert len(mps.virtual_nodes) == 3
+                    for automemory in [True, False]:
+                        for unbind_mode in [True, False]:
+                            for side in ['left']:#['up', 'down', 'left', 'right']:
+                                for inline in [False]:#[True, False]:
+                                    print(boundary_0, boundary_1, param_bond,
+                                          automemory, unbind_mode, side, inline)
+                                    peps.automemory = automemory
+                                    peps.unbind_mode = unbind_mode
                                     
-                                # Canonicalize and continue
-                                for oc in [0, 1, 5, 8, 9]:
-                                    for mode in ['svd', 'svdr', 'qr']:
-                                        mps.delete_non_leaf()
-                                        mps.canonicalize(oc=oc, mode=mode, rank=2)
-                                        mps.trace(example)
-                                        result = mps(data)
-                                        
-                                        assert result.shape == (100,)
-                                        assert len(mps.edges) == 0
-                                        assert len(mps.leaf_nodes) == 10
-                                        assert len(mps.data_nodes) == 10
-                                        if not inline_input and automemory:
-                                            assert len(mps.virtual_nodes) == 4
+                                    peps.trace(example,
+                                               from_side=side,
+                                               inline=inline)
+                                    result = peps(data,
+                                                  from_side=side,
+                                                  inline=inline)
+                                    
+                                    assert result.shape == (100,)
+                                    assert len(peps.edges) == 0
+                                    assert len(peps.leaf_nodes) == 3*4
+                                    assert len(peps.data_nodes) == 3*4
+                                    if automemory:
+                                        if boundary_0 == 'obc':
+                                            if boundary_1 == 'obc':
+                                                assert len(peps.virtual_nodes) == 8
+                                            else:
+                                                assert len(peps.virtual_nodes) == 6
                                         else:
-                                            assert len(mps.virtual_nodes) == 3
+                                            if boundary_1 == 'obc':
+                                                assert len(peps.virtual_nodes) == 6
+                                            else:
+                                                assert len(peps.virtual_nodes) == 4
+                                    else:
+                                        assert len(peps.virtual_nodes) == 3
                                         
     def test_all_algorithms_diff_d_phys(self):
         d_phys = torch.randint(low=2, high=7, size=(10,)).tolist()

@@ -428,6 +428,7 @@ def _check_first_split(node: AbstractNode,
     return None
 
 
+# TODO: AÑADIR CUTOFF=1E-9 COMO FORMA DE ACOTAR BOND DIM
 def _split_first(node: AbstractNode,
                  node1_axes: Optional[Sequence[Ax]] = None,
                  node2_axes: Optional[Sequence[Ax]] = None,
@@ -610,14 +611,14 @@ def _split_first(node: AbstractNode,
 
         if rank is None:
             # raise ValueError('One of `rank` and `cum_percentage` should be provided')
-            rank = len(s)
+            rank = s.shape[-1]
         else:
-            if rank < len(s):
+            if rank < s.shape[-1]:
                 u = u[..., :rank]
                 s = s[..., :rank]
                 vh = vh[..., :rank, :]
             else:
-                rank = len(s)
+                rank = s.shape[-1]
                 
         if mode == 'svdr':
             phase = torch.sign(torch.randn(s.shape))
@@ -828,14 +829,14 @@ def _split_next(successor: Successor,
 
         if rank is None:
             # raise ValueError('One of `rank` and `cum_percentage` should be provided')
-            rank = len(s)
+            rank = s.shape[-1]
         else:
-            if rank < len(s):
+            if rank < s.shape[-1]:
                 u = u[..., :rank]
                 s = s[..., :rank]
                 vh = vh[..., :rank, :]
             else:
-                rank = len(s)
+                rank = s.shape[-1]
                 
         if mode == 'svdr':
             phase = torch.sign(torch.randn(s.shape))

@@ -165,63 +165,54 @@ class MPS(TensorNetwork):
         self.right_node = None
         self.mats_env = []
         
-        if self._n_sites == 1:
-            node = ParamNode(shape=(self.d_bond[0], self.d_phys[0], self.d_bond[0]),
-                             axes_names=('left', 'input', 'right'),
-                             name=f'mats_env_node',
-                             network=self)
-            node['right'] ^ node['left']
-            self.mats_env.append(node)
+        if self.boundary == 'obc':
+            self.left_node = ParamNode(shape=(self.d_phys[0], self.d_bond[0]),
+                                       axes_names=('input', 'right'),
+                                       name='left_node',
+                                       network=self)
             
-        else:
-            if self.boundary == 'obc':
-                self.left_node = ParamNode(shape=(self.d_phys[0], self.d_bond[0]),
-                                           axes_names=('input', 'right'),
-                                           name='left_node',
-                                           network=self)
+            for i in range(self._n_sites - 2):
+                node = ParamNode(shape=(self.d_bond[i],
+                                        self.d_phys[i + 1],
+                                        self.d_bond[i + 1]),
+                                 axes_names=('left', 'input', 'right'),
+                                 name=f'mats_env_node_({i})',
+                                 network=self)
+                self.mats_env.append(node)
                 
-                for i in range(self._n_sites - 2):
-                    node = ParamNode(shape=(self.d_bond[i],
-                                            self.d_phys[i + 1],
-                                            self.d_bond[i + 1]),
-                                     axes_names=('left', 'input', 'right'),
-                                     name=f'mats_env_node_({i})',
-                                     network=self)
-                    self.mats_env.append(node)
-                    
-                    if i == 0:
-                        self.left_node['right'] ^ self.mats_env[-1]['left']
-                    else:
-                        self.mats_env[-2]['right'] ^ self.mats_env[-1]['left']
-                        
-                    
-                self.right_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[-1]),
-                                            axes_names=('left', 'input'),
-                                            name='right_node',
-                                            network=self)
-                
-                if self._n_sites > 2:
-                    self.mats_env[-1]['right'] ^ self.right_node['left']
+                if i == 0:
+                    self.left_node['right'] ^ self.mats_env[-1]['left']
                 else:
-                    self.left_node['right'] ^ self.right_node['left']
+                    self.mats_env[-2]['right'] ^ self.mats_env[-1]['left']
                     
+                
+            self.right_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[-1]),
+                                        axes_names=('left', 'input'),
+                                        name='right_node',
+                                        network=self)
+            
+            if self._n_sites > 2:
+                self.mats_env[-1]['right'] ^ self.right_node['left']
             else:
-                for i in range(self._n_sites):
-                    node = ParamNode(shape=(self.d_bond[i - 1],
-                                            self.d_phys[i],
-                                            self.d_bond[i]),
-                                     axes_names=('left', 'input', 'right'),
-                                     name=f'mats_env_node_({i})',
-                                     network=self)
-                    self.mats_env.append(node)
-                    
-                    if i == 0:
-                        periodic_edge = self.mats_env[-1]['left']
-                    else:
-                        self.mats_env[-2]['right'] ^ self.mats_env[-1]['left']
-                    
-                    if i == self._n_sites - 1:
-                        self.mats_env[-1]['right'] ^ periodic_edge
+                self.left_node['right'] ^ self.right_node['left']
+                
+        else:
+            for i in range(self._n_sites):
+                node = ParamNode(shape=(self.d_bond[i - 1],
+                                        self.d_phys[i],
+                                        self.d_bond[i]),
+                                 axes_names=('left', 'input', 'right'),
+                                 name=f'mats_env_node_({i})',
+                                 network=self)
+                self.mats_env.append(node)
+                
+                if i == 0:
+                    periodic_edge = self.mats_env[-1]['left']
+                else:
+                    self.mats_env[-2]['right'] ^ self.mats_env[-1]['left']
+                
+                if i == self._n_sites - 1:
+                    self.mats_env[-1]['right'] ^ periodic_edge
 
     def initialize(self, std: float = 1e-9) -> None:
         # Left node

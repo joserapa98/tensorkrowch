@@ -813,11 +813,11 @@ class UMPSLayer(TensorNetwork):
                     self.right_env[-1]['right'] ^ periodic_edge
                     
         # Virtual node
-        uniform_memory = tk.ParamNode(shape=(self.d_bond, self.d_phys, self.d_bond),
-                                      axes_names=('left', 'input', 'right'),
-                                      name='virtual_uniform',
-                                      network=self,
-                                      virtual=True)
+        uniform_memory = ParamNode(shape=(self.d_bond, self.d_phys, self.d_bond),
+                                   axes_names=('left', 'input', 'right'),
+                                   name='virtual_uniform',
+                                   network=self,
+                                   virtual=True)
         self.uniform_memory = uniform_memory
         
         for edge in uniform_memory._edges:

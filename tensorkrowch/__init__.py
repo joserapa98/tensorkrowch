@@ -18,6 +18,6 @@ from tensorkrowch.initializers import zeros, ones, copy, rand, randn
 from tensorkrowch.tn_models.mps import MPS, UMPS, ConvMPS, ConvUMPS
 from tensorkrowch.tn_models.mps_layer import (MPSLayer, UMPSLayer,
                                               ConvMPSLayer, ConvUMPSLayer)
-from tensorkrowch.tn_models.peps import PEPS
+from tensorkrowch.tn_models.peps import PEPS, UPEPS, ConvPEPS, ConvUPEPS
 
 #from tensorkrowch.functionals import tn_mode

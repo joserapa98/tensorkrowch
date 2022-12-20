@@ -509,17 +509,38 @@ def _split_first(node: AbstractNode,
         batch_axes = []
         all_axes = node1_axes + node2_axes
         all_axes.sort()
-        diff = 0
-        for i, j in enumerate(all_axes):
-            if (i + diff) < j:
-                for k in range(i, j):
-                    if not node._edges[k].is_batch():
-                        raise ValueError(f'Edge {node._edges[k]} is not a batch'
-                                         'edge but it\'s not included in `node1_axes`'
-                                         'neither in `node2_axes`')
-                    else:
-                        batch_axes.append(k)
-                diff = j - i
+        
+        if all_axes:
+            j = 0
+            k = all_axes[0]
+        else:
+            k = node.rank
+        for i in range(node.rank):
+            if i < k:
+                if not node._edges[i].is_batch():
+                    raise ValueError(f'Edge {node._edges[i]} is not a batch '
+                                     'edge but it\'s not included in `node1_axes` '
+                                     'neither in `node2_axes`')
+                else:
+                    batch_axes.append(i)
+            else:
+                if (j + 1) == len(all_axes):
+                    k = node.rank
+                else:
+                    j += 1
+                    k = all_axes[j]
+        
+        # diff = 0
+        # for i, j in enumerate(all_axes):
+        #     if (i + diff) < j:
+        #         for k in range(i, j):  #  i + diff?
+        #             if not node._edges[k].is_batch():
+        #                 raise ValueError(f'Edge {node._edges[k]} is not a batch '
+        #                                  'edge but it\'s not included in `node1_axes` '
+        #                                  'neither in `node2_axes`')
+        #             else:
+        #                 batch_axes.append(k)
+        #         diff = j - i
         
         batch_shape = torch.tensor(node.shape)[batch_axes].tolist()
         node1_shape = torch.tensor(node.shape)[node1_axes]

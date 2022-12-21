@@ -413,14 +413,16 @@ def _check_first_split(node: AbstractNode,
                        mode = 'svd',
                        side = 'left',
                        rank: Optional[int] = None,
-                       cum_percentage: Optional[float] = None) -> Optional[Successor]:
+                       cum_percentage: Optional[float] = None,
+                       cutoff: Optional[float] = None) -> Optional[Successor]:
     kwargs={'node': node,
             'node1_axes': node1_axes,
             'node2_axes': node2_axes,
             'mode': mode,
             'side': side,
             'rank': rank,
-            'cum_percentage': cum_percentage}
+            'cum_percentage': cum_percentage,
+            'cutoff': cutoff}
     if 'split' in node._successors:
         for succ in node._successors['split']:
             if succ.kwargs == kwargs:
@@ -437,7 +439,8 @@ def _split_first(node: AbstractNode,
                  mode = 'svd',
                  side = 'left',
                  rank: Optional[int] = None,
-                 cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
+                 cum_percentage: Optional[float] = None,
+                 cutoff: Optional[float] = None) -> Tuple[Node, Node]:
     """
     Split one node in two via SVD. The set of edges has to be split in two sets,
     corresponding to the edges of the first and second resultant nodes. Batch
@@ -465,6 +468,8 @@ def _split_first(node: AbstractNode,
         cum_percentage: if rank is None, number of singular values to keep will
             be the amount of values whose sum with respect to the total sum of
             singular values is greater than `cum_percentage`
+        cutoff: if rank and cum_percentage are None, only singular values greater
+            than cutoff will remain
             
     Returns:
         node1, node2: nodes that store both parts of the splitted tensor
@@ -501,7 +506,8 @@ def _split_first(node: AbstractNode,
                   'mode': mode,
                   'side': side,
                   'rank': rank,
-                  'cum_percentage': cum_percentage}
+                  'cum_percentage': cum_percentage,
+                  'cutoff': cutoff}
         
         node1_axes = [node.get_axis_num(axis) for axis in node1_axes]
         node2_axes = [node.get_axis_num(axis) for axis in node2_axes]
@@ -619,16 +625,32 @@ def _split_first(node: AbstractNode,
         u, s, vh = torch.linalg.svd(node_tensor, full_matrices=False)
 
         if cum_percentage is not None:
-            if rank is not None:
-                raise ValueError('Only one of `rank` and `cum_percentage` should be provided')
+            if (rank is not None) or (cutoff is not None):
+                raise ValueError('Only one of `rank`, `cum_percentage` and '
+                                 '`cutoff` should be provided')
             percentages = s.cumsum(-1) / s.sum(-1).view(*s.shape[:-1], 1).expand(s.shape)
             cum_percentage_tensor = torch.tensor(cum_percentage).repeat(percentages.shape[:-1])
             rank = 0
             for i in range(percentages.shape[-1]):
                 p = percentages[..., i]
                 rank += 1
-                if torch.ge(p, cum_percentage_tensor).all():  # TODO: while
+                # NOTE: cortamos cuando en todos los batches nos pasamos del cum_percentage
+                if torch.ge(p, cum_percentage_tensor).all():
                     break
+                
+        elif cutoff is not None:
+            if rank is not None:
+                raise ValueError('Only one of `rank`, `cum_percentage` and '
+                                 '`cutoff` should be provided')
+            cutoff_tensor = torch.tensor(cutoff).repeat(s.shape[:-1])
+            rank = 0
+            for i in range(s.shape[-1]):
+                # NOTE: cortamos cuando en todos los batches nos pasamos del cutoff
+                if torch.le(s[..., i], cutoff_tensor).all():
+                    break
+                rank += 1
+            if rank == 0:
+                rank = 1
 
         if rank is None:
             # raise ValueError('One of `rank` and `cum_percentage` should be provided')
@@ -809,7 +831,8 @@ def _split_next(successor: Successor,
                 mode = 'svd',
                 side = 'left',
                 rank: Optional[int] = None,
-                cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
+                cum_percentage: Optional[float] = None,
+                cutoff: Optional[float] = None) -> Tuple[Node, Node]:
     
     batch_axes = successor.hints['batch_axes']
     node1_axes = successor.hints['node1_axes']
@@ -837,16 +860,32 @@ def _split_next(successor: Successor,
         u, s, vh = torch.linalg.svd(node_tensor, full_matrices=False)
 
         if cum_percentage is not None:
-            if rank is not None:
-                raise ValueError('Only one of `rank` and `cum_percentage` should be provided')
+            if (rank is not None) or (cutoff is None):
+                raise ValueError('Only one of `rank`, `cum_percentage` and '
+                                 '`cutoff` should be provided')
             percentages = s.cumsum(-1) / s.sum(-1).view(*s.shape[:-1], 1).expand(s.shape)
             cum_percentage_tensor = torch.tensor(cum_percentage).repeat(percentages.shape[:-1])
             rank = 0
             for i in range(percentages.shape[-1]):
                 p = percentages[..., i]
                 rank += 1
-                if torch.ge(p, cum_percentage_tensor).all():  # TODO: while
+                # NOTE: cortamos cuando en todos los batches nos pasamos del cum_percentage
+                if torch.ge(p, cum_percentage_tensor).all():
                     break
+                
+        elif cutoff is not None:
+            if rank is not None:
+                raise ValueError('Only one of `rank`, `cum_percentage` and '
+                                 '`cutoff` should be provided')
+            cutoff_tensor = torch.tensor(cutoff).repeat(s.shape[:-1])
+            rank = 0
+            for i in range(s.shape[-1]):
+                # NOTE: cortamos cuando en todos los batches nos pasamos del cutoff
+                if torch.le(s[..., i], cutoff_tensor).all():
+                    break
+                rank += 1
+            if rank == 0:
+                rank = 1
 
         if rank is None:
             # raise ValueError('One of `rank` and `cum_percentage` should be provided')
@@ -920,10 +959,12 @@ def split_node(node: AbstractNode,
                 #  node1: Optional[AbstractNode] = None,
                 #  node2: Optional[AbstractNode] = None,
                 mode = 'svd',
-                 side = 'left',
-                 rank: Optional[int] = None,
-                 cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
-    return split(node, node1_axes, node2_axes, mode, side, rank, cum_percentage)
+                side = 'left',
+                rank: Optional[int] = None,
+                cum_percentage: Optional[float] = None,
+                cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+    return split(node, node1_axes, node2_axes,
+                 mode, side, rank, cum_percentage, cutoff)
 
 AbstractNode.split = split_node
 
@@ -936,12 +977,13 @@ def split_(node: AbstractNode,
            mode = 'svd',
            side = 'left',
            rank: Optional[int] = None,
-           cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
+           cum_percentage: Optional[float] = None,
+           cutoff: Optional[float] = None) -> Tuple[Node, Node]:
     """
     Contract only one edge
     """
     node1, node2 = split(node, node1_axes, node2_axes,
-                         mode, side, rank, cum_percentage)
+                         mode, side, rank, cum_percentage, cutoff)
     node1._reattach_edges(True)
     node2._reattach_edges(True)
     
@@ -1108,7 +1150,8 @@ AbstractNode.split_ = split_
 def svd_(edge,
          side = 'left',
          rank: Optional[int] = None,
-         cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
+         cum_percentage: Optional[float] = None,
+         cutoff: Optional[float] = None) -> Tuple[Node, Node]:
     
     if edge.is_dangling():
         raise ValueError('Edge should be connected to perform SVD')
@@ -1135,7 +1178,8 @@ def svd_(edge,
                                   mode='svd',
                                   side=side,
                                   rank=rank,
-                                  cum_percentage=cum_percentage)
+                                  cum_percentage=cum_percentage,
+                                  cutoff=cutoff)
     
     # new_node1
     prev_nums = [ax.num for ax in batch_axes]
@@ -1172,7 +1216,8 @@ AbstractEdge.svd_ = svd_
 def svdr_(edge,
          side = 'left',
          rank: Optional[int] = None,
-         cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
+         cum_percentage: Optional[float] = None,
+         cutoff: Optional[float] = None) -> Tuple[Node, Node]:
     
     if edge.is_dangling():
         raise ValueError('Edge should be connected to perform SVD')
@@ -1199,7 +1244,8 @@ def svdr_(edge,
                                   mode='svdr',
                                   side=side,
                                   rank=rank,
-                                  cum_percentage=cum_percentage)
+                                  cum_percentage=cum_percentage,
+                                  cutoff=cutoff)
     
     # new_node1
     prev_nums = [ax.num for ax in batch_axes]

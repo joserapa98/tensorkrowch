@@ -158,7 +158,7 @@ class MPS(TensorNetwork):
             self._param_bond = set_param
 
     def _make_nodes(self) -> None:
-        if self.nodes:
+        if self.leaf_nodes:
             raise ValueError('Cannot create MPS nodes if the MPS already has nodes')
 
         self.left_node = None
@@ -390,7 +390,8 @@ class MPS(TensorNetwork):
                      oc: Optional[int] = None,
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
-                     cum_percentage: Optional[float] = None) -> None:
+                     cum_percentage: Optional[float] = None,
+                     cutoff: Optional[float] = None) -> None:
         """
         Turns the MPS into canonical form
         
@@ -413,11 +414,13 @@ class MPS(TensorNetwork):
             if mode == 'svd':
                 result1, result2 = nodes[i]['right'].svd_(side='right',
                                                           rank=rank,
-                                                          cum_percentage=cum_percentage)
+                                                          cum_percentage=cum_percentage,
+                                                          cutoff=cutoff)
             elif mode == 'svdr':
                 result1, result2 = nodes[i]['right'].svdr_(side='right',
                                                            rank=rank,
-                                                           cum_percentage=cum_percentage)
+                                                           cum_percentage=cum_percentage,
+                                                           cutoff=cutoff)
             elif mode == 'qr':
                 result1, result2 = nodes[i]['right'].qr_()
             else:
@@ -431,11 +434,13 @@ class MPS(TensorNetwork):
             if mode == 'svd':
                 result1, result2 = nodes[i]['left'].svd_(side='left',
                                                          rank=rank,
-                                                         cum_percentage=cum_percentage)
+                                                         cum_percentage=cum_percentage,
+                                                         cutoff=cutoff)
             elif mode == 'svdr':
                 result1, result2 = nodes[i]['left'].svdr_(side='left',
                                                           rank=rank,
-                                                          cum_percentage=cum_percentage)
+                                                          cum_percentage=cum_percentage,
+                                                          cutoff=cutoff)
             elif mode == 'qr':
                 result1, result2 = nodes[i]['left'].rq_()
             else:
@@ -455,6 +460,12 @@ class MPS(TensorNetwork):
             self.mats_env = nodes
             
         self.param_bond(set_param=self._param_bond)
+        
+        d_bond = []
+        for node in nodes:
+            if 'right' in node.axes_names:
+                d_bond.append(node['right'].size())
+        self._d_bond = d_bond
 
 
 class UMPS(TensorNetwork):
@@ -558,7 +569,7 @@ class UMPS(TensorNetwork):
             self._param_bond = set_param
 
     def _make_nodes(self) -> None:
-        if self.nodes:
+        if self.leaf_nodes:
             raise ValueError('Cannot create MPS nodes if the MPS already has nodes')
         
         self.left_node = None

@@ -15,13 +15,13 @@ import time
 class TestMPSLayer:
     
     def test_all_algorithms(self):
-        example = torch.randn(10, 1, 5)
-        data = torch.randn(10, 100, 5)
+        example = torch.randn(4, 1, 5)
+        data = torch.randn(4, 100, 5)
         
         for boundary in ['obc', 'pbc']:
             for param_bond in [True, False]:
-                for l_position in [0, 1, 5, 9, 10]:
-                    mps = tk.MPSLayer(n_sites=11,
+                for l_position in range(5):
+                    mps = tk.MPSLayer(n_sites=5,
                                       d_phys=5,
                                       n_labels=12,
                                       d_bond=2,
@@ -43,8 +43,8 @@ class TestMPSLayer:
                                     
                                     assert result.shape == (100, 12)
                                     assert len(mps.edges) == 1
-                                    assert len(mps.leaf_nodes) == 11
-                                    assert len(mps.data_nodes) == 10
+                                    assert len(mps.leaf_nodes) == 5
+                                    assert len(mps.data_nodes) == 4
                                     if not inline_input and automemory:
                                         assert len(mps.virtual_nodes) == 4
                                     else:
@@ -52,29 +52,33 @@ class TestMPSLayer:
                                         
                                     # Canonicalize and continue
                                     for mode in ['svd', 'svdr', 'qr']:
-                                        mps.delete_non_leaf()
-                                        mps.canonicalize(mode=mode, rank=2)
-                                        mps.trace(example)
-                                        result = mps(data)
-                                        
-                                        assert result.shape == (100, 12)
-                                        assert len(mps.edges) == 1
-                                        assert len(mps.leaf_nodes) == 11
-                                        assert len(mps.data_nodes) == 10
-                                        if not inline_input and automemory:
-                                            assert len(mps.virtual_nodes) == 4
-                                        else:
-                                            assert len(mps.virtual_nodes) == 3
+                                        sv_cut_dicts = [{'rank': 2},
+                                                        {'cum_percentage': 0.95},
+                                                        {'cutoff': 1e-5}]
+                                        for sv_cut in sv_cut_dicts:
+                                            mps.delete_non_leaf()
+                                            mps.canonicalize(mode=mode, **sv_cut)
+                                            mps.trace(example)
+                                            result = mps(data)
+                                            
+                                            assert result.shape == (100, 12)
+                                            assert len(mps.edges) == 1
+                                            assert len(mps.leaf_nodes) == 5
+                                            assert len(mps.data_nodes) == 4
+                                            if not inline_input and automemory:
+                                                assert len(mps.virtual_nodes) == 4
+                                            else:
+                                                assert len(mps.virtual_nodes) == 3
                                         
     def test_all_algorithms_diff_d_phys(self):
-        d_phys = torch.randint(low=2, high=7, size=(10,)).tolist()
+        d_phys = torch.randint(low=2, high=7, size=(4,)).tolist()
         example = [torch.randn(1, d) for d in d_phys]
         data = [torch.randn(100, d) for d in d_phys]
         
         for boundary in ['obc', 'pbc']:
             for param_bond in [True, False]:
-                for l_position in [0, 1, 5, 9, 10]:
-                    mps = tk.MPSLayer(n_sites=11,
+                for l_position in range(5):
+                    mps = tk.MPSLayer(n_sites=5,
                                       d_phys=d_phys,
                                       n_labels=12,
                                       d_bond=2,
@@ -96,8 +100,8 @@ class TestMPSLayer:
                                     
                                     assert result.shape == (100, 12)
                                     assert len(mps.edges) == 1
-                                    assert len(mps.leaf_nodes) == 11
-                                    assert len(mps.data_nodes) == 10
+                                    assert len(mps.leaf_nodes) == 5
+                                    assert len(mps.data_nodes) == 4
                                     if not inline_input and automemory:
                                         assert len(mps.virtual_nodes) == 1
                                     else:
@@ -105,29 +109,33 @@ class TestMPSLayer:
                                         
                                     # Canonicalize and continue
                                     for mode in ['svd', 'svdr', 'qr']:
-                                        mps.delete_non_leaf()
-                                        mps.canonicalize(mode=mode, rank=2)
-                                        mps.trace(example)
-                                        result = mps(data)
-                                        
-                                        assert result.shape == (100, 12)
-                                        assert len(mps.edges) == 1
-                                        assert len(mps.leaf_nodes) == 11
-                                        assert len(mps.data_nodes) == 10
-                                        if not inline_input and automemory:
-                                            assert len(mps.virtual_nodes) == 1
-                                        else:
-                                            assert len(mps.virtual_nodes) == 0
+                                        sv_cut_dicts = [{'rank': 2},
+                                                        {'cum_percentage': 0.95},
+                                                        {'cutoff': 1e-5}]
+                                        for sv_cut in sv_cut_dicts:
+                                            mps.delete_non_leaf()
+                                            mps.canonicalize(mode=mode, **sv_cut)
+                                            mps.trace(example)
+                                            result = mps(data)
+                                            
+                                            assert result.shape == (100, 12)
+                                            assert len(mps.edges) == 1
+                                            assert len(mps.leaf_nodes) == 5
+                                            assert len(mps.data_nodes) == 4
+                                            if not inline_input and automemory:
+                                                assert len(mps.virtual_nodes) == 1
+                                            else:
+                                                assert len(mps.virtual_nodes) == 0
                                         
     def test_all_algorithms_diff_d_bond(self):
-        d_bond = torch.randint(low=2, high=7, size=(11,)).tolist()
-        example = torch.randn(10, 1, 5)
-        data = torch.randn(10, 100, 5)
+        d_bond = torch.randint(low=2, high=7, size=(5,)).tolist()
+        example = torch.randn(4, 1, 5)
+        data = torch.randn(4, 100, 5)
         
         for boundary in ['obc', 'pbc']:
             for param_bond in [True, False]:
-                for l_position in [0, 1, 5, 9, 10]:
-                    mps = tk.MPSLayer(n_sites=11,
+                for l_position in range(5):
+                    mps = tk.MPSLayer(n_sites=5,
                                       d_phys=5,
                                       n_labels=12,
                                       d_bond=d_bond[:-1] if boundary == 'obc' else d_bond,
@@ -151,8 +159,8 @@ class TestMPSLayer:
                                     
                                     assert result.shape == (100, 12)
                                     assert len(mps.edges) == 1
-                                    assert len(mps.leaf_nodes) == 11
-                                    assert len(mps.data_nodes) == 10
+                                    assert len(mps.leaf_nodes) == 5
+                                    assert len(mps.data_nodes) == 4
                                     if not inline_input and automemory:
                                         assert len(mps.virtual_nodes) == 4
                                     else:
@@ -160,30 +168,34 @@ class TestMPSLayer:
                                         
                                     # Canonicalize and continue
                                     for mode in ['svd', 'svdr', 'qr']:
-                                        mps.delete_non_leaf()
-                                        mps.canonicalize(mode=mode, rank=2)
-                                        mps.trace(example)
-                                        result = mps(data)
-                                        
-                                        assert result.shape == (100, 12)
-                                        assert len(mps.edges) == 1
-                                        assert len(mps.leaf_nodes) == 11
-                                        assert len(mps.data_nodes) == 10
-                                        if not inline_input and automemory:
-                                            assert len(mps.virtual_nodes) == 4
-                                        else:
-                                            assert len(mps.virtual_nodes) == 3
+                                        sv_cut_dicts = [{'rank': 2},
+                                                        {'cum_percentage': 0.95},
+                                                        {'cutoff': 1e-5}]
+                                        for sv_cut in sv_cut_dicts:
+                                            mps.delete_non_leaf()
+                                            mps.canonicalize(mode=mode, **sv_cut)
+                                            mps.trace(example)
+                                            result = mps(data)
+                                            
+                                            assert result.shape == (100, 12)
+                                            assert len(mps.edges) == 1
+                                            assert len(mps.leaf_nodes) == 5
+                                            assert len(mps.data_nodes) == 4
+                                            if not inline_input and automemory:
+                                                assert len(mps.virtual_nodes) == 4
+                                            else:
+                                                assert len(mps.virtual_nodes) == 3
                                         
     def test_all_algorithms_diff_d_phys_d_bond(self):
-        d_phys = torch.randint(low=2, high=7, size=(10,)).tolist()
-        d_bond = torch.randint(low=2, high=7, size=(11,)).tolist()
+        d_phys = torch.randint(low=2, high=7, size=(4,)).tolist()
+        d_bond = torch.randint(low=2, high=7, size=(5,)).tolist()
         example = [torch.randn(1, d) for d in d_phys]
         data = [torch.randn(100, d) for d in d_phys]
         
         for boundary in ['obc', 'pbc']:
             for param_bond in [True, False]:
-                for l_position in [0, 1, 5, 9, 10]:
-                    mps = tk.MPSLayer(n_sites=11,
+                for l_position in range(5):
+                    mps = tk.MPSLayer(n_sites=5,
                                       d_phys=d_phys,
                                       n_labels=12,
                                       d_bond=d_bond[:-1] if boundary == 'obc' else d_bond,
@@ -207,8 +219,8 @@ class TestMPSLayer:
                                     
                                     assert result.shape == (100, 12)
                                     assert len(mps.edges) == 1
-                                    assert len(mps.leaf_nodes) == 11
-                                    assert len(mps.data_nodes) == 10
+                                    assert len(mps.leaf_nodes) == 5
+                                    assert len(mps.data_nodes) == 4
                                     if not inline_input and automemory:
                                         assert len(mps.virtual_nodes) == 1
                                     else:
@@ -216,19 +228,23 @@ class TestMPSLayer:
                                         
                                     # Canonicalize and continue
                                     for mode in ['svd', 'svdr', 'qr']:
-                                        mps.delete_non_leaf()
-                                        mps.canonicalize(mode=mode, rank=2)
-                                        mps.trace(example)
-                                        result = mps(data)
-                                        
-                                        assert result.shape == (100, 12)
-                                        assert len(mps.edges) == 1
-                                        assert len(mps.leaf_nodes) == 11
-                                        assert len(mps.data_nodes) == 10
-                                        if not inline_input and automemory:
-                                            assert len(mps.virtual_nodes) == 1
-                                        else:
-                                            assert len(mps.virtual_nodes) == 0
+                                        sv_cut_dicts = [{'rank': 2},
+                                                        {'cum_percentage': 0.95},
+                                                        {'cutoff': 1e-5}]
+                                        for sv_cut in sv_cut_dicts:
+                                            mps.delete_non_leaf()
+                                            mps.canonicalize(mode=mode, **sv_cut)
+                                            mps.trace(example)
+                                            result = mps(data)
+                                            
+                                            assert result.shape == (100, 12)
+                                            assert len(mps.edges) == 1
+                                            assert len(mps.leaf_nodes) == 5
+                                            assert len(mps.data_nodes) == 4
+                                            if not inline_input and automemory:
+                                                assert len(mps.virtual_nodes) == 1
+                                            else:
+                                                assert len(mps.virtual_nodes) == 0
 
     def test_extreme_case_left_output(self):
         # Left node + Outpt node
@@ -262,16 +278,20 @@ class TestMPSLayer:
                         
                         # Canonicalize and continue
                         for mode in ['svd', 'svdr', 'qr']:
-                            mps.delete_non_leaf()
-                            mps.canonicalize(mode=mode, rank=2)
-                            mps.trace(example)
-                            result = mps(data)
-                            
-                            assert result.shape == (100, 12)
-                            assert len(mps.edges) == 1
-                            assert len(mps.leaf_nodes) == 2
-                            assert len(mps.data_nodes) == 1
-                            assert len(mps.virtual_nodes) == 3
+                            sv_cut_dicts = [{'rank': 2},
+                                            {'cum_percentage': 0.95},
+                                            {'cutoff': 1e-5}]
+                            for sv_cut in sv_cut_dicts:
+                                mps.delete_non_leaf()
+                                mps.canonicalize(mode=mode, **sv_cut)
+                                mps.trace(example)
+                                result = mps(data)
+                                
+                                assert result.shape == (100, 12)
+                                assert len(mps.edges) == 1
+                                assert len(mps.leaf_nodes) == 2
+                                assert len(mps.data_nodes) == 1
+                                assert len(mps.virtual_nodes) == 3
 
     def test_extreme_case_output_right(self):
         # Output node + Right node
@@ -305,16 +325,20 @@ class TestMPSLayer:
                         
                         # Canonicalize and continue
                         for mode in ['svd', 'svdr', 'qr']:
-                            mps.delete_non_leaf()
-                            mps.canonicalize(mode=mode, rank=2)
-                            mps.trace(example)
-                            result = mps(data)
-                            
-                            assert result.shape == (100, 12)
-                            assert len(mps.edges) == 1
-                            assert len(mps.leaf_nodes) == 2
-                            assert len(mps.data_nodes) == 1
-                            assert len(mps.virtual_nodes) == 3
+                            sv_cut_dicts = [{'rank': 2},
+                                            {'cum_percentage': 0.95},
+                                            {'cutoff': 1e-5}]
+                            for sv_cut in sv_cut_dicts:
+                                mps.delete_non_leaf()
+                                mps.canonicalize(mode=mode, **sv_cut)
+                                mps.trace(example)
+                                result = mps(data)
+                                
+                                assert result.shape == (100, 12)
+                                assert len(mps.edges) == 1
+                                assert len(mps.leaf_nodes) == 2
+                                assert len(mps.data_nodes) == 1
+                                assert len(mps.virtual_nodes) == 3
 
     def test_extreme_case_output(self):
         # Outpt node
@@ -374,12 +398,12 @@ class TestMPSLayer:
 class TestUMPSLayer:
     
     def test_all_algorithms(self):
-        example = torch.randn(10, 1, 5)
-        data = torch.randn(10, 100, 5)
+        example = torch.randn(4, 1, 5)
+        data = torch.randn(4, 100, 5)
         
         for param_bond in [True, False]:
-            for l_position in [0, 1, 5, 9, 10]:
-                mps = tk.UMPSLayer(n_sites=11,
+            for l_position in range(5):
+                mps = tk.UMPSLayer(n_sites=5,
                                    d_phys=5,
                                    n_labels=12,
                                    d_bond=2,
@@ -400,8 +424,8 @@ class TestUMPSLayer:
                                 
                                 assert result.shape == (100, 12)
                                 assert len(mps.edges) == 1
-                                assert len(mps.leaf_nodes) == 11
-                                assert len(mps.data_nodes) == 10
+                                assert len(mps.leaf_nodes) == 5
+                                assert len(mps.data_nodes) == 4
                                 assert len(mps.virtual_nodes) == 4
                                 
     def test_extreme_case_left_output(self):
@@ -499,16 +523,16 @@ class TestConvMPSLayer:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
             
-        example = embedding(torch.randn(1, 14, 14))
-        data = embedding(torch.randn(100, 14, 14))
+        example = embedding(torch.randn(1, 5, 5))
+        data = embedding(torch.randn(100, 5, 5))
         
         for boundary in ['obc', 'pbc']:
             for param_bond in [True, False]:
-                for l_position in [0, 1, 4, 7, 8]:
+                for l_position in range(5):
                     mps = tk.ConvMPSLayer(in_channels=2,
                                           out_channels=5,
                                           d_bond=2,
-                                          kernel_size=3,
+                                          kernel_size=2,
                                           l_position=l_position,
                                           boundary=boundary,
                                           param_bond=param_bond)
@@ -526,10 +550,10 @@ class TestConvMPSLayer:
                                         mps.trace(example)
                                         result = mps(data, mode=conv_mode)
                                         
-                                        assert result.shape == (100, 5, 12, 12)
+                                        assert result.shape == (100, 5, 4, 4)
                                         assert len(mps.edges) == 1
-                                        assert len(mps.leaf_nodes) == 10
-                                        assert len(mps.data_nodes) == 9
+                                        assert len(mps.leaf_nodes) == 5
+                                        assert len(mps.data_nodes) == 4
                                         if not inline_input and automemory:
                                             assert len(mps.virtual_nodes) == 4
                                         else:
@@ -537,36 +561,40 @@ class TestConvMPSLayer:
                                             
                                         # Canonicalize and continue
                                         for mode in ['svd', 'svdr', 'qr']:
-                                            mps.delete_non_leaf()
-                                            mps.canonicalize(mode=mode, rank=2)
-                                            mps.trace(example)
-                                            result = mps(data, mode=conv_mode)
-                                            
-                                            assert result.shape == (100, 5, 12, 12)
-                                            assert len(mps.edges) == 1
-                                            assert len(mps.leaf_nodes) == 10
-                                            assert len(mps.data_nodes) == 9
-                                            if not inline_input and automemory:
-                                                assert len(mps.virtual_nodes) == 4
-                                            else:
-                                                assert len(mps.virtual_nodes) == 3
+                                            sv_cut_dicts = [{'rank': 2},
+                                                            {'cum_percentage': 0.95},
+                                                            {'cutoff': 1e-5}]
+                                            for sv_cut in sv_cut_dicts:
+                                                mps.delete_non_leaf()
+                                                mps.canonicalize(mode=mode, **sv_cut)
+                                                mps.trace(example)
+                                                result = mps(data, mode=conv_mode)
+                                                
+                                                assert result.shape == (100, 5, 4, 4)
+                                                assert len(mps.edges) == 1
+                                                assert len(mps.leaf_nodes) == 5
+                                                assert len(mps.data_nodes) == 4
+                                                if not inline_input and automemory:
+                                                    assert len(mps.virtual_nodes) == 4
+                                                else:
+                                                    assert len(mps.virtual_nodes) == 3
                                         
     def test_all_algorithms_diff_d_bond(self):
         def embedding(data: torch.Tensor) -> torch.Tensor:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
             
-        d_bond = torch.randint(low=2, high=7, size=(10,)).tolist()
-        example = embedding(torch.randn(1, 14, 14))
-        data = embedding(torch.randn(100, 14, 14))
+        d_bond = torch.randint(low=2, high=7, size=(5,)).tolist()
+        example = embedding(torch.randn(1, 5, 5))
+        data = embedding(torch.randn(100, 5, 5))
         
         for boundary in ['obc', 'pbc']:
             for param_bond in [True, False]:
-                for l_position in [0, 1, 4, 7, 8]:
+                for l_position in range(5):
                     mps = tk.ConvMPSLayer(in_channels=2,
                                           out_channels=5,
                                           d_bond=d_bond[:-1] if boundary == 'obc' else d_bond,
-                                          kernel_size=3,
+                                          kernel_size=2,
                                           l_position=l_position,
                                           boundary=boundary,
                                           param_bond=param_bond)
@@ -584,10 +612,10 @@ class TestConvMPSLayer:
                                         mps.trace(example)
                                         result = mps(data, mode=conv_mode)
                                         
-                                        assert result.shape == (100, 5, 12, 12)
+                                        assert result.shape == (100, 5, 4, 4)
                                         assert len(mps.edges) == 1
-                                        assert len(mps.leaf_nodes) == 10
-                                        assert len(mps.data_nodes) == 9
+                                        assert len(mps.leaf_nodes) == 5
+                                        assert len(mps.data_nodes) == 4
                                         if not inline_input and automemory:
                                             assert len(mps.virtual_nodes) == 4
                                         else:
@@ -595,19 +623,23 @@ class TestConvMPSLayer:
                                             
                                         # Canonicalize and continue
                                         for mode in ['svd', 'svdr', 'qr']:
-                                            mps.delete_non_leaf()
-                                            mps.canonicalize(mode=mode, rank=2)
-                                            mps.trace(example)
-                                            result = mps(data, mode=conv_mode)
-                                            
-                                            assert result.shape == (100, 5, 12, 12)
-                                            assert len(mps.edges) == 1
-                                            assert len(mps.leaf_nodes) == 10
-                                            assert len(mps.data_nodes) == 9
-                                            if not inline_input and automemory:
-                                                assert len(mps.virtual_nodes) == 4
-                                            else:
-                                                assert len(mps.virtual_nodes) == 3
+                                            sv_cut_dicts = [{'rank': 2},
+                                                            {'cum_percentage': 0.95},
+                                                            {'cutoff': 1e-5}]
+                                            for sv_cut in sv_cut_dicts:
+                                                mps.delete_non_leaf()
+                                                mps.canonicalize(mode=mode, **sv_cut)
+                                                mps.trace(example)
+                                                result = mps(data, mode=conv_mode)
+                                                
+                                                assert result.shape == (100, 5, 4, 4)
+                                                assert len(mps.edges) == 1
+                                                assert len(mps.leaf_nodes) == 5
+                                                assert len(mps.data_nodes) == 4
+                                                if not inline_input and automemory:
+                                                    assert len(mps.virtual_nodes) == 4
+                                                else:
+                                                    assert len(mps.virtual_nodes) == 3
 
     def test_extreme_case_left_output(self):
         # Left node + Outpt node
@@ -615,8 +647,8 @@ class TestConvMPSLayer:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
             
-        example = embedding(torch.randn(1, 14, 14))
-        data = embedding(torch.randn(100, 14, 14))
+        example = embedding(torch.randn(1, 5, 5))
+        data = embedding(torch.randn(100, 5, 5))
         
         mps = tk.ConvMPSLayer(in_channels=2,
                               out_channels=5,
@@ -639,7 +671,7 @@ class TestConvMPSLayer:
                             mps.trace(example)
                             result = mps(data, mode=conv_mode)
                             
-                            assert result.shape == (100, 5, 14, 14)
+                            assert result.shape == (100, 5, 5, 5)
                             assert len(mps.edges) == 1
                             assert len(mps.leaf_nodes) == 2
                             assert len(mps.data_nodes) == 1
@@ -647,16 +679,20 @@ class TestConvMPSLayer:
                             
                             # Canonicalize and continue
                             for mode in ['svd', 'svdr', 'qr']:
-                                mps.delete_non_leaf()
-                                mps.canonicalize(mode=mode, rank=2)
-                                mps.trace(example)
-                                result = mps(data, mode=conv_mode)
-                                
-                                assert result.shape == (100, 5, 14, 14)
-                                assert len(mps.edges) == 1
-                                assert len(mps.leaf_nodes) == 2
-                                assert len(mps.data_nodes) == 1
-                                assert len(mps.virtual_nodes) == 3
+                                sv_cut_dicts = [{'rank': 2},
+                                                {'cum_percentage': 0.95},
+                                                {'cutoff': 1e-5}]
+                                for sv_cut in sv_cut_dicts:
+                                    mps.delete_non_leaf()
+                                    mps.canonicalize(mode=mode, **sv_cut)
+                                    mps.trace(example)
+                                    result = mps(data, mode=conv_mode)
+                                    
+                                    assert result.shape == (100, 5, 5, 5)
+                                    assert len(mps.edges) == 1
+                                    assert len(mps.leaf_nodes) == 2
+                                    assert len(mps.data_nodes) == 1
+                                    assert len(mps.virtual_nodes) == 3
 
     def test_extreme_case_output_right(self):
         # Output node + Right node
@@ -664,8 +700,8 @@ class TestConvMPSLayer:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
             
-        example = embedding(torch.randn(1, 14, 14))
-        data = embedding(torch.randn(100, 14, 14))
+        example = embedding(torch.randn(1, 5, 5))
+        data = embedding(torch.randn(100, 5, 5))
         
         mps = tk.ConvMPSLayer(in_channels=2,
                               out_channels=5,
@@ -688,7 +724,7 @@ class TestConvMPSLayer:
                             mps.trace(example)
                             result = mps(data, mode=conv_mode)
                             
-                            assert result.shape == (100, 5, 14, 14)
+                            assert result.shape == (100, 5, 5, 5)
                             assert len(mps.edges) == 1
                             assert len(mps.leaf_nodes) == 2
                             assert len(mps.data_nodes) == 1
@@ -696,16 +732,20 @@ class TestConvMPSLayer:
                             
                             # Canonicalize and continue
                             for mode in ['svd', 'svdr', 'qr']:
-                                mps.delete_non_leaf()
-                                mps.canonicalize(mode=mode, rank=2)
-                                mps.trace(example)
-                                result = mps(data, mode=conv_mode)
-                                
-                                assert result.shape == (100, 5, 14, 14)
-                                assert len(mps.edges) == 1
-                                assert len(mps.leaf_nodes) == 2
-                                assert len(mps.data_nodes) == 1
-                                assert len(mps.virtual_nodes) == 3
+                                sv_cut_dicts = [{'rank': 2},
+                                                {'cum_percentage': 0.95},
+                                                {'cutoff': 1e-5}]
+                                for sv_cut in sv_cut_dicts:
+                                    mps.delete_non_leaf()
+                                    mps.canonicalize(mode=mode, **sv_cut)
+                                    mps.trace(example)
+                                    result = mps(data, mode=conv_mode)
+                                    
+                                    assert result.shape == (100, 5, 5, 5)
+                                    assert len(mps.edges) == 1
+                                    assert len(mps.leaf_nodes) == 2
+                                    assert len(mps.data_nodes) == 1
+                                    assert len(mps.virtual_nodes) == 3
 
 
 class TestConvUMPSLayer:
@@ -715,17 +755,17 @@ class TestConvUMPSLayer:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
             
-        example = embedding(torch.randn(1, 14, 14))
-        data = embedding(torch.randn(100, 14, 14))
+        example = embedding(torch.randn(1, 5, 5))
+        data = embedding(torch.randn(100, 5, 5))
         
         for param_bond in [True, False]:
-            for l_position in [0, 1, 4, 7, 8]:
+            for l_position in range(5):
                 mps = tk.ConvUMPSLayer(in_channels=2,
-                                        out_channels=5,
-                                        d_bond=2,
-                                        kernel_size=3,
-                                        l_position=l_position,
-                                        param_bond=param_bond)
+                                       out_channels=5,
+                                       d_bond=2,
+                                       kernel_size=2,
+                                       l_position=l_position,
+                                       param_bond=param_bond)
             
                 for automemory in [True, False]:
                     for unbind_mode in [True, False]:
@@ -740,10 +780,10 @@ class TestConvUMPSLayer:
                                     mps.trace(example)
                                     result = mps(data, mode=conv_mode)
                                     
-                                    assert result.shape == (100, 5, 12, 12)
+                                    assert result.shape == (100, 5, 4, 4)
                                     assert len(mps.edges) == 1
-                                    assert len(mps.leaf_nodes) == 10
-                                    assert len(mps.data_nodes) == 9
+                                    assert len(mps.leaf_nodes) == 5
+                                    assert len(mps.data_nodes) == 4
                                     assert len(mps.virtual_nodes) == 4
                             
     def test_extreme_case_left_output(self):
@@ -752,8 +792,8 @@ class TestConvUMPSLayer:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
             
-        example = embedding(torch.randn(1, 14, 14))
-        data = embedding(torch.randn(100, 14, 14))
+        example = embedding(torch.randn(1, 5, 5))
+        data = embedding(torch.randn(100, 5, 5))
         
         mps = tk.ConvUMPSLayer(in_channels=2,
                                d_bond=2,
@@ -775,7 +815,7 @@ class TestConvUMPSLayer:
                             mps.trace(example)
                             result = mps(data, mode=conv_mode)
                             
-                            assert result.shape == (100, 5, 14, 14)
+                            assert result.shape == (100, 5, 5, 5)
                             assert len(mps.edges) == 1
                             assert len(mps.leaf_nodes) == 2
                             assert len(mps.data_nodes) == 1
@@ -787,8 +827,8 @@ class TestConvUMPSLayer:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
             
-        example = embedding(torch.randn(1, 14, 14))
-        data = embedding(torch.randn(100, 14, 14))
+        example = embedding(torch.randn(1, 5, 5))
+        data = embedding(torch.randn(100, 5, 5))
         
         mps = tk.ConvUMPSLayer(in_channels=2,
                                d_bond=2,
@@ -810,7 +850,7 @@ class TestConvUMPSLayer:
                             mps.trace(example)
                             result = mps(data, mode=conv_mode)
                             
-                            assert result.shape == (100, 5, 14, 14)
+                            assert result.shape == (100, 5, 5, 5)
                             assert len(mps.edges) == 1
                             assert len(mps.leaf_nodes) == 2
                             assert len(mps.data_nodes) == 1

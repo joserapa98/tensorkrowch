@@ -860,7 +860,7 @@ def _split_next(successor: Successor,
         u, s, vh = torch.linalg.svd(node_tensor, full_matrices=False)
 
         if cum_percentage is not None:
-            if (rank is not None) or (cutoff is None):
+            if (rank is not None) or (cutoff is not None):
                 raise ValueError('Only one of `rank`, `cum_percentage` and '
                                  '`cutoff` should be provided')
             percentages = s.cumsum(-1) / s.sum(-1).view(*s.shape[:-1], 1).expand(s.shape)
@@ -2588,7 +2588,8 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
             
     #     # NOTE: unbind mode / mix index mode
         
-    node._record_in_inverse_memory()
+    else:
+        node._record_in_inverse_memory()
 
     successor = Successor(kwargs={'node': node},
                              child=nodes,
@@ -2628,20 +2629,20 @@ def _unbind_next(successor: Successor, node: AbstractNode) -> List[Node]:
         children = successor.child
         
         if batch_idx is None:
-            node._record_in_inverse_memory()
+            # node._record_in_inverse_memory()
             return children[:]
         
         new_dim = node.shape[batch_idx + 1]
         child_dim = children[0].shape[batch_idx]
         
         if new_dim == child_dim:
-            node._record_in_inverse_memory()
+            # node._record_in_inverse_memory()
             return children[:]  # TODO: añadimos [:] para no poder modificar la lista de hijos desde fuera
         
         # for i, child in enumerate(children):
         #     child._tensor_info['index'][batch_idx + 1] = slice(0, new_dim)
         
-        node._record_in_inverse_memory()
+        # node._record_in_inverse_memory()
         return successor.child[:]  # TODO: cambia el tamaño del batch
         # NOTE: index mode
 

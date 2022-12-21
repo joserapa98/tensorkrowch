@@ -539,6 +539,8 @@ class AbstractNode(ABC):
 
     def get_axis_num(self, axis: Ax) -> int:
         if isinstance(axis, int):
+            while axis < 0:
+                axis += self.rank
             for ax in self._axes:
                 if axis == ax._num:
                     return ax._num

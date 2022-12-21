@@ -1152,7 +1152,7 @@ class ConvPEPS(PEPS):
                     (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
         
         result = result.view(*result.shape[:-1], h_out, w_out)
-        # batch_size x out_channels x height_out x width_out
+        # batch_size x height_out x width_out
         
         return result
 
@@ -1250,6 +1250,6 @@ class ConvUPEPS(UPEPS):
                     (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
         
         result = result.view(*result.shape[:-1], h_out, w_out)
-        # batch_size x out_channels x height_out x width_out
+        # batch_size x height_out x width_out
         
         return result

@@ -2992,26 +2992,29 @@ class TensorNetwork(nn.Module):
         # num_batch_edges = len(names_batch_edges)
 
         if same_dim:
-            # TODO: Stack data node donde se guardan los datos, se supone que todas las features tienen la misma dim
-            stack_node = Node(shape=(len(input_edges), *([1]*num_batch_edges), input_edges[0].size()),  # TODO: supongo edge es AbstractEdge
-                            axes_names=('n_features',
-                                        *(['batch']*num_batch_edges),
-                                        'feature'),
-                            name=f'stack_data_memory',  # TODO: guardo aqui la memory, no uso memory_data_nodes
-                            network=self,
-                            virtual=True)
-            n_features_node = Node(shape=(stack_node.shape[0],),
-                                axes_names=('n_features',),
-                                name='virtual_n_features',
+            if 'stack_data_memory' not in self._virtual_nodes:
+                # TODO: Stack data node donde se guardan los datos, se supone que todas las features tienen la misma dim
+                stack_node = Node(shape=(len(input_edges), *([1]*num_batch_edges), input_edges[0].size()),  # TODO: supongo edge es AbstractEdge
+                                axes_names=('n_features',
+                                            *(['batch']*num_batch_edges),
+                                            'feature'),
+                                name=f'stack_data_memory',  # TODO: guardo aqui la memory, no uso memory_data_nodes
                                 network=self,
                                 virtual=True)
-            feature_node = Node(shape=(stack_node.shape[-1],),
-                                axes_names=('feature',),
-                                name='virtual_feature',
-                                network=self,
-                                virtual=True)
-            stack_node['n_features'] ^ n_features_node['n_features']
-            stack_node['feature'] ^ feature_node['feature']
+                n_features_node = Node(shape=(stack_node.shape[0],),
+                                    axes_names=('n_features',),
+                                    name='virtual_n_features',
+                                    network=self,
+                                    virtual=True)
+                feature_node = Node(shape=(stack_node.shape[-1],),
+                                    axes_names=('feature',),
+                                    name='virtual_feature',
+                                    network=self,
+                                    virtual=True)
+                stack_node['n_features'] ^ n_features_node['n_features']
+                stack_node['feature'] ^ feature_node['feature']
+            else:
+                stack_node = self._virtual_nodes['stack_data_memory']
 
         # if names_batch_edges is not None:
         #     if len(names_batch_edges) != num_batch_edges:

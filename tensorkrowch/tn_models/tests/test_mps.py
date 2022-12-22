@@ -32,11 +32,13 @@ class TestMPS:
                             for inline_mats in [True, False]:
                                 mps.automemory = automemory
                                 mps.unbind_mode = unbind_mode
-                                mps.inline_input = inline_input
-                                mps.inline_mats = inline_mats
                                 
-                                mps.trace(example)
-                                result = mps(data)
+                                mps.trace(example,
+                                          inline_input=inline_input,
+                                          inline_mats=inline_mats)
+                                result = mps(data,
+                                             inline_input=inline_input,
+                                             inline_mats=inline_mats)
                                 
                                 assert result.shape == (100,)
                                 assert len(mps.edges) == 0
@@ -57,8 +59,12 @@ class TestMPS:
                                             mps.delete_non_leaf()
                                             mps.canonicalize(oc=oc, mode=mode,
                                                              **sv_cut)
-                                            mps.trace(example)
-                                            result = mps(data)
+                                            mps.trace(example,
+                                                      inline_input=inline_input,
+                                                      inline_mats=inline_mats)
+                                            result = mps(data,
+                                                         inline_input=inline_input,
+                                                         inline_mats=inline_mats)
                                             
                                             assert result.shape == (100,)
                                             assert len(mps.edges) == 0
@@ -88,11 +94,13 @@ class TestMPS:
                             for inline_mats in [True, False]:
                                 mps.automemory = automemory
                                 mps.unbind_mode = unbind_mode
-                                mps.inline_input = inline_input
-                                mps.inline_mats = inline_mats
                                 
-                                mps.trace(example)
-                                result = mps(data)
+                                mps.trace(example,
+                                          inline_input=inline_input,
+                                          inline_mats=inline_mats)
+                                result = mps(data,
+                                             inline_input=inline_input,
+                                             inline_mats=inline_mats)
                                 
                                 assert result.shape == (100,)
                                 assert len(mps.edges) == 0
@@ -113,8 +121,12 @@ class TestMPS:
                                             mps.delete_non_leaf()
                                             mps.canonicalize(oc=oc, mode=mode,
                                                              **sv_cut)
-                                            mps.trace(example)
-                                            result = mps(data)
+                                            mps.trace(example,
+                                                      inline_input=inline_input,
+                                                      inline_mats=inline_mats)
+                                            result = mps(data,
+                                                         inline_input=inline_input,
+                                                         inline_mats=inline_mats)
                                             
                                             assert result.shape == (100,)
                                             assert len(mps.edges) == 0
@@ -144,11 +156,13 @@ class TestMPS:
                             for inline_mats in [True, False]:
                                 mps.automemory = automemory
                                 mps.unbind_mode = unbind_mode
-                                mps.inline_input = inline_input
-                                mps.inline_mats = inline_mats
                                 
-                                mps.trace(example)
-                                result = mps(data)
+                                mps.trace(example,
+                                          inline_input=inline_input,
+                                          inline_mats=inline_mats)
+                                result = mps(data,
+                                             inline_input=inline_input,
+                                             inline_mats=inline_mats)
                                 
                                 assert result.shape == (100,)
                                 assert len(mps.edges) == 0
@@ -169,8 +183,12 @@ class TestMPS:
                                             mps.delete_non_leaf()
                                             mps.canonicalize(oc=oc, mode=mode,
                                                              **sv_cut)
-                                            mps.trace(example)
-                                            result = mps(data)
+                                            mps.trace(example,
+                                                      inline_input=inline_input,
+                                                      inline_mats=inline_mats)
+                                            result = mps(data,
+                                                         inline_input=inline_input,
+                                                         inline_mats=inline_mats)
                                             
                                             assert result.shape == (100,)
                                             assert len(mps.edges) == 0
@@ -201,11 +219,13 @@ class TestMPS:
                             for inline_mats in [True, False]:
                                 mps.automemory = automemory
                                 mps.unbind_mode = unbind_mode
-                                mps.inline_input = inline_input
-                                mps.inline_mats = inline_mats
                                 
-                                mps.trace(example)
-                                result = mps(data)
+                                mps.trace(example,
+                                          inline_input=inline_input,
+                                          inline_mats=inline_mats)
+                                result = mps(data,
+                                             inline_input=inline_input,
+                                             inline_mats=inline_mats)
                                 
                                 assert result.shape == (100,)
                                 assert len(mps.edges) == 0
@@ -226,8 +246,12 @@ class TestMPS:
                                             mps.delete_non_leaf()
                                             mps.canonicalize(oc=oc, mode=mode,
                                                              **sv_cut)
-                                            mps.trace(example)
-                                            result = mps(data)
+                                            mps.trace(example,
+                                                      inline_input=inline_input,
+                                                      inline_mats=inline_mats)
+                                            result = mps(data,
+                                                         inline_input=inline_input,
+                                                         inline_mats=inline_mats)
                                             
                                             assert result.shape == (100,)
                                             assert len(mps.edges) == 0
@@ -254,11 +278,13 @@ class TestMPS:
                     for inline_mats in [True, False]:
                         mps.automemory = automemory
                         mps.unbind_mode = unbind_mode
-                        mps.inline_input = inline_input
-                        mps.inline_mats = inline_mats
                         
-                        mps.trace(example)
-                        result = mps(data)
+                        mps.trace(example,
+                                  inline_input=inline_input,
+                                  inline_mats=inline_mats)
+                        result = mps(data,
+                                     inline_input=inline_input,
+                                     inline_mats=inline_mats)
                         
                         assert result.shape == (100,)
                         assert len(mps.edges) == 0
@@ -276,8 +302,12 @@ class TestMPS:
                                     mps.delete_non_leaf()
                                     mps.canonicalize(oc=oc, mode=mode,
                                                         **sv_cut)
-                                    mps.trace(example)
-                                    result = mps(data)
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats)
                                     
                                     assert result.shape == (100,)
                                     assert len(mps.edges) == 0
@@ -301,11 +331,13 @@ class TestMPS:
                     for inline_mats in [True, False]:
                         mps.automemory = automemory
                         mps.unbind_mode = unbind_mode
-                        mps.inline_input = inline_input
-                        mps.inline_mats = inline_mats
                         
-                        mps.trace(example)
-                        result = mps(data)
+                        mps.trace(example,
+                                  inline_input=inline_input,
+                                  inline_mats=inline_mats)
+                        result = mps(data,
+                                     inline_input=inline_input,
+                                     inline_mats=inline_mats)
                         
                         assert result.shape == (100,)
                         assert len(mps.edges) == 0
@@ -325,8 +357,12 @@ class TestMPS:
                                 mps.delete_non_leaf()
                                 mps.canonicalize(oc=0, mode=mode,
                                                  **sv_cut)
-                                mps.trace(example)
-                                result = mps(data)
+                                mps.trace(example,
+                                          inline_input=inline_input,
+                                          inline_mats=inline_mats)
+                                result = mps(data,
+                                             inline_input=inline_input,
+                                             inline_mats=inline_mats)
                                 
                                 assert result.shape == (100,)
                                 assert len(mps.edges) == 0
@@ -356,11 +392,13 @@ class TestUMPS:
                         for inline_mats in [True, False]:
                             mps.automemory = automemory
                             mps.unbind_mode = unbind_mode
-                            mps.inline_input = inline_input
-                            mps.inline_mats = inline_mats
                             
-                            mps.trace(example)
-                            result = mps(data)
+                            mps.trace(example,
+                                      inline_input=inline_input,
+                                      inline_mats=inline_mats)
+                            result = mps(data,
+                                         inline_input=inline_input,
+                                         inline_mats=inline_mats)
                             
                             assert result.shape == (100,)
                             assert len(mps.edges) == 0
@@ -383,11 +421,13 @@ class TestUMPS:
                     for inline_mats in [True, False]:
                         mps.automemory = automemory
                         mps.unbind_mode = unbind_mode
-                        mps.inline_input = inline_input
-                        mps.inline_mats = inline_mats
                         
-                        mps.trace(example)
-                        result = mps(data)
+                        mps.trace(example,
+                                  inline_input=inline_input,
+                                  inline_mats=inline_mats)
+                        result = mps(data,
+                                     inline_input=inline_input,
+                                     inline_mats=inline_mats)
                         
                         assert result.shape == (100,)
                         assert len(mps.edges) == 0
@@ -410,11 +450,13 @@ class TestUMPS:
                     for inline_mats in [True, False]:
                         mps.automemory = automemory
                         mps.unbind_mode = unbind_mode
-                        mps.inline_input = inline_input
-                        mps.inline_mats = inline_mats
                         
-                        mps.trace(example)
-                        result = mps(data)
+                        mps.trace(example,
+                                  inline_input=inline_input,
+                                  inline_mats=inline_mats)
+                        result = mps(data,
+                                     inline_input=inline_input,
+                                     inline_mats=inline_mats)
                         
                         assert result.shape == (100,)
                         assert len(mps.edges) == 0
@@ -448,11 +490,15 @@ class TestConvMPS:
                                 for conv_mode in ['flat', 'snake']:
                                     mps.automemory = automemory
                                     mps.unbind_mode = unbind_mode
-                                    mps.inline_input = inline_input
-                                    mps.inline_mats = inline_mats
                                     
-                                    mps.trace(example)
-                                    result = mps(data, mode=conv_mode)
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              mode=conv_mode)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 mode=conv_mode)
                                     
                                     assert result.shape == (100, 4, 4)
                                     assert len(mps.edges) == 0
@@ -473,8 +519,14 @@ class TestConvMPS:
                                                 mps.delete_non_leaf()
                                                 mps.canonicalize(oc=oc, mode=mode,
                                                                     **sv_cut)
-                                                mps.trace(example)
-                                                result = mps(data, mode=conv_mode)
+                                                mps.trace(example,
+                                                          inline_input=inline_input,
+                                                          inline_mats=inline_mats,
+                                                          mode=conv_mode)
+                                                result = mps(data,
+                                                             inline_input=inline_input,
+                                                             inline_mats=inline_mats,
+                                                             mode=conv_mode)
                                                 
                                                 assert result.shape == (100, 4, 4)
                                                 assert len(mps.edges) == 0
@@ -509,11 +561,15 @@ class TestConvMPS:
                                 for conv_mode in ['flat', 'snake']:
                                     mps.automemory = automemory
                                     mps.unbind_mode = unbind_mode
-                                    mps.inline_input = inline_input
-                                    mps.inline_mats = inline_mats
                                     
-                                    mps.trace(example)
-                                    result = mps(data, mode=conv_mode)
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              mode=conv_mode)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 mode=conv_mode)
                                     
                                     assert result.shape == (100, 4, 4)
                                     assert len(mps.edges) == 0
@@ -533,9 +589,15 @@ class TestConvMPS:
                                             for sv_cut in sv_cut_dicts:
                                                 mps.delete_non_leaf()
                                                 mps.canonicalize(oc=oc, mode=mode,
-                                                                    **sv_cut)
-                                                mps.trace(example)
-                                                result = mps(data, mode=conv_mode)
+                                                                    **sv_cut)         
+                                                mps.trace(example,
+                                                          inline_input=inline_input,
+                                                          inline_mats=inline_mats,
+                                                          mode=conv_mode)
+                                                result = mps(data,
+                                                             inline_input=inline_input,
+                                                             inline_mats=inline_mats,
+                                                             mode=conv_mode)
                                                 
                                                 assert result.shape == (100, 4, 4)
                                                 assert len(mps.edges) == 0
@@ -568,11 +630,15 @@ class TestConvMPS:
                         for conv_mode in ['flat', 'snake']:
                             mps.automemory = automemory
                             mps.unbind_mode = unbind_mode
-                            mps.inline_input = inline_input
-                            mps.inline_mats = inline_mats
                             
-                            mps.trace(example)
-                            result = mps(data, mode=conv_mode)
+                            mps.trace(example,
+                                      inline_input=inline_input,
+                                      inline_mats=inline_mats,
+                                      mode=conv_mode)
+                            result = mps(data,
+                                         inline_input=inline_input,
+                                         inline_mats=inline_mats,
+                                         mode=conv_mode)
                             
                             assert result.shape == (100, 5, 4)
                             assert len(mps.edges) == 0
@@ -590,8 +656,14 @@ class TestConvMPS:
                                         mps.delete_non_leaf()
                                         mps.canonicalize(oc=oc, mode=mode,
                                                          **sv_cut)
-                                        mps.trace(example)
-                                        result = mps(data, mode=conv_mode)
+                                        mps.trace(example,
+                                                  inline_input=inline_input,
+                                                  inline_mats=inline_mats,
+                                                  mode=conv_mode)
+                                        result = mps(data,
+                                                     inline_input=inline_input,
+                                                     inline_mats=inline_mats,
+                                                     mode=conv_mode)
                                         
                                         assert result.shape == (100, 5, 4)
                                         assert len(mps.edges) == 0
@@ -621,11 +693,15 @@ class TestConvMPS:
                         for conv_mode in ['flat', 'snake']:
                             mps.automemory = automemory
                             mps.unbind_mode = unbind_mode
-                            mps.inline_input = inline_input
-                            mps.inline_mats = inline_mats
                             
-                            mps.trace(example)
-                            result = mps(data, mode=conv_mode)
+                            mps.trace(example,
+                                      inline_input=inline_input,
+                                      inline_mats=inline_mats,
+                                      mode=conv_mode)
+                            result = mps(data,
+                                         inline_input=inline_input,
+                                         inline_mats=inline_mats,
+                                         mode=conv_mode)
                             
                             assert result.shape == (100, 5, 5)
                             assert len(mps.edges) == 0
@@ -645,8 +721,14 @@ class TestConvMPS:
                                     mps.delete_non_leaf()
                                     mps.canonicalize(oc=0, mode=mode,
                                                      **sv_cut)
-                                    mps.trace(example)
-                                    result = mps(data, mode=conv_mode)
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              mode=conv_mode)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 mode=conv_mode)
                                     
                                     assert result.shape == (100, 5, 5)
                                     assert len(mps.edges) == 0
@@ -681,11 +763,15 @@ class TestConvUMPS:
                             for conv_mode in ['flat', 'snake']:
                                 mps.automemory = automemory
                                 mps.unbind_mode = unbind_mode
-                                mps.inline_input = inline_input
-                                mps.inline_mats = inline_mats
                                 
-                                mps.trace(example)
-                                result = mps(data, mode=conv_mode)
+                                mps.trace(example,
+                                          inline_input=inline_input,
+                                          inline_mats=inline_mats,
+                                          mode=conv_mode)
+                                result = mps(data,
+                                             inline_input=inline_input,
+                                             inline_mats=inline_mats,
+                                             mode=conv_mode)
                                 
                                 assert result.shape == (100, 4, 4)
                                 assert len(mps.edges) == 0
@@ -714,11 +800,15 @@ class TestConvUMPS:
                         for conv_mode in ['flat', 'snake']:
                             mps.automemory = automemory
                             mps.unbind_mode = unbind_mode
-                            mps.inline_input = inline_input
-                            mps.inline_mats = inline_mats
                             
-                            mps.trace(example)
-                            result = mps(data, mode=conv_mode)
+                            mps.trace(example,
+                                      inline_input=inline_input,
+                                      inline_mats=inline_mats,
+                                      mode=conv_mode)
+                            result = mps(data,
+                                         inline_input=inline_input,
+                                         inline_mats=inline_mats,
+                                         mode=conv_mode)
                             
                             assert result.shape == (100, 5, 4)
                             assert len(mps.edges) == 0
@@ -747,11 +837,15 @@ class TestConvUMPS:
                         for conv_mode in ['flat', 'snake']:
                             mps.automemory = automemory
                             mps.unbind_mode = unbind_mode
-                            mps.inline_input = inline_input
-                            mps.inline_mats = inline_mats
                             
-                            mps.trace(example)
-                            result = mps(data, mode=conv_mode)
+                            mps.trace(example,
+                                      inline_input=inline_input,
+                                      inline_mats=inline_mats,
+                                      mode=conv_mode)
+                            result = mps(data,
+                                         inline_input=inline_input,
+                                         inline_mats=inline_mats,
+                                         mode=conv_mode)
                             
                             assert result.shape == (100, 5, 5)
                             assert len(mps.edges) == 0

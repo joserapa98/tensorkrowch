@@ -391,9 +391,9 @@ class MPSLayer(TensorNetwork):
             self.lr_env_data = list(map(lambda node: node.neighbours('input'),
                                         self.left_env + self.right_env))
 
-    def _input_contraction(self) -> Tuple[Optional[List[Node]],
-                                          Optional[List[Node]]]:
-        if self.inline_input:
+    def _input_contraction(self, inline_input=True) -> Tuple[Optional[List[Node]],
+                                                             Optional[List[Node]]]:
+        if inline_input:
             left_result = []
             for node in self.left_env:
                 left_result.append(node @ node.neighbours('input'))
@@ -532,13 +532,13 @@ class MPSLayer(TensorNetwork):
 
         return self._contract_envs_inline(left_aux_nodes, right_aux_nodes)
 
-    def contract(self) -> Node:
+    def contract(self, inline_input=True, inline_mats=True) -> Node:
         start = time.time()
-        left_env, right_env = self._input_contraction()
+        left_env, right_env = self._input_contraction(inline_input)
         if PRINT_MODE: print('\tInput:', time.time() - start)
 
         start = time.time()
-        if self.inline_mats:
+        if inline_mats:
             left_env_contracted, right_env_contracted = self._contract_envs_inline(left_env, right_env)
         else:
             left_env_contracted, right_env_contracted = self._pairwise_contraction(left_env, right_env)
@@ -882,9 +882,9 @@ class UMPSLayer(TensorNetwork):
             self.lr_env_data = list(map(lambda node: node.neighbours('input'),
                                         self.left_env + self.right_env))
 
-    def _input_contraction(self) -> Tuple[Optional[List[Node]],
-                                          Optional[List[Node]]]:
-        if self.inline_input:
+    def _input_contraction(self, inline_input=True) -> Tuple[Optional[List[Node]],
+                                                             Optional[List[Node]]]:
+        if inline_input:
             left_result = []
             for node in self.left_env:
                 left_result.append(node @ node.neighbours('input'))
@@ -1015,13 +1015,13 @@ class UMPSLayer(TensorNetwork):
 
         return self._contract_envs_inline(left_aux_nodes, right_aux_nodes)
 
-    def contract(self) -> Node:
+    def contract(self, inline_input=True, inline_mats=True) -> Node:
         start = time.time()
-        left_env, right_env = self._input_contraction()
+        left_env, right_env = self._input_contraction(inline_input)
         if PRINT_MODE: print('\tInput:', time.time() - start)
 
         start = time.time()
-        if self.inline_mats:
+        if inline_mats:
             left_env_contracted, right_env_contracted = self._contract_envs_inline(left_env, right_env)
         else:
             left_env_contracted, right_env_contracted = self._pairwise_contraction(left_env, right_env)
@@ -1191,7 +1191,7 @@ class ConvMPSLayer(MPSLayer):
     def dilation(self) -> Tuple[int, int]:
         return self._dilation
     
-    def forward(self, image, mode='flat'):
+    def forward(self, image, mode='flat', *args, **kwargs):
         """
         Parameters
         ----------
@@ -1226,7 +1226,7 @@ class ConvMPSLayer(MPSLayer):
         elif mode != 'flat':
             raise ValueError('`mode` can only be \'flat\' or \'snake\'')
         
-        result = super().forward(patches)
+        result = super().forward(patches, *args, **kwargs)
         # batch_size x nb_windows x out_channels
         
         result = result.transpose(1, 2)
@@ -1322,7 +1322,7 @@ class ConvUMPSLayer(UMPSLayer):
     def dilation(self) -> Tuple[int, int]:
         return self._dilation
     
-    def forward(self, image, mode='flat'):
+    def forward(self, image, mode='flat', *args, **kwargs):
         """
         Parameters
         ----------
@@ -1357,7 +1357,7 @@ class ConvUMPSLayer(UMPSLayer):
         elif mode != 'flat':
             raise ValueError('`mode` can only be \'flat\' or \'snake\'')
         
-        result = super().forward(patches)
+        result = super().forward(patches, *args, **kwargs)
         # batch_size x nb_windows x out_channels
         
         result = result.transpose(1, 2)

@@ -261,9 +261,9 @@ class MPS(TensorNetwork):
             self.mats_env_data = list(map(lambda node: node.neighbours('input'),
                                           self.mats_env))
 
-    def _input_contraction(self) -> Tuple[Optional[List[Node]],
-                                          Optional[List[Node]]]:
-        if self.inline_input:
+    def _input_contraction(self, inline_input: bool = True) -> Tuple[Optional[List[Node]],
+                                                                     Optional[List[Node]]]:
+        if inline_input:
             mats_result = []
             for node in self.mats_env:
                 mats_result.append(node @ node.neighbours('input'))
@@ -371,13 +371,13 @@ class MPS(TensorNetwork):
 
         return self._contract_envs_inline(aux_nodes)
 
-    def contract(self) -> Node:
+    def contract(self, inline_input=True, inline_mats=True) -> Node:
         start = time.time()
-        mats_env = self._input_contraction()
+        mats_env = self._input_contraction(inline_input)
         if PRINT_MODE: print('\tInput:', time.time() - start)
 
         start = time.time()
-        if self.inline_mats:
+        if inline_mats:
             result = self._contract_envs_inline(mats_env)
         else:
             result = self._pairwise_contraction(mats_env)
@@ -634,9 +634,9 @@ class UMPS(TensorNetwork):
             self.mats_env_data = list(map(lambda node: node.neighbours('input'),
                                           self.mats_env))
 
-    def _input_contraction(self) -> Tuple[Optional[List[Node]],
-                                          Optional[List[Node]]]:
-        if self.inline_input:
+    def _input_contraction(self, inline_input=True) -> Tuple[Optional[List[Node]],
+                                                             Optional[List[Node]]]:
+        if inline_input:
             mats_result = []
             for node in self.mats_env:
                 mats_result.append(node @ node.neighbours('input'))
@@ -740,13 +740,13 @@ class UMPS(TensorNetwork):
 
         return self._contract_envs_inline(aux_nodes)
 
-    def contract(self) -> Node:
+    def contract(self, inline_input=True, inline_mats=True) -> Node:
         start = time.time()
-        mats_env = self._input_contraction()
+        mats_env = self._input_contraction(inline_input)
         if PRINT_MODE: print('\tInput:', time.time() - start)
 
         start = time.time()
-        if self.inline_mats:
+        if inline_mats:
             result = self._contract_envs_inline(mats_env)
         else:
             result = self._pairwise_contraction(mats_env)
@@ -902,7 +902,7 @@ class ConvMPS(MPS):
     def dilation(self) -> Tuple[int, int]:
         return self._dilation
     
-    def forward(self, image, mode='flat'):
+    def forward(self, image, mode='flat', *args, **kwargs):
         """
         Parameters
         ----------
@@ -937,7 +937,7 @@ class ConvMPS(MPS):
         elif mode != 'flat':
             raise ValueError('`mode` can only be \'flat\' or \'snake\'')
         
-        result = super().forward(patches)
+        result = super().forward(patches, *args, **kwargs)
         # batch_size x nb_windows
         
         h_in = image.shape[2]
@@ -1026,7 +1026,7 @@ class ConvUMPS(UMPS):
     def dilation(self) -> Tuple[int, int]:
         return self._dilation
     
-    def forward(self, image, mode='flat'):
+    def forward(self, image, mode='flat', *args, **kwargs):
         """
         Parameters
         ----------
@@ -1061,7 +1061,7 @@ class ConvUMPS(UMPS):
         elif mode != 'flat':
             raise ValueError('`mode` can only be \'flat\' or \'snake\'')
         
-        result = super().forward(patches)
+        result = super().forward(patches, *args, **kwargs)
         # batch_size x nb_windows
         
         h_in = image.shape[2]

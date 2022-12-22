@@ -155,7 +155,7 @@ class Tree(TensorNetwork):
                                              f'layer {i} than output edges in '
                                              f'layer {i - 1}')
                             
-                        edge ^ self.layers[-1][idx_last_layer]['output']
+                        self.layers[-1][idx_last_layer]['output'] ^ edge
                         idx_last_layer += 1
                     
                 if idx_last_layer < len(self.layers[-1]):
@@ -227,20 +227,65 @@ class Tree(TensorNetwork):
 
         return result_lst[0]
     
+    def _canonicalize_layer(self,
+                            layer1: List[Node],
+                            layer2: List[Node],
+                            mode: Text = 'svd',
+                            rank: Optional[int] = None,
+                            cum_percentage: Optional[float] = None,
+                            cutoff: Optional[float] = None) -> None:
+        new_layer1 = []
+        new_layer2 = []
+        i = 0
+        for node in layer2:
+            for _ in range(node.rank - 1):
+                if mode == 'svd':
+                    result1, node = layer1[i]['output'].svd_(side='right',
+                                                             rank=rank,
+                                                             cum_percentage=cum_percentage,
+                                                             cutoff=cutoff)
+                elif mode == 'svdr':
+                    result1, node = layer1[i]['output'].svdr_(side='right',
+                                                              rank=rank,
+                                                              cum_percentage=cum_percentage,
+                                                              cutoff=cutoff)
+                elif mode == 'qr':
+                    result1, node = layer1[i]['output'].qr_()
+                else:
+                    raise ValueError('`mode` can only be \'svd\', \'svdr\' or \'qr\'')
+                
+                new_layer1.append(result1.parameterize())
+                i += 1
+                
+            new_layer2.append(node.parameterize())
+            
+        return new_layer1, new_layer2
+    
     def canonicalize(self,
-                     oc: Optional[int] = None,
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
-                     cum_percentage: Optional[float] = None) -> None:
+                     cum_percentage: Optional[float] = None,
+                     cutoff: Optional[float] = None) -> None:
         """
         Turns the MPS into canonical form
         
         Parameters
         ----------
-        oc: orthogonality center position
         mode: can be either 'svd', 'svdr' or 'qr'
         """
-        pass
+        if len(self.layers) > 1:
+            for i in range(len(self.layers) - 1):
+                layer1 = self.layers[i]
+                layer2 = self.layers[i + 1]
+                layer1, layer2 = self._canonicalize_layer(layer1, layer2,
+                                                          mode=mode,
+                                                          rank=rank,
+                                                          cum_percentage=cum_percentage,
+                                                          cutoff=cutoff)
+                self.layers[i] = layer1
+                self.layers[i + 1] = layer2
+            
+        self.param_bond(set_param=self._param_bond)
 
 
 class UTree(TensorNetwork):

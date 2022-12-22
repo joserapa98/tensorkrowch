@@ -41,6 +41,27 @@ class TestTree:
                             assert len(tree.virtual_nodes) == 6
                         else:
                             assert len(tree.virtual_nodes) == 3
+                        
+                        # Canonicalize and continue
+                        for mode in ['svd', 'svdr', 'qr']:
+                            sv_cut_dicts = [{'rank': 2},
+                                            {'cum_percentage': 0.95},
+                                            {'cutoff': 1e-5}]
+                            for sv_cut in sv_cut_dicts:
+                                print(mode, sv_cut)
+                                tree.delete_non_leaf()
+                                tree.canonicalize(mode=mode, **sv_cut)
+                                tree.trace(example, inline=inline)
+                                result = tree(data, inline=inline)
+                                
+                                assert result.shape == (100, 2)
+                                assert len(tree.edges) == 1
+                                assert len(tree.leaf_nodes) == 9
+                                assert len(tree.data_nodes) == 12
+                                if automemory and not inline:
+                                    assert len(tree.virtual_nodes) == 6
+                                else:
+                                    assert len(tree.virtual_nodes) == 3
 
     def test_extreme_case_1_node_per_layer(self):
         example = torch.randn(1, 1, 5)
@@ -69,6 +90,27 @@ class TestTree:
                             assert len(tree.virtual_nodes) == 6
                         else:
                             assert len(tree.virtual_nodes) == 3
+                        
+                        # Canonicalize and continue
+                        for mode in ['svd', 'svdr', 'qr']:
+                            sv_cut_dicts = [{'rank': 2},
+                                            {'cum_percentage': 0.95},
+                                            {'cutoff': 1e-5}]
+                            for sv_cut in sv_cut_dicts:
+                                print(mode, sv_cut)
+                                tree.delete_non_leaf()
+                                tree.canonicalize(mode=mode, **sv_cut)
+                                tree.trace(example, inline=inline)
+                                result = tree(data, inline=inline)
+                                
+                                assert result.shape == (100, 2)
+                                assert len(tree.edges) == 1
+                                assert len(tree.leaf_nodes) == 3
+                                assert len(tree.data_nodes) == 1
+                                if automemory and not inline:
+                                    assert len(tree.virtual_nodes) == 6
+                                else:
+                                    assert len(tree.virtual_nodes) == 3
                             
     def test_extreme_case_1_node(self):
         example = torch.randn(3, 1, 5)
@@ -97,6 +139,27 @@ class TestTree:
                             assert len(tree.virtual_nodes) == 4
                         else:
                             assert len(tree.virtual_nodes) == 3
+                        
+                        # Canonicalize and continue
+                        for mode in ['svd', 'svdr', 'qr']:
+                            sv_cut_dicts = [{'rank': 2},
+                                            {'cum_percentage': 0.95},
+                                            {'cutoff': 1e-5}]
+                            for sv_cut in sv_cut_dicts:
+                                print(mode, sv_cut)
+                                tree.delete_non_leaf()
+                                tree.canonicalize(mode=mode, **sv_cut)
+                                tree.trace(example, inline=inline)
+                                result = tree(data, inline=inline)
+                                
+                                assert result.shape == (100, 2)
+                                assert len(tree.edges) == 1
+                                assert len(tree.leaf_nodes) == 1
+                                assert len(tree.data_nodes) == 3
+                                if automemory and not inline:
+                                    assert len(tree.virtual_nodes) == 4
+                                else:
+                                    assert len(tree.virtual_nodes) == 3
 
 
 class TestUTree:
@@ -215,6 +278,27 @@ class TestConvTree:
                             assert len(tree.virtual_nodes) == 6
                         else:
                             assert len(tree.virtual_nodes) == 3
+                        
+                        # Canonicalize and continue
+                        for mode in ['svd', 'svdr', 'qr']:
+                            sv_cut_dicts = [{'rank': 2},
+                                            {'cum_percentage': 0.95},
+                                            {'cutoff': 1e-5}]
+                            for sv_cut in sv_cut_dicts:
+                                print(mode, sv_cut)
+                                tree.delete_non_leaf()
+                                tree.canonicalize(mode=mode, **sv_cut)
+                                tree.trace(example, inline=inline)
+                                result = tree(data, inline=inline)
+                                
+                                assert result.shape == (100, 2, 4, 4)
+                                assert len(tree.edges) == 1
+                                assert len(tree.leaf_nodes) == 7
+                                assert len(tree.data_nodes) == 4
+                                if automemory and not inline:
+                                    assert len(tree.virtual_nodes) == 6
+                                else:
+                                    assert len(tree.virtual_nodes) == 3
     
     def test_extreme_case_1_node_per_layer(self):
         def embedding(data: torch.Tensor) -> torch.Tensor:
@@ -249,6 +333,27 @@ class TestConvTree:
                             assert len(tree.virtual_nodes) == 6
                         else:
                             assert len(tree.virtual_nodes) == 3
+                        
+                        # Canonicalize and continue
+                        for mode in ['svd', 'svdr', 'qr']:
+                            sv_cut_dicts = [{'rank': 2},
+                                            {'cum_percentage': 0.95},
+                                            {'cutoff': 1e-5}]
+                            for sv_cut in sv_cut_dicts:
+                                print(mode, sv_cut)
+                                tree.delete_non_leaf()
+                                tree.canonicalize(mode=mode, **sv_cut)
+                                tree.trace(example, inline=inline)
+                                result = tree(data, inline=inline)
+                                
+                                assert result.shape == (100, 2, 5, 5)
+                                assert len(tree.edges) == 1
+                                assert len(tree.leaf_nodes) == 3
+                                assert len(tree.data_nodes) == 1
+                                if automemory and not inline:
+                                    assert len(tree.virtual_nodes) == 6
+                                else:
+                                    assert len(tree.virtual_nodes) == 3
                             
     def test_extreme_case_1_node(self):
         def embedding(data: torch.Tensor) -> torch.Tensor:
@@ -284,6 +389,27 @@ class TestConvTree:
                             assert len(tree.virtual_nodes) == 4
                         else:
                             assert len(tree.virtual_nodes) == 3
+                        
+                        # Canonicalize and continue
+                        for mode in ['svd', 'svdr', 'qr']:
+                            sv_cut_dicts = [{'rank': 2},
+                                            {'cum_percentage': 0.95},
+                                            {'cutoff': 1e-5}]
+                            for sv_cut in sv_cut_dicts:
+                                print(mode, sv_cut)
+                                tree.delete_non_leaf()
+                                tree.canonicalize(mode=mode, **sv_cut)
+                                tree.trace(example, inline=inline)
+                                result = tree(data, inline=inline)
+                                
+                                assert result.shape == (100, 2, 4, 4)
+                                assert len(tree.edges) == 1
+                                assert len(tree.leaf_nodes) == 1
+                                assert len(tree.data_nodes) == 4
+                                if automemory and not inline:
+                                    assert len(tree.virtual_nodes) == 4
+                                else:
+                                    assert len(tree.virtual_nodes) == 3
 
 
 class TestConvUTree:

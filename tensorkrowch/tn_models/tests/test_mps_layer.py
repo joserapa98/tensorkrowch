@@ -405,6 +405,158 @@ class TestMPSLayer:
                         assert len(mps.leaf_nodes) == 1
                         assert len(mps.data_nodes) == 0
                         assert len(mps.virtual_nodes) == 0
+                        
+    def test_canonicalize_continuous(self):
+        example = torch.randn(4, 1, 2)
+        data = torch.randn(4, 100, 2)
+        
+        mps = tk.MPSLayer(n_sites=5,
+                          d_phys=2,
+                          d_bond=5,
+                          n_labels=2,
+                          boundary='obc',
+                          param_bond=True)
+        mps.output_node.tensor = torch.randn(mps.output_node.shape)
+        
+        # Contract MPS
+        result = mps.left_node
+        for node in mps.left_env:
+            result @= node
+        result @= mps.output_node
+        for node in mps.right_env:
+            result @= node
+        result @= mps.right_node
+        
+        mps_tensor = result.tensor
+                
+        # Canonicalize and continue
+        mps.delete_non_leaf()
+        mps.canonicalize_continuous()
+        mps.trace(example)
+        result = mps(data)
+        
+        assert result.shape == (100, 2)
+        assert len(mps.edges) == 1
+        assert len(mps.leaf_nodes) == 5
+        assert len(mps.data_nodes) == 4
+        assert len(mps.virtual_nodes) == 3
+        
+        # Contract Canonical MPS
+        result = mps.left_node
+        for node in mps.left_env:
+            result @= node
+        result @= mps.output_node
+        for node in mps.right_env:
+            result @= node
+        result @= mps.right_node
+        
+        mps_canon_tensor = result.tensor
+        
+        diff = mps_tensor - mps_canon_tensor
+        norm = diff.norm()
+        assert norm.item() < 1e-4
+        
+    def test_canonicalize_continuous_diff_dims(self):
+        d_phys = torch.arange(2, 6).int().tolist()
+        d_bond = torch.arange(2, 6).int().tolist()
+        example = [torch.randn(1, d) for d in d_phys]
+        data = [torch.randn(100, d) for d in d_phys]
+        
+        mps = tk.MPSLayer(n_sites=5,
+                          d_phys=d_phys,
+                          d_bond=d_bond,
+                          n_labels=5,
+                          boundary='obc',
+                          param_bond=True)
+        mps.output_node.tensor = torch.randn(mps.output_node.shape)
+                
+        # Contract MPS
+        result = mps.left_node
+        for node in mps.left_env:
+            result @= node
+        result @= mps.output_node
+        for node in mps.right_env:
+            result @= node
+        result @= mps.right_node
+        
+        mps_tensor = result.tensor
+                
+        # Canonicalize and continue
+        mps.delete_non_leaf()
+        mps.canonicalize_continuous()
+        mps.trace(example)
+        result = mps(data)
+        
+        assert result.shape == (100, 5)
+        assert len(mps.edges) == 1
+        assert len(mps.leaf_nodes) == 5
+        assert len(mps.data_nodes) == 4
+        assert len(mps.virtual_nodes) == 0
+        
+        # Contract Canonical MPS
+        result = mps.left_node
+        for node in mps.left_env:
+            result @= node
+        result @= mps.output_node
+        for node in mps.right_env:
+            result @= node
+        result @= mps.right_node
+        
+        mps_canon_tensor = result.tensor
+        
+        diff = mps_tensor - mps_canon_tensor
+        norm = diff.norm()
+        assert norm.item() < 1e-5
+        
+    def test_canonicalize_continuous_bond_greater_than_phys(self):
+        example = torch.randn(5, 1, 2)
+        data = torch.randn(5, 100, 2)
+        
+        mps = tk.MPSLayer(n_sites=5,
+                          d_phys=2,
+                          d_bond=20,
+                          n_labels=2,
+                          boundary='obc',
+                          param_bond=True)
+        mps.output_node.tensor = torch.randn(mps.output_node.shape)
+                
+        # Contract MPS
+        result = mps.left_node
+        for node in mps.left_env:
+            result @= node
+        result @= mps.output_node
+        for node in mps.right_env:
+            result @= node
+        result @= mps.right_node
+        
+        mps_tensor = result.tensor
+                
+        # Canonicalize and continue
+        mps.delete_non_leaf()
+        mps.canonicalize_continuous()
+        mps.trace(example)
+        result = mps(data)
+        
+        assert result.shape == (100, 2)
+        assert len(mps.edges) == 1
+        assert len(mps.leaf_nodes) == 5
+        assert len(mps.data_nodes) == 4
+        assert len(mps.virtual_nodes) == 3
+        
+        # Contract Canonical MPS
+        result = mps.left_node
+        for node in mps.left_env:
+            result @= node
+        result @= mps.output_node
+        for node in mps.right_env:
+            result @= node
+        result @= mps.right_node
+        
+        mps_canon_tensor = result.tensor
+        
+        diff = mps_tensor - mps_canon_tensor
+        norm = diff.norm()
+        assert norm.item() < 1e-5
 
     def test_check_grad(self):
         mps = tk.MPSLayer(n_sites=2,

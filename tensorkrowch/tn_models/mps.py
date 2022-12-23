@@ -466,6 +466,167 @@ class MPS(TensorNetwork):
             if 'right' in node.axes_names:
                 d_bond.append(node['right'].size())
         self._d_bond = d_bond
+        
+    def _project_to_d_bond(self, nodes, d_bond, side='right'):
+        if side == 'left':
+            nodes.reverse()
+        elif side != 'right':
+            raise ValueError('`side` can only be \'left\' or \'right\'')
+        
+        for node in nodes:
+            if not node['input'].is_dangling():
+                self.delete_node(node.neighbours('input'))
+        
+        line_mat_nodes = []
+        d_phys_lst = []
+        proj_mat_node = None
+        for j in range(len(nodes)):
+            d_phys_lst.append(nodes[j]['input'].size())
+            if d_bond <= torch.tensor(d_phys_lst).prod().item():
+                proj_mat_node = Node(shape=(*d_phys_lst,d_bond),
+                                     axes_names=(*(['input'] * len(d_phys_lst)),
+                                                 'd_bond'),
+                                     name='proj_mat_node',
+                                     network=self)
+                
+                proj_mat_node.tensor = torch.eye(torch.tensor(d_phys_lst).prod().int().item(),
+                                                 d_bond).view(*d_phys_lst, -1)
+                for k in range(j + 1):
+                    nodes[k]['input'] ^ proj_mat_node[k]
+                    
+                aux_result = proj_mat_node
+                for k in range(j + 1):
+                    aux_result @= nodes[k]
+                line_mat_nodes.append(aux_result)  # d_bond x left x right
+                break
+            
+        if proj_mat_node is None:
+            d_bond = torch.tensor(d_phys_lst).prod().int().item()
+            proj_mat_node = Node(shape=(*d_phys_lst, d_bond),
+                                 axes_names=(*(['input'] * len(d_phys_lst)),
+                                             'd_bond'),
+                                 name='proj_mat_node',
+                                 network=self)
+            
+            proj_mat_node.tensor = torch.eye(torch.tensor(d_phys_lst).prod().int().item(),
+                                             d_bond).view(*d_phys_lst, -1)
+            for k in range(j + 1):
+                nodes[k]['input'] ^ proj_mat_node[k]
+                
+            aux_result = proj_mat_node
+            for k in range(j + 1):
+                aux_result @= nodes[k]
+            line_mat_nodes.append(aux_result)
+            
+        k = j + 1
+        while k < len(nodes):
+            d_phys = nodes[k]['input'].size()
+            proj_vec_node = Node(shape=(d_phys,),
+                                 axes_names=('input',),
+                                 name='proj_vec_node',
+                                 network=self)
+            
+            proj_vec_node.tensor = torch.eye(d_phys, 1).squeeze()
+            nodes[k]['input'] ^ proj_vec_node['input']
+            line_mat_nodes.append(proj_vec_node @ nodes[k])
+            
+            k += 1
+        
+        line_mat_nodes.reverse()
+        result = line_mat_nodes[0]
+        for node in line_mat_nodes[1:]:
+            result @= node
+            
+        return result  # d_bond x left/right
+    
+    def _aux_canonicalize_continuous(self, nodes, idx, left_nodeL):
+        L = nodes[idx]  # left x input x right
+        left_nodeC = None
+        
+        if idx > 0:
+            # left_nodeL = self._project_to_d_bond(nodes[:idx],
+            #                                      self._d_bond[idx - 1],
+            #                                      side='left')  # d_bond[-1] x right
+            L = left_nodeL @ L  # d_bond[-1] x input  x right  /  d_bond[-1] x input
+        
+        L = L.tensor
+        
+        if idx < self._n_sites - 1:
+            d_bond = self._d_bond[idx]
+            
+            prod_phys_left = 1
+            for i in range(idx + 1):
+                prod_phys_left *= self._d_phys[i]
+            d_bond = min(d_bond, prod_phys_left)
+            
+            prod_phys_right = 1
+            for i in range(idx + 1, self._n_sites):
+                prod_phys_right *= self._d_phys[i]
+            d_bond = min(d_bond, prod_phys_right)
+            
+            if d_bond < self._d_bond[idx]:
+                self._d_bond[idx] = d_bond
+            
+            left_nodeC = self._project_to_d_bond(nodes=nodes[:idx + 1],
+                                                d_bond=d_bond,
+                                                side='left')  # d_bond x right
+            right_node = self._project_to_d_bond(nodes=nodes[idx + 1:],
+                                                d_bond=d_bond,
+                                                side='right')  # d_bond x left
+            
+            C = left_nodeC @ right_node  # d_bond x d_bond
+            # C._unrestricted_set_tensor(torch.linalg.inv(C.tensor))
+            C = torch.linalg.inv(C.tensor)
+            
+            if idx == 0:
+                L @= right_node.tensor.t()  # input x d_bond
+                L @= C
+            else:
+                shape_L = L.shape
+                L = (L.view(-1, L.shape[-1]) @ right_node.tensor.t())  # (d_bond[-1] * input) x d_bond
+                L @= C
+                L = L.view(*shape_L[:-1], right_node.shape[0])
+            # L = L.tensor
+            
+            # edge = L[-1] ^ C[0]
+            # L._add_edge(edge=edge, axis=-1, node1=True)
+            # C._add_edge(edge=edge, axis=0, node1=False)
+            # L @= C
+            
+        return L, left_nodeC
+        
+    def canonicalize_continuous(self):
+        if self._boundary != 'obc':
+            raise ValueError('`canonicalize_continuous` can only be used if '
+                             'boundary is `obc`')
+        
+        nodes = [self.left_node] + self.mats_env + [self.right_node]
+        for node in nodes:
+            if not node['input'].is_dangling():
+                node['input'].disconnect()
+        
+        new_tensors = []
+        # new_tensors.append(torch.eye(self._d_phys[0], self._d_bond[0]))
+        left_nodeC = None
+        for i in range(self._n_sites):
+            tensor, left_nodeC = self._aux_canonicalize_continuous(nodes=nodes,
+                                                                   idx=i,
+                                                                   left_nodeL=left_nodeC)
+            new_tensors.append(tensor)
+        # new_tensors.append(torch.eye(self._d_bond[-1], self._d_phys[-1]))
+        
+        for i, (node, tensor) in enumerate(zip(nodes, new_tensors)):
+            if i < self._n_sites - 1:
+                if self._d_bond[i] < node['right'].size():
+                    node['right'].change_size(self._d_bond[i])
+            node.tensor = tensor
+            
+            if not node['input'].is_dangling():
+                self.delete_node(node.neighbours('input'))
+        self.delete_non_leaf()
+            
+        for node, data_node in zip(nodes, self._data_nodes.values()):
+            node['input'] ^ data_node['feature']
 
 
 class UMPS(TensorNetwork):

@@ -372,6 +372,134 @@ class TestMPS:
                                     assert len(mps.virtual_nodes) == 4
                                 else:
                                     assert len(mps.virtual_nodes) == 3
+    
+    def test_canonicalize_continuous(self):
+        example = torch.randn(5, 1, 2)
+        data = torch.randn(5, 100, 2)
+        
+        mps = tk.MPS(n_sites=5,
+                     d_phys=2,
+                     d_bond=5,
+                     boundary='obc',
+                     param_bond=True)
+        
+        # Contract MPS
+        result = mps.left_node
+        for node in mps.mats_env:
+            result @= node
+        result @= mps.right_node
+        
+        mps_tensor = result.tensor
+                
+        # Canonicalize and continue
+        mps.delete_non_leaf()
+        mps.canonicalize_continuous()
+        mps.trace(example)
+        result = mps(data)
+        
+        assert result.shape == (100,)
+        assert len(mps.edges) == 0
+        assert len(mps.leaf_nodes) == 5
+        assert len(mps.data_nodes) == 5
+        assert len(mps.virtual_nodes) == 3
+        
+        # Contract Canonical MPS
+        result = mps.left_node
+        for node in mps.mats_env:
+            result @= node
+        result @= mps.right_node
+        
+        mps_canon_tensor = result.tensor
+        
+        diff = mps_tensor - mps_canon_tensor
+        norm = diff.norm()
+        assert norm.item() < 1e-5
+        
+    def test_canonicalize_continuous_diff_dims(self):
+        d_phys = torch.arange(2, 7).int().tolist()
+        d_bond = torch.arange(2, 6).int().tolist()
+        example = [torch.randn(1, d) for d in d_phys]
+        data = [torch.randn(100, d) for d in d_phys]
+        
+        mps = tk.MPS(n_sites=5,
+                     d_phys=d_phys,
+                     d_bond=d_bond,
+                     boundary='obc',
+                     param_bond=True)
+                
+        # Contract MPS
+        result = mps.left_node
+        for node in mps.mats_env:
+            result @= node
+        result @= mps.right_node
+        
+        mps_tensor = result.tensor
+                
+        # Canonicalize and continue
+        mps.delete_non_leaf()
+        mps.canonicalize_continuous()
+        mps.trace(example)
+        result = mps(data)
+        
+        assert result.shape == (100,)
+        assert len(mps.edges) == 0
+        assert len(mps.leaf_nodes) == 5
+        assert len(mps.data_nodes) == 5
+        assert len(mps.virtual_nodes) == 0
+        
+        # Contract Canonical MPS
+        result = mps.left_node
+        for node in mps.mats_env:
+            result @= node
+        result @= mps.right_node
+        
+        mps_canon_tensor = result.tensor
+        
+        diff = mps_tensor - mps_canon_tensor
+        norm = diff.norm()
+        assert norm.item() < 1e-5
+        
+    def test_canonicalize_continuous_bond_greater_than_phys(self):
+        example = torch.randn(5, 1, 2)
+        data = torch.randn(5, 100, 2)
+        
+        mps = tk.MPS(n_sites=5,
+                     d_phys=2,
+                     d_bond=20,
+                     boundary='obc',
+                     param_bond=True)
+                
+        # Contract MPS
+        result = mps.left_node
+        for node in mps.mats_env:
+            result @= node
+        result @= mps.right_node
+        
+        mps_tensor = result.tensor
+                
+        # Canonicalize and continue
+        mps.delete_non_leaf()
+        mps.canonicalize_continuous()
+        mps.trace(example)
+        result = mps(data)
+        
+        assert result.shape == (100,)
+        assert len(mps.edges) == 0
+        assert len(mps.leaf_nodes) == 5
+        assert len(mps.data_nodes) == 5
+        assert len(mps.virtual_nodes) == 3
+        
+        # Contract Canonical MPS
+        result = mps.left_node
+        for node in mps.mats_env:
+            result @= node
+        result @= mps.right_node
+        
+        mps_canon_tensor = result.tensor
+        
+        diff = mps_tensor - mps_canon_tensor
+        norm = diff.norm()
+        assert norm.item() < 1e-5
 
 
 class TestUMPS:

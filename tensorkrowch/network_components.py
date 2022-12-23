@@ -1751,6 +1751,8 @@ class AbstractEdge(ABC):
         return self.name
 
     def __repr__(self) -> Text:
+        if self.is_batch():
+            return f'{self.__class__.__name__}( {self.name} )  (Batch Edge)'
         if self.is_dangling():
             return f'{self.__class__.__name__}( {self.name} )  (Dangling Edge)'
         return f'{self.__class__.__name__}( {self.name} )'

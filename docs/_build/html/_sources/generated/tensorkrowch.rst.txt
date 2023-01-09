@@ -1,0 +1,23 @@
+﻿tensorkrowch
+============
+
+.. automodule:: tensorkrowch
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+

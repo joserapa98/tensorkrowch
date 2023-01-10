@@ -33,10 +33,10 @@ release = '00.00.01'
 extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.autodoc',
-    'sphinx.ext.autodoc.typehints',
-    'sphinx.ext.autosummary',
     'sphinx.ext.viewcode',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
+    'sphinx_copybutton',
+    'nbsphinx',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

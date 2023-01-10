@@ -1,7 +1,8 @@
 API
 ===
 
-.. autosummary::
-   :toctree: generated
+..
+   .. autosummary::
+      :toctree: generated
 
-   tensorkrowch
+      tensorkrowch

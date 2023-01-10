@@ -3,6 +3,14 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. image:: /figures/tensorkrowch_logo.png
+   :width: 450
+   :align: center
+   :alt: TensorKrowch logo
+
+|
+|
+
 Welcome to TensorKrowch's documentation!
 ========================================
 

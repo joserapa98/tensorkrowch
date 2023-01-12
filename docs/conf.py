@@ -35,6 +35,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
+    'sphinx.ext.githubpages',
     'sphinx_copybutton',
     'nbsphinx',
 ]
@@ -46,6 +47,9 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+
+master_doc = 'contents'
+autodoc_typehints = 'description'
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -59,5 +63,7 @@ html_theme = 'sphinx_book_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
-
-autodoc_typehints = 'description'
+html_logo = 'figures/tensorkrowch_logo.png'
+html_theme_options = {
+    'logo_only': True
+}

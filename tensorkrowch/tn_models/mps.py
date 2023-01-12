@@ -27,6 +27,25 @@ PRINT_MODE = False
 
 
 class MPS(TensorNetwork):
+    """
+    Create an MPS module.
+
+    Parameters
+    ----------
+    n_sites: number of sites, including the input and output_node sites
+    d_phys: physic dimension
+    d_bond: bond dimension. If given as a sequence, the i-th bond
+        dimension is always the dimension of the right edge of th i-th node
+    boundary: string indicating whether we are using periodic or open
+        boundary conditions
+    param_bond: boolean indicating whether bond edges should be parametric
+    num_batches: number of batch edges of input data
+    inline_input: boolean indicating whether input should be contracted
+        inline or in a single stacked contraction
+    inline_mats: boolean indicating whether sequence of matrices
+        should be contracted inline or as a sequence of pairwise stacked
+        contrations
+    """
 
     def __init__(self,
                  n_sites: int,
@@ -37,25 +56,6 @@ class MPS(TensorNetwork):
                  num_batches: int = 1,
                  inline_input: bool = False,
                  inline_mats: bool = False) -> None:
-        """
-        Create an MPS module.
-
-        Parameters
-        ----------
-        n_sites: number of sites, including the input and output_node sites
-        d_phys: physic dimension
-        d_bond: bond dimension. If given as a sequence, the i-th bond
-            dimension is always the dimension of the right edge of th i-th node
-        boundary: string indicating whether we are using periodic or open
-            boundary conditions
-        param_bond: boolean indicating whether bond edges should be parametric
-        num_batches: number of batch edges of input data
-        inline_input: boolean indicating whether input should be contracted
-            inline or in a single stacked contraction
-        inline_mats: boolean indicating whether sequence of matrices
-            should be contracted inline or as a sequence of pairwise stacked
-            contrations
-        """
 
         super().__init__(name='mps')
 
@@ -270,9 +270,7 @@ class MPS(TensorNetwork):
             return mats_result
 
         else:
-            # start = time.time()
             if self.mats_env:
-                # print('\t\tFind data:', time.time() - start)
                 start = time.time()
                 stack = tk.stack(self.mats_env)
                 stack_data = tk.stack(self.mats_env_data)
@@ -544,9 +542,6 @@ class MPS(TensorNetwork):
         left_nodeC = None
         
         if idx > 0:
-            # left_nodeL = self._project_to_d_bond(nodes[:idx],
-            #                                      self._d_bond[idx - 1],
-            #                                      side='left')  # d_bond[-1] x right
             L = left_nodeL @ L  # d_bond[-1] x input  x right  /  d_bond[-1] x input
         
         L = L.tensor
@@ -575,7 +570,6 @@ class MPS(TensorNetwork):
                                                 side='right')  # d_bond x left
             
             C = left_nodeC @ right_node  # d_bond x d_bond
-            # C._unrestricted_set_tensor(torch.linalg.inv(C.tensor))
             C = torch.linalg.inv(C.tensor)
             
             if idx == 0:
@@ -586,12 +580,6 @@ class MPS(TensorNetwork):
                 L = (L.view(-1, L.shape[-1]) @ right_node.tensor.t())  # (d_bond[-1] * input) x d_bond
                 L @= C
                 L = L.view(*shape_L[:-1], right_node.shape[0])
-            # L = L.tensor
-            
-            # edge = L[-1] ^ C[0]
-            # L._add_edge(edge=edge, axis=-1, node1=True)
-            # C._add_edge(edge=edge, axis=0, node1=False)
-            # L @= C
             
         return L, left_nodeC
         
@@ -630,6 +618,23 @@ class MPS(TensorNetwork):
 
 
 class UMPS(TensorNetwork):
+    """
+    Create an MPS module.
+
+    Parameters
+    ----------
+    n_sites: number of sites, including the input and output_node sites
+    d_phys: physic dimension
+    d_bond: bond dimension. If given as a sequence, the i-th bond
+        dimension is always the dimension of the right edge of th i-th node
+    param_bond: boolean indicating whether bond edges should be parametric
+    num_batches: number of batch edges of input data
+    inline_input: boolean indicating whether input should be contracted
+        inline or in a single stacked contraction
+    inline_mats: boolean indicating whether sequence of matrices
+        should be contracted inline or as a sequence of pairwise stacked
+        contrations
+    """
 
     def __init__(self,
                  n_sites: int,
@@ -639,23 +644,6 @@ class UMPS(TensorNetwork):
                  num_batches: int = 1,
                  inline_input: bool = False,
                  inline_mats: bool = False) -> None:
-        """
-        Create an MPS module.
-
-        Parameters
-        ----------
-        n_sites: number of sites, including the input and output_node sites
-        d_phys: physic dimension
-        d_bond: bond dimension. If given as a sequence, the i-th bond
-            dimension is always the dimension of the right edge of th i-th node
-        param_bond: boolean indicating whether bond edges should be parametric
-        num_batches: number of batch edges of input data
-        inline_input: boolean indicating whether input should be contracted
-            inline or in a single stacked contraction
-        inline_mats: boolean indicating whether sequence of matrices
-            should be contracted inline or as a sequence of pairwise stacked
-            contrations
-        """
 
         super().__init__(name='mps')
 
@@ -915,78 +903,6 @@ class UMPS(TensorNetwork):
         if PRINT_MODE: print('\tMatrices contraction:', time.time() - start)
         
         return result
-    
-    # def canonicalize(self,
-    #                  mode: Text = 'svd',
-    #                  rank: Optional[int] = None,
-    #                  cum_percentage: Optional[float] = None) -> None:
-    #     # Left
-    #     left_nodes = []
-    #     if self.left_node is not None:
-    #         left_nodes.append(self.left_node)
-    #     left_nodes += self.left_env
-        
-    #     if left_nodes:
-    #         new_left_nodes = []
-    #         node = left_nodes[0]
-    #         for _ in range(len(left_nodes)):
-    #             if mode == 'svd':
-    #                 result1, result2 = node['right'].svd_(side='right',
-    #                                                       rank=rank,
-    #                                                       cum_percentage=cum_percentage)
-    #             elif mode == 'svdr':
-    #                 result1, result2 = node['right'].svdr_(side='right',
-    #                                                        rank=rank,
-    #                                                        cum_percentage=cum_percentage)
-    #             elif mode == 'qr':
-    #                 result1, result2 = node['right'].qr_()
-    #             else:
-    #                 raise ValueError('`mode` can only be \'svd\', \'svdr\' or \'qr\'')
-                
-    #             node = result2
-    #             result1 = result1.parameterize()
-    #             new_left_nodes.append(result1)
-                
-    #         output_node = node
-                
-    #         if new_left_nodes:
-    #             self.left_node = new_left_nodes[0]
-    #         self.left_env = new_left_nodes[1:]
-
-    #     # Right
-    #     right_nodes = self.right_env[:]
-    #     right_nodes.reverse()
-    #     if self.right_node is not None:
-    #         right_nodes = [self.right_node] + right_nodes
-        
-    #     if right_nodes:
-    #         new_right_nodes = []
-    #         node = right_nodes[0]
-    #         for _ in range(len(right_nodes)):
-    #             if mode == 'svd':
-    #                 result1, result2 = node['left'].svd_(side='left',
-    #                                                      rank=rank,
-    #                                                      cum_percentage=cum_percentage)
-    #             elif mode == 'svdr':
-    #                 result1, result2 = node['left'].svdr_(side='left',
-    #                                                       rank=rank,
-    #                                                       cum_percentage=cum_percentage)
-    #             elif mode == 'qr':
-    #                 result1, result2 = node['left'].qr_()
-    #             else:
-    #                 raise ValueError('`mode` can only be \'svd\', \'svdr\' or \'qr\'')
-                
-    #             node = result1
-    #             result2 = result2.parameterize()
-    #             new_right_nodes = [result2] + new_right_nodes
-                
-    #         output_node = node
-                
-    #         if new_right_nodes:
-    #             self.right_node = new_right_nodes[-1]
-    #         self.right_env = new_right_nodes[:-1]
-            
-    #     self.output_node = output_node.parameterize()
 
 
 class ConvMPS(MPS):

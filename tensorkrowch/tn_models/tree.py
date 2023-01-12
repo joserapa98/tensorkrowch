@@ -27,27 +27,27 @@ PRINT_MODE = False
 
 
 class Tree(TensorNetwork):
+    """
+    Create an Tree module.
+
+    Parameters
+    ----------
+    sites_per_layer: number of sites in each layer of the tree
+    d_bond: bond dimensions of nodes in each layer. In each layer, all
+        nodes have the same shape, formed by various input edges and a
+        single output edge. d_bond should be a sequence of sequences,
+        one for each layer. Each sequence is formed by the bond dimensions
+        of the input edges and the bond dimension of the output (last
+        element in the sequence)
+    param_bond: boolean indicating whether bond edges should be parametric
+    num_batches: number of batch edges of input data
+    """
 
     def __init__(self,
                  sites_per_layer: Sequence[int],
                  d_bond: Sequence[Sequence[int]],
                  param_bond: bool = False,
                  num_batches: int = 1) -> None:
-        """
-        Create an MPS module.
-
-        Parameters
-        ----------
-        sites_per_layer: number of sites in each layer of the tree
-        d_bond: bond dimensions of nodes in each layer. In each layer, all
-            nodes have the same shape, formed by various input edges and a
-            single output edge. d_bond should be a sequence of sequences,
-            one for each layer. Each sequence is formed by the bond dimensions
-            of the input edges and the bond dimension of the output (last
-            element in the sequence)
-        param_bond: boolean indicating whether bond edges should be parametric
-        num_batches: number of batch edges of input data
-        """
 
         super().__init__(name='tree')
 
@@ -289,27 +289,27 @@ class Tree(TensorNetwork):
 
 
 class UTree(TensorNetwork):
+    """
+    Create an UTree module.
+
+    Parameters
+    ----------
+    sites_per_layer: number of sites in each layer of the tree
+    d_bond: bond dimensions of nodes in each layer. In each layer, all
+        nodes have the same shape, formed by various input edges and a
+        single output edge. d_bond should be a sequence of sequences,
+        one for each layer. Each sequence is formed by the bond dimensions
+        of the input edges and the bond dimension of the output (last
+        element in the sequence)
+    param_bond: boolean indicating whether bond edges should be parametric
+    num_batches: number of batch edges of input data
+    """
 
     def __init__(self,
                  sites_per_layer: Sequence[int],
                  d_bond: Sequence[int],
                  param_bond: bool = False,
                  num_batches: int = 1) -> None:
-        """
-        Create an MPS module.
-
-        Parameters
-        ----------
-        sites_per_layer: number of sites in each layer of the tree
-        d_bond: bond dimensions of nodes in each layer. In each layer, all
-            nodes have the same shape, formed by various input edges and a
-            single output edge. d_bond should be a sequence of sequences,
-            one for each layer. Each sequence is formed by the bond dimensions
-            of the input edges and the bond dimension of the output (last
-            element in the sequence)
-        param_bond: boolean indicating whether bond edges should be parametric
-        num_batches: number of batch edges of input data
-        """
 
         super().__init__(name='tree')
 

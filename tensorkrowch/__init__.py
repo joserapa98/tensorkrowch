@@ -10,7 +10,7 @@ from tensorkrowch.node_operations import (connect, disconnect, get_shared_edges,
 
 from tensorkrowch.node_operations import (permute, tprod, mul, add, sub,
                                       einsum, stack, unbind, stacked_einsum,
-                                      stack_unequal_tensors)
+                                      stack_unequal_tensors, contract_edges, contract_between, split)
 from tensorkrowch.node_operations import CHECK_TIMES  # TODO
 
 from tensorkrowch.initializers import zeros, ones, copy, rand, randn

@@ -37,6 +37,7 @@ This script contains:
 
 from typing import Union, Optional, Text, List, Dict, Tuple, Any, Callable, Sequence
 from abc import abstractmethod
+import time
 
 import torch
 import torch.nn as nn
@@ -47,7 +48,6 @@ from tensorkrowch.utils import (is_permutation, permute_list,
 
 from tensorkrowch.network_components import *
 
-import time
 
 Ax = Union[int, Text, Axis]
 
@@ -430,12 +430,9 @@ def _check_first_split(node: AbstractNode,
     return None
 
 
-# TODO: AÑADIR CUTOFF=1E-9 COMO FORMA DE ACOTAR BOND DIM
 def _split_first(node: AbstractNode,
                  node1_axes: Optional[Sequence[Ax]] = None,
                  node2_axes: Optional[Sequence[Ax]] = None,
-                #  node1: Optional[AbstractNode] = None,
-                #  node2: Optional[AbstractNode] = None,
                  mode = 'svd',
                  side = 'left',
                  rank: Optional[int] = None,
@@ -452,12 +449,6 @@ def _split_first(node: AbstractNode,
             go to `node1`
         node2_axes: sequence of axes from `node` whose attached edges will
             go to `node2`
-        node1: if `node1_axes` is None, a `node` is the already created node
-            in which we will put the first part of the splitted tensor of `node`.
-            Used only for svd
-        node2: if `node2_axes` is None, a `node` is the already created node
-            in which we will put the second part of the splitted tensor of `node`.
-            Used only for svd
         mode: available modes are `qr` (QR decomposition), `rq`, `svd` (SVD
             decomposition cutting off singular values according to `rank`
             or `cum_percentage`) or `svdr` (like `svd` but multiplying with
@@ -482,14 +473,7 @@ def _split_first(node: AbstractNode,
         if node2_axes is not None:
             raise ValueError('If `node2_edges` is provided `node1_edges` '
                              'should also be provided')
-        # else:
-        #     if (node1 is None) or (node2 is None):
-        #         raise ValueError('If nodes edges are not provided, both '
-        #                          '`node1` and `node2` have to be provided')
-                
-    # if (rank is None) and (cum_percentage is None):
-    #     raise ValueError('One of `rank` and `cum_percentage` should '
-    #                      'be provided')
+            
     if (rank is not None) and (cum_percentage is not None):
         raise ValueError('Only one of `rank` and `cum_percentage` should '
                          'be provided')
@@ -535,18 +519,6 @@ def _split_first(node: AbstractNode,
                 else:
                     j += 1
                     k = all_axes[j]
-        
-        # diff = 0
-        # for i, j in enumerate(all_axes):
-        #     if (i + diff) < j:
-        #         for k in range(i, j):  #  i + diff?
-        #             if not node._edges[k].is_batch():
-        #                 raise ValueError(f'Edge {node._edges[k]} is not a batch '
-        #                                  'edge but it\'s not included in `node1_axes` '
-        #                                  'neither in `node2_axes`')
-        #             else:
-        #                 batch_axes.append(k)
-        #         diff = j - i
         
         batch_shape = torch.tensor(node.shape)[batch_axes].tolist()
         node1_shape = torch.tensor(node.shape)[node1_axes]
@@ -676,20 +648,9 @@ def _split_first(node: AbstractNode,
         else:
             # TODO: could be changed to bool or "node1"/"node2"
             raise ValueError('`side` can only be "left" or "right"')
-
-        # u = u.reshape(*(batch_shape + node1_shape.tolist() + [rank]))
-        # vh = vh.reshape(*(batch_shape + [rank] + node2_shape.tolist()))
         
         node1_tensor = u
         node2_tensor = vh
-            
-        # u = u.permute(*(inverse_permutation(batch_axes + node1_axes) +
-        #                 [len(u.shape) - 1]))
-        
-        # rank_axis = len(batch_shape)
-        # aux_node2_axes = inverse_permutation(batch_axes + node2_axes)
-        # aux_node2_axes = [x + 1 if x >= rank_axis else x for x in aux_node2_axes]
-        # vh = vh.permute(*(aux_node2_axes + [rank_axis]))
         
     elif mode == 'qr':
         q, r = torch.linalg.qr(node_tensor)
@@ -777,28 +738,6 @@ def _split_first(node: AbstractNode,
             node2._add_edge(edge=node._edges[axis2],
                             axis=n_batches + j + 1,
                             node1=node.is_node1(axis2))
-            
-    
-    # node1._edges[len(batch_axes):-1] = permute_list(node._edges, node1_axes)
-    # node1_list = permute_list(node.is_node1(), node1_axes)
-    # for axis, is_node1 in zip(node1._axes[len(batch_axes):-1], node1_list):
-    #     axis._node1 = is_node1
-        
-    # node1._node1_list[len(batch_axes):-1] = permute_list(node._node1_list, node1_axes)
-    # for edge in node1._edges[:len(batch_axes)]:
-    #     net._remove_edge(edge)
-    # net._remove_edge(node1._edges[-1]) # NOTE: creo que esto no afecta
-    
-    # for edge in node2._edges[(len(batch_axes) + 1):]:
-    #     net._remove_edge(edge)
-    # node2._edges[(len(batch_axes) + 1):] = permute_list(node._edges, node2_axes)
-    # node1_list = permute_list(node.is_node1(), node2_axes)
-    # for axis, is_node1 in zip(node1._axes[len(batch_axes):-1], node1_list):
-    #     axis._node1 = is_node1
-        
-    # node2._node1_list[(len(batch_axes) + 1):] = permute_list(node._node1_list, node2_axes)
-    # for edge in node1._edges[:(len(batch_axes) + 1)]:
-    #     net._remove_edge(edge)
         
     splitted_edge = node1['splitted'] ^ node2['splitted']
     net._remove_edge(splitted_edge)
@@ -826,8 +765,6 @@ def _split_next(successor: Successor,
                 node: AbstractNode,
                 node1_axes: Optional[Sequence[Ax]] = None,
                 node2_axes: Optional[Sequence[Ax]] = None,
-                # node1: Optional[AbstractNode] = None,
-                # node2: Optional[AbstractNode] = None,
                 mode = 'svd',
                 side = 'left',
                 rank: Optional[int] = None,
@@ -911,9 +848,6 @@ def _split_next(successor: Successor,
         else:
             # TODO: could be changed to bool or "node1"/"node2"
             raise ValueError('`side` can only be "left" or "right"')
-
-        # u = u.reshape(*(batch_shape + node1_shape.tolist() + [rank]))
-        # vh = vh.reshape(*(batch_shape + [rank] + node2_shape.tolist()))
         
         node1_tensor = u
         node2_tensor = vh
@@ -956,8 +890,6 @@ split = Operation(_check_first_split, _split_first, _split_next)
 def split_node(node: AbstractNode,
                  node1_axes: Optional[Sequence[Ax]] = None,
                  node2_axes: Optional[Sequence[Ax]] = None,
-                #  node1: Optional[AbstractNode] = None,
-                #  node2: Optional[AbstractNode] = None,
                 mode = 'svd',
                 side = 'left',
                 rank: Optional[int] = None,
@@ -972,8 +904,6 @@ AbstractNode.split = split_node
 def split_(node: AbstractNode,
            node1_axes: Optional[Sequence[Ax]] = None,
            node2_axes: Optional[Sequence[Ax]] = None,
-           # node1: Optional[AbstractNode] = None,
-           # node2: Optional[AbstractNode] = None,
            mode = 'svd',
            side = 'left',
            rank: Optional[int] = None,
@@ -1008,143 +938,6 @@ def split_(node: AbstractNode,
     return node1, node2
 
 AbstractNode.split_ = split_
-
-
-# TODO: HACER SVD OPERACION INDEPENDIENTE PARA NO TENER QUE REPETIR TANTOS CALCULOS
-# NOTE: svd solo puede ser operaciones in-place de edges
-# por lo mismo que contract
-# def svd(node: AbstractNode,
-#         axis: Ax,
-#         side = 'left',
-#         rank: Optional[int] = None,
-#         cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
-    
-#     edge = node[axis]
-    
-#     if edge.is_dangling():
-#         raise ValueError('Edge should be connected to perform SVD')
-    
-#     node1, node2 = node, node.neighbours(axis)
-#     node1_name, node2_name = node1.name, node2.name
-#     axis1, axis2 = node1.get_axis(axis), node2.in_which_axis(edge)
-#     axis1_name, axis2_name = axis1.name, axis2.name
-    
-#     batch_axes = []
-#     for ax in node1._axes:
-#         if ax.is_batch() and (ax.name in node2.axes_names):
-#             batch_axes.append(ax)
-    
-#     n_batches = len(batch_axes)
-#     n_axes1 = len(node1._axes) - n_batches - 1
-#     n_axes2 = len(node2._axes) - n_batches - 1
-    
-#     contracted = node.contract(axis)
-#     new_node1, new_node2 = split(node=contracted,
-#                                  node1_axes=list(range(n_batches,
-#                                                        n_batches + n_axes1)),
-#                                  node2_axes=list(range(n_batches + n_axes1,
-#                                                        n_batches + n_axes1 + n_axes2)),
-#                                  side=side,
-#                                  rank=rank,
-#                                  cum_percentage=cum_percentage)
-    
-#     # new_node1
-#     prev_nums = [ax.num for ax in batch_axes]
-#     for i in range(new_node1.rank):
-#         if (i not in prev_nums) and (i != axis1.num):
-#             prev_nums.append(i)
-#     prev_nums += [axis1.num]
-    
-#     if prev_nums != list(range(new_node1.rank)):
-#         permutation = inverse_permutation(prev_nums)
-#         new_node1 = new_node1.permute_(permutation)
-        
-#     # new_node2 
-#     prev_nums = [node2.in_which_axis(node1[ax]).num for ax in batch_axes] + [axis2.num]
-#     for i in range(new_node2.rank):
-#         if i not in prev_nums:
-#             prev_nums.append(i)
-            
-#     if prev_nums != list(range(new_node2.rank)):
-#         permutation = inverse_permutation(prev_nums)
-#         new_node2 = new_node2.permute_(permutation)
-    
-#     new_node1.name = 'svd'
-#     new_node1.get_axis(axis1.num).name = axis1_name
-    
-#     new_node2.name = 'svd'
-#     new_node2.get_axis(axis2.num).name = axis2_name
-    
-#     return new_node1, new_node2
-    
-# AbstractNode.svd = svd
-
-
-# def svd_(node: AbstractNode,
-#          axis: Ax,
-#          side = 'left',
-#          rank: Optional[int] = None,
-#          cum_percentage: Optional[float] = None) -> Tuple[Node, Node]:
-    
-#     edge = node[axis]
-    
-#     if edge.is_dangling():
-#         raise ValueError('Edge should be connected to perform SVD')
-    
-#     node1, node2 = node, node.neighbours(axis)
-#     node1_name, node2_name = node1.name, node2.name
-#     axis1, axis2 = node1.get_axis(axis), node2.in_which_axis(edge)
-#     axis1_name, axis2_name = axis1.name, axis2.name
-    
-#     batch_axes = []
-#     for ax in node1._axes:
-#         if ax.is_batch() and (ax.name in node2.axes_names):
-#             batch_axes.append(ax)
-    
-#     n_batches = len(batch_axes)
-#     n_axes1 = len(node1._axes) - n_batches - 1
-#     n_axes2 = len(node2._axes) - n_batches - 1
-    
-#     contracted = node.contract_(axis)
-#     new_node1, new_node2 = split_(node=contracted,
-#                                   node1_axes=list(range(n_batches,
-#                                                         n_batches + n_axes1)),
-#                                   node2_axes=list(range(n_batches + n_axes1,
-#                                                         n_batches + n_axes1 + n_axes2)),
-#                                   side=side,
-#                                   rank=rank,
-#                                   cum_percentage=cum_percentage)
-    
-#     # new_node1
-#     prev_nums = [ax.num for ax in batch_axes]
-#     for i in range(new_node1.rank):
-#         if (i not in prev_nums) and (i != axis1.num):
-#             prev_nums.append(i)
-#     prev_nums += [axis1.num]
-    
-#     if prev_nums != list(range(new_node1.rank)):
-#         permutation = inverse_permutation(prev_nums)
-#         new_node1 = new_node1.permute_(permutation)
-        
-#     # new_node2 
-#     prev_nums = [node2.in_which_axis(node1[ax]).num for ax in batch_axes] + [axis2.num]
-#     for i in range(new_node2.rank):
-#         if i not in prev_nums:
-#             prev_nums.append(i)
-            
-#     if prev_nums != list(range(new_node2.rank)):
-#         permutation = inverse_permutation(prev_nums)
-#         new_node2 = new_node2.permute_(permutation)
-        
-#     new_node1.name = node1_name
-#     new_node1.get_axis(axis1.num).name = axis1_name
-    
-#     new_node2.name = node2_name
-#     new_node2.get_axis(axis2.num).name = axis2_name
-    
-#     return new_node1, new_node2
-    
-# AbstractNode.svd_ = svd_
 
 
 def svd_(edge,
@@ -1538,30 +1331,17 @@ def _contract_edges_first(edges: List[AbstractEdge],
                         for aux_axis in nodes[1]._axes:
                             if aux_axis.is_batch() and (axis._name == aux_axis._name):
                                 batch_edges[axis._name] = [j]
-                                # if 'batch' in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!
-                                #     batch_edges[edge.axis1._name] = [-1, j]
-                                # else:
-                                #     # Cuando es una stack
-                                #     batch_edges[edge.axis1._name] = [tensors[0].shape[j], j]
                                 batch_in_node2 = True
                                 break
 
                         if not batch_in_node2:
                             non_contract_edges[i][axis._name] = j
-                            # if 'batch' in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!
-                            #     non_contract_edges[i][edge] = [j]
-                            # else:
-                            #     non_contract_edges[i][edge] = [tensors[i].shape[j], j]
 
                     else:
                         if axis._name in batch_edges:
                             batch_edges[axis._name].append(j)
                         else:
                             non_contract_edges[i][axis._name] = j
-                            # if 'batch' in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!
-                            #     non_contract_edges[i][edge] = [-1, j]
-                            # else:
-                            #     non_contract_edges[i][edge] = [tensors[i].shape[j], j]
 
                 else:
                     non_contract_edges[i][axis._name] = j
@@ -1578,74 +1358,11 @@ def _contract_edges_first(edges: List[AbstractEdge],
         for i in [0, 1]:
             if permutation_dims[i] == list(range(len(permutation_dims[i]))):
                 permutation_dims[i] = []
-
-        # aux_permutation = inverse_permutation(list(map(lambda l: l[1], batch_edges.values())) +
-        #                                       list(map(lambda l: l[1], non_contract_edges[0].values())))
-        # aux_permutation2 = inverse_permutation(list(map(lambda l: l[1], non_contract_edges[1].values())))
-        # inv_permutation_dims = aux_permutation + list(map(lambda x: x + len(aux_permutation), aux_permutation2))
-        
-        # TODO: creo que inv_permutation no hace nada, porque dejamos los batches
-        # al principio y los edges no contraidos de sejan en el mismo orden en que lo encontramos
-        # NOTE: Dejamos los batches al principio
-        # inv_permutation_batches = list(range(len(batch_edges)))
-        # inv_permutation_0 = inverse_permutation(list(non_contract_edges[0].values()))
-        # inv_permutation_0 = inv_permutation_batches + \
-        #     list(map(lambda x: x + len(inv_permutation_batches), inv_permutation_0))
-        
-        # inv_permutation_1 = inverse_permutation(list(non_contract_edges[1].values()))
-        # inv_permutation_dims = inv_permutation_0 + \
-        #     list(map(lambda x: x + len(inv_permutation_0), inv_permutation_1))
-        # # NOTE: Dejamos los batches al principio
-        
-        # if inv_permutation_dims == list(range(len(inv_permutation_dims))):
-        #     inv_permutation_dims = []
-
-        # aux_shape = [None, None]
-        # if batch_edges:
-        #     aux_shape[0] = [torch.tensor(list(map(lambda l: l[0], batch_edges.values()))),
-        #                     torch.tensor(list(map(lambda l: l[0], non_contract_edges[0].values()))),
-        #                     torch.tensor(list(map(lambda l: l[0], contract_edges.values())))]
-# 
-        #     aux_shape[1] = [torch.tensor(list(map(lambda l: l[0], batch_edges.values()))),
-        #                     torch.tensor(list(map(lambda l: l[0], contract_edges.values()))),
-        #                     torch.tensor(list(map(lambda l: l[0], non_contract_edges[1].values())))]
-        # else:
-        #     aux_shape[0] = [torch.tensor(list(map(lambda l: l[0], non_contract_edges[0].values()))),
-        #                     torch.tensor(list(map(lambda l: l[0], contract_edges.values())))]
-# 
-        #     aux_shape[1] = [torch.tensor(list(map(lambda l: l[0], contract_edges.values()))),
-        #                     torch.tensor(list(map(lambda l: l[0], non_contract_edges[1].values())))]
-        #     
-        # for i in [0, 1]:
-        #     for j in range(len(aux_shape[i])):
-        #         if (aux_shape[i][j] < 0).any():
-        #             aux_shape[i][j] = torch.tensor(-1)  # Por si hemos hecho producto de -1 por otra dim
-        #             
-        # for i in [0, 1]:
-        #     for j in range(len(aux_shape[i])):
-        #         aux_shape[i][j] = aux_shape[i][j].prod().long().item()
-        #             
-        # for i in [0, 1]:
-        #     if tensors[i].reshape(aux_shape[i]).shape == tensors[i].shape:
-        #         aux_shape[i] = []
                 
         for i in [0, 1]:
             if permutation_dims[i]:
                 tensors[i] = tensors[i].permute(permutation_dims[i])
                 
-        # TODO: solo contemplo 1 batch de tipo batch, y el resto pueden
-        # ser stacks, ya que los batches son los que pueden tener dims
-        # distintas cada vez, los stacks supongo que no. Si hay alg'un
-        # caso en el que haya que usar dos edges distintos de batch,
-        # hay que implementarlo. Ahora, en ese caso, `new_shape` tendr'ia
-        # varios -1 y dar'ia error
-        
-        # new_shape = list(map(lambda l: l[0], batch_edges.values())) + \
-        #             list(map(lambda l: l[0], non_contract_edges[0].values())) + \
-        #             list(map(lambda l: l[0], non_contract_edges[1].values()))
-        
-        # new_shape_hint = [len(batch_edges) + len(non_contract_edges[0]),
-        #                   len(batch_edges) + len(contract_edges)]
         shape_limits = {'batch': len(batch_edges),
                         'non_contract': len(non_contract_edges[0]),
                         'contract': len(contract_edges)}
@@ -1665,13 +1382,6 @@ def _contract_edges_first(edges: List[AbstractEdge],
         for i in [0, 1]:
             for j in range(len(aux_shape[i])):
                 aux_shape[i][j] = aux_shape[i][j].prod().long().item()
-        
-            
-        # if (aux_shape[0] != []) or (aux_shape[1] != []):
-        #     # NOTE: new way of doing new_shape!!
-        #     new_shape = []
-        #     new_shape += list(tensors[0].shape[:new_shape_hint[0]])
-        #     new_shape += list(tensors[1].shape[new_shape_hint[1]:])
                 
         for i in [0, 1]:
             if aux_shape[i]:
@@ -1680,14 +1390,6 @@ def _contract_edges_first(edges: List[AbstractEdge],
         result = tensors[0] @ tensors[1]
         if new_shape:
             result = result.view(new_shape)
-        # if inv_permutation_dims:
-        #     result = result.permute(inv_permutation_dims)
-
-        # indices = [None, None]
-        # indices[0] = permute_list(list(map(lambda l: l[1], batch_edges.values())) +
-        #                           list(map(lambda l: l[1], non_contract_edges[0].values())),
-        #                           aux_permutation)
-        # indices[1] = list(map(lambda l: l[1], non_contract_edges[1].values()))
         
         # NOTE: Dejamos los batches al principio
         indices = [None, None]
@@ -1705,23 +1407,8 @@ def _contract_edges_first(edges: List[AbstractEdge],
                 new_edges.append(nodes[i][idx])
                 new_node1_list.append(nodes[i].axes[idx].is_node1())
 
-        # TODO: Save time if no transformation occurs
-        # TODO: Como hacemos esto despu'es de haber cambiado la forma de los tensores,
-        # est'a mal, estamos midiendo shapes erroneas. Deber'iamos hacerlo antes, al crear
-        # cada lista. Y tambi'en en funci'on de esto cambiar los inv_permutation y demas
-        # if permutation_dims[0] == list(range(len(tensors[0].shape))):
-        #     permutation_dims[0] = []
-        # if permutation_dims[1] == list(range(len(tensors[1].shape))):
-        #     permutation_dims[1] = []
-        # if aux_shape[0] == tensors[0].shape:
-        #     aux_shape[0] = []
-        # if aux_shape[1] == tensors[1].shape:
-        #     aux_shape[1] = []
-
         hints = {'permutation_dims': permutation_dims,
-                #  'inv_permutation_dims': inv_permutation_dims,
                  'aux_shape': aux_shape,
-                 #'new_shape': new_shape,
                  'shape_limits': shape_limits}
         
         node1._record_in_inverse_memory()
@@ -1828,10 +1515,6 @@ def _contract_edges_next(successor: Successor,
         # TODO: Bien, pero cuidad con la shape del batch al meterla en hints, hay que dejar libertad en ese hueco
         nodes = [node1, node2]
         tensors = [node1.tensor, node2.tensor]
-        # node1._record_in_inverse_memory()
-        # node2._record_in_inverse_memory()
-
-        # torch.cuda.synchronize()
 
         if PRINT_MODE:
             diff = time.time() - total_time
@@ -1864,17 +1547,6 @@ def _contract_edges_next(successor: Successor,
         total_time = time.time()
 
         hints = successor.hints
-        # batch_idx = hints['batch_idx']
-        # batch_shapes = []
-        # for idx in batch_idx:
-        #     batch_shapes.append(tensors[0].shape[idx])
-        #
-        # new_shape = hints['new_shape']
-        # new_shape[:len(batch_shapes)] = batch_shapes
-        #
-        # aux_shape = hints['aux_shape']
-        # aux_shape[0][0] = torch.tensor(batch_shapes).prod().long().item()
-        # aux_shape[1][0] = torch.tensor(batch_shapes).prod().long().item()
         if PRINT_MODE: print('\t\t\t\tCheckpoint 4:', time.time() - total_time)
         total_time = time.time()
 
@@ -1902,14 +1574,6 @@ def _contract_edges_next(successor: Successor,
             for j in range(len(aux_shape[i])):
                 aux_shape[i][j] = aux_shape[i][j].prod().long().item()
             
-            
-        # new_shape = []
-        # if (hints['aux_shape'][0] != []) or (hints['aux_shape'][1] != []):
-        #     # NOTE: new way of doing new_shape!!
-        #     new_shape = []
-        #     new_shape += list(tensors[0].shape[:hints['new_shape_hint'][0]])
-        #     new_shape += list(tensors[1].shape[hints['new_shape_hint'][1]:])
-            
         for i in [0, 1]:
             if aux_shape[i]:
                 tensors[i] = tensors[i].reshape(aux_shape[i])
@@ -1922,18 +1586,8 @@ def _contract_edges_next(successor: Successor,
         if PRINT_MODE: print('\t\t\t\tCheckpoint 4.2:', time.time() - total_time)
         total_time = time.time()
 
-        # result = torch.randn(tensors[0].shape) @ torch.randn(tensors[1].shape)
-        # torch.cuda.synchronize()
-        # if PRINT_MODE: print('\t\t\t\tCheckpoint 4.2:', time.time() - total_time)
-
-        # TODO: save time if transformations don't occur
-        # if hints['new_shape']:
-        #     result = result.view(hints['new_shape'])
         if new_shape:
             result = result.view(new_shape)
-        # if hints['inv_permutation_dims']:
-        #     result = result.permute(hints['inv_permutation_dims'])
-        # result = result.view(hints['new_shape']).permute(hints['inv_permutation_dims'])
         if PRINT_MODE: print('\t\t\t\tCheckpoint 5:', time.time() - total_time)
         total_time = time.time()
         
@@ -1953,20 +1607,6 @@ def _contract_edges_next(successor: Successor,
 contract_edges = Operation(_check_first_contract_edges,
                            _contract_edges_first,
                            _contract_edges_next)
-
-
-# NOTE: contract for edges can only be in-place, since we
-# cannot know which node is the neighbour of another
-# through one edge, when we are performing operations,
-# because resultant nodes inherit edges that point to other
-# two leaf nodes
-# def contract(edge: AbstractEdge) -> Node:
-#     """
-#     Contract only one edge
-#     """
-#     return contract_edges([edge], edge.node1, edge.node2)
-
-# AbstractEdge.contract = contract
 
 
 def contract_(edge: AbstractEdge) -> Node:
@@ -1997,100 +1637,6 @@ def contract_(edge: AbstractEdge) -> Node:
     return result
 
 AbstractEdge.contract_ = contract_
-
-
-# def contract(node: AbstractNode, axis: Ax) -> Node:
-#     """
-#     Contract only one edge
-#     """
-#     return contract_edges([node[axis]], node, node.neighbours(axis))
-
-# AbstractNode.contract = contract
-
-
-# def contract_(node: AbstractNode, axis: Ax) -> Node:
-#     """
-#     Contract only one edge
-#     """
-#     node1 = node
-#     node2 = node.neighbours(axis)
-    
-#     result = contract_edges([node[axis]], node1, node2)
-#     result._reattach_edges(True)
-    
-#     # Delete nodes (and their edges) from the TN
-#     net = result.network
-#     net.delete_node(node1)
-#     net.delete_node(node2)
-    
-#     # Add edges of result to the TN
-#     for res_edge in result._edges:
-#         net._add_edge(res_edge)
-    
-#     net._change_node_type(result, 'leaf')
-    
-#     node1._successors = dict()
-#     node2._successors = dict()
-    
-#     # Remove non-leaf name
-#     result.name = 'contract_edges_ip'
-    
-#     return result
-
-# AbstractNode.contract_ = contract_
-
-
-# NOTE: más rápido -> es una estuidez, al llamar a contract_edges el input
-# NOTE: ya estaba guardado siempre en kwargs del successor
-# def _check_first_get_shared_edges(node1: AbstractNode, node2: AbstractNode) -> Optional[Successor]:
-#     kwargs = {'node1': node1,
-#               'node2': node2}
-#     if 'get_shared_edges' in node1._successors:
-#         for succ in node1._successors['get_shared_edges']:
-#             if succ.kwargs == kwargs:
-#                 return succ
-#     return None
-
-
-# def _get_shared_edges_first(node1: AbstractNode, node2: AbstractNode) -> List[AbstractEdge]:
-#     """
-#     Obtain list of edges shared between two nodes
-#     """
-#     edges = set()
-#     for i1, edge1 in enumerate(node1._edges):
-#         for i2, edge2 in enumerate(node2._edges):
-#             if (edge1 == edge2) and not edge1.is_dangling():
-#                 if node1.is_node1(i1) != node2.is_node1(i2):
-#                     edges.add(edge1)
-#     edges = list(edges)
-                    
-#     successor = nc.Successor(kwargs={'node1': node1, 'node2': node2},
-#                              child=edges)
-    
-#     net = node1._network
-#     if 'get_shared_edges' in node1._successors:
-#         node1._successors['get_shared_edges'].append(successor)
-#     else:
-#         node1._successors['get_shared_edges'] = [successor]
-
-#     net._list_ops.append((node1, 'get_shared_edges', len(node1._successors['get_shared_edges']) - 1))
-    
-#     return edges
-
-
-# def _get_shared_edges_next(successor: Successor,
-#                            node1: AbstractNode,
-#                            node2: AbstractNode) -> List[AbstractEdge]:
-#     """
-#     Obtain list of edges shared between two nodes
-#     """
-#     return successor.child
-
-
-# get_shared_edges = Operation(_check_first_get_shared_edges,
-#                              _get_shared_edges_first,
-#                              _get_shared_edges_next)
-# NOTE: hasta aquí
 
 
 # NOTE: modo no Operation
@@ -2210,24 +1756,6 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
             all_non_param = False
         else:
             all_param = False
-
-        # TODO: Creo que el mix index mode ya no sirve denada
-
-        # NOTE: index mode / mix index mode
-        # if node._tensor_info['address'] is None or node.name.startswith('unbind'):
-        # NOTE: mix index mode
-        
-        # NOTE: unbind mode
-        # if node._tensor_info['address'] is None:
-        # NOTE: unbind mode
-        
-        # NOTE: no cambia nada, en unbind node ya tienen siempre address,
-        # y  en index no tienen nunca
-        # if net.unbind_mode:
-        #     condition = node._tensor_info['address'] is None
-        # else:
-        #     condition = node._tensor_info['address'] is None or \
-        #         node.name.startswith('unbind')
         
         if all_same_ref:
             if node._tensor_info['address'] is None:
@@ -2252,32 +1780,9 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
                     continue
 
                 stack_indices.append(node._tensor_info['stack_idx'])
-
-            # if use_slice:
-            #     if stack_indices_slice[0] is None:
-            #         stack_indices_slice[0] = node._tensor_info['stack_idx']
-            #         stack_indices_slice[1] = node._tensor_info['stack_idx']
-            #     elif stack_indices_slice[2] == None:
-            #         stack_indices_slice[1] = node._tensor_info['stack_idx']
-            #         stack_indices_slice[2] = stack_indices_slice[1] - stack_indices_slice[0]
-            #         # TODO: cuidado con ir al revés, step < 0
-            #     else:
-            #         if (node._tensor_info['stack_idx'] - stack_indices_slice[1]) == stack_indices_slice[2]:
-            #             stack_indices_slice[1] = node._tensor_info['stack_idx']
-            #         else:
-            #             use_slice = False
-
-            # indices.append(node._tensor_info['index'])
+                
             else:
                 all_same_ref = False
-
-    # if (stack_indices_slice[0] is not None) and use_slice:
-    #     stack_indices_slice[1] += 1
-    #     stack_indices = slice(stack_indices_slice[0],
-    #                           stack_indices_slice[1],
-    #                           stack_indices_slice[2])
-    
-    # stack_indices = list2slice(stack_indices)
 
     if all_param and stack_node_ref and net._automemory:
         stack_node = ParamStackNode(nodes=nodes, name='virtual_stack', virtual=True)
@@ -2304,14 +1809,6 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
                 else:
                     index.append(slice(max_dim - dim, max_dim))
         stack_node._tensor_info['index'] = index
-            
-        # stack_node._tensor_info['index'] = stack_indices  #list(zip(*indices))
-        
-        # stack_node._shape = (stack_node._shape[0], *node_ref._shape[1:])
-        # for edge, size in zip(stack_node._edges[1:], stack_node._shape[1:]):
-        #     edge._size = size
-        
-        # stack_node._record_in_inverse_memory()  # NOTE: no tocar
 
     else:
         # TODO: quitamos todos non-param por lo de la stack de data nodes, hay que
@@ -2463,17 +1960,6 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
             address = aux_node_ref._tensor_info['address']
                 
         for i, new_node in enumerate(nodes):
-            # shape = new_node.shape
-            # if new_node._tensor_info['address'] is not None:
-            #     del new_node.network._memory_nodes[new_node._tensor_info['address']]
-            # new_node._tensor_info['address'] = None
-            # new_node._tensor_info['node_ref'] = node
-            # new_node._tensor_info['full'] = False
-            # new_node._tensor_info['stack_idx'] = i
-            # index = [i]
-            # for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo
-            #     index.append(slice(max_dim - dim, max_dim))
-            # new_node._tensor_info['index'] = index
             
             shape = new_node.shape
             if new_node._tensor_info['address'] is not None:
@@ -2520,73 +2006,6 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
                         else:
                             index.append(slice(max_dim - dim, max_dim))
                 new_node._tensor_info['index'] = index
-                
-            # aux_slice = node._tensor_info['stack_idx']
-            # if aux_slice is None:
-            #     new_node._tensor_info['stack_idx'] = i
-            #     index = [i]
-            # elif isinstance(aux_slice, list):
-            #     new_node._tensor_info['stack_idx'] = aux_slice[i]
-            #     index = [new_node._tensor_info['stack_idx']]
-            # else:    
-            #     new_node._tensor_info['stack_idx'] = range(aux_slice.start,
-            #                                                aux_slice.stop,
-            #                                                aux_slice.step)[i]
-            #     index = [new_node._tensor_info['stack_idx']]
-                
-            # for j, (max_dim, dim) in enumerate(zip(node.shape[1:], shape)):  # TODO: max_dim == dim siempre creo
-            #     if new_node._axes[j].is_batch():
-            #         index.append(slice(0, None))
-            #     else:
-            #         index.append(slice(max_dim - dim, max_dim))
-            # new_node._tensor_info['index'] = index
-        # NOTE: index mode
-
-    # else:
-    #     # This memory management can happen always, even not in contracting mode
-    #     # NOTE: unbind mode / mix index mode
-    #     for i, new_node in enumerate(nodes):
-    #         # shape = new_node.shape
-    #         # # if new_node._tensor_info['address'] is not None:
-    #         # #     del new_node.network._memory_nodes[new_node._tensor_info['address']]
-    #         # # new_node._tensor_info['address'] = None
-    #         # new_node._tensor_info['node_ref'] = node
-    #         # new_node._tensor_info['full'] = False
-    #         # new_node._tensor_info['stack_idx'] = i
-    #         # index = [i]
-    #         # for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo -> no si apilo de distintas dims
-    #         #     index.append(slice(max_dim - dim, max_dim))
-    #         # new_node._tensor_info['index'] = index
-            
-    #         shape = new_node.shape
-            
-    #         aux_node_ref = node
-    #         address = node._tensor_info['address']
-    #         while address is None:
-    #             aux_node_ref = aux_node_ref._tensor_info['node_ref']
-    #             address = aux_node_ref._tensor_info['address']
-            
-    #         new_node._tensor_info['node_ref'] = aux_node_ref
-    #         new_node._tensor_info['full'] = False
-            
-    #         aux_slice = node._tensor_info['stack_idx']
-    #         if aux_slice is None:
-    #             new_node._tensor_info['stack_idx'] = i
-    #             index = [i]
-    #         elif isinstance(aux_slice, list):
-    #             new_node._tensor_info['stack_idx'] = aux_slice[i]
-    #             index = [new_node._tensor_info['stack_idx']]
-    #         else:    
-    #             new_node._tensor_info['stack_idx'] = range(aux_slice.start,
-    #                                                        aux_slice.stop,
-    #                                                        aux_slice.step)[i]
-    #             index = [new_node._tensor_info['stack_idx']]
-                
-    #         for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo
-    #             index.append(slice(max_dim - dim, max_dim))
-    #         new_node._tensor_info['index'] = index
-            
-    #     # NOTE: unbind mode / mix index mode
         
     else:
         node._record_in_inverse_memory()
@@ -2639,10 +2058,6 @@ def _unbind_next(successor: Successor, node: AbstractNode) -> List[Node]:
             # node._record_in_inverse_memory()
             return children[:]  # TODO: añadimos [:] para no poder modificar la lista de hijos desde fuera
         
-        # for i, child in enumerate(children):
-        #     child._tensor_info['index'][batch_idx + 1] = slice(0, new_dim)
-        
-        # node._record_in_inverse_memory()
         return successor.child[:]  # TODO: cambia el tamaño del batch
         # NOTE: index mode
 
@@ -2737,27 +2152,11 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
                         matrices_strings.append(stack_char + (2 * char))
                         which_matrices.append(edge)
                         
-                    # in_matrices = False
-                    # for mat in matrices:
-                    #     if torch.equal(edge.matrix, mat):
-                    #         in_matrices = True
-                    #         break
-                    # if not in_matrices:
-                    #     matrices_strings.append(stack_char + (2 * char))
-                    #     matrices.append(edge.matrix)
                 elif isinstance(edge, ParamEdge):
                     if edge not in which_matrices:
                         matrices_strings.append(2 * char)
                         which_matrices.append(edge)
                         
-                    # in_matrices = False
-                    # for mat in matrices:
-                    #     if torch.equal(edge.matrix, mat):
-                    #         in_matrices = True
-                    #         break
-                    # if not in_matrices:
-                    #     matrices_strings.append(2 * char)
-                    #     matrices.append(edge.matrix)
             else:
                 edge = nodes[i][j]
                 if output_dict[char] == 0:
@@ -2898,7 +2297,6 @@ def stacked_einsum(string: Text, *nodes_lists: List[AbstractNode]) -> List[Node]
     stacks_list = []
     for nodes_list in nodes_lists:
         stacks_list.append(stack(nodes_list))
-    #print('\t\t\tStacks:', time.time() - start)
 
     input_strings = string.split('->')[0].split(',')
     output_string = string.split('->')[1]
@@ -2918,10 +2316,7 @@ def stacked_einsum(string: Text, *nodes_lists: List[AbstractNode]) -> List[Node]
     start = time.time()
     # TODO: no adaptado a'un, creamos nodos nuevos cada vez, y a su vez con unbind
     result = einsum(string, *stacks_list)
-    #print('\t\t\tEinsum:', time.time() - start)
-    start = time.time()
     unbinded_result = unbind(result)  # <-- Lo más lento
-    #print('\t\t\tUnbind:', time.time() - start)
     return unbinded_result
 
 

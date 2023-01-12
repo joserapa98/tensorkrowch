@@ -72,9 +72,12 @@
         <div class="bd-sidebar__top"><div class="navbar-brand-box">
     <a class="navbar-brand text-wrap" href="../../index.html">
       
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
       
       
-      <h1 class="site-logo" id="site-title">TensorKrowch 00.00.01 documentation</h1>
+      <img src="../../_static/tensorkrowch_logo.png" class="logo" alt="logo">
+      
       
     </a>
 </div><form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
@@ -93,10 +96,17 @@
    Usage
   </a>
  </li>
- <li class="toctree-l1">
+ <li class="toctree-l1 has-children">
   <a class="reference internal" href="../../api.html">
-   API
+   API Reference
   </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul class="simple">
+  </ul>
  </li>
 </ul>
 
@@ -226,6 +236,7 @@ title="Fullscreen mode"
 
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Text</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Sequence</span>
 <span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">abstractmethod</span>
+<span class="kn">import</span> <span class="nn">time</span>
 
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
@@ -236,7 +247,6 @@ title="Fullscreen mode"
 
 <span class="kn">from</span> <span class="nn">tensorkrowch.network_components</span> <span class="kn">import</span> <span class="o">*</span>
 
-<span class="kn">import</span> <span class="nn">time</span>
 
 <span class="n">Ax</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Text</span><span class="p">,</span> <span class="n">Axis</span><span class="p">]</span>
 
@@ -619,12 +629,9 @@ title="Fullscreen mode"
     <span class="k">return</span> <span class="kc">None</span>
 
 
-<span class="c1"># TODO: AÑADIR CUTOFF=1E-9 COMO FORMA DE ACOTAR BOND DIM</span>
 <span class="k">def</span> <span class="nf">_split_first</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
                  <span class="n">node1_axes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">node2_axes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                <span class="c1">#  node1: Optional[AbstractNode] = None,</span>
-                <span class="c1">#  node2: Optional[AbstractNode] = None,</span>
                  <span class="n">mode</span> <span class="o">=</span> <span class="s1">&#39;svd&#39;</span><span class="p">,</span>
                  <span class="n">side</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span>
                  <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -641,12 +648,6 @@ title="Fullscreen mode"
 <span class="sd">            go to `node1`</span>
 <span class="sd">        node2_axes: sequence of axes from `node` whose attached edges will</span>
 <span class="sd">            go to `node2`</span>
-<span class="sd">        node1: if `node1_axes` is None, a `node` is the already created node</span>
-<span class="sd">            in which we will put the first part of the splitted tensor of `node`.</span>
-<span class="sd">            Used only for svd</span>
-<span class="sd">        node2: if `node2_axes` is None, a `node` is the already created node</span>
-<span class="sd">            in which we will put the second part of the splitted tensor of `node`.</span>
-<span class="sd">            Used only for svd</span>
 <span class="sd">        mode: available modes are `qr` (QR decomposition), `rq`, `svd` (SVD</span>
 <span class="sd">            decomposition cutting off singular values according to `rank`</span>
 <span class="sd">            or `cum_percentage`) or `svdr` (like `svd` but multiplying with</span>
@@ -671,14 +672,7 @@ title="Fullscreen mode"
         <span class="k">if</span> <span class="n">node2_axes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;If `node2_edges` is provided `node1_edges` &#39;</span>
                              <span class="s1">&#39;should also be provided&#39;</span><span class="p">)</span>
-        <span class="c1"># else:</span>
-        <span class="c1">#     if (node1 is None) or (node2 is None):</span>
-        <span class="c1">#         raise ValueError(&#39;If nodes edges are not provided, both &#39;</span>
-        <span class="c1">#                          &#39;`node1` and `node2` have to be provided&#39;)</span>
-                
-    <span class="c1"># if (rank is None) and (cum_percentage is None):</span>
-    <span class="c1">#     raise ValueError(&#39;One of `rank` and `cum_percentage` should &#39;</span>
-    <span class="c1">#                      &#39;be provided&#39;)</span>
+            
     <span class="k">if</span> <span class="p">(</span><span class="n">rank</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">cum_percentage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only one of `rank` and `cum_percentage` should &#39;</span>
                          <span class="s1">&#39;be provided&#39;</span><span class="p">)</span>
@@ -724,18 +718,6 @@ title="Fullscreen mode"
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
                     <span class="n">k</span> <span class="o">=</span> <span class="n">all_axes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
-        
-        <span class="c1"># diff = 0</span>
-        <span class="c1"># for i, j in enumerate(all_axes):</span>
-        <span class="c1">#     if (i + diff) &lt; j:</span>
-        <span class="c1">#         for k in range(i, j):  #  i + diff?</span>
-        <span class="c1">#             if not node._edges[k].is_batch():</span>
-        <span class="c1">#                 raise ValueError(f&#39;Edge {node._edges[k]} is not a batch &#39;</span>
-        <span class="c1">#                                  &#39;edge but it\&#39;s not included in `node1_axes` &#39;</span>
-        <span class="c1">#                                  &#39;neither in `node2_axes`&#39;)</span>
-        <span class="c1">#             else:</span>
-        <span class="c1">#                 batch_axes.append(k)</span>
-        <span class="c1">#         diff = j - i</span>
         
         <span class="n">batch_shape</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">)[</span><span class="n">batch_axes</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
         <span class="n">node1_shape</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">)[</span><span class="n">node1_axes</span><span class="p">]</span>
@@ -865,20 +847,9 @@ title="Fullscreen mode"
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># TODO: could be changed to bool or &quot;node1&quot;/&quot;node2&quot;</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`side` can only be &quot;left&quot; or &quot;right&quot;&#39;</span><span class="p">)</span>
-
-        <span class="c1"># u = u.reshape(*(batch_shape + node1_shape.tolist() + [rank]))</span>
-        <span class="c1"># vh = vh.reshape(*(batch_shape + [rank] + node2_shape.tolist()))</span>
         
         <span class="n">node1_tensor</span> <span class="o">=</span> <span class="n">u</span>
         <span class="n">node2_tensor</span> <span class="o">=</span> <span class="n">vh</span>
-            
-        <span class="c1"># u = u.permute(*(inverse_permutation(batch_axes + node1_axes) +</span>
-        <span class="c1">#                 [len(u.shape) - 1]))</span>
-        
-        <span class="c1"># rank_axis = len(batch_shape)</span>
-        <span class="c1"># aux_node2_axes = inverse_permutation(batch_axes + node2_axes)</span>
-        <span class="c1"># aux_node2_axes = [x + 1 if x &gt;= rank_axis else x for x in aux_node2_axes]</span>
-        <span class="c1"># vh = vh.permute(*(aux_node2_axes + [rank_axis]))</span>
         
     <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;qr&#39;</span><span class="p">:</span>
         <span class="n">q</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span><span class="n">node_tensor</span><span class="p">)</span>
@@ -966,28 +937,6 @@ title="Fullscreen mode"
             <span class="n">node2</span><span class="o">.</span><span class="n">_add_edge</span><span class="p">(</span><span class="n">edge</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">[</span><span class="n">axis2</span><span class="p">],</span>
                             <span class="n">axis</span><span class="o">=</span><span class="n">n_batches</span> <span class="o">+</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
                             <span class="n">node1</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">is_node1</span><span class="p">(</span><span class="n">axis2</span><span class="p">))</span>
-            
-    
-    <span class="c1"># node1._edges[len(batch_axes):-1] = permute_list(node._edges, node1_axes)</span>
-    <span class="c1"># node1_list = permute_list(node.is_node1(), node1_axes)</span>
-    <span class="c1"># for axis, is_node1 in zip(node1._axes[len(batch_axes):-1], node1_list):</span>
-    <span class="c1">#     axis._node1 = is_node1</span>
-        
-    <span class="c1"># node1._node1_list[len(batch_axes):-1] = permute_list(node._node1_list, node1_axes)</span>
-    <span class="c1"># for edge in node1._edges[:len(batch_axes)]:</span>
-    <span class="c1">#     net._remove_edge(edge)</span>
-    <span class="c1"># net._remove_edge(node1._edges[-1]) # NOTE: creo que esto no afecta</span>
-    
-    <span class="c1"># for edge in node2._edges[(len(batch_axes) + 1):]:</span>
-    <span class="c1">#     net._remove_edge(edge)</span>
-    <span class="c1"># node2._edges[(len(batch_axes) + 1):] = permute_list(node._edges, node2_axes)</span>
-    <span class="c1"># node1_list = permute_list(node.is_node1(), node2_axes)</span>
-    <span class="c1"># for axis, is_node1 in zip(node1._axes[len(batch_axes):-1], node1_list):</span>
-    <span class="c1">#     axis._node1 = is_node1</span>
-        
-    <span class="c1"># node2._node1_list[(len(batch_axes) + 1):] = permute_list(node._node1_list, node2_axes)</span>
-    <span class="c1"># for edge in node1._edges[:(len(batch_axes) + 1)]:</span>
-    <span class="c1">#     net._remove_edge(edge)</span>
         
     <span class="n">splitted_edge</span> <span class="o">=</span> <span class="n">node1</span><span class="p">[</span><span class="s1">&#39;splitted&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node2</span><span class="p">[</span><span class="s1">&#39;splitted&#39;</span><span class="p">]</span>
     <span class="n">net</span><span class="o">.</span><span class="n">_remove_edge</span><span class="p">(</span><span class="n">splitted_edge</span><span class="p">)</span>
@@ -1015,8 +964,6 @@ title="Fullscreen mode"
                 <span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
                 <span class="n">node1_axes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                 <span class="n">node2_axes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                <span class="c1"># node1: Optional[AbstractNode] = None,</span>
-                <span class="c1"># node2: Optional[AbstractNode] = None,</span>
                 <span class="n">mode</span> <span class="o">=</span> <span class="s1">&#39;svd&#39;</span><span class="p">,</span>
                 <span class="n">side</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span>
                 <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1100,9 +1047,6 @@ title="Fullscreen mode"
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># TODO: could be changed to bool or &quot;node1&quot;/&quot;node2&quot;</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`side` can only be &quot;left&quot; or &quot;right&quot;&#39;</span><span class="p">)</span>
-
-        <span class="c1"># u = u.reshape(*(batch_shape + node1_shape.tolist() + [rank]))</span>
-        <span class="c1"># vh = vh.reshape(*(batch_shape + [rank] + node2_shape.tolist()))</span>
         
         <span class="n">node1_tensor</span> <span class="o">=</span> <span class="n">u</span>
         <span class="n">node2_tensor</span> <span class="o">=</span> <span class="n">vh</span>
@@ -1145,8 +1089,6 @@ title="Fullscreen mode"
 <span class="k">def</span> <span class="nf">split_node</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
                  <span class="n">node1_axes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">node2_axes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                <span class="c1">#  node1: Optional[AbstractNode] = None,</span>
-                <span class="c1">#  node2: Optional[AbstractNode] = None,</span>
                 <span class="n">mode</span> <span class="o">=</span> <span class="s1">&#39;svd&#39;</span><span class="p">,</span>
                 <span class="n">side</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span>
                 <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1161,8 +1103,6 @@ title="Fullscreen mode"
 <span class="k">def</span> <span class="nf">split_</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
            <span class="n">node1_axes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
            <span class="n">node2_axes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-           <span class="c1"># node1: Optional[AbstractNode] = None,</span>
-           <span class="c1"># node2: Optional[AbstractNode] = None,</span>
            <span class="n">mode</span> <span class="o">=</span> <span class="s1">&#39;svd&#39;</span><span class="p">,</span>
            <span class="n">side</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span>
            <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1197,143 +1137,6 @@ title="Fullscreen mode"
     <span class="k">return</span> <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span>
 
 <span class="n">AbstractNode</span><span class="o">.</span><span class="n">split_</span> <span class="o">=</span> <span class="n">split_</span>
-
-
-<span class="c1"># TODO: HACER SVD OPERACION INDEPENDIENTE PARA NO TENER QUE REPETIR TANTOS CALCULOS</span>
-<span class="c1"># NOTE: svd solo puede ser operaciones in-place de edges</span>
-<span class="c1"># por lo mismo que contract</span>
-<span class="c1"># def svd(node: AbstractNode,</span>
-<span class="c1">#         axis: Ax,</span>
-<span class="c1">#         side = &#39;left&#39;,</span>
-<span class="c1">#         rank: Optional[int] = None,</span>
-<span class="c1">#         cum_percentage: Optional[float] = None) -&gt; Tuple[Node, Node]:</span>
-    
-<span class="c1">#     edge = node[axis]</span>
-    
-<span class="c1">#     if edge.is_dangling():</span>
-<span class="c1">#         raise ValueError(&#39;Edge should be connected to perform SVD&#39;)</span>
-    
-<span class="c1">#     node1, node2 = node, node.neighbours(axis)</span>
-<span class="c1">#     node1_name, node2_name = node1.name, node2.name</span>
-<span class="c1">#     axis1, axis2 = node1.get_axis(axis), node2.in_which_axis(edge)</span>
-<span class="c1">#     axis1_name, axis2_name = axis1.name, axis2.name</span>
-    
-<span class="c1">#     batch_axes = []</span>
-<span class="c1">#     for ax in node1._axes:</span>
-<span class="c1">#         if ax.is_batch() and (ax.name in node2.axes_names):</span>
-<span class="c1">#             batch_axes.append(ax)</span>
-    
-<span class="c1">#     n_batches = len(batch_axes)</span>
-<span class="c1">#     n_axes1 = len(node1._axes) - n_batches - 1</span>
-<span class="c1">#     n_axes2 = len(node2._axes) - n_batches - 1</span>
-    
-<span class="c1">#     contracted = node.contract(axis)</span>
-<span class="c1">#     new_node1, new_node2 = split(node=contracted,</span>
-<span class="c1">#                                  node1_axes=list(range(n_batches,</span>
-<span class="c1">#                                                        n_batches + n_axes1)),</span>
-<span class="c1">#                                  node2_axes=list(range(n_batches + n_axes1,</span>
-<span class="c1">#                                                        n_batches + n_axes1 + n_axes2)),</span>
-<span class="c1">#                                  side=side,</span>
-<span class="c1">#                                  rank=rank,</span>
-<span class="c1">#                                  cum_percentage=cum_percentage)</span>
-    
-<span class="c1">#     # new_node1</span>
-<span class="c1">#     prev_nums = [ax.num for ax in batch_axes]</span>
-<span class="c1">#     for i in range(new_node1.rank):</span>
-<span class="c1">#         if (i not in prev_nums) and (i != axis1.num):</span>
-<span class="c1">#             prev_nums.append(i)</span>
-<span class="c1">#     prev_nums += [axis1.num]</span>
-    
-<span class="c1">#     if prev_nums != list(range(new_node1.rank)):</span>
-<span class="c1">#         permutation = inverse_permutation(prev_nums)</span>
-<span class="c1">#         new_node1 = new_node1.permute_(permutation)</span>
-        
-<span class="c1">#     # new_node2 </span>
-<span class="c1">#     prev_nums = [node2.in_which_axis(node1[ax]).num for ax in batch_axes] + [axis2.num]</span>
-<span class="c1">#     for i in range(new_node2.rank):</span>
-<span class="c1">#         if i not in prev_nums:</span>
-<span class="c1">#             prev_nums.append(i)</span>
-            
-<span class="c1">#     if prev_nums != list(range(new_node2.rank)):</span>
-<span class="c1">#         permutation = inverse_permutation(prev_nums)</span>
-<span class="c1">#         new_node2 = new_node2.permute_(permutation)</span>
-    
-<span class="c1">#     new_node1.name = &#39;svd&#39;</span>
-<span class="c1">#     new_node1.get_axis(axis1.num).name = axis1_name</span>
-    
-<span class="c1">#     new_node2.name = &#39;svd&#39;</span>
-<span class="c1">#     new_node2.get_axis(axis2.num).name = axis2_name</span>
-    
-<span class="c1">#     return new_node1, new_node2</span>
-    
-<span class="c1"># AbstractNode.svd = svd</span>
-
-
-<span class="c1"># def svd_(node: AbstractNode,</span>
-<span class="c1">#          axis: Ax,</span>
-<span class="c1">#          side = &#39;left&#39;,</span>
-<span class="c1">#          rank: Optional[int] = None,</span>
-<span class="c1">#          cum_percentage: Optional[float] = None) -&gt; Tuple[Node, Node]:</span>
-    
-<span class="c1">#     edge = node[axis]</span>
-    
-<span class="c1">#     if edge.is_dangling():</span>
-<span class="c1">#         raise ValueError(&#39;Edge should be connected to perform SVD&#39;)</span>
-    
-<span class="c1">#     node1, node2 = node, node.neighbours(axis)</span>
-<span class="c1">#     node1_name, node2_name = node1.name, node2.name</span>
-<span class="c1">#     axis1, axis2 = node1.get_axis(axis), node2.in_which_axis(edge)</span>
-<span class="c1">#     axis1_name, axis2_name = axis1.name, axis2.name</span>
-    
-<span class="c1">#     batch_axes = []</span>
-<span class="c1">#     for ax in node1._axes:</span>
-<span class="c1">#         if ax.is_batch() and (ax.name in node2.axes_names):</span>
-<span class="c1">#             batch_axes.append(ax)</span>
-    
-<span class="c1">#     n_batches = len(batch_axes)</span>
-<span class="c1">#     n_axes1 = len(node1._axes) - n_batches - 1</span>
-<span class="c1">#     n_axes2 = len(node2._axes) - n_batches - 1</span>
-    
-<span class="c1">#     contracted = node.contract_(axis)</span>
-<span class="c1">#     new_node1, new_node2 = split_(node=contracted,</span>
-<span class="c1">#                                   node1_axes=list(range(n_batches,</span>
-<span class="c1">#                                                         n_batches + n_axes1)),</span>
-<span class="c1">#                                   node2_axes=list(range(n_batches + n_axes1,</span>
-<span class="c1">#                                                         n_batches + n_axes1 + n_axes2)),</span>
-<span class="c1">#                                   side=side,</span>
-<span class="c1">#                                   rank=rank,</span>
-<span class="c1">#                                   cum_percentage=cum_percentage)</span>
-    
-<span class="c1">#     # new_node1</span>
-<span class="c1">#     prev_nums = [ax.num for ax in batch_axes]</span>
-<span class="c1">#     for i in range(new_node1.rank):</span>
-<span class="c1">#         if (i not in prev_nums) and (i != axis1.num):</span>
-<span class="c1">#             prev_nums.append(i)</span>
-<span class="c1">#     prev_nums += [axis1.num]</span>
-    
-<span class="c1">#     if prev_nums != list(range(new_node1.rank)):</span>
-<span class="c1">#         permutation = inverse_permutation(prev_nums)</span>
-<span class="c1">#         new_node1 = new_node1.permute_(permutation)</span>
-        
-<span class="c1">#     # new_node2 </span>
-<span class="c1">#     prev_nums = [node2.in_which_axis(node1[ax]).num for ax in batch_axes] + [axis2.num]</span>
-<span class="c1">#     for i in range(new_node2.rank):</span>
-<span class="c1">#         if i not in prev_nums:</span>
-<span class="c1">#             prev_nums.append(i)</span>
-            
-<span class="c1">#     if prev_nums != list(range(new_node2.rank)):</span>
-<span class="c1">#         permutation = inverse_permutation(prev_nums)</span>
-<span class="c1">#         new_node2 = new_node2.permute_(permutation)</span>
-        
-<span class="c1">#     new_node1.name = node1_name</span>
-<span class="c1">#     new_node1.get_axis(axis1.num).name = axis1_name</span>
-    
-<span class="c1">#     new_node2.name = node2_name</span>
-<span class="c1">#     new_node2.get_axis(axis2.num).name = axis2_name</span>
-    
-<span class="c1">#     return new_node1, new_node2</span>
-    
-<span class="c1"># AbstractNode.svd_ = svd_</span>
 
 
 <span class="k">def</span> <span class="nf">svd_</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span>
@@ -1727,30 +1530,17 @@ title="Fullscreen mode"
                         <span class="k">for</span> <span class="n">aux_axis</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">_axes</span><span class="p">:</span>
                             <span class="k">if</span> <span class="n">aux_axis</span><span class="o">.</span><span class="n">is_batch</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span> <span class="o">==</span> <span class="n">aux_axis</span><span class="o">.</span><span class="n">_name</span><span class="p">):</span>
                                 <span class="n">batch_edges</span><span class="p">[</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">j</span><span class="p">]</span>
-                                <span class="c1"># if &#39;batch&#39; in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!</span>
-                                <span class="c1">#     batch_edges[edge.axis1._name] = [-1, j]</span>
-                                <span class="c1"># else:</span>
-                                <span class="c1">#     # Cuando es una stack</span>
-                                <span class="c1">#     batch_edges[edge.axis1._name] = [tensors[0].shape[j], j]</span>
                                 <span class="n">batch_in_node2</span> <span class="o">=</span> <span class="kc">True</span>
                                 <span class="k">break</span>
 
                         <span class="k">if</span> <span class="ow">not</span> <span class="n">batch_in_node2</span><span class="p">:</span>
                             <span class="n">non_contract_edges</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span>
-                            <span class="c1"># if &#39;batch&#39; in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!</span>
-                            <span class="c1">#     non_contract_edges[i][edge] = [j]</span>
-                            <span class="c1"># else:</span>
-                            <span class="c1">#     non_contract_edges[i][edge] = [tensors[i].shape[j], j]</span>
 
                     <span class="k">else</span><span class="p">:</span>
                         <span class="k">if</span> <span class="n">axis</span><span class="o">.</span><span class="n">_name</span> <span class="ow">in</span> <span class="n">batch_edges</span><span class="p">:</span>
                             <span class="n">batch_edges</span><span class="p">[</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
                         <span class="k">else</span><span class="p">:</span>
                             <span class="n">non_contract_edges</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span>
-                            <span class="c1"># if &#39;batch&#39; in edge.axis1._name:  # TODO: restringir a solo un edge de batch!!</span>
-                            <span class="c1">#     non_contract_edges[i][edge] = [-1, j]</span>
-                            <span class="c1"># else:</span>
-                            <span class="c1">#     non_contract_edges[i][edge] = [tensors[i].shape[j], j]</span>
 
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">non_contract_edges</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span>
@@ -1767,74 +1557,11 @@ title="Fullscreen mode"
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]:</span>
             <span class="k">if</span> <span class="n">permutation_dims</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">permutation_dims</span><span class="p">[</span><span class="n">i</span><span class="p">]))):</span>
                 <span class="n">permutation_dims</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-
-        <span class="c1"># aux_permutation = inverse_permutation(list(map(lambda l: l[1], batch_edges.values())) +</span>
-        <span class="c1">#                                       list(map(lambda l: l[1], non_contract_edges[0].values())))</span>
-        <span class="c1"># aux_permutation2 = inverse_permutation(list(map(lambda l: l[1], non_contract_edges[1].values())))</span>
-        <span class="c1"># inv_permutation_dims = aux_permutation + list(map(lambda x: x + len(aux_permutation), aux_permutation2))</span>
-        
-        <span class="c1"># TODO: creo que inv_permutation no hace nada, porque dejamos los batches</span>
-        <span class="c1"># al principio y los edges no contraidos de sejan en el mismo orden en que lo encontramos</span>
-        <span class="c1"># NOTE: Dejamos los batches al principio</span>
-        <span class="c1"># inv_permutation_batches = list(range(len(batch_edges)))</span>
-        <span class="c1"># inv_permutation_0 = inverse_permutation(list(non_contract_edges[0].values()))</span>
-        <span class="c1"># inv_permutation_0 = inv_permutation_batches + \</span>
-        <span class="c1">#     list(map(lambda x: x + len(inv_permutation_batches), inv_permutation_0))</span>
-        
-        <span class="c1"># inv_permutation_1 = inverse_permutation(list(non_contract_edges[1].values()))</span>
-        <span class="c1"># inv_permutation_dims = inv_permutation_0 + \</span>
-        <span class="c1">#     list(map(lambda x: x + len(inv_permutation_0), inv_permutation_1))</span>
-        <span class="c1"># # NOTE: Dejamos los batches al principio</span>
-        
-        <span class="c1"># if inv_permutation_dims == list(range(len(inv_permutation_dims))):</span>
-        <span class="c1">#     inv_permutation_dims = []</span>
-
-        <span class="c1"># aux_shape = [None, None]</span>
-        <span class="c1"># if batch_edges:</span>
-        <span class="c1">#     aux_shape[0] = [torch.tensor(list(map(lambda l: l[0], batch_edges.values()))),</span>
-        <span class="c1">#                     torch.tensor(list(map(lambda l: l[0], non_contract_edges[0].values()))),</span>
-        <span class="c1">#                     torch.tensor(list(map(lambda l: l[0], contract_edges.values())))]</span>
-<span class="c1"># </span>
-        <span class="c1">#     aux_shape[1] = [torch.tensor(list(map(lambda l: l[0], batch_edges.values()))),</span>
-        <span class="c1">#                     torch.tensor(list(map(lambda l: l[0], contract_edges.values()))),</span>
-        <span class="c1">#                     torch.tensor(list(map(lambda l: l[0], non_contract_edges[1].values())))]</span>
-        <span class="c1"># else:</span>
-        <span class="c1">#     aux_shape[0] = [torch.tensor(list(map(lambda l: l[0], non_contract_edges[0].values()))),</span>
-        <span class="c1">#                     torch.tensor(list(map(lambda l: l[0], contract_edges.values())))]</span>
-<span class="c1"># </span>
-        <span class="c1">#     aux_shape[1] = [torch.tensor(list(map(lambda l: l[0], contract_edges.values()))),</span>
-        <span class="c1">#                     torch.tensor(list(map(lambda l: l[0], non_contract_edges[1].values())))]</span>
-        <span class="c1">#     </span>
-        <span class="c1"># for i in [0, 1]:</span>
-        <span class="c1">#     for j in range(len(aux_shape[i])):</span>
-        <span class="c1">#         if (aux_shape[i][j] &lt; 0).any():</span>
-        <span class="c1">#             aux_shape[i][j] = torch.tensor(-1)  # Por si hemos hecho producto de -1 por otra dim</span>
-        <span class="c1">#             </span>
-        <span class="c1"># for i in [0, 1]:</span>
-        <span class="c1">#     for j in range(len(aux_shape[i])):</span>
-        <span class="c1">#         aux_shape[i][j] = aux_shape[i][j].prod().long().item()</span>
-        <span class="c1">#             </span>
-        <span class="c1"># for i in [0, 1]:</span>
-        <span class="c1">#     if tensors[i].reshape(aux_shape[i]).shape == tensors[i].shape:</span>
-        <span class="c1">#         aux_shape[i] = []</span>
                 
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]:</span>
             <span class="k">if</span> <span class="n">permutation_dims</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
                 <span class="n">tensors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="n">permutation_dims</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
                 
-        <span class="c1"># TODO: solo contemplo 1 batch de tipo batch, y el resto pueden</span>
-        <span class="c1"># ser stacks, ya que los batches son los que pueden tener dims</span>
-        <span class="c1"># distintas cada vez, los stacks supongo que no. Si hay alg&#39;un</span>
-        <span class="c1"># caso en el que haya que usar dos edges distintos de batch,</span>
-        <span class="c1"># hay que implementarlo. Ahora, en ese caso, `new_shape` tendr&#39;ia</span>
-        <span class="c1"># varios -1 y dar&#39;ia error</span>
-        
-        <span class="c1"># new_shape = list(map(lambda l: l[0], batch_edges.values())) + \</span>
-        <span class="c1">#             list(map(lambda l: l[0], non_contract_edges[0].values())) + \</span>
-        <span class="c1">#             list(map(lambda l: l[0], non_contract_edges[1].values()))</span>
-        
-        <span class="c1"># new_shape_hint = [len(batch_edges) + len(non_contract_edges[0]),</span>
-        <span class="c1">#                   len(batch_edges) + len(contract_edges)]</span>
         <span class="n">shape_limits</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;batch&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch_edges</span><span class="p">),</span>
                         <span class="s1">&#39;non_contract&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">non_contract_edges</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
                         <span class="s1">&#39;contract&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">contract_edges</span><span class="p">)}</span>
@@ -1854,13 +1581,6 @@ title="Fullscreen mode"
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]:</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">aux_shape</span><span class="p">[</span><span class="n">i</span><span class="p">])):</span>
                 <span class="n">aux_shape</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">aux_shape</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span><span class="o">.</span><span class="n">long</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
-        
-            
-        <span class="c1"># if (aux_shape[0] != []) or (aux_shape[1] != []):</span>
-        <span class="c1">#     # NOTE: new way of doing new_shape!!</span>
-        <span class="c1">#     new_shape = []</span>
-        <span class="c1">#     new_shape += list(tensors[0].shape[:new_shape_hint[0]])</span>
-        <span class="c1">#     new_shape += list(tensors[1].shape[new_shape_hint[1]:])</span>
                 
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]:</span>
             <span class="k">if</span> <span class="n">aux_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
@@ -1869,14 +1589,6 @@ title="Fullscreen mode"
         <span class="n">result</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">@</span> <span class="n">tensors</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">new_shape</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">new_shape</span><span class="p">)</span>
-        <span class="c1"># if inv_permutation_dims:</span>
-        <span class="c1">#     result = result.permute(inv_permutation_dims)</span>
-
-        <span class="c1"># indices = [None, None]</span>
-        <span class="c1"># indices[0] = permute_list(list(map(lambda l: l[1], batch_edges.values())) +</span>
-        <span class="c1">#                           list(map(lambda l: l[1], non_contract_edges[0].values())),</span>
-        <span class="c1">#                           aux_permutation)</span>
-        <span class="c1"># indices[1] = list(map(lambda l: l[1], non_contract_edges[1].values()))</span>
         
         <span class="c1"># NOTE: Dejamos los batches al principio</span>
         <span class="n">indices</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
@@ -1894,23 +1606,8 @@ title="Fullscreen mode"
                 <span class="n">new_edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">idx</span><span class="p">])</span>
                 <span class="n">new_node1_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">is_node1</span><span class="p">())</span>
 
-        <span class="c1"># TODO: Save time if no transformation occurs</span>
-        <span class="c1"># TODO: Como hacemos esto despu&#39;es de haber cambiado la forma de los tensores,</span>
-        <span class="c1"># est&#39;a mal, estamos midiendo shapes erroneas. Deber&#39;iamos hacerlo antes, al crear</span>
-        <span class="c1"># cada lista. Y tambi&#39;en en funci&#39;on de esto cambiar los inv_permutation y demas</span>
-        <span class="c1"># if permutation_dims[0] == list(range(len(tensors[0].shape))):</span>
-        <span class="c1">#     permutation_dims[0] = []</span>
-        <span class="c1"># if permutation_dims[1] == list(range(len(tensors[1].shape))):</span>
-        <span class="c1">#     permutation_dims[1] = []</span>
-        <span class="c1"># if aux_shape[0] == tensors[0].shape:</span>
-        <span class="c1">#     aux_shape[0] = []</span>
-        <span class="c1"># if aux_shape[1] == tensors[1].shape:</span>
-        <span class="c1">#     aux_shape[1] = []</span>
-
         <span class="n">hints</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;permutation_dims&#39;</span><span class="p">:</span> <span class="n">permutation_dims</span><span class="p">,</span>
-                <span class="c1">#  &#39;inv_permutation_dims&#39;: inv_permutation_dims,</span>
                  <span class="s1">&#39;aux_shape&#39;</span><span class="p">:</span> <span class="n">aux_shape</span><span class="p">,</span>
-                 <span class="c1">#&#39;new_shape&#39;: new_shape,</span>
                  <span class="s1">&#39;shape_limits&#39;</span><span class="p">:</span> <span class="n">shape_limits</span><span class="p">}</span>
         
         <span class="n">node1</span><span class="o">.</span><span class="n">_record_in_inverse_memory</span><span class="p">()</span>
@@ -2017,10 +1714,6 @@ title="Fullscreen mode"
         <span class="c1"># TODO: Bien, pero cuidad con la shape del batch al meterla en hints, hay que dejar libertad en ese hueco</span>
         <span class="n">nodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">]</span>
         <span class="n">tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">node1</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span> <span class="n">node2</span><span class="o">.</span><span class="n">tensor</span><span class="p">]</span>
-        <span class="c1"># node1._record_in_inverse_memory()</span>
-        <span class="c1"># node2._record_in_inverse_memory()</span>
-
-        <span class="c1"># torch.cuda.synchronize()</span>
 
         <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span>
             <span class="n">diff</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">total_time</span>
@@ -2053,17 +1746,6 @@ title="Fullscreen mode"
         <span class="n">total_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 
         <span class="n">hints</span> <span class="o">=</span> <span class="n">successor</span><span class="o">.</span><span class="n">hints</span>
-        <span class="c1"># batch_idx = hints[&#39;batch_idx&#39;]</span>
-        <span class="c1"># batch_shapes = []</span>
-        <span class="c1"># for idx in batch_idx:</span>
-        <span class="c1">#     batch_shapes.append(tensors[0].shape[idx])</span>
-        <span class="c1">#</span>
-        <span class="c1"># new_shape = hints[&#39;new_shape&#39;]</span>
-        <span class="c1"># new_shape[:len(batch_shapes)] = batch_shapes</span>
-        <span class="c1">#</span>
-        <span class="c1"># aux_shape = hints[&#39;aux_shape&#39;]</span>
-        <span class="c1"># aux_shape[0][0] = torch.tensor(batch_shapes).prod().long().item()</span>
-        <span class="c1"># aux_shape[1][0] = torch.tensor(batch_shapes).prod().long().item()</span>
         <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t\t\t</span><span class="s1">Checkpoint 4:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">total_time</span><span class="p">)</span>
         <span class="n">total_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 
@@ -2091,14 +1773,6 @@ title="Fullscreen mode"
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">aux_shape</span><span class="p">[</span><span class="n">i</span><span class="p">])):</span>
                 <span class="n">aux_shape</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">aux_shape</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span><span class="o">.</span><span class="n">long</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
             
-            
-        <span class="c1"># new_shape = []</span>
-        <span class="c1"># if (hints[&#39;aux_shape&#39;][0] != []) or (hints[&#39;aux_shape&#39;][1] != []):</span>
-        <span class="c1">#     # NOTE: new way of doing new_shape!!</span>
-        <span class="c1">#     new_shape = []</span>
-        <span class="c1">#     new_shape += list(tensors[0].shape[:hints[&#39;new_shape_hint&#39;][0]])</span>
-        <span class="c1">#     new_shape += list(tensors[1].shape[hints[&#39;new_shape_hint&#39;][1]:])</span>
-            
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]:</span>
             <span class="k">if</span> <span class="n">aux_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
                 <span class="n">tensors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">aux_shape</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
@@ -2111,18 +1785,8 @@ title="Fullscreen mode"
         <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t\t\t</span><span class="s1">Checkpoint 4.2:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">total_time</span><span class="p">)</span>
         <span class="n">total_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 
-        <span class="c1"># result = torch.randn(tensors[0].shape) @ torch.randn(tensors[1].shape)</span>
-        <span class="c1"># torch.cuda.synchronize()</span>
-        <span class="c1"># if PRINT_MODE: print(&#39;\t\t\t\tCheckpoint 4.2:&#39;, time.time() - total_time)</span>
-
-        <span class="c1"># TODO: save time if transformations don&#39;t occur</span>
-        <span class="c1"># if hints[&#39;new_shape&#39;]:</span>
-        <span class="c1">#     result = result.view(hints[&#39;new_shape&#39;])</span>
         <span class="k">if</span> <span class="n">new_shape</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">new_shape</span><span class="p">)</span>
-        <span class="c1"># if hints[&#39;inv_permutation_dims&#39;]:</span>
-        <span class="c1">#     result = result.permute(hints[&#39;inv_permutation_dims&#39;])</span>
-        <span class="c1"># result = result.view(hints[&#39;new_shape&#39;]).permute(hints[&#39;inv_permutation_dims&#39;])</span>
         <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t\t\t</span><span class="s1">Checkpoint 5:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">total_time</span><span class="p">)</span>
         <span class="n">total_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
         
@@ -2142,20 +1806,6 @@ title="Fullscreen mode"
 <span class="n">contract_edges</span> <span class="o">=</span> <span class="n">Operation</span><span class="p">(</span><span class="n">_check_first_contract_edges</span><span class="p">,</span>
                            <span class="n">_contract_edges_first</span><span class="p">,</span>
                            <span class="n">_contract_edges_next</span><span class="p">)</span>
-
-
-<span class="c1"># NOTE: contract for edges can only be in-place, since we</span>
-<span class="c1"># cannot know which node is the neighbour of another</span>
-<span class="c1"># through one edge, when we are performing operations,</span>
-<span class="c1"># because resultant nodes inherit edges that point to other</span>
-<span class="c1"># two leaf nodes</span>
-<span class="c1"># def contract(edge: AbstractEdge) -&gt; Node:</span>
-<span class="c1">#     &quot;&quot;&quot;</span>
-<span class="c1">#     Contract only one edge</span>
-<span class="c1">#     &quot;&quot;&quot;</span>
-<span class="c1">#     return contract_edges([edge], edge.node1, edge.node2)</span>
-
-<span class="c1"># AbstractEdge.contract = contract</span>
 
 
 <span class="k">def</span> <span class="nf">contract_</span><span class="p">(</span><span class="n">edge</span><span class="p">:</span> <span class="n">AbstractEdge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
@@ -2186,100 +1836,6 @@ title="Fullscreen mode"
     <span class="k">return</span> <span class="n">result</span>
 
 <span class="n">AbstractEdge</span><span class="o">.</span><span class="n">contract_</span> <span class="o">=</span> <span class="n">contract_</span>
-
-
-<span class="c1"># def contract(node: AbstractNode, axis: Ax) -&gt; Node:</span>
-<span class="c1">#     &quot;&quot;&quot;</span>
-<span class="c1">#     Contract only one edge</span>
-<span class="c1">#     &quot;&quot;&quot;</span>
-<span class="c1">#     return contract_edges([node[axis]], node, node.neighbours(axis))</span>
-
-<span class="c1"># AbstractNode.contract = contract</span>
-
-
-<span class="c1"># def contract_(node: AbstractNode, axis: Ax) -&gt; Node:</span>
-<span class="c1">#     &quot;&quot;&quot;</span>
-<span class="c1">#     Contract only one edge</span>
-<span class="c1">#     &quot;&quot;&quot;</span>
-<span class="c1">#     node1 = node</span>
-<span class="c1">#     node2 = node.neighbours(axis)</span>
-    
-<span class="c1">#     result = contract_edges([node[axis]], node1, node2)</span>
-<span class="c1">#     result._reattach_edges(True)</span>
-    
-<span class="c1">#     # Delete nodes (and their edges) from the TN</span>
-<span class="c1">#     net = result.network</span>
-<span class="c1">#     net.delete_node(node1)</span>
-<span class="c1">#     net.delete_node(node2)</span>
-    
-<span class="c1">#     # Add edges of result to the TN</span>
-<span class="c1">#     for res_edge in result._edges:</span>
-<span class="c1">#         net._add_edge(res_edge)</span>
-    
-<span class="c1">#     net._change_node_type(result, &#39;leaf&#39;)</span>
-    
-<span class="c1">#     node1._successors = dict()</span>
-<span class="c1">#     node2._successors = dict()</span>
-    
-<span class="c1">#     # Remove non-leaf name</span>
-<span class="c1">#     result.name = &#39;contract_edges_ip&#39;</span>
-    
-<span class="c1">#     return result</span>
-
-<span class="c1"># AbstractNode.contract_ = contract_</span>
-
-
-<span class="c1"># NOTE: más rápido -&gt; es una estuidez, al llamar a contract_edges el input</span>
-<span class="c1"># NOTE: ya estaba guardado siempre en kwargs del successor</span>
-<span class="c1"># def _check_first_get_shared_edges(node1: AbstractNode, node2: AbstractNode) -&gt; Optional[Successor]:</span>
-<span class="c1">#     kwargs = {&#39;node1&#39;: node1,</span>
-<span class="c1">#               &#39;node2&#39;: node2}</span>
-<span class="c1">#     if &#39;get_shared_edges&#39; in node1._successors:</span>
-<span class="c1">#         for succ in node1._successors[&#39;get_shared_edges&#39;]:</span>
-<span class="c1">#             if succ.kwargs == kwargs:</span>
-<span class="c1">#                 return succ</span>
-<span class="c1">#     return None</span>
-
-
-<span class="c1"># def _get_shared_edges_first(node1: AbstractNode, node2: AbstractNode) -&gt; List[AbstractEdge]:</span>
-<span class="c1">#     &quot;&quot;&quot;</span>
-<span class="c1">#     Obtain list of edges shared between two nodes</span>
-<span class="c1">#     &quot;&quot;&quot;</span>
-<span class="c1">#     edges = set()</span>
-<span class="c1">#     for i1, edge1 in enumerate(node1._edges):</span>
-<span class="c1">#         for i2, edge2 in enumerate(node2._edges):</span>
-<span class="c1">#             if (edge1 == edge2) and not edge1.is_dangling():</span>
-<span class="c1">#                 if node1.is_node1(i1) != node2.is_node1(i2):</span>
-<span class="c1">#                     edges.add(edge1)</span>
-<span class="c1">#     edges = list(edges)</span>
-                    
-<span class="c1">#     successor = nc.Successor(kwargs={&#39;node1&#39;: node1, &#39;node2&#39;: node2},</span>
-<span class="c1">#                              child=edges)</span>
-    
-<span class="c1">#     net = node1._network</span>
-<span class="c1">#     if &#39;get_shared_edges&#39; in node1._successors:</span>
-<span class="c1">#         node1._successors[&#39;get_shared_edges&#39;].append(successor)</span>
-<span class="c1">#     else:</span>
-<span class="c1">#         node1._successors[&#39;get_shared_edges&#39;] = [successor]</span>
-
-<span class="c1">#     net._list_ops.append((node1, &#39;get_shared_edges&#39;, len(node1._successors[&#39;get_shared_edges&#39;]) - 1))</span>
-    
-<span class="c1">#     return edges</span>
-
-
-<span class="c1"># def _get_shared_edges_next(successor: Successor,</span>
-<span class="c1">#                            node1: AbstractNode,</span>
-<span class="c1">#                            node2: AbstractNode) -&gt; List[AbstractEdge]:</span>
-<span class="c1">#     &quot;&quot;&quot;</span>
-<span class="c1">#     Obtain list of edges shared between two nodes</span>
-<span class="c1">#     &quot;&quot;&quot;</span>
-<span class="c1">#     return successor.child</span>
-
-
-<span class="c1"># get_shared_edges = Operation(_check_first_get_shared_edges,</span>
-<span class="c1">#                              _get_shared_edges_first,</span>
-<span class="c1">#                              _get_shared_edges_next)</span>
-<span class="c1"># NOTE: hasta aquí</span>
 
 
 <span class="c1"># NOTE: modo no Operation</span>
@@ -2399,24 +1955,6 @@ title="Fullscreen mode"
             <span class="n">all_non_param</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">all_param</span> <span class="o">=</span> <span class="kc">False</span>
-
-        <span class="c1"># TODO: Creo que el mix index mode ya no sirve denada</span>
-
-        <span class="c1"># NOTE: index mode / mix index mode</span>
-        <span class="c1"># if node._tensor_info[&#39;address&#39;] is None or node.name.startswith(&#39;unbind&#39;):</span>
-        <span class="c1"># NOTE: mix index mode</span>
-        
-        <span class="c1"># NOTE: unbind mode</span>
-        <span class="c1"># if node._tensor_info[&#39;address&#39;] is None:</span>
-        <span class="c1"># NOTE: unbind mode</span>
-        
-        <span class="c1"># NOTE: no cambia nada, en unbind node ya tienen siempre address,</span>
-        <span class="c1"># y  en index no tienen nunca</span>
-        <span class="c1"># if net.unbind_mode:</span>
-        <span class="c1">#     condition = node._tensor_info[&#39;address&#39;] is None</span>
-        <span class="c1"># else:</span>
-        <span class="c1">#     condition = node._tensor_info[&#39;address&#39;] is None or \</span>
-        <span class="c1">#         node.name.startswith(&#39;unbind&#39;)</span>
         
         <span class="k">if</span> <span class="n">all_same_ref</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -2441,32 +1979,9 @@ title="Fullscreen mode"
                     <span class="k">continue</span>
 
                 <span class="n">stack_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;stack_idx&#39;</span><span class="p">])</span>
-
-            <span class="c1"># if use_slice:</span>
-            <span class="c1">#     if stack_indices_slice[0] is None:</span>
-            <span class="c1">#         stack_indices_slice[0] = node._tensor_info[&#39;stack_idx&#39;]</span>
-            <span class="c1">#         stack_indices_slice[1] = node._tensor_info[&#39;stack_idx&#39;]</span>
-            <span class="c1">#     elif stack_indices_slice[2] == None:</span>
-            <span class="c1">#         stack_indices_slice[1] = node._tensor_info[&#39;stack_idx&#39;]</span>
-            <span class="c1">#         stack_indices_slice[2] = stack_indices_slice[1] - stack_indices_slice[0]</span>
-            <span class="c1">#         # TODO: cuidado con ir al revés, step &lt; 0</span>
-            <span class="c1">#     else:</span>
-            <span class="c1">#         if (node._tensor_info[&#39;stack_idx&#39;] - stack_indices_slice[1]) == stack_indices_slice[2]:</span>
-            <span class="c1">#             stack_indices_slice[1] = node._tensor_info[&#39;stack_idx&#39;]</span>
-            <span class="c1">#         else:</span>
-            <span class="c1">#             use_slice = False</span>
-
-            <span class="c1"># indices.append(node._tensor_info[&#39;index&#39;])</span>
+                
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">all_same_ref</span> <span class="o">=</span> <span class="kc">False</span>
-
-    <span class="c1"># if (stack_indices_slice[0] is not None) and use_slice:</span>
-    <span class="c1">#     stack_indices_slice[1] += 1</span>
-    <span class="c1">#     stack_indices = slice(stack_indices_slice[0],</span>
-    <span class="c1">#                           stack_indices_slice[1],</span>
-    <span class="c1">#                           stack_indices_slice[2])</span>
-    
-    <span class="c1"># stack_indices = list2slice(stack_indices)</span>
 
     <span class="k">if</span> <span class="n">all_param</span> <span class="ow">and</span> <span class="n">stack_node_ref</span> <span class="ow">and</span> <span class="n">net</span><span class="o">.</span><span class="n">_automemory</span><span class="p">:</span>
         <span class="n">stack_node</span> <span class="o">=</span> <span class="n">ParamStackNode</span><span class="p">(</span><span class="n">nodes</span><span class="o">=</span><span class="n">nodes</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_stack&#39;</span><span class="p">,</span> <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -2493,14 +2008,6 @@ title="Fullscreen mode"
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="n">max_dim</span> <span class="o">-</span> <span class="n">dim</span><span class="p">,</span> <span class="n">max_dim</span><span class="p">))</span>
         <span class="n">stack_node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
-            
-        <span class="c1"># stack_node._tensor_info[&#39;index&#39;] = stack_indices  #list(zip(*indices))</span>
-        
-        <span class="c1"># stack_node._shape = (stack_node._shape[0], *node_ref._shape[1:])</span>
-        <span class="c1"># for edge, size in zip(stack_node._edges[1:], stack_node._shape[1:]):</span>
-        <span class="c1">#     edge._size = size</span>
-        
-        <span class="c1"># stack_node._record_in_inverse_memory()  # NOTE: no tocar</span>
 
     <span class="k">else</span><span class="p">:</span>
         <span class="c1"># TODO: quitamos todos non-param por lo de la stack de data nodes, hay que</span>
@@ -2652,17 +2159,6 @@ title="Fullscreen mode"
             <span class="n">address</span> <span class="o">=</span> <span class="n">aux_node_ref</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span>
                 
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">new_node</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">nodes</span><span class="p">):</span>
-            <span class="c1"># shape = new_node.shape</span>
-            <span class="c1"># if new_node._tensor_info[&#39;address&#39;] is not None:</span>
-            <span class="c1">#     del new_node.network._memory_nodes[new_node._tensor_info[&#39;address&#39;]]</span>
-            <span class="c1"># new_node._tensor_info[&#39;address&#39;] = None</span>
-            <span class="c1"># new_node._tensor_info[&#39;node_ref&#39;] = node</span>
-            <span class="c1"># new_node._tensor_info[&#39;full&#39;] = False</span>
-            <span class="c1"># new_node._tensor_info[&#39;stack_idx&#39;] = i</span>
-            <span class="c1"># index = [i]</span>
-            <span class="c1"># for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo</span>
-            <span class="c1">#     index.append(slice(max_dim - dim, max_dim))</span>
-            <span class="c1"># new_node._tensor_info[&#39;index&#39;] = index</span>
             
             <span class="n">shape</span> <span class="o">=</span> <span class="n">new_node</span><span class="o">.</span><span class="n">shape</span>
             <span class="k">if</span> <span class="n">new_node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -2709,73 +2205,6 @@ title="Fullscreen mode"
                         <span class="k">else</span><span class="p">:</span>
                             <span class="n">index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="n">max_dim</span> <span class="o">-</span> <span class="n">dim</span><span class="p">,</span> <span class="n">max_dim</span><span class="p">))</span>
                 <span class="n">new_node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
-                
-            <span class="c1"># aux_slice = node._tensor_info[&#39;stack_idx&#39;]</span>
-            <span class="c1"># if aux_slice is None:</span>
-            <span class="c1">#     new_node._tensor_info[&#39;stack_idx&#39;] = i</span>
-            <span class="c1">#     index = [i]</span>
-            <span class="c1"># elif isinstance(aux_slice, list):</span>
-            <span class="c1">#     new_node._tensor_info[&#39;stack_idx&#39;] = aux_slice[i]</span>
-            <span class="c1">#     index = [new_node._tensor_info[&#39;stack_idx&#39;]]</span>
-            <span class="c1"># else:    </span>
-            <span class="c1">#     new_node._tensor_info[&#39;stack_idx&#39;] = range(aux_slice.start,</span>
-            <span class="c1">#                                                aux_slice.stop,</span>
-            <span class="c1">#                                                aux_slice.step)[i]</span>
-            <span class="c1">#     index = [new_node._tensor_info[&#39;stack_idx&#39;]]</span>
-                
-            <span class="c1"># for j, (max_dim, dim) in enumerate(zip(node.shape[1:], shape)):  # TODO: max_dim == dim siempre creo</span>
-            <span class="c1">#     if new_node._axes[j].is_batch():</span>
-            <span class="c1">#         index.append(slice(0, None))</span>
-            <span class="c1">#     else:</span>
-            <span class="c1">#         index.append(slice(max_dim - dim, max_dim))</span>
-            <span class="c1"># new_node._tensor_info[&#39;index&#39;] = index</span>
-        <span class="c1"># NOTE: index mode</span>
-
-    <span class="c1"># else:</span>
-    <span class="c1">#     # This memory management can happen always, even not in contracting mode</span>
-    <span class="c1">#     # NOTE: unbind mode / mix index mode</span>
-    <span class="c1">#     for i, new_node in enumerate(nodes):</span>
-    <span class="c1">#         # shape = new_node.shape</span>
-    <span class="c1">#         # # if new_node._tensor_info[&#39;address&#39;] is not None:</span>
-    <span class="c1">#         # #     del new_node.network._memory_nodes[new_node._tensor_info[&#39;address&#39;]]</span>
-    <span class="c1">#         # # new_node._tensor_info[&#39;address&#39;] = None</span>
-    <span class="c1">#         # new_node._tensor_info[&#39;node_ref&#39;] = node</span>
-    <span class="c1">#         # new_node._tensor_info[&#39;full&#39;] = False</span>
-    <span class="c1">#         # new_node._tensor_info[&#39;stack_idx&#39;] = i</span>
-    <span class="c1">#         # index = [i]</span>
-    <span class="c1">#         # for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo -&gt; no si apilo de distintas dims</span>
-    <span class="c1">#         #     index.append(slice(max_dim - dim, max_dim))</span>
-    <span class="c1">#         # new_node._tensor_info[&#39;index&#39;] = index</span>
-            
-    <span class="c1">#         shape = new_node.shape</span>
-            
-    <span class="c1">#         aux_node_ref = node</span>
-    <span class="c1">#         address = node._tensor_info[&#39;address&#39;]</span>
-    <span class="c1">#         while address is None:</span>
-    <span class="c1">#             aux_node_ref = aux_node_ref._tensor_info[&#39;node_ref&#39;]</span>
-    <span class="c1">#             address = aux_node_ref._tensor_info[&#39;address&#39;]</span>
-            
-    <span class="c1">#         new_node._tensor_info[&#39;node_ref&#39;] = aux_node_ref</span>
-    <span class="c1">#         new_node._tensor_info[&#39;full&#39;] = False</span>
-            
-    <span class="c1">#         aux_slice = node._tensor_info[&#39;stack_idx&#39;]</span>
-    <span class="c1">#         if aux_slice is None:</span>
-    <span class="c1">#             new_node._tensor_info[&#39;stack_idx&#39;] = i</span>
-    <span class="c1">#             index = [i]</span>
-    <span class="c1">#         elif isinstance(aux_slice, list):</span>
-    <span class="c1">#             new_node._tensor_info[&#39;stack_idx&#39;] = aux_slice[i]</span>
-    <span class="c1">#             index = [new_node._tensor_info[&#39;stack_idx&#39;]]</span>
-    <span class="c1">#         else:    </span>
-    <span class="c1">#             new_node._tensor_info[&#39;stack_idx&#39;] = range(aux_slice.start,</span>
-    <span class="c1">#                                                        aux_slice.stop,</span>
-    <span class="c1">#                                                        aux_slice.step)[i]</span>
-    <span class="c1">#             index = [new_node._tensor_info[&#39;stack_idx&#39;]]</span>
-                
-    <span class="c1">#         for max_dim, dim in zip(node.shape[1:], shape):  # TODO: max_dim == dim siempre creo</span>
-    <span class="c1">#             index.append(slice(max_dim - dim, max_dim))</span>
-    <span class="c1">#         new_node._tensor_info[&#39;index&#39;] = index</span>
-            
-    <span class="c1">#     # NOTE: unbind mode / mix index mode</span>
         
     <span class="k">else</span><span class="p">:</span>
         <span class="n">node</span><span class="o">.</span><span class="n">_record_in_inverse_memory</span><span class="p">()</span>
@@ -2828,10 +2257,6 @@ title="Fullscreen mode"
             <span class="c1"># node._record_in_inverse_memory()</span>
             <span class="k">return</span> <span class="n">children</span><span class="p">[:]</span>  <span class="c1"># TODO: añadimos [:] para no poder modificar la lista de hijos desde fuera</span>
         
-        <span class="c1"># for i, child in enumerate(children):</span>
-        <span class="c1">#     child._tensor_info[&#39;index&#39;][batch_idx + 1] = slice(0, new_dim)</span>
-        
-        <span class="c1"># node._record_in_inverse_memory()</span>
         <span class="k">return</span> <span class="n">successor</span><span class="o">.</span><span class="n">child</span><span class="p">[:]</span>  <span class="c1"># TODO: cambia el tamaño del batch</span>
         <span class="c1"># NOTE: index mode</span>
 
@@ -2926,27 +2351,11 @@ title="Fullscreen mode"
                         <span class="n">matrices_strings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">stack_char</span> <span class="o">+</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">char</span><span class="p">))</span>
                         <span class="n">which_matrices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
                         
-                    <span class="c1"># in_matrices = False</span>
-                    <span class="c1"># for mat in matrices:</span>
-                    <span class="c1">#     if torch.equal(edge.matrix, mat):</span>
-                    <span class="c1">#         in_matrices = True</span>
-                    <span class="c1">#         break</span>
-                    <span class="c1"># if not in_matrices:</span>
-                    <span class="c1">#     matrices_strings.append(stack_char + (2 * char))</span>
-                    <span class="c1">#     matrices.append(edge.matrix)</span>
                 <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">edge</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">which_matrices</span><span class="p">:</span>
                         <span class="n">matrices_strings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">char</span><span class="p">)</span>
                         <span class="n">which_matrices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
                         
-                    <span class="c1"># in_matrices = False</span>
-                    <span class="c1"># for mat in matrices:</span>
-                    <span class="c1">#     if torch.equal(edge.matrix, mat):</span>
-                    <span class="c1">#         in_matrices = True</span>
-                    <span class="c1">#         break</span>
-                    <span class="c1"># if not in_matrices:</span>
-                    <span class="c1">#     matrices_strings.append(2 * char)</span>
-                    <span class="c1">#     matrices.append(edge.matrix)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">edge</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
                 <span class="k">if</span> <span class="n">output_dict</span><span class="p">[</span><span class="n">char</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
@@ -3087,7 +2496,6 @@ title="Fullscreen mode"
     <span class="n">stacks_list</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">nodes_list</span> <span class="ow">in</span> <span class="n">nodes_lists</span><span class="p">:</span>
         <span class="n">stacks_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">stack</span><span class="p">(</span><span class="n">nodes_list</span><span class="p">))</span>
-    <span class="c1">#print(&#39;\t\t\tStacks:&#39;, time.time() - start)</span>
 
     <span class="n">input_strings</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-&gt;&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
     <span class="n">output_string</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-&gt;&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
@@ -3107,10 +2515,7 @@ title="Fullscreen mode"
     <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
     <span class="c1"># TODO: no adaptado a&#39;un, creamos nodos nuevos cada vez, y a su vez con unbind</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">einsum</span><span class="p">(</span><span class="n">string</span><span class="p">,</span> <span class="o">*</span><span class="n">stacks_list</span><span class="p">)</span>
-    <span class="c1">#print(&#39;\t\t\tEinsum:&#39;, time.time() - start)</span>
-    <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
     <span class="n">unbinded_result</span> <span class="o">=</span> <span class="n">unbind</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>  <span class="c1"># &lt;-- Lo más lento</span>
-    <span class="c1">#print(&#39;\t\t\tUnbind:&#39;, time.time() - start)</span>
     <span class="k">return</span> <span class="n">unbinded_result</span>
 
 

@@ -27,17 +27,8 @@ PRINT_MODE = False
 
 
 class PEPS(TensorNetwork):
-
-    def __init__(self,
-                 n_rows: int,
-                 n_cols: int,
-                 d_phys: int,
-                 d_bond: Sequence[int],
-                 boundary: Sequence[Text] = ['obc', 'obc'],
-                 param_bond: bool = False,
-                 num_batches: int = 1) -> None:  # TODO: poner n_batches
-        """
-        Create an MPS module.
+    """
+        Create an PEPS module.
 
         Parameters
         ----------
@@ -51,6 +42,15 @@ class PEPS(TensorNetwork):
         param_bond: boolean indicating whether bond edges should be parametric
         num_batches: number of batch edges of input data
         """
+
+    def __init__(self,
+                 n_rows: int,
+                 n_cols: int,
+                 d_phys: int,
+                 d_bond: Sequence[int],
+                 boundary: Sequence[Text] = ['obc', 'obc'],
+                 param_bond: bool = False,
+                 num_batches: int = 1) -> None:  # TODO: poner n_batches
 
         super().__init__(name='mps')
 
@@ -739,24 +739,13 @@ class PEPS(TensorNetwork):
             if not edge.is_batch():
                 result @= result
                 break
-            
-        # if result.rank > 1:
-        #     result @= result
         
         return result
 
 
 class UPEPS(TensorNetwork):
-
-    def __init__(self,
-                 n_rows: int,
-                 n_cols: int,
-                 d_phys: int,
-                 d_bond: Sequence[int],
-                 param_bond: bool = False,
-                 num_batches: int = 1) -> None:  # TODO: poner n_batches
-        """
-        Create an MPS module.
+    """
+        Create an UPEPS module.
 
         Parameters
         ----------
@@ -768,6 +757,14 @@ class UPEPS(TensorNetwork):
         param_bond: boolean indicating whether bond edges should be parametric
         num_batches: number of batch edges of input data
         """
+
+    def __init__(self,
+                 n_rows: int,
+                 n_cols: int,
+                 d_phys: int,
+                 d_bond: Sequence[int],
+                 param_bond: bool = False,
+                 num_batches: int = 1) -> None:  # TODO: poner n_batches
 
         super().__init__(name='mps')
 
@@ -1050,9 +1047,6 @@ class UPEPS(TensorNetwork):
             if not edge.is_batch():
                 result @= result
                 break
-            
-        # if result.rank > 1:
-        #     result @= result
         
         return result
 

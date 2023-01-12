@@ -1,8 +1,8 @@
-API
-===
+API Reference
+=============
 
-..
-   .. autosummary::
-      :toctree: generated
+.. toctree::
+   :maxdepth: 4
 
-      tensorkrowch
+   network_components
+   node_operations

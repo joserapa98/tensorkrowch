@@ -50,6 +50,12 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 master_doc = 'contents'
 autodoc_typehints = 'description'
+autodoc_member_order = 'bysource'
+
+# Make that the index page does not disappear from sidebar TOC. From
+# https://stackoverflow.com/questions/18969093/how-to-include-the-toctree-in-the-sidebar-of-each-page
+# html_sidebars = {"**": ['globaltoc.html', 'relations.html',
+#                         'sourcelink.html', 'searchbox.html']}
 
 
 # -- Options for HTML output -------------------------------------------------

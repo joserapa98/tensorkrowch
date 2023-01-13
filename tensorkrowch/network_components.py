@@ -59,6 +59,13 @@ class Axis:
         boolean indicating whether `node1` of the edge
         attached to this axis is the node that contains
         the axis. Otherwise, the node is `node2` of the edge
+        
+    Examples
+    --------
+    >>> import tensorkrowch as tk
+    >>> axis = tk.Axis(0, 'left')
+    >>> axis
+    Axis( left (0) )
     """
 
     def __init__(self,

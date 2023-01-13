@@ -1,5 +1,6 @@
-Node Operations
-===============
+Operations
+==========
+
 
 Basic Operations
 ----------------
@@ -12,15 +13,13 @@ Basic Operations
 
 .. autofunction:: tensorkrowch.sub
 
-Tensor Operations
------------------
-
 .. autofunction:: tensorkrowch.permute
 
-.. autofunction:: tensorkrowch.split
 
 Node Operations
 ---------------
+
+.. autofunction:: tensorkrowch.split
 
 .. autofunction:: tensorkrowch.contract_edges
 

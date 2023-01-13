@@ -61,13 +61,15 @@ CHECK_TIMES = []
 ################################################
 class Operation:
 
-    def __init__(self, check_first, func1, func2):
+    def __init__(self, name, check_first, func1, func2):
         assert isinstance(check_first, Callable)
         assert isinstance(func1, Callable)
         assert isinstance(func2, Callable)
         self.func1 = func1
         self.func2 = func2
         self.check_first = check_first
+        
+        TensorNetwork.operations[name] = self
 
     def __call__(self, *args, **kwargs):
         start = time.time()
@@ -143,9 +145,30 @@ def _permute_next(successor: Successor, node: AbstractNode, axes: Sequence[Ax]) 
     return child
 
 
-permute = Operation(_check_first_permute, _permute_first, _permute_next)
-def permute_node(node, axes): return permute(node, axes)
+permute_op = Operation('permute', _check_first_permute, _permute_first, _permute_next)
+
+def permute(node, axes):
+    """
+    Parameters
+    ----------
+    node: Node
+        node to which we apply permute
+    axes: List[Axis]
+        list of axes to permute
+    """
+    return permute_op(node, axes)
+
+def permute_node(node, axes):
+    """
+    Parameters
+    ----------
+    axes: List[Axis]
+        list of axes to permute
+    """
+    return permute_op(node, axes)
+
 AbstractNode.permute = permute_node
+
 
 def permute_(node: AbstractNode, axes: Sequence[Ax]) -> Node:
     axes_nums = []
@@ -384,22 +407,22 @@ def _sub_next(successor: Successor, node1: AbstractNode, node2: AbstractNode) ->
     return child
 
 
-tprod = Operation(_check_first_tprod, _tprod_first, _tprod_next)
+tprod = Operation('tprod', _check_first_tprod, _tprod_first, _tprod_next)
 def tprod_node(node1, node2): return tprod(node1, node2)
 AbstractNode.__mod__ = tprod_node
 
 
-mul = Operation(_check_first_mul, _mul_first, _mul_next)
+mul = Operation('mul', _check_first_mul, _mul_first, _mul_next)
 def mul_node(node1, node2): return mul(node1, node2)
 AbstractNode.__mul__ = mul_node
 
 
-add = Operation(_check_first_add, _add_first, _add_next)
+add = Operation('add', _check_first_add, _add_first, _add_next)
 def add_node(node1, node2): return add(node1, node2)
 AbstractNode.__add__ = add_node
 
 
-sub = Operation(_check_first_sub, _sub_first, _sub_next)
+sub = Operation('sub', _check_first_sub, _sub_first, _sub_next)
 def sub_node(node1, node2): return sub(node1, node2)
 AbstractNode.__sub__ = sub_node
 
@@ -885,7 +908,7 @@ def _split_next(successor: Successor,
     return children[0], children[1]
 
 
-split = Operation(_check_first_split, _split_first, _split_next)
+split = Operation('split', _check_first_split, _split_first, _split_next)
 
 def split_node(node: AbstractNode,
                  node1_axes: Optional[Sequence[Ax]] = None,
@@ -1604,7 +1627,8 @@ def _contract_edges_next(successor: Successor,
     return child
 
 
-contract_edges = Operation(_check_first_contract_edges,
+contract_edges = Operation('contract_edges',
+                           _check_first_contract_edges,
                            _contract_edges_first,
                            _contract_edges_next)
 
@@ -1895,7 +1919,7 @@ def _stack_next(successor: Successor,
     return child
 
 
-stack = Operation(_check_first_stack, _stack_first, _stack_next)
+stack = Operation('stack', _check_first_stack, _stack_first, _stack_next)
 
 
 ##################   UNBIND   ##################
@@ -2062,7 +2086,7 @@ def _unbind_next(successor: Successor, node: AbstractNode) -> List[Node]:
         # NOTE: index mode
 
 
-unbind = Operation(_check_first_unbind, _unbind_first, _unbind_next)
+unbind = Operation('unbind', _check_first_unbind, _unbind_first, _unbind_next)
 
 
 ##################   OTHERS   ##################
@@ -2271,7 +2295,7 @@ def _einsum_next(successor: Successor, string: Text, *nodes: AbstractNode) -> No
     return child
 
 
-einsum = Operation(_check_first_einsum, _einsum_first, _einsum_next)
+einsum = Operation('einsum', _check_first_einsum, _einsum_first, _einsum_next)
 
 
 def stacked_einsum(string: Text, *nodes_lists: List[AbstractNode]) -> List[Node]:
@@ -2324,13 +2348,13 @@ def stacked_einsum(string: Text, *nodes_lists: List[AbstractNode]) -> List[Node]
 #    Save operations in TensorNetwork     #
 ###########################################
 
-TensorNetwork.operations = {'permute': permute,
-                            'tprod': tprod,
-                            'mul': mul,
-                            'add': add,
-                            'sub': sub,
-                            'split': split,
-                            'contract_edges': contract_edges,
-                            'stack': stack,
-                            'unbind': unbind}
+# TensorNetwork.operations = {'permute': permute,
+#                             'tprod': tprod,
+#                             'mul': mul,
+#                             'add': add,
+#                             'sub': sub,
+#                             'split': split,
+#                             'contract_edges': contract_edges,
+#                             'stack': stack,
+#                             'unbind': unbind}
 # TODO: add einsum, stacked_einsum

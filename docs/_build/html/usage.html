@@ -38,7 +38,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="API Reference" href="api.html" />
-    <link rel="prev" title="&lt;no title&gt;" href="contents.html" />
+    <link rel="prev" title="TensorKrowch documentation" href="index.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -94,6 +94,11 @@
  </span>
 </p>
 <ul class="current nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="index.html">
+   TensorKrowch documentation
+  </a>
+ </li>
  <li class="toctree-l1 current active">
   <a class="current reference internal" href="#">
    Usage
@@ -315,11 +320,12 @@ title="Print to PDF"
 any new class of non-trainable nodes.</p>
 <p>Used for fixed nodes of the network or intermediate,
 derived nodes resulting from operations between other nodes.</p>
+<p>Refer to <a class="reference internal" href="#installation"><span class="std std-ref">install</span></a></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>override_node</strong> (<em>boolean indicating whether the node should override</em>) – a node in the network with the same name (e.g. if we parameterize
-a node, we want to replace it in the network)</p></li>
+a node, we want to replace it in the network). Refer to [<cite>tensor</cite>]</p></li>
 <li><p><strong>param_edges</strong> (<em>boolean indicating whether node's edges are parameterized</em>) – (trainable) or not</p></li>
 <li><p><strong>tensor</strong> (<em>tensor &quot;contained&quot; in the node</em>) – </p></li>
 <li><p><strong>edges</strong> (<em>list of edges to be attached to the node</em>) – </p></li>
@@ -328,17 +334,7 @@ copy and permute)</p></li>
 <li><p><strong>node1_list</strong> (<em>list of node1 boolean values corresponding to each axis</em>) – </p></li>
 <li><p><strong>init_method</strong> (<em>method to use to initialize the node's tensor when it</em>) – is not provided</p></li>
 <li><p><strong>kwargs</strong> (<em>keyword arguments for the init_method</em>) – </p></li>
-<li><p><strong>shape</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><em>int</em><em>, </em><em>Sequence</em><em>[</em><em>int</em><em>]</em><em>, </em><em>torch.Size</em><em>]</em><em>]</em>) – </p></li>
-<li><p><strong>axes_names</strong> (<em>Optional</em><em>[</em><em>Sequence</em><em>[</em><em>str</em><em>]</em><em>]</em>) – </p></li>
-<li><p><strong>name</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – </p></li>
-<li><p><strong>network</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="network_components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><em>TensorNetwork</em></a><em>]</em>) – </p></li>
-<li><p><strong>leaf</strong> (<em>bool</em>) – </p></li>
-<li><p><strong>data</strong> (<em>bool</em>) – </p></li>
-<li><p><strong>virtual</strong> (<em>bool</em>) – </p></li>
 </ul>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -376,11 +372,11 @@ computed if each node has one batch edge that share the same name</p></li>
                 
     <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-    <a class='left-prev' id="prev-link" href="contents.html" title="previous page">
+    <a class='left-prev' id="prev-link" href="index.html" title="previous page">
         <i class="fas fa-angle-left"></i>
         <div class="prev-next-info">
             <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">&lt;no title&gt;</p>
+            <p class="prev-next-title">TensorKrowch documentation</p>
         </div>
     </a>
     <a class='right-next' id="next-link" href="api.html" title="next page">

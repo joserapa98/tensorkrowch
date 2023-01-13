@@ -35,13 +35,19 @@ def tab_string(string: Text, num_tabs: int = 1) -> Text:
     return displaced_string
 
 
-def check_name_style(name: Text) -> bool:
+def check_name_style(name: Text, type: Text = 'axis') -> bool:
     """
     Names can only contain letters, numbers and underscores.
     """
     for char in name:
-        if (not char.isalpha()) and (not char.isnumeric()) and (char != '_'):
-            return True #False
+        if type == 'axis':
+            if (not char.isalpha()) and (not char.isnumeric()) and (char != '_'):
+                return False
+        elif type == 'node':
+            if char == ' ':
+                return False
+        else:
+            raise ValueError('`type` can only be \'axis\' or \'node\'')
     return True
 
 

@@ -1,12 +1,19 @@
 Network Components
 ==================
 
+Axis Class
+----------
+
+.. autoclass:: tensorkrowch.Axis
+    :members:
+
 Node Class
 ----------
 
 .. autoclass:: tensorkrowch.Node
     :inherited-members:
     :members:
+    :noindex:
 
 .. autoclass:: tensorkrowch.ParamNode
     :inherited-members:

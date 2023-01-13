@@ -94,6 +94,11 @@
 </p>
 <ul class="current nav bd-sidenav">
  <li class="toctree-l1">
+  <a class="reference internal" href="index.html">
+   TensorKrowch documentation
+  </a>
+ </li>
+ <li class="toctree-l1">
   <a class="reference internal" href="usage.html">
    Usage
   </a>
@@ -340,8 +345,16 @@ title="Print to PDF"
 <h2>Tensor Operations<a class="headerlink" href="#tensor-operations" title="Permalink to this headline">#</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.permute">
-<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">permute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.permute" title="Permalink to this definition">#</a></dt>
-<dd></dd></dl>
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">permute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/node_operations.html#permute"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.permute" title="Permalink to this definition">#</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>node</strong> (<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a>) – node to which we apply permute</p></li>
+<li><p><strong>axes</strong> (<em>List</em><em>[</em><a class="reference internal" href="network_components.html#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em>) – list of axes to permute</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.split">
@@ -361,18 +374,6 @@ title="Print to PDF"
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">contract_between</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/node_operations.html#contract_between"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.contract_between" title="Permalink to this definition">#</a></dt>
 <dd><p>Contract all shared edges between two nodes, also performing batch contraction
 between batch edges that share name in both nodes</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>node1</strong> (<em>tensorkrowch.network_components.AbstractNode</em>) – </p></li>
-<li><p><strong>node2</strong> (<em>tensorkrowch.network_components.AbstractNode</em>) – </p></li>
-<li><p><strong>axes</strong> (<em>Optional</em><em>[</em><em>Sequence</em><em>[</em><em>Union</em><em>[</em><em>int</em><em>, </em><em>str</em><em>, </em><em>tensorkrowch.network_components.Axis</em><em>]</em><em>]</em><em>]</em>) – </p></li>
-</ul>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.network_components.Node">tensorkrowch.network_components.Node</a></p>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py function">

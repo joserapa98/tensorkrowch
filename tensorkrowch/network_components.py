@@ -20,25 +20,22 @@ This script contains:
         *TensorNetwork
 """
 
-from typing import (overload, Union, Optional, Dict,
-                    Sequence, Text, List, Tuple, Any)
-from abc import ABC, abstractmethod
-import warnings
+from abc import abstractmethod, ABC
 import copy
+from typing import (overload,
+                    Any, Dict, List, Optional,
+                    Sequence, Text, Tuple, Union)
+import warnings
 
 import torch
 import torch.nn as nn
 from torch import Tensor, Size
 from torch.nn import Parameter
 
-from tensorkrowch.utils import (print_list, tab_string, check_name_style,
-                                erase_enum, enum_repeated_names,
+from tensorkrowch.utils import (print_list, tab_string,
+                                check_name_style, erase_enum,
+                                enum_repeated_names,
                                 stack_unequal_tensors)
-
-
-# Tensor = torch.Tensor
-# Parameter = nn.Parameter
-# Size = torch.Size
 
 
 ################################################
@@ -46,22 +43,22 @@ from tensorkrowch.utils import (print_list, tab_string, check_name_style,
 ################################################
 class Axis:
     """
-    Class for axes. An axis can be denoted by a number or a name.
+    The axes are the objects where edges are connected to 
     
-    Create an axis for a node.
+    Class for axes. An axis can be denoted by a number or a name.
 
     Parameters
     ----------
-    num: index in the node's axes list
-    name: axis name
-    node: node to which the axis belongs
-    node1: boolean indicating whether `node1` of the edge
+    num: int
+        index in the node's axes list
+    name: str
+        axis name
+    node: Node or ParamNode
+        node to which the axis belongs
+    node1: bool
+        boolean indicating whether `node1` of the edge
         attached to this axis is the node that contains
-        the axis. If False, node is `node2` of the edge
-
-    Raises
-    ------
-    TypeError
+        the axis. Otherwise, the node is `node2` of the edge
     """
 
     def __init__(self,
@@ -76,8 +73,9 @@ class Axis:
 
         if not isinstance(name, str):
             raise TypeError('`name` should be str type')
-        if not check_name_style(name):
-            raise ValueError('Names can only contain letters, numbers and underscores')
+        if not check_name_style(name, 'axis'):
+            raise ValueError(
+                'Names can only contain letters, numbers and underscores')
 
         if node is not None:
             if not isinstance(node, AbstractNode):
@@ -85,7 +83,7 @@ class Axis:
 
         if not isinstance(node1, bool):
             raise TypeError('`node1` should be bool type')
-        
+
         # Check name
         if 'stack' in name:
             if not isinstance(node, (StackNode, ParamStackNode)):
@@ -107,32 +105,36 @@ class Axis:
     # properties
     @property
     def num(self) -> int:
+        """Returns the index in the node's axes list"""
         return self._num
 
     @property
     def name(self) -> Text:
+        """Returns axis name, used to access edges by name of the axis"""
         return self._name
 
     @name.setter
     def name(self, name: Text) -> None:
         """
-        Set axis name. Should not contain blank spaces
+        Set axis name. Should not contain blank spaces or special characters
         since it is intended to be used as name of submodules.
         """
         if not isinstance(name, str):
             raise TypeError('`name` should be str type')
-        if not check_name_style(name):
-            raise ValueError('Names can only contain letters, numbers and underscores')
+        if not check_name_style(name, 'axis'):
+            raise ValueError(
+                'Names can only contain letters, numbers and underscores')
         if self._name == 'stack':
             raise ValueError('Name \'stack\' of stack edge cannot be changed')
         if 'stack' in name:
-            raise ValueError('Name \'stack\' is reserved for stack edges of StackNodes')
-        
+            raise ValueError(
+                'Name \'stack\' is reserved for stack edges of StackNodes')
+
         if self._batch and not ('batch' in name or 'stack' in name):
             self._batch = False
         elif not self._batch and ('batch' in name or 'stack' in name):
             self._batch = True
-        
+
         if self._node is not None:
             self._node._change_axis_name(self, name)
         else:
@@ -140,13 +142,24 @@ class Axis:
 
     @property
     def node(self) -> 'AbstractNode':
+        """Returns node to which the axis belongs"""
         return self._node
 
     # methods
     def is_node1(self) -> bool:
+        """
+        Returns `node1` attribute, a boolean indicating whether
+        `node1` of the edge attached to this axis is the node
+        that contains the axis. Otherwise, the node is `node2`
+        of the edge
+        """
         return self._node1
 
     def is_batch(self) -> bool:
+        """
+        Returns `batch` attribute, a boolean indicating whether
+        the edge in this axis is used as a batch edge
+        """
         return self._batch
 
     def __int__(self) -> int:
@@ -173,7 +186,7 @@ class AbstractNode(ABC):
     A node is the minimum element in a tensor network. It is
     made up of a tensor and edges that can be connected to
     other nodes.
-    
+
     Create a node. Should be subclassed before usage and
     a limited number of abstract methods overridden.
 
@@ -208,7 +221,8 @@ class AbstractNode(ABC):
         # check shape
         if shape is not None:
             if not isinstance(shape, (int, tuple, list, Size)):
-                raise TypeError('`shape` should be int, tuple[int, ...], list[int, ...] or Size type')
+                raise TypeError(
+                    '`shape` should be int, tuple[int, ...], list[int, ...] or Size type')
             if isinstance(shape, (tuple, list)):
                 for i in shape:
                     if not isinstance(i, int):
@@ -220,9 +234,11 @@ class AbstractNode(ABC):
                     for i, _ in enumerate(shape)]
         else:
             if not isinstance(axes_names, (tuple, list)):
-                raise TypeError('`axes_names` should be tuple[str, ...] or list[str, ...] type')
+                raise TypeError(
+                    '`axes_names` should be tuple[str, ...] or list[str, ...] type')
             if len(axes_names) != len(shape):
-                raise ValueError('`axes_names` length should match `shape` length')
+                raise ValueError(
+                    '`axes_names` length should match `shape` length')
             else:
                 axes_names = enum_repeated_names(axes_names)
                 axes = [Axis(num=i, name=name, node=self)
@@ -233,8 +249,9 @@ class AbstractNode(ABC):
             name = self.__class__.__name__.lower()
         elif not isinstance(name, str):
             raise TypeError('`name` should be str type')
-        elif not check_name_style(name):
-            raise ValueError('Names can only contain letters, numbers and underscores')
+        elif not check_name_style(name, 'node'):
+            raise ValueError(
+                'Names can only contain letters, numbers and underscores')
 
         # check network
         if network is not None:
@@ -242,10 +259,11 @@ class AbstractNode(ABC):
                 raise TypeError('`network` should be TensorNetwork type')
         else:
             network = TensorNetwork()
-            
+
         # check leaf and data
         if data and virtual:
-            raise ValueError('`data` and `virtual` arguments cannot be both True')
+            raise ValueError(
+                '`data` and `virtual` arguments cannot be both True')
         elif data or virtual:
             leaf = False
 
@@ -267,32 +285,33 @@ class AbstractNode(ABC):
     # ----------
     @property
     def tensor(self) -> Union[torch.Tensor, Parameter]:
-        if (self._temp_tensor is not None ) or (self._tensor_info is None):
+        if (self._temp_tensor is not None) or (self._tensor_info is None):
             result = self._temp_tensor
             return result
-        
+
         address = self._tensor_info['address']
         node_ref = self._tensor_info['node_ref']
         full = self._tensor_info['full']
-        stack_idx = self._tensor_info['stack_idx']  # TODO: do i use stack_idx for anything??
+        # TODO: do i use stack_idx for anything??
+        stack_idx = self._tensor_info['stack_idx']
         index = self._tensor_info['index']
-        
+
         if address is None:
             node = node_ref
             address = node_ref._tensor_info['address']
         else:
             node = self
-        
-        result = self._network._memory_nodes[address]             
+
+        result = self._network._memory_nodes[address]
         if self._network.unbind_mode:
             condition = full or self.name.startswith('unbind')
         else:
             condition = full
-            
+
         if condition or (result is None):
             return result
         # TODO: 'index'
-        #return result[stack_idx]
+        # return result[stack_idx]
         return result[index]
 
     @tensor.setter
@@ -337,8 +356,9 @@ class AbstractNode(ABC):
     def name(self, name: Text) -> None:
         if not isinstance(name, str):
             raise TypeError('`name` should be str type')
-        elif not check_name_style(name):
-            raise ValueError('Names can only contain letters, numbers and underscores')
+        elif not check_name_style(name, 'node'):
+            raise ValueError(
+                'Names can only contain letters, numbers and underscores')
         self._network._change_node_name(self, name)
 
     @property
@@ -348,7 +368,7 @@ class AbstractNode(ABC):
     @network.setter
     def network(self, network: 'TensorNetwork') -> None:
         self.move_to_network(network)
-        
+
     @property
     def successors(self) -> Dict[Text, 'Successor']:
         """
@@ -388,13 +408,13 @@ class AbstractNode(ABC):
     # -------
     def is_leaf(self) -> bool:
         return self._leaf
-    
+
     def is_data(self) -> bool:
         return self._data
-    
+
     def is_virtual(self) -> bool:
         return self._virtual
-    
+
     def is_non_leaf(self) -> bool:
         return not (self._leaf or self._data or self._virtual)
 
@@ -466,20 +486,21 @@ class AbstractNode(ABC):
         if size <= 0:
             raise ValueError('new `size` should be greater than zero')
         axis_num = self.get_axis_num(axis)
-          
+
         tensor = self.tensor
         if tensor is None:
             aux_shape = list(self.shape)
             aux_shape[axis_num] = size
             self._shape = tuple(aux_shape)
-        
-        else:  
+
+        else:
             if size < self.shape[axis_num]:
                 index = []
                 for i, dim in enumerate(self.shape):
                     if i == axis_num:
                         if size > dim:
-                            index.append(slice(size - dim, size)) # TODO: aqui no se entra
+                            # TODO: aqui no se entra
+                            index.append(slice(size - dim, size))
                         else:
                             index.append(slice(dim - size, dim))
                     else:
@@ -529,17 +550,17 @@ class AbstractNode(ABC):
     def get_axis(self, axis: Ax) -> 'AbstractEdge':
         axis_num = self.get_axis_num(axis)
         return self._axes[axis_num]
-    
+
     def get_edge(self, axis: Ax) -> 'AbstractEdge':
         axis_num = self.get_axis_num(axis)
         return self._edges[axis_num]
-    
+
     def in_which_axis(self, edge: 'AbstractEdge') -> Axis:
         lst = []
         for ax, ed in zip(self._axes, self._edges):
             if ed == edge:
                 lst.append(ax)
-        
+
         if len(lst) == 0:
             raise ValueError(f'Edge {edge} not in node {self}')
         elif len(lst) == 1:
@@ -604,7 +625,8 @@ class AbstractNode(ABC):
                 if not sizes:
                     sizes = self.shape
                 elif len(sizes) != len(self._edges):
-                    raise ValueError('`sizes` length should match the number of node\'s axes')
+                    raise ValueError(
+                        '`sizes` length should match the number of node\'s axes')
                 for i, edge in enumerate(self._edges):
                     edge.parameterize(True, size=sizes[i])
             else:
@@ -633,10 +655,10 @@ class AbstractNode(ABC):
                 # node has different edges than the new one
                 new_edge = edge.copy()
                 self._edges[i] = new_edge
-                
+
                 new_edge._nodes[1 - node1] = self
                 new_edge._axes[1 - node1] = self._axes[i]
-                
+
                 other_node = new_edge._nodes[node1]
                 if other_node == node:
                     for j, other_edge in enumerate(self._edges):
@@ -644,10 +666,11 @@ class AbstractNode(ABC):
                             self._edges[j] = new_edge
                             new_edge._nodes[node1] = self
                             new_edge._axes[node1] = self._axes[j]
-                
+
                 if override:
                     if not new_edge.is_dangling() and (other_node != node):
-                        other_node._add_edge(new_edge, new_edge._axes[node1], not node1)
+                        other_node._add_edge(
+                            new_edge, new_edge._axes[node1], not node1)
 
     def disconnect(self, axis: Optional[Ax] = None) -> None:
         """
@@ -736,13 +759,13 @@ class AbstractNode(ABC):
                     return False
             return True
         return False
-    
+
     def _crop_tensor(self, tensor: Tensor, allow_diff_shape: bool = False) -> Tensor:
         if len(tensor.shape) == self.rank:
             index = []
             for i, dim in enumerate(tensor.shape):
                 edge = self.get_edge(i)
-                
+
                 if edge.is_batch() or (dim == edge.size()) or allow_diff_shape:
                     index.append(slice(0, dim))
                 elif dim > edge.size():
@@ -751,9 +774,9 @@ class AbstractNode(ABC):
                     # TODO: or padding with zeros?
                     raise ValueError('Cannot crop tensor if its dimensions'
                                      ' are smaller than node\'s dimensions')
-                    
+
             return tensor[index]
-            
+
         else:
             raise ValueError('`tensor` should have the same number of'
                              ' dimensions as node\'s tensor (same rank)')
@@ -796,7 +819,8 @@ class AbstractNode(ABC):
             node_tensor = self.tensor
             if (device is None) and (node_tensor is not None):
                 device = node_tensor.device
-            tensor = self.make_tensor(init_method=init_method, device=device, **kwargs)
+            tensor = self.make_tensor(
+                init_method=init_method, device=device, **kwargs)
             correct_format_tensor = self._set_tensor_format(tensor)
 
         else:
@@ -805,8 +829,9 @@ class AbstractNode(ABC):
 
         self._save_in_network(correct_format_tensor)
         # print('Save in network:', time.time() - start)
-        
-        self._shape = tensor.shape  # NOTE: new! to save shape instead of having to access the tensor each time
+
+        # NOTE: new! to save shape instead of having to access the tensor each time
+        self._shape = tensor.shape
 
     def set_tensor(self,
                    tensor: Optional[Tensor] = None,
@@ -818,8 +843,9 @@ class AbstractNode(ABC):
         """
         # TODO: pensar bien cu'ando permito hacer set y unset
         if self._leaf and not self._network._automemory:
-            self._unrestricted_set_tensor(tensor=tensor, init_method=init_method, device=device, **kwargs)
-            
+            self._unrestricted_set_tensor(
+                tensor=tensor, init_method=init_method, device=device, **kwargs)
+
             for edge, size in zip(self._edges, self._shape):
                 edge._size = size
         else:
@@ -853,7 +879,8 @@ class AbstractNode(ABC):
         if stack_idx is not None:
             self._tensor_info['stack_idx'] = stack_idx
         if index is not None:
-            self._tensor_info['index'] = index  # TODO: y creo que nunca uso index
+            # TODO: y creo que nunca uso index
+            self._tensor_info['index'] = index
 
     def _save_in_network(self, tensor: Union[Tensor, Parameter]) -> None:
         """
@@ -862,44 +889,46 @@ class AbstractNode(ABC):
         self._network._memory_nodes[self._tensor_info['address']] = tensor
         if isinstance(tensor, Parameter):
             if not hasattr(self, 'param_' + self._tensor_info['address']):
-                self._network.register_parameter('param_' + self._tensor_info['address'], tensor)
+                self._network.register_parameter(
+                    'param_' + self._tensor_info['address'], tensor)
             else:
-                raise ValueError(f'Network already has attribute named {self._tensor_info["address"]}')
-            
+                raise ValueError(
+                    f'Network already has attribute named {self._tensor_info["address"]}')
+
     def _record_in_inverse_memory(self):
         node_ref = self
         address = self._tensor_info['address']
         while address is None:
             node_ref = node_ref._tensor_info['node_ref']
             address = node_ref._tensor_info['address']
-            
+
         if node_ref != self:
             check_nodes = [self, node_ref]
         else:
             check_nodes = [self]
-        
+
         net = self._network
         if net._tracing:
             if address in net._inverse_memory:
                 if net._inverse_memory[address]['erase']:
                     net._inverse_memory[address]['accessed'] += 1
-                    
+
                     erase = True
                     for node in check_nodes:
                         erase &= node.is_non_leaf() or \
-                                 node.is_data() or \
-                                 (node.is_virtual() and \
-                                    node.name == 'stack_data_memory')
-                                 
+                            node.is_data() or \
+                            (node.is_virtual() and
+                             node.name == 'stack_data_memory')
+
                     net._inverse_memory[address]['erase'] &= erase
             else:
                 erase = True
                 for node in check_nodes:
                     erase &= node.is_non_leaf() or \
-                                node.is_data() or \
-                                (node.is_virtual() and \
-                                    node.name == 'stack_data_memory')
-                                
+                        node.is_data() or \
+                        (node.is_virtual() and
+                         node.name == 'stack_data_memory')
+
                 net._inverse_memory[address] = {
                     'accessed': 1,
                     're-accessed': 0,
@@ -908,7 +937,7 @@ class AbstractNode(ABC):
             if address in net._inverse_memory:
                 net._inverse_memory[address]['re-accessed'] += 1
                 aux_dict = net._inverse_memory[address]
-                
+
                 if aux_dict['accessed'] == aux_dict['re-accessed']:
                     if aux_dict['erase']:
                         self._network._memory_nodes[address] = None
@@ -1001,11 +1030,13 @@ class Node(AbstractNode):
     Used for fixed nodes of the network or intermediate,
     derived nodes resulting from operations between other nodes.
     
+    Refer to :ref:`install <installation>`
+
     Parameters
     ----------
     override_node: boolean indicating whether the node should override
         a node in the network with the same name (e.g. if we parameterize
-        a node, we want to replace it in the network)
+        a node, we want to replace it in the network). Refer to [`tensor`]
     param_edges: boolean indicating whether node's edges are parameterized
         (trainable) or not
     tensor: tensor "contained" in the node
@@ -1067,15 +1098,16 @@ class Node(AbstractNode):
             self._edges = [self.make_edge(ax, param_edges) for ax in self.axes]
         else:
             if node1_list is None:
-                raise ValueError('If `edges` are provided, `node1_list` should also be provided')
+                raise ValueError(
+                    'If `edges` are provided, `node1_list` should also be provided')
             for i, axis in enumerate(self.axes):
                 if not isinstance(node1_list[i], bool):
                     raise TypeError('`node1_list` should be List[bool] type')
                 axis._node1 = node1_list[i]
             self._edges = edges[:]
-            if self._leaf:# and not self._network._automemory:
+            if self._leaf:  # and not self._network._automemory:
                 # TODO: parameterize, permute, copy, etc.
-                self._reattach_edges(override=override_edges) 
+                self._reattach_edges(override=override_edges)
                 # TODO: no se para que puse eso, no es bueno,
                 # cuando hago permute en MPs contract, acabo aqu'i, y
                 # creo nuevos edges malos en lugar de los que quer'ia usar
@@ -1085,7 +1117,8 @@ class Node(AbstractNode):
 
         if shape is not None:
             if init_method is not None:
-                self._unrestricted_set_tensor(init_method=init_method, **kwargs)
+                self._unrestricted_set_tensor(
+                    init_method=init_method, **kwargs)
         else:
             self._unrestricted_set_tensor(tensor=tensor)
 
@@ -1151,7 +1184,7 @@ class ParamNode(AbstractNode):
     Should be subclassed by any new class of trainable nodes.
 
     Used as initial nodes of a tensor network that is to be trained.
-    
+
     Parameters
     ----------
     override_node: boolean indicating whether the node should override
@@ -1186,14 +1219,15 @@ class ParamNode(AbstractNode):
                  node1_list: Optional[List[bool]] = None,
                  init_method: Optional[Text] = None,
                  **kwargs: float) -> None:
-        
-        # data 
+
+        # data
         if data:
             raise ValueError('ParamNode cannot be a data node')
-        
+
         # leaf
         if not leaf:
-            raise ValueError('ParamNode is always a leaf node. Cannot set leaf to False')
+            raise ValueError(
+                'ParamNode is always a leaf node. Cannot set leaf to False')
 
         # shape and tensor
         if (shape is None) == (tensor is None):
@@ -1228,21 +1262,24 @@ class ParamNode(AbstractNode):
             self._edges = [self.make_edge(ax, param_edges) for ax in self.axes]
         else:
             if node1_list is None:
-                raise ValueError('If `edges` are provided, `node1_list` should also be provided')
+                raise ValueError(
+                    'If `edges` are provided, `node1_list` should also be provided')
             for i, axis in enumerate(self.axes):
                 if not isinstance(node1_list[i], bool):
                     raise TypeError('`node1_list` should be List[bool] type')
                 axis._node1 = node1_list[i]
             self._edges = edges[:]
-            if self._leaf:# and not self._network._automemory:
-                self._reattach_edges(override=override_edges)  # TODO: no estoy seguro que haya que hacerlo siempre
+            if self._leaf:  # and not self._network._automemory:
+                # TODO: no estoy seguro que haya que hacerlo siempre
+                self._reattach_edges(override=override_edges)
 
         # network
         self._network._add_node(self, override=override_node)
 
         if shape is not None:
             if init_method is not None:
-                self._unrestricted_set_tensor(init_method=init_method, **kwargs)
+                self._unrestricted_set_tensor(
+                    init_method=init_method, **kwargs)
         else:
             self._unrestricted_set_tensor(tensor=tensor)
 
@@ -1256,10 +1293,10 @@ class ParamNode(AbstractNode):
             tensor = aux_node._network._memory_nodes[aux_node._tensor_info['address']]
         else:
             tensor = self._network._memory_nodes[self._tensor_info['address']]
-            
+
         if tensor is None:
             return
-        
+
         aux_grad = tensor.grad
         if aux_grad is None:
             return aux_grad
@@ -1329,7 +1366,7 @@ class AbstractEdge(ABC):
     Abstract class for edges. Should be subclassed.
 
     An edge is just a wrap up of references to the nodes it connects.
-    
+
     Create an edge. Should be subclassed before usage and
     a limited number of abstract methods overridden.
 
@@ -1344,7 +1381,7 @@ class AbstractEdge(ABC):
     ------
     ValueError
     TypeError
-        
+
     """
 
     def __init__(self,
@@ -1365,7 +1402,8 @@ class AbstractEdge(ABC):
 
         # check node2 and axis2
         if (node2 is None) != (axis2 is None):
-            raise ValueError('`node2` and `axis2` must either be both None or both not be None')
+            raise ValueError(
+                '`node2` and `axis2` must either be both None or both not be None')
         if node2 is not None:
             if not isinstance(node2, AbstractNode):
                 raise TypeError('`node2` should be AbstractNode type')
@@ -1373,11 +1411,12 @@ class AbstractEdge(ABC):
                 raise TypeError('`axis2` should be int, str or Axis type')
             if not isinstance(axis2, Axis):
                 axis2 = node2.get_axis(axis2)
-            
+
             if node1.shape[axis1.num] != node2.shape[axis2.num]:
                 raise ValueError('Sizes of `axis1` and `axis2` should match')
             if (node2 == node1) and (axis2 == axis1):
-                raise ValueError('Cannot connect the same axis of the same node to itself')
+                raise ValueError(
+                    'Cannot connect the same axis of the same node to itself')
 
         self._nodes = [node1, node2]
         self._axes = [axis1, axis2]
@@ -1470,9 +1509,9 @@ class AbstractEdge(ABC):
         return self._size
 
     def svd_aux(self,
-            side = 'left',
-            rank: Optional[int] = None,
-            cum_percentage: Optional[float] = None) -> None:
+                side='left',
+                rank: Optional[int] = None,
+                cum_percentage: Optional[float] = None) -> None:
         # TODO: problema del futuro xd
         contracted_node = self.contract()
 
@@ -1508,9 +1547,12 @@ class AbstractEdge(ABC):
 
         if cum_percentage is not None:
             if rank is not None:
-                raise ValueError('Only one of `rank` and `cum_percentage` should be provided')
-            percentages = s.cumsum(-1) / s.sum(-1).view(*s.shape[:-1], 1).expand(s.shape)
-            cum_percentage_tensor = torch.tensor(cum_percentage).repeat(percentages.shape[:-1])
+                raise ValueError(
+                    'Only one of `rank` and `cum_percentage` should be provided')
+            percentages = s.cumsum(-1) / s.sum(-1).view(*
+                                                        s.shape[:-1], 1).expand(s.shape)
+            cum_percentage_tensor = torch.tensor(
+                cum_percentage).repeat(percentages.shape[:-1])
             rank = 0
             for i in range(percentages.shape[-1]):
                 p = percentages[..., i]
@@ -1519,7 +1561,8 @@ class AbstractEdge(ABC):
                     break
 
         if rank is None:
-            raise ValueError('One of `rank` and `cum_percentage` should be provided')
+            raise ValueError(
+                'One of `rank` and `cum_percentage` should be provided')
         if rank <= len(s):
             u = u[..., :rank]
             s = s[..., :rank]
@@ -1580,11 +1623,11 @@ class AbstractEdge(ABC):
         for node in self._nodes:
             node._successors = dict()
         net.delete_node(contracted_node, False)
-        
+
         self.change_size(rank)
         self.node1.tensor = u
         self.node2.tensor = vh
-        
+
     def __xor__(self, other: 'AbstractEdge') -> 'AbstractEdge':
         return self.connect(other)
 
@@ -1686,7 +1729,7 @@ class ParamEdge(AbstractEdge, nn.Module):
 
         nn.Module.__init__(self)
         AbstractEdge.__init__(self, node1, axis1, node2, axis2)
-        
+
         axis1, axis2 = self._axes[0], self._axes[1]
 
         # check batch
@@ -1795,7 +1838,8 @@ class ParamEdge(AbstractEdge, nn.Module):
                 self._shift = shift
                 self._prev_shift = shift.item()
             else:
-                raise TypeError('`shift` should be int, float or Parameter type')
+                raise TypeError(
+                    '`shift` should be int, float or Parameter type')
         if slope is not None:
             if isinstance(slope, int):
                 slope = float(slope)
@@ -1809,7 +1853,8 @@ class ParamEdge(AbstractEdge, nn.Module):
                 self._slope = slope
                 self._prev_slope = slope.item()
             else:
-                raise TypeError('`slope` should be int, float or Parameter type')
+                raise TypeError(
+                    '`slope` should be int, float or Parameter type')
         self.set_matrix()
 
     def is_updated(self) -> bool:  # TODO: creo que esto no sirve para nada, lo podemos borrar
@@ -1832,7 +1877,8 @@ class ParamEdge(AbstractEdge, nn.Module):
         positions of the diagonal (dimension is equal to number of 1's, while
         size is equal to the matrix size)
         """
-        matrix = torch.zeros((self.size(), self.size()), device=self.shift.device)
+        matrix = torch.zeros((self.size(), self.size()),
+                             device=self.shift.device)
         i = torch.arange(self.size(), device=self.shift.device)
         matrix[(i, i)] = self.sigmoid(self.slope * (i - self.shift))
         return matrix
@@ -1846,7 +1892,8 @@ class ParamEdge(AbstractEdge, nn.Module):
         dim = int(torch.where(signs == 1,
                               signs, torch.zeros_like(signs)).sum())
         if dim <= 0:
-            warnings.warn(f'Dimension of edge {self!r} is not greater than zero')
+            warnings.warn(
+                f'Dimension of edge {self!r} is not greater than zero')
         self._dim = dim
 
     def dim(self) -> int:
@@ -1863,10 +1910,10 @@ class ParamEdge(AbstractEdge, nn.Module):
         self._size = size
         shift, slope = self.compute_parameters(size, min(size, self.dim()))
         device = self._shift.device
-        
+
         self.set_parameters(shift, slope)
         self.to(device)
-        
+
         if not self.is_dangling():
             self.node2._change_axis_size(self.axis2, size)
         self.node1._change_axis_size(self.axis1, size)
@@ -1921,7 +1968,7 @@ class StackNode(Node):
     """
     Class for stacked nodes. This is a node that stores the information
     of a list of nodes that are stacked in order to perform some operation
-    """         
+    """
 
     def __init__(self,
                  nodes: Optional[Sequence[AbstractNode]] = None,
@@ -1934,25 +1981,29 @@ class StackNode(Node):
                  node1_list: Optional[List[bool]] = None) -> None:
 
         if nodes is not None:
-            
+
             if not isinstance(nodes, (list, tuple)):
                 raise TypeError('`nodes` should be a list or tuple of nodes')
-            
+
             for node in nodes:
                 if isinstance(node, (StackNode, ParamStackNode)):
-                    raise TypeError('Cannot create a stack using (Param)StackNode\'s')
-            
+                    raise TypeError(
+                        'Cannot create a stack using (Param)StackNode\'s')
+
             # TODO: Y en la misma TN todos
             for i in range(len(nodes[:-1])):
                 if not isinstance(nodes[i], type(nodes[i + 1])):
                     raise TypeError('Cannot stack nodes of different types. Nodes '
                                     'must be either all Node or all ParamNode type')
                 if nodes[i].rank != nodes[i + 1].rank:
-                    raise ValueError('Cannot stack nodes with different number of edges')
+                    raise ValueError(
+                        'Cannot stack nodes with different number of edges')
                 if nodes[i].axes_names != nodes[i + 1].axes_names:
-                    raise ValueError('Stacked nodes must have the same name for each axis')
+                    raise ValueError(
+                        'Stacked nodes must have the same name for each axis')
                 if nodes[i].network != nodes[i + 1].network:
-                    raise ValueError('Stacked nodes must all be in the same network')
+                    raise ValueError(
+                        'Stacked nodes must all be in the same network')
                 for edge1, edge2 in zip(nodes[i].edges, nodes[i + 1].edges):
                     if not isinstance(edge1, type(edge2)):
                         raise TypeError('Cannot stack nodes with edges of different types. '
@@ -1977,37 +2028,42 @@ class StackNode(Node):
 
             # stacked_tensor = torch.stack([node.tensor for node in nodes])
             if tensor is None:
-                tensor = stack_unequal_tensors([node.tensor for node in nodes])  # TODO: not sure if this is necessary
+                # TODO: not sure if this is necessary
+                tensor = stack_unequal_tensors([node.tensor for node in nodes])
             super().__init__(axes_names=['stack'] + nodes[0].axes_names,
                              name=name,
                              network=nodes[0]._network,
                              leaf=False,
                              override_node=override_node,
                              tensor=tensor)
-            
+
         else:
             if axes_names is None:
-                raise ValueError('If `nodes` are not provided, `axes_names` must be given')
+                raise ValueError(
+                    'If `nodes` are not provided, `axes_names` must be given')
             if network is None:
-                raise ValueError('If `nodes` are not provided, `network` must be given')
+                raise ValueError(
+                    'If `nodes` are not provided, `network` must be given')
             if tensor is None:
-                raise ValueError('If `nodes` are not provided, `tensor` must be given')
+                raise ValueError(
+                    'If `nodes` are not provided, `tensor` must be given')
             if edges is None:
-                raise ValueError('If `nodes` are not provided, `edges` must be given')
+                raise ValueError(
+                    'If `nodes` are not provided, `edges` must be given')
             if node1_list is None:
-                raise ValueError('If `nodes` are not provided, `node1_list` must be given')
-            
-            
+                raise ValueError(
+                    'If `nodes` are not provided, `node1_list` must be given')
+
             edges_dict = dict()
             node1_lists_dict = dict()
             for axis_name, edge in zip(axes_names[1:], edges[1:]):
                 edges_dict[axis_name] = edge.edges
                 node1_lists_dict[axis_name] = edge.node1_lists
-                        
+
             self._edges_dict = edges_dict
             self._node1_lists_dict = node1_lists_dict
             # self.nodes = nodes
-            
+
             super().__init__(axes_names=axes_names,
                              name=name,
                              network=network,
@@ -2016,7 +2072,6 @@ class StackNode(Node):
                              tensor=tensor,
                              edges=edges,
                              node1_list=node1_list)
-            
 
     @property
     def edges_dict(self) -> Dict[Text, List[AbstractEdge]]:
@@ -2077,10 +2132,11 @@ class ParamStackNode(ParamNode):
 
         if not isinstance(nodes, (list, tuple)):
             raise TypeError('`nodes` should be a list or tuple of nodes')
-        
+
         for node in nodes:
             if isinstance(node, (StackNode, ParamStackNode)):
-                raise TypeError('Cannot create a stack using (Param)StackNode\'s')
+                raise TypeError(
+                    'Cannot create a stack using (Param)StackNode\'s')
 
         # TODO: Y en la misma TN todos
         for i in range(len(nodes[:-1])):
@@ -2088,11 +2144,14 @@ class ParamStackNode(ParamNode):
                 raise TypeError('Cannot stack nodes of different types. Nodes '
                                 'must be either all Node or all ParamNode type')
             if nodes[i].rank != nodes[i + 1].rank:
-                    raise ValueError('Cannot stack nodes with different number of edges')
+                raise ValueError(
+                    'Cannot stack nodes with different number of edges')
             if nodes[i].axes_names != nodes[i + 1].axes_names:
-                raise ValueError('Stacked nodes must have the same name for each axis')
+                raise ValueError(
+                    'Stacked nodes must have the same name for each axis')
             if nodes[i].network != nodes[i + 1].network:
-                    raise ValueError('Stacked nodes must all be in the same network')
+                raise ValueError(
+                    'Stacked nodes must all be in the same network')
             for edge1, edge2 in zip(nodes[i].edges, nodes[i + 1].edges):
                 if not isinstance(edge1, type(edge2)):
                     raise TypeError('Cannot stack nodes with edges of different types. '
@@ -2122,7 +2181,7 @@ class ParamStackNode(ParamNode):
                          name=name,
                          network=nodes[0]._network,
                          virtual=virtual,
-                        #  leaf=False,
+                         #  leaf=False,
                          override_node=override_node,
                          tensor=tensor)
 
@@ -2212,8 +2271,8 @@ class ParamStackEdge(AbstractStackEdge, ParamEdge):
         self._node1_lists = node1_lists
         ParamEdge.__init__(self,
                            node1=node1, axis1=axis1,
-                        #    shift=self._edges[0].shift,
-                        #    slope=self._edges[0].slope,
+                           #    shift=self._edges[0].shift,
+                           #    slope=self._edges[0].slope,
                            node2=node2, axis2=axis2)
 
     @property
@@ -2223,14 +2282,14 @@ class ParamStackEdge(AbstractStackEdge, ParamEdge):
     @property
     def node1_lists(self) -> List[bool]:
         return self._node1_lists
-    
+
     @property
     def matrix(self) -> Tensor:
         mats = []
         for edge in self.edges:
             mats.append(edge.matrix)
         stacked_mats = stack_unequal_tensors(mats)
-        
+
         # When stacking nodes that were previously stacked, and the memory of
         # the current stack makes reference to the previous one with, possibly,
         # a different size, the stacked_mats could have a size that is smaller
@@ -2239,7 +2298,7 @@ class ParamStackEdge(AbstractStackEdge, ParamEdge):
             pad = [self._size - stacked_mats.shape[-1], 0,
                    self._size - stacked_mats.shape[-2], 0]
             stacked_mats = nn.functional.pad(stacked_mats, pad)
-            
+
         return stacked_mats
 
     def __xor__(self, other: 'ParamStackEdge') -> ParamEdge:
@@ -2256,7 +2315,7 @@ class Successor:
     Class for successors. Object that stores information about
     the already computed operations in the network, in order to
     compute them faster next time.
-    
+
     Parameters
     ----------
     kwargs: keyword arguments used in the operation
@@ -2287,6 +2346,8 @@ class TensorNetwork(nn.Module):
     and perform site-wise contractions, even though network contraction
     methods are not implemented. Useful for experimentation.
     """
+    
+    operations = dict()
 
     def __init__(self, name: Optional[Text] = None):
         super().__init__()
@@ -2299,20 +2360,21 @@ class TensorNetwork(nn.Module):
         self._data_nodes = dict()
         self._virtual_nodes = dict()
         self._non_leaf_nodes = dict()
-        
+
         self._repeated_nodes_names = dict()
-        
+
         self._memory_nodes = dict()   # address -> memory
-        self._inverse_memory = dict() # address -> nodes using that memory
+        self._inverse_memory = dict()  # address -> nodes using that memory
 
         self._data_nodes = dict()
         # self._memory_data_nodes = None
 
         self._edges = []
-        
+
         # TODO: poder pasar esto como parametros
-        self._automemory = False  # Flag to indicate whether the TN has optimized memory to perform contraction
-        self._unbind_mode = True # True if training, False if not training
+        # Flag to indicate whether the TN has optimized memory to perform contraction
+        self._automemory = False
+        self._unbind_mode = True  # True if training, False if not training
         self._tracing = False
 
         self._list_ops = []
@@ -2337,7 +2399,7 @@ class TensorNetwork(nn.Module):
         al_nodes_names += list(self._virtual_nodes.keys())
         al_nodes_names += list(self._non_leaf_nodes.keys())
         return all_nodes_names
-    
+
     @property
     def leaf_nodes(self) -> Dict[Text, AbstractNode]:
         # TODO: cuanto sentido tiene proteger listas, dicts, etc.
@@ -2346,21 +2408,21 @@ class TensorNetwork(nn.Module):
         Data nodes created to feed the tensor network with input data
         """
         return self._leaf_nodes
-    
+
     @property
     def data_nodes(self) -> Dict[Text, AbstractNode]:
         """
         Data nodes created to feed the tensor network with input data
         """
         return self._data_nodes
-    
+
     @property
     def virtual_nodes(self) -> Dict[Text, AbstractNode]:
         """
         Data nodes created to feed the tensor network with input data
         """
         return self._virtual_nodes
-    
+
     @property
     def non_leaf_nodes(self) -> Dict[Text, AbstractNode]:
         """
@@ -2374,27 +2436,27 @@ class TensorNetwork(nn.Module):
         List of dangling, non-batch edges of the network
         """
         return self._edges
-    
+
     @property
     def automemory(self) -> bool:
         return self._automemory
-    
+
     @automemory.setter
     def automemory(self, automem: bool) -> None:
         # TODO: necesito rehacer todo?
         self.delete_non_leaf()
         self._automemory = automem
-        
+
     @property
     def unbind_mode(self) -> bool:
         return self._unbind_mode
-    
+
     @unbind_mode.setter
     def unbind_mode(self, unbind: bool) -> None:
         # TODO: necesito rehacer todo?
         self.delete_non_leaf()
         self._unbind_mode = unbind
-        
+
     def trace(self, example: Optional[Tensor] = None, *args, **kwargs) -> None:
         with torch.no_grad():
             self._tracing = True
@@ -2421,12 +2483,14 @@ class TensorNetwork(nn.Module):
             self._remove_node(prev_node)
         self._assign_node_name(node, node.name, True)
 
-    def add_nodes_from(self, nodes_list: Sequence[AbstractNode]):  # TODO: not used
+    # TODO: not used
+    def add_nodes_from(self, nodes_list: Sequence[AbstractNode]):
         for name, node in nodes_list:
             self._add_node(node)
 
     def _add_edge(self, edge: AbstractEdge) -> None:
-        if not isinstance(edge, AbstractStackEdge):  # TODO: evitar añadir los edges de los stacks a la TN
+        # TODO: evitar añadir los edges de los stacks a la TN
+        if not isinstance(edge, AbstractStackEdge):
             if isinstance(edge, ParamEdge):
                 if not hasattr(self, edge.module_name):
                     # If ParamEdge is already a submodule, it is the case in which we are
@@ -2436,13 +2500,14 @@ class TensorNetwork(nn.Module):
                 self._edges.append(edge)
 
     def _remove_edge(self, edge: AbstractEdge) -> None:
-        if not isinstance(edge, AbstractStackEdge):  # TODO: evitar añadir los edges de los stacks a la TN
+        # TODO: evitar añadir los edges de los stacks a la TN
+        if not isinstance(edge, AbstractStackEdge):
             if isinstance(edge, ParamEdge):
                 if hasattr(self, edge.module_name):
                     delattr(self, edge.module_name)
             if edge in self._edges:
                 self._edges.remove(edge)
-                
+
     def _which_dict(self, node: AbstractNode) -> Optional[Dict[Text, AbstractNode]]:
         if node._leaf:
             return self._leaf_nodes
@@ -2459,7 +2524,7 @@ class TensorNetwork(nn.Module):
         to the TN that is kept by the node. To completely get rid of the node,
         it should be disconnected from any other node of the TN and removed from
         the TN.
-        
+
         Args
         ----
         move_nodes: indicates whether the rest of the names should be
@@ -2477,7 +2542,7 @@ class TensorNetwork(nn.Module):
         if node._name in nodes_dict:
             if nodes_dict[node._name] == node:
                 del nodes_dict[node._name]
-                
+
                 if node._name in self._memory_nodes:  # NOTE: puede que no est'e si usaba memory de otro nodo
                     del self._memory_nodes[node._name]
 
@@ -2489,12 +2554,12 @@ class TensorNetwork(nn.Module):
         node.disconnect()
         self._remove_node(node, move_names)
         # TODO: del node
-        
+
     def delete_non_leaf(self):
         # TODO: tarda mogoll'on, tengo que arreglarlo
         self._list_ops = []
         self._inverse_memory = dict()
-        
+
         if self._non_leaf_nodes or self._virtual_nodes:
             # TODO: pensar esto, igual no hace falta siempre cambiar los leaf nodes
             # TODO: solo poner memoria a sí mismos si su memoria estaba en un nodo non_leaf
@@ -2507,36 +2572,36 @@ class TensorNetwork(nn.Module):
             for node in aux_dict.values():
                 if node.is_virtual() and ('virtual_stack' not in node.name):
                     continue
-                
+
                 node._successors = dict()
-                
+
                 node_ref = node._tensor_info['node_ref']
                 if node_ref is not None:
                     if node_ref.is_virtual() and ('virtual_uniform' in node_ref.name):
                         continue
-                
+
                 node._temp_tensor = node.tensor
                 node._tensor_info['address'] = node.name
                 node._tensor_info['node_ref'] = None
                 node._tensor_info['full'] = True
                 node._tensor_info['stack_idx'] = None
                 node._tensor_info['index'] = None
-                
+
                 if isinstance(node._temp_tensor, Parameter):
                     if hasattr(self, 'param_' + node.name):
                         delattr(self, 'param_' + node.name)
-                
+
                 if node.name not in self._memory_nodes:
                     self._memory_nodes[node.name] = None
-                
+
                 if node._temp_tensor is not None:
                     # TODO: why i need this?
                     node._unrestricted_set_tensor(node._temp_tensor)
                     node._temp_tensor = None
-                    
+
             for node in list(self._data_nodes.values()):
                 node._successors = dict()
-                    
+
             aux_dict = dict()
             aux_dict.update(self._non_leaf_nodes)
             aux_dict.update(self._virtual_nodes)
@@ -2554,7 +2619,8 @@ class TensorNetwork(nn.Module):
                 self.add_module(param.name, param)
             else:
                 # Nodes names are never repeated, so it is likely that this case will never occur
-                raise ValueError(f'Network already has attribute named {param.name}')
+                raise ValueError(
+                    f'Network already has attribute named {param.name}')
         elif isinstance(param, ParamEdge):
             if not hasattr(self, param.module_name):
                 self.add_module(param.module_name, param)
@@ -2572,20 +2638,23 @@ class TensorNetwork(nn.Module):
         if nodes_dict.get(prev_name) == node:
             nodes_dict[new_name] = nodes_dict.pop(prev_name)
             # TODO: A lo mejor esto solo si address is not None
-            if node._tensor_info['address'] is not None:  # TODO: caso se est'a usando la memoria de otro nodo
-                self._memory_nodes[new_name] = self._memory_nodes.pop(prev_name)
+            # TODO: caso se est'a usando la memoria de otro nodo
+            if node._tensor_info['address'] is not None:
+                self._memory_nodes[new_name] = self._memory_nodes.pop(
+                    prev_name)
                 node._assign_memory(address=new_name)
-                
+
                 if self._tracing and (prev_name in self._inverse_memory):
-                    self._inverse_memory[new_name] = self._inverse_memory.pop(prev_name)
-                    
-        else: # NOTE: Case change node name
+                    self._inverse_memory[new_name] = self._inverse_memory.pop(
+                        prev_name)
+
+        else:  # NOTE: Case change node name
             nodes_dict[new_name] = node
             self._memory_nodes[new_name] = node._temp_tensor
             node._temp_tensor = None
             node._assign_memory(address=new_name)
             # node._tensor_info['address'] = new_name
-            
+
             # TODO: in tracing mode i do not change names, this does not happen
             # if self._tracing and (prev_name in self._inverse_memory):
             #     self._inverse_memory[new_name] = self._inverse_memory[prev_name]
@@ -2602,10 +2671,12 @@ class TensorNetwork(nn.Module):
 
         if isinstance(node.tensor, Parameter):
             if not hasattr(self, 'param_' + node.name):
-                self.register_parameter('param_' + node._name, self._memory_nodes[node._name])
+                self.register_parameter(
+                    'param_' + node._name, self._memory_nodes[node._name])
             else:
                 # Nodes names are never repeated, so it is likely that this case will never occur
-                raise ValueError(f'Network already has attribute named {node._name}')
+                raise ValueError(
+                    f'Network already has attribute named {node._name}')
         for edge in node.edges:
             self._add_edge(edge)
 
@@ -2614,11 +2685,11 @@ class TensorNetwork(nn.Module):
         Used to assign a new name to a node in the network
         """
         non_enum_prev_name = erase_enum(name)
-        
+
         if not node.is_non_leaf() and (non_enum_prev_name in self.operations):
             raise ValueError(f'Node\'s name cannot be an operation name '
                              f'{list(self.operations.keys())}')
-        
+
         if non_enum_prev_name in self._repeated_nodes_names:
             count = self._repeated_nodes_names[non_enum_prev_name]
             if count == 1:
@@ -2630,7 +2701,7 @@ class TensorNetwork(nn.Module):
             new_name = non_enum_prev_name
             self._repeated_nodes_names[non_enum_prev_name] = 0
         self._repeated_nodes_names[non_enum_prev_name] += 1
-        
+
         for edge in node.edges:
             if edge.is_attached_to(node):
                 self._remove_edge(edge)
@@ -2653,10 +2724,12 @@ class TensorNetwork(nn.Module):
 
         if isinstance(node.tensor, Parameter):
             if not hasattr(self, 'param_' + node.name):
-                self.register_parameter('param_' + node._name, self._memory_nodes[node._name])
+                self.register_parameter(
+                    'param_' + node._name, self._memory_nodes[node._name])
             else:
                 # TODO: Nodes names are never repeated, so it is likely that this case will never occur
-                raise ValueError(f'Network already has attribute named {node._name}')
+                raise ValueError(
+                    f'Network already has attribute named {node._name}')
         for edge in node.edges:
             self._add_edge(edge)
 
@@ -2709,7 +2782,7 @@ class TensorNetwork(nn.Module):
         if erase_enum(name) != erase_enum(node.name):
             self._unassign_node_name(node)
             self._assign_node_name(node, name)
-            
+
     def _change_node_type(self, node: AbstractNode, type: Text) -> None:
         """
         Used to change node from leaf, non_leaf, data or virtual
@@ -2718,9 +2791,9 @@ class TensorNetwork(nn.Module):
         if type not in ['leaf', 'non_leaf', 'data', 'virtual']:
             raise ValueError('`type` can only be \'leaf\', \'non_leaf\', '
                              '\'data\' or \'virtual\'')
-        
+
         prev_dict = self._which_dict(node)
-        
+
         if type == 'leaf':
             new_dict = self._leaf_nodes
             node._leaf = True
@@ -2741,10 +2814,10 @@ class TensorNetwork(nn.Module):
             node._leaf = False
             node._data = False
             node._virtual = False
-        
-        del prev_dict[node.name]    
-        new_dict[node.name] = node   
-            
+
+        del prev_dict[node.name]
+        new_dict[node.name] = node
+
     def copy(self) -> 'TensorNetwork':
         return copy.deepcopy(self)
 
@@ -2765,16 +2838,16 @@ class TensorNetwork(nn.Module):
             net = self
         else:
             net = self.copy()
-            
+
         if self.non_leaf_nodes:
             warnings.warn('Non-leaf nodes will be removed before parameterizing '
                           'the TN')
             self.delete_non_leaf()
-            
+
         for node in list(net.leaf_nodes.values()):
             param_node = node.parameterize(set_param)
             param_node.param_edges(set_param)
-        
+
         return net
 
     def initialize(self) -> None:
@@ -2784,7 +2857,8 @@ class TensorNetwork(nn.Module):
         # Initialization methods depend on the topology of the network. Number of nodes,
         # edges and its dimensions might be relevant when specifying the initial distribution
         # (e.g. mean, std) of each node
-        raise NotImplementedError('Initialization methods not implemented for generic TensorNetwork class')
+        raise NotImplementedError(
+            'Initialization methods not implemented for generic TensorNetwork class')
 
     def set_data_nodes(self,
                        input_edges: Union[List[int], List[AbstractEdge]],
@@ -2803,34 +2877,36 @@ class TensorNetwork(nn.Module):
         names_batch_edges: sequence of names for the batch edges
         """
         if input_edges == []:
-            raise ValueError('`input_edges` is empty. Cannot set data nodes if no edges are provided')
+            raise ValueError(
+                '`input_edges` is empty. Cannot set data nodes if no edges are provided')
         if self.data_nodes:
-            raise ValueError('Tensor network data nodes should be unset in order to set new ones')
-        
+            raise ValueError(
+                'Tensor network data nodes should be unset in order to set new ones')
+
         # Only make stack_data_memory if all the input edges have the same dimension
         same_dim = True
         for i in range(len(input_edges) - 1):
             if input_edges[i].size() != input_edges[i + 1].size():
                 same_dim = False
                 break
-        
+
         # num_batch_edges = len(names_batch_edges)
 
         if same_dim:
             if 'stack_data_memory' not in self._virtual_nodes:
                 # TODO: Stack data node donde se guardan los datos, se supone que todas las features tienen la misma dim
                 stack_node = Node(shape=(len(input_edges), *([1]*num_batch_edges), input_edges[0].size()),  # TODO: supongo edge es AbstractEdge
-                                axes_names=('n_features',
-                                            *(['batch']*num_batch_edges),
-                                            'feature'),
-                                name=f'stack_data_memory',  # TODO: guardo aqui la memory, no uso memory_data_nodes
-                                network=self,
-                                virtual=True)
+                                  axes_names=('n_features',
+                                              *(['batch']*num_batch_edges),
+                                              'feature'),
+                                  name=f'stack_data_memory',  # TODO: guardo aqui la memory, no uso memory_data_nodes
+                                  network=self,
+                                  virtual=True)
                 n_features_node = Node(shape=(stack_node.shape[0],),
-                                    axes_names=('n_features',),
-                                    name='virtual_n_features',
-                                    network=self,
-                                    virtual=True)
+                                       axes_names=('n_features',),
+                                       name='virtual_n_features',
+                                       network=self,
+                                       virtual=True)
                 feature_node = Node(shape=(stack_node.shape[-1],),
                                     axes_names=('feature',),
                                     name='virtual_feature',
@@ -2854,9 +2930,11 @@ class TensorNetwork(nn.Module):
                 edge = self[edge]
             elif isinstance(edge, AbstractEdge):
                 if edge not in self.edges:
-                    raise ValueError(f'Edge {edge!r} should be a dangling edge of the Tensor Network')
+                    raise ValueError(
+                        f'Edge {edge!r} should be a dangling edge of the Tensor Network')
             else:
-                raise TypeError('`input_edges` should be List[int] or List[AbstractEdge] type')
+                raise TypeError(
+                    '`input_edges` should be List[int] or List[AbstractEdge] type')
             node = Node(shape=(*([1]*num_batch_edges), edge.size()),
                         axes_names=(*(['batch']*num_batch_edges),
                                     'feature'),
@@ -2865,7 +2943,7 @@ class TensorNetwork(nn.Module):
                         data=True)
             node['feature'] ^ edge
             data_nodes.append(node)
-            
+
         if same_dim:
             for i, node in enumerate(data_nodes):
                 del self._memory_nodes[node._tensor_info['address']]
@@ -2880,7 +2958,7 @@ class TensorNetwork(nn.Module):
             for node in list(self.data_nodes.values()):
                 self.delete_node(node)
             self._data_nodes = dict()
-            
+
             if 'stack_data_memory' in self.virtual_nodes:
                 self.delete_node(self.virtual_nodes['stack_data_memory'])
                 self.delete_node(self.virtual_nodes['virtual_n_features'])
@@ -2889,15 +2967,15 @@ class TensorNetwork(nn.Module):
     def _add_data(self, data: Union[Tensor, Sequence[Tensor]]) -> None:
         """
         Add data to data nodes, that is, change their tensors by new data tensors given a new data set.
-        
+
         Parameters
         ----------
         data: data tensor, of dimensions
             n_features x batch_size_{0} x ... x batch_size_{n} x feature_size
         """
-        
+
         stack_node = self.virtual_nodes.get('stack_data_memory')
-        
+
         if stack_node is not None:
             stack_node._unrestricted_set_tensor(data)
         elif self.data_nodes:
@@ -2911,7 +2989,8 @@ class TensorNetwork(nn.Module):
         Contract tensor network
         """
         # Custom, optimized contraction methods should be defined for each new subclass of TensorNetwork
-        raise NotImplementedError('Contraction methods not implemented for generic TensorNetwork class')
+        raise NotImplementedError(
+            'Contraction methods not implemented for generic TensorNetwork class')
 
     def forward(self, data: Optional[Tensor] = None, *args, **kwargs) -> Tensor:
         """
@@ -2922,36 +3001,36 @@ class TensorNetwork(nn.Module):
             if not self.data_nodes:
                 self.set_data_nodes()
             self._add_data(data=data)
-        
+
         if not self.non_leaf_nodes:
             output = self.contract(*args, **kwargs)
-            
+
             self._seq_ops = []
             for op in self._list_ops:
-                self._seq_ops.append((op[1], op[0]._successors[op[1]][op[2]].kwargs))
-                
+                self._seq_ops.append(
+                    (op[1], op[0]._successors[op[1]][op[2]].kwargs))
+
             return output.tensor
-        
+
         else:
             # output = self.contract(*args, **kwargs)
-            
+
             # total = time.time()
             for op in self._seq_ops:
                 # start = time.time()
                 output = self.operations[op[0]](**op[1])
                 # print(f'Time {op[0]}: {time.time() - start:.4f}')
             # print(f'Total time: {time.time() - total:.4f}')
-            
+
             if not isinstance(output, Node):
                 if (op[0] == 'unbind') and (len(output) == 1):
                     output = output[0]
                 else:
                     raise ValueError('The last operation should be the one '
                                      'returning a single resulting node')
-                
+
             return output.tensor
-        
-        
+
         # TODO: algo as'i, en la primera epoca se meten datos con batch 1, solo
         #  para ir creando todos los nodos intermedios necesarios r'apidamente,
         #  luego ya se contrae la red haciendo operaciones de tensores
@@ -2977,7 +3056,8 @@ class TensorNetwork(nn.Module):
             try:
                 return self.nodes[key]
             except Exception:
-                raise KeyError(f'Tensor network {self!s} does not have any node with name {key}')
+                raise KeyError(
+                    f'Tensor network {self!s} does not have any node with name {key}')
         else:
             raise TypeError('`key` should be int or str type')
 
@@ -3040,21 +3120,21 @@ def connect(edge1: AbstractEdge, edge2: AbstractEdge) -> Union[Edge, ParamEdge]:
         if isinstance(edge1, ParamEdge):
             if isinstance(edge1, ParamStackEdge):
                 new_edge = ParamStackEdge(edges=edge1.edges, node1_lists=edge1.node1_lists,
-                                             node1=node1, axis1=axis1,
-                                             node2=node2, axis2=axis2)
+                                          node1=node1, axis1=axis1,
+                                          node2=node2, axis2=axis2)
                 # net._add_edge(new_edge)
             else:
                 shift = edge1.shift
                 slope = edge1.slope
                 new_edge = ParamEdge(node1=node1, axis1=axis1,
-                                        shift=shift, slope=slope,
-                                        node2=node2, axis2=axis2)
+                                     shift=shift, slope=slope,
+                                     node2=node2, axis2=axis2)
                 net._add_edge(new_edge)
         else:
             if isinstance(edge1, StackEdge):
                 new_edge = StackEdge(edges=edge1.edges, node1_lists=edge1.node1_lists,
-                                        node1=node1, axis1=axis1,
-                                        node2=node2, axis2=axis2)
+                                     node1=node1, axis1=axis1,
+                                     node2=node2, axis2=axis2)
             else:
                 new_edge = Edge(node1=node1, axis1=axis1,
                                 node2=node2, axis2=axis2)
@@ -3066,8 +3146,8 @@ def connect(edge1: AbstractEdge, edge2: AbstractEdge) -> Union[Edge, ParamEdge]:
             shift = edge2.shift
             slope = edge2.slope
         new_edge = ParamEdge(node1=node1, axis1=axis1,
-                                shift=shift, slope=slope,
-                                node2=node2, axis2=axis2)
+                             shift=shift, slope=slope,
+                             node2=node2, axis2=axis2)
         net._add_edge(new_edge)
 
     node1._add_edge(new_edge, axis1, True)
@@ -3081,9 +3161,9 @@ def connect_stack(edge1: AbstractStackEdge, edge2: AbstractStackEdge):
     (coming from already connected edges)
     """
     if not isinstance(edge1, AbstractStackEdge) or \
-        not isinstance(edge2, AbstractStackEdge):
-            raise TypeError('Both edges should be (Param)StackEdge\'s')
-        
+            not isinstance(edge2, AbstractStackEdge):
+        raise TypeError('Both edges should be (Param)StackEdge\'s')
+
     if edge1.edges != edge2.edges:
         raise ValueError('Cannot connect stack edges whose lists of'
                          ' edges are not the same. They will be the '
@@ -3099,53 +3179,53 @@ def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
     """
     if edge.is_dangling():
         raise ValueError('Cannot disconnect a dangling edge')
-    
+
     nodes = []
     axes = []
     for axis, node in zip(edge._axes, edge._nodes):
         if edge in node._edges:
             nodes.append(node)
             axes.append(axis)
-            
+
     new_edges = []
     first = True
     for axis, node in zip(axes, nodes):
         if isinstance(edge, Edge):
             if isinstance(edge, StackEdge):
                 new_edge = StackEdge(edges=edge.edges,
-                                    node1_lists=edge.node1_lists,
-                                    node1=node,
-                                    axis1=axis)
+                                     node1_lists=edge.node1_lists,
+                                     node1=node,
+                                     axis1=axis)
                 new_edges.append(new_edge)
-                
+
             else:
                 new_edge = Edge(node1=node, axis1=axis)
                 new_edges.append(new_edge)
-                
+
                 net = node._network
                 net._add_edge(new_edge)
         else:
             if isinstance(edge, ParamStackEdge):
                 new_edge = ParamStackEdge(edges=edge.edges,
-                                        node1_lists=edge.node1_lists,
-                                        node1=node,
-                                        axis1=axis)
+                                          node1_lists=edge.node1_lists,
+                                          node1=node,
+                                          axis1=axis)
                 new_edges.append(new_edge)
-                
-            else:  
+
+            else:
                 shift = edge.shift
                 slope = edge.slope
                 new_edge = ParamEdge(node1=node, axis1=axis,
-                                    shift=shift, slope=slope)
+                                     shift=shift, slope=slope)
                 new_edges.append(new_edge)
-                
+
                 net = node._network
                 if first:
                     net._remove_edge(edge)
                     first = False
                 net._add_edge(new_edge)
-                
+
     for axis, node, new_edge in zip(axes, nodes, new_edges):
         node._add_edge(new_edge, axis, True)
-        
+
     return tuple(new_edges)

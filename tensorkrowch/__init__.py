@@ -1,3 +1,4 @@
+from tensorkrowch.network_components import Axis
 from tensorkrowch.network_components import AbstractNode, Node, ParamNode
 from tensorkrowch.network_components import AbstractEdge, Edge, ParamEdge
 from tensorkrowch.network_components import StackNode, ParamStackNode

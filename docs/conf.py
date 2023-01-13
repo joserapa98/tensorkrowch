@@ -50,8 +50,9 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 master_doc = 'contents'
 
-autodoc_typehints = 'description'
+autodoc_typehints = 'none'
 # autodoc_member_order = 'bysource'
+autodoc_typehints_format = 'short'
 
 # Make that the index page does not disappear from sidebar TOC. From
 # https://stackoverflow.com/questions/18969093/how-to-include-the-toctree-in-the-sidebar-of-each-page
@@ -64,13 +65,30 @@ autodoc_typehints = 'description'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
+
 html_theme = 'sphinx_book_theme'
+html_theme_options = {
+    'logo_only': True
+}
+
+# html_theme = 'furo'
+# html_theme_options = {
+#     'sidebar_hide_name': True,
+#     'light_css_variables': {
+#         # "color-brand-primary": "hsl(45, 80%, 45%)",
+#         'color-brand-primary': 'hsl(210, 50%, 50%)',
+#         'color-brand-content': 'hsl(210, 50%, 50%)',
+#     },
+#     'dark_css_variables': {
+#         'color-brand-primary': 'hsl(210, 50%, 60%)',
+#         'color-brand-content': 'hsl(210, 50%, 60%)',
+#     },
+#     'light_logo': 'figures/tensorkrowch_logo_light.png',
+#     'dark_logo': 'figures/tensorkrowch_logo_dark.png'
+# }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 html_logo = 'figures/tensorkrowch_logo_light.png'
-html_theme_options = {
-    'logo_only': True
-}

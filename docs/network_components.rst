@@ -5,9 +5,11 @@ Node Class
 ----------
 
 .. autoclass:: tensorkrowch.Node
+    :inherited-members:
     :members:
 
 .. autoclass:: tensorkrowch.ParamNode
+    :inherited-members:
     :members:
 
 Edge Class

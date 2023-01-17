@@ -1803,7 +1803,7 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
                     stack_node_ref = False
                     continue
 
-                stack_indices.append(node._tensor_info['stack_idx'])
+                stack_indices.append(node._tensor_info['index'][0])
                 
             else:
                 all_same_ref = False
@@ -1823,7 +1823,6 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
         stack_node._tensor_info['address'] = None
         stack_node._tensor_info['node_ref'] = node_ref
         stack_node._tensor_info['full'] = False
-        stack_node._tensor_info['stack_idx'] = stack_indices
         
         index = [stack_indices]
         if node_ref.shape[1:] != stack_node.shape[1:]:
@@ -1849,7 +1848,6 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
                 node._tensor_info['address'] = None
                 node._tensor_info['node_ref'] = stack_node
                 node._tensor_info['full'] = False
-                node._tensor_info['stack_idx'] = i
                 index = [i]
                 for j, (max_dim, dim) in enumerate(zip(stack_node.shape[1:], shape)):
                     if node._axes[j].is_batch():
@@ -1901,7 +1899,6 @@ def _stack_next(successor: Successor,
             node._tensor_info['address'] = None
             node._tensor_info['node_ref'] = child
             node._tensor_info['full'] = False
-            node._tensor_info['stack_idx'] = i
             index = [i]
             for j, (max_dim, dim) in enumerate(zip(stack_tensor.shape[1:], shape)):
                     if node._axes[j].is_batch():
@@ -1994,7 +1991,6 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
             new_node._tensor_info['full'] = False
             
             if aux_node_ref == node:
-                new_node._tensor_info['stack_idx'] = i
                 index = [i]
                 for j, (max_dim, dim) in enumerate(zip(node.shape[1:], shape)):  # TODO: max_dim == dim siempre creo
                     if new_node._axes[j].is_batch():
@@ -2007,13 +2003,9 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
                 node_index = node._tensor_info['index']
                 aux_slice = node_index[0]
                 if isinstance(aux_slice, list):
-                    new_node._tensor_info['stack_idx'] = aux_slice[i]
-                    index = [new_node._tensor_info['stack_idx']]
-                else:    
-                    new_node._tensor_info['stack_idx'] = range(aux_slice.start,
-                                                               aux_slice.stop,
-                                                               aux_slice.step)[i]
-                    index = [new_node._tensor_info['stack_idx']]
+                    index = [aux_slice[i]]
+                else:
+                    index = [range(aux_slice.start, aux_slice.stop, aux_slice.step)[i]]
                     
                 # If node is indexing from the original stack
                 if node_index[1:]:

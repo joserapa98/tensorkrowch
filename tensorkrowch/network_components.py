@@ -12,12 +12,21 @@ This script contains:
 
     Classes for stacks:
         *StackNode
+        *ParamStackNode
         *AbstractStackEdge:
             +StackEdge
             +ParamStackEdge
+    
+    Class for successors:        
+        *Successor
 
     Class for Tensor Networks:
         *TensorNetwork
+        
+    Edge operations:
+        *connect
+        *connect_stack
+        *disconnect
 """
 
 from abc import abstractmethod, ABC
@@ -29,13 +38,11 @@ import warnings
 
 import torch
 import torch.nn as nn
-from torch import Tensor, Size
+from torch import Size, Tensor
 from torch.nn import Parameter
 
-from tensorkrowch.utils import (print_list, tab_string,
-                                check_name_style, erase_enum,
-                                enum_repeated_names,
-                                stack_unequal_tensors)
+from tensorkrowch.utils import (check_name_style, enum_repeated_names, erase_enum,
+                                print_list, stack_unequal_tensors, tab_string)
 
 
 ################################################
@@ -43,29 +50,80 @@ from tensorkrowch.utils import (print_list, tab_string,
 ################################################
 class Axis:
     """
-    The axes are the objects where edges are connected to 
+    The axes are the objects that stick edges to nodes. Every :class:`node <AbstractNode>`
+    has a list of :math:`N` axes, each corresponding to one edge; and every axis
+    stores information that helps accessing that edge, such as its :attr:`name`
+    and :attr:`num` (index). Also, the axis keeps track of the :meth:`batch <is_batch>`
+    and :meth:`node1 <is_node1>` attributes:
     
-    Class for axes. An axis can be denoted by a number or a name.
+    * **batch**: If axis name containes the word "`batch`", the edge attached
+      to this axis will be a batch edge, that is, that edge will not be able to
+      be connected to other nodes, but rather specify a dimension with which we
+      can perform batch operations (e.g. batch contraction). If the name of the
+      axis is changed and no longer contains the word "`batch`", the corresponding
+      edge will not be a batch edge any more. Also, :class:`StackNode` and
+      :class:`ParamStackNode` instances always have an axis with name "`stack`"
+      whose edge is a batch edge.
+    
+    * **node1**: When two dangling edges are connected the result is a new
+      edge linking two nodes, say ``nodeA`` and ``nodeB``. If the
+      connection is performed in the following order:
+      ::
+        new_edge = nodeA[edgeA] ^ nodeB[edgeB]
+        
+      Then ``nodeA`` will be the `node1` of ``new_edge`` and ``nodeB``, the `node2`.
+      Hence, to access one of the nodes from ``new_edge`` one needs to know if it is
+      `node1` or `node2`.
+      
+    Even though we can create Axis instances, that will not be usually the case,
+    since axes are automatically created when instantiating a new :class:`node <AbstractNode>`.
 
     Parameters
     ----------
-    num: int
-        index in the node's axes list
-    name: str
-        axis name
-    node: Node or ParamNode
-        node to which the axis belongs
-    node1: bool
-        boolean indicating whether `node1` of the edge
-        attached to this axis is the node that contains
-        the axis. Otherwise, the node is `node2` of the edge
+    num : int
+        Index in the node's axes list.
+    name : str
+        Axis name, should not contain blank spaces or special characters since
+        it is intended to be used as name of submodules.
+    node : AbstractNode, optional
+        Node to which the axis belongs
+    node1 : bool
+        Boolean indicating whether `node1` of the edge attached to this axis is
+        the node that contains the axis. Otherwise, the node is `node2` of the edge.
         
     Examples
     --------
-    >>> import tensorkrowch as tk
+    Although Axis will not be usually explicitly instantiated, it can be done
+    like so:
+    
     >>> axis = tk.Axis(0, 'left')
     >>> axis
     Axis( left (0) )
+    
+    >>> axis.is_node1()
+    True
+    
+    >>> axis.is_batch()
+    False
+    
+    Since "`batch`" is not contained in "`left`", ``axis`` does not correspond
+    to a batch edge, but that can be changed:
+    
+    >>> axis.name = 'mybatch'
+    >>> axis.is_batch()
+    True
+    
+    Also, as explained before, knowing if a node is the `node1` or `node2` of an
+    edge enables users to access that node from the edge:
+    
+    >>> nodeA = tk.Node(shape=(2, 3), axes_names=['left', 'right'])
+    >>> nodeB = tk.Node(shape=(3, 4), axes_names=['left', 'right'])
+    >>> new_edge = nodeA['right'] ^ nodeB['left']
+    >>> nodeA == new_edge.nodes[1 - nodeA.get_axis('right').is_node1()]
+    True
+    
+    >>> nodeB == new_edge.nodes[nodeA.get_axis('right').is_node1()]
+    True
     """
 
     def __init__(self,
@@ -82,7 +140,8 @@ class Axis:
             raise TypeError('`name` should be str type')
         if not check_name_style(name, 'axis'):
             raise ValueError(
-                'Names can only contain letters, numbers and underscores')
+                '`name` cannot contain blank spaces or special characters '
+                'since it is intended to be used as name of submodules')
 
         if node is not None:
             if not isinstance(node, AbstractNode):
@@ -112,12 +171,16 @@ class Axis:
     # properties
     @property
     def num(self) -> int:
-        """Returns the index in the node's axes list"""
+        """Index in the node's axes list."""
         return self._num
 
     @property
     def name(self) -> Text:
-        """Returns axis name, used to access edges by name of the axis"""
+        """
+        Axis name, used to access edges by name of the axis. Is cannot contain
+        blank spaces or special characters since it is intended to be used as
+        name of submodules.
+        """
         return self._name
 
     @name.setter
@@ -130,12 +193,13 @@ class Axis:
             raise TypeError('`name` should be str type')
         if not check_name_style(name, 'axis'):
             raise ValueError(
-                'Names can only contain letters, numbers and underscores')
+                '`name` cannot contain blank spaces or special characters '
+                'since it is intended to be used as name of submodules')
         if self._name == 'stack':
-            raise ValueError('Name \'stack\' of stack edge cannot be changed')
+            raise ValueError('Name "stack" of stack edge cannot be changed')
         if 'stack' in name:
             raise ValueError(
-                'Name \'stack\' is reserved for stack edges of StackNodes')
+                'Name "stack" is reserved for stack edges of (Param)StackNodes')
 
         if self._batch and not ('batch' in name or 'stack' in name):
             self._batch = False
@@ -149,23 +213,20 @@ class Axis:
 
     @property
     def node(self) -> 'AbstractNode':
-        """Returns node to which the axis belongs"""
+        """Node to which the axis belongs."""
         return self._node
 
     # methods
     def is_node1(self) -> bool:
         """
-        Returns `node1` attribute, a boolean indicating whether
-        `node1` of the edge attached to this axis is the node
-        that contains the axis. Otherwise, the node is `node2`
-        of the edge
+        Boolean indicating whether `node1` of the edge attached to this axis is
+        the node that contains the axis. Otherwise, the node is `node2` of the edge.
         """
         return self._node1
 
     def is_batch(self) -> bool:
         """
-        Returns `batch` attribute, a boolean indicating whether
-        the edge in this axis is used as a batch edge
+        Boolean indicating whether the edge in this axis is used as a batch edge.
         """
         return self._batch
 
@@ -187,6 +248,7 @@ Shape = Union[int, Sequence[int], Size]
 
 
 class AbstractNode(ABC):
+    # TODO:
     """
     Abstract class for nodes. Should be subclassed.
 
@@ -229,7 +291,8 @@ class AbstractNode(ABC):
         if shape is not None:
             if not isinstance(shape, (int, tuple, list, Size)):
                 raise TypeError(
-                    '`shape` should be int, tuple[int, ...], list[int, ...] or Size type')
+                    '`shape` should be int, tuple[int, ...], list[int, ...] or '
+                    'Size type')
             if isinstance(shape, (tuple, list)):
                 for i in shape:
                     if not isinstance(i, int):
@@ -257,8 +320,7 @@ class AbstractNode(ABC):
         elif not isinstance(name, str):
             raise TypeError('`name` should be str type')
         elif not check_name_style(name, 'node'):
-            raise ValueError(
-                'Names can only contain letters, numbers and underscores')
+            raise ValueError('Names cannot contain blank spaces')
 
         # check network
         if network is not None:
@@ -291,7 +353,11 @@ class AbstractNode(ABC):
     # Properties
     # ----------
     @property
-    def tensor(self) -> Union[torch.Tensor, Parameter]:
+    def tensor(self) -> Optional[Union[Tensor, Parameter]]:
+        """
+        Node's tensor. It can be a ``torch.Tensor``, ``torch.nn.Parameter`` or
+        ``None`` if the node is empty.
+        """
         if (self._temp_tensor is not None) or (self._tensor_info is None):
             result = self._temp_tensor
             return result
@@ -299,26 +365,18 @@ class AbstractNode(ABC):
         address = self._tensor_info['address']
         node_ref = self._tensor_info['node_ref']
         full = self._tensor_info['full']
-        # TODO: do i use stack_idx for anything??
-        stack_idx = self._tensor_info['stack_idx']
         index = self._tensor_info['index']
 
         if address is None:
-            node = node_ref
             address = node_ref._tensor_info['address']
-        else:
-            node = self
-
         result = self._network._memory_nodes[address]
-        if self._network.unbind_mode:
-            condition = full or self.name.startswith('unbind')
-        else:
-            condition = full
+        
+        return_result = full or (result is None)
+        if self._network._unbind_mode:
+            return_result = return_result or self._name.startswith('unbind')
 
-        if condition or (result is None):
+        if return_result:
             return result
-        # TODO: 'index'
-        # return result[stack_idx]
         return result[index]
 
     @tensor.setter
@@ -330,14 +388,17 @@ class AbstractNode(ABC):
 
     @property
     def shape(self) -> Size:
+        """Shape of node's :attr:`tensor`. It is a ``torch.Size``."""
         return self._shape
 
     @property
     def rank(self) -> int:
-        return len(self.shape)
+        """Length of node's :attr:`shape`, that is, number of edges of the node."""
+        return len(self._shape)
 
     @property
     def dtype(self):
+        """``torch.dtype`` of node's :attr:`tensor`."""
         tensor = self.tensor
         if tensor is None:
             return
@@ -345,31 +406,26 @@ class AbstractNode(ABC):
 
     @property
     def axes(self) -> List[Axis]:
+        """List of nodes's :class:`axes <Axis>`."""
         return self._axes
 
     @property
     def axes_names(self) -> List[Text]:
+        """List of names of node's axes."""
         return list(map(lambda axis: axis._name, self._axes))
 
     @property
     def edges(self) -> List['AbstractEdge']:
+        """List of node's :class:`edges <AbstractEdge>`."""
         return self._edges
 
     @property
-    def name(self) -> Text:
-        return self._name
-
-    @name.setter
-    def name(self, name: Text) -> None:
-        if not isinstance(name, str):
-            raise TypeError('`name` should be str type')
-        elif not check_name_style(name, 'node'):
-            raise ValueError(
-                'Names can only contain letters, numbers and underscores')
-        self._network._change_node_name(self, name)
-
-    @property
     def network(self) -> 'TensorNetwork':
+        """
+        :class:`TensorNetwork` where the node belongs. If the node is moved to
+        another :class:`TensorNetwork`, the entire connected component of the
+        graph where the node is will be moved.
+        """
         return self._network
 
     @network.setter
@@ -379,85 +435,159 @@ class AbstractNode(ABC):
     @property
     def successors(self) -> Dict[Text, 'Successor']:
         """
-        Dictionary with operations' names as keys, and list of successors as values
+        Dictionary with :class:`Operations <Operation>`' names as keys, and the
+        list of successors of the node as values.
         """
         return self._successors
+    
+    @property
+    def name(self) -> Text:
+        """
+        Node's name, used to access the node from the :attr:`tensor network <network>`
+        where it belongs. It cannot contain blank spaces.
+        """
+        return self._name
+
+    @name.setter
+    def name(self, name: Text) -> None:
+        if not isinstance(name, str):
+            raise TypeError('`name` should be str type')
+        elif not check_name_style(name, 'node'):
+            raise ValueError('`name` cannot contain blank spaces')
+        self._network._change_node_name(self, name)
 
     # ----------------
     # Abstract methods
     # ----------------
     @staticmethod
     @abstractmethod
-    def _set_tensor_format(tensor: torch.Tensor) -> Union[torch.Tensor, Parameter]:
-        """
-        Set the tensor format for each type of node. For normal nodes the format
-        is just a Tensor, but for parameterized nodes it should be a Parameter
-        """
+    def _set_tensor_format(tensor: Tensor) -> Union[Tensor, Parameter]:
         pass
 
     @abstractmethod
     def parameterize(self, set_param: bool) -> 'AbstractNode':
-        """
-        Turn a normal node into a parametric node and vice versa, replacing the node in
-        the network
-        """
         pass
 
     @abstractmethod
     def copy(self) -> 'AbstractNode':
-        """
-        Copy the node, creating a new one with new, copied edges that are reattached to it
-        """
         pass
 
     # -------
     # Methods
     # -------
     def is_leaf(self) -> bool:
+        """
+        Returns a boolean indicating if the node is a ``leaf`` node. These are
+        the nodes that form the :class:`TensorNetwork`. Usually, these will be
+        the `trainable` nodes.
+        """
         return self._leaf
 
     def is_data(self) -> bool:
+        """
+        Returns a boolean indicating if the node is a ``data`` node. These are
+        the nodes where input data tensors will be put.
+        """
         return self._data
 
     def is_virtual(self) -> bool:
+        """
+        Returns a boolean indicating if the node is a ``virtual`` node. These
+        are a sort of `hidden` nodes that can be used, for instance, to store
+        the information of other ``leaf`` or ``data`` nodes more efficiently
+        (e.g. :class:`Uniform MPS <UMPS>` uses a unique ``virtual`` node to
+        store the tensor used by all the nodes in the network).
+        """
         return self._virtual
 
     def is_non_leaf(self) -> bool:
+        """
+        Returns a boolean indicating if the node is a ``non_leaf`` node. These
+        are the nodes that result from an operation on any type of nodes.
+        """
         return not (self._leaf or self._data or self._virtual)
 
     def size(self, axis: Optional[Ax] = None) -> Union[Size, int]:
+        """
+        Returns the size of the node's tensor. If ``axis`` is specified, returns
+        the size of that axis; otherwise returns the shape of the node (same as
+        :attr:`shape`).
+
+        Parameters
+        ----------
+        axis : int, str or Axis, optional
+            Axis for which to retrieve the size.
+
+        Returns
+        -------
+        int or torch.Size
+        """
         if axis is None:
-            return self.shape
+            return self._shape
         axis_num = self.get_axis_num(axis)
-        return self.shape[axis_num]
+        return self._shape[axis_num]
 
     def dim(self, axis: Optional[Ax] = None) -> Union[Size, int]:
         """
-        Similar to `size`, but if a ParamEdge is attached to an axis,
-        it is returned its dimension (number of 1's in the diagonal of
-        the matrix) rather than its total size (number of 1's and 0's
-        in the diagonal of the matrix)
+        Returns the dimensions of the node's tensor. If ``axis`` is specified,
+        returns the dimension of that edge; otherwise returns the dimensions of
+        all edges.
+        
+        See also :meth:`Edge.dim` and :meth:`ParamEdge.dim`.
+
+        Parameters
+        ----------
+        axis : int, str or Axis, optional
+            Axis for which to retrieve the dimension.
+
+        Returns
+        -------
+        int or torch.Size
         """
         if axis is None:
-            return Size(map(lambda edge: edge.dim(), self.edges))
+            return Size(map(lambda edge: edge.dim(), self._edges))
         axis_num = self.get_axis_num(axis)
-        return self.edges[axis_num].dim()
+        return self._edges[axis_num].dim()
 
     def is_node1(self, axis: Optional[Ax] = None) -> Union[bool, List[bool]]:
+        """
+        Returns :meth:`node <Axis.is_node1>` attribute of axes of the node. If
+        ``axis`` is specified, returns only the ``node`` of that axis; otherwise
+        returns the ``node1`` of all axes of the node.
+
+        Parameters
+        ----------
+        axis : int, str or Axis, optional
+            Axis for which to retrieve the ``node1``.
+
+        Returns
+        -------
+        bool or list[bool]
+        """
         if axis is None:
             return list(map(lambda ax: ax._node1, self._axes))
         axis_num = self.get_axis_num(axis)
-        return self.axes[axis_num]._node1
+        return self._axes[axis_num]._node1
 
     def neighbours(self, axis: Optional[Ax] = None) -> Union[Optional['AbstractNode'],
                                                              List['AbstractNode']]:
         """
-        Return nodes to which self is connected
+        Returns the neighbours of the node, the nodes to which it is connected.
+        
+        Parameters
+        ----------
+        axis : int, str or Axis, optional
+            Axis for which to retrieve the neighbour.
+
+        Returns
+        -------
+        AbstractNode or list[AbstractNode]
         """
         node1_list = self.is_node1()
         if axis is not None:
             node2 = self[axis]._nodes[node1_list[self.get_axis_num(axis)]]
             return node2
+        
         neighbours = set()
         for i, edge in enumerate(self._edges):
             if not edge.is_dangling():
@@ -467,10 +597,22 @@ class AbstractNode(ABC):
 
     def _change_axis_name(self, axis: Axis, name: Text) -> None:
         """
-        Used to change the name of an axis. If an axis belongs to a node,
-        we have to take care of repeated names. If the name that is going
-        to be assigned to the axis is already set for another axis, we change
-        those names by an enumerated version of them
+        Changes the name of an axis. If an axis belongs to a node, we have to
+        take care of repeated names. If the name that is going to be assigned
+        to the axis is already set for another axis, we change  those names by
+        an enumerated version of them.
+
+        Parameters
+        ----------
+        axis : Axis
+            Axis whose name is going to be changed.
+        name : str
+            New name.
+
+        Raises
+        ------
+        ValueError
+            If ``axis`` does not belong to the node.
         """
         if axis._node != self:
             raise ValueError('Cannot change the name of an axis that does '
@@ -478,7 +620,7 @@ class AbstractNode(ABC):
         if name != axis._name:
             axes_names = self.axes_names[:]
             for i, axis_name in enumerate(axes_names):
-                if axis_name == axis._name:
+                if axis_name == axis._name:  # Axes names are unique
                     axes_names[i] = name
                     break
             new_axes_names = enum_repeated_names(axes_names)
@@ -487,56 +629,71 @@ class AbstractNode(ABC):
 
     def _change_axis_size(self, axis: Ax, size: int) -> None:
         """
-        Change axis size, that is, change size of node's tensor and corresponding edges
-        at a certain axis.
+        Changes axis size, that is, changes size of node's tensor and corresponding
+        edges at a certain axis.
+
+        Parameters
+        ----------
+        axis : int, str or Axis
+            Axis where size is going to be changed.
+        size : int
+            New size.
+
+        Raises
+        ------
+        ValueError
+            If new size is not positive.
         """
         if size <= 0:
-            raise ValueError('new `size` should be greater than zero')
+            raise ValueError('New `size` should be greater than zero')
         axis_num = self.get_axis_num(axis)
 
         tensor = self.tensor
         if tensor is None:
-            aux_shape = list(self.shape)
+            aux_shape = list(self._shape)
             aux_shape[axis_num] = size
             self._shape = tuple(aux_shape)
 
         else:
-            if size < self.shape[axis_num]:
+            if size < self._shape[axis_num]:
+                # If new size is smaller than current, tensor is cropped
+                # starting from the "left", "top", "front", etc. in each dimension
                 index = []
-                for i, dim in enumerate(self.shape):
+                for i, dim in enumerate(self._shape):
                     if i == axis_num:
-                        if size > dim:
-                            # TODO: aqui no se entra
-                            index.append(slice(size - dim, size))
-                        else:
-                            index.append(slice(dim - size, dim))
+                        index.append(slice(dim - size, dim))
                     else:
                         index.append(slice(0, dim))
-                aux_shape = list(self.shape)
+                aux_shape = list(self._shape)
                 aux_shape[axis_num] = size
                 self._shape = tuple(aux_shape)
                 self.tensor = tensor[index]
 
-            elif size > self.shape[axis_num]:
+            elif size > self._shape[axis_num]:
+                # If new size is greater than current, tensor is expanded with
+                # zeros in the "left", "top", "front", etc. dimension
                 pad = []
-                for i, dim in enumerate(self.shape):
+                for i, dim in enumerate(self._shape):
                     if i == axis_num:
-                        if size > dim:
-                            pad += [0, size - dim]
-                        else:
-                            pad += [0, 0]  # TODO: aqui no se entra
+                        pad += [0, size - dim]
                     else:
                         pad += [0, 0]
                 pad.reverse()
-                aux_shape = list(self.shape)
+                aux_shape = list(self._shape)
                 aux_shape[axis_num] = size
                 self._shape = tuple(aux_shape)
                 self.tensor = nn.functional.pad(tensor, pad)
 
+    def get_axis(self, axis: Ax) -> 'AbstractEdge':
+        """Returns :class:`Axis` given its ``name`` or ``num``."""
+        axis_num = self.get_axis_num(axis)
+        return self._axes[axis_num]
+    
     def get_axis_num(self, axis: Ax) -> int:
+        """Returns axis' ``num`` given the :class:`Axis` or its ``name``."""
         if isinstance(axis, int):
-            while axis < 0:
-                axis += self.rank
+            if axis < 0:
+                axis = axis % self.rank  # When indexing with -1, -2, ...
             for ax in self._axes:
                 if axis == ax._num:
                     return ax._num
@@ -553,16 +710,20 @@ class AbstractNode(ABC):
             raise IndexError(f'Node {self!s} has no axis {axis!r}')
         else:
             raise TypeError('`axis` should be int, str or Axis type')
-
-    def get_axis(self, axis: Ax) -> 'AbstractEdge':
-        axis_num = self.get_axis_num(axis)
-        return self._axes[axis_num]
-
+        
     def get_edge(self, axis: Ax) -> 'AbstractEdge':
+        """
+        Returns :class:`AbstractEdge` given the :class:`Axis` (or its name/num)
+        where it is attached to the node.
+        """
         axis_num = self.get_axis_num(axis)
         return self._edges[axis_num]
-
+    
     def in_which_axis(self, edge: 'AbstractEdge') -> Axis:
+        """
+        Returns :class:`Axis` given the :class:`AbstractEdge` that is attached
+        to the node through it.
+        """
         lst = []
         for ax, ed in zip(self._axes, self._edges):
             if ed == edge:
@@ -573,12 +734,14 @@ class AbstractNode(ABC):
         elif len(lst) == 1:
             return lst[0]
         else:
+            # Case of a trace edge that is attached to the node in two axes
             return lst
 
     def _add_edge(self,
                   edge: 'AbstractEdge',
                   axis: Ax,
                   node1: bool = True) -> None:
+        # TODO:
         """
         Add an edge to a given axis of the node.
 
@@ -871,7 +1034,6 @@ class AbstractNode(ABC):
                        address: Optional[Text] = None,
                        node_ref: Optional['AbstractNode'] = None,
                        full: Optional[bool] = None,
-                       stack_idx: Optional[Tuple[slice, ...]] = None,
                        index: Optional[Tuple[slice, ...]] = None) -> None:
         """
         Change information about tensor storage when we are changing memory management.
@@ -883,8 +1045,6 @@ class AbstractNode(ABC):
             self._tensor_info['node_ref'] = node_ref
         if full is not None:
             self._tensor_info['full'] = full
-        if stack_idx is not None:
-            self._tensor_info['stack_idx'] = stack_idx
         if index is not None:
             # TODO: y creo que nunca uso index
             self._tensor_info['index'] = index
@@ -1439,6 +1599,10 @@ class AbstractEdge(ABC):
     @property
     def node2(self) -> AbstractNode:
         return self._nodes[1]
+    
+    @property
+    def nodes(self) -> List[AbstractNode]:
+        return self._nodes
 
     @property
     def axis1(self) -> Axis:
@@ -1447,6 +1611,10 @@ class AbstractEdge(ABC):
     @property
     def axis2(self) -> Axis:
         return self._axes[1]
+    
+    @property
+    def axes(self) -> List[Axis]:
+        return self._nodes
 
     @property
     def name(self) -> Text:
@@ -1904,6 +2072,24 @@ class ParamEdge(AbstractEdge, nn.Module):
         self._dim = dim
 
     def dim(self) -> int:
+        """
+        Here, `dimension` is not the same as `size`. The ``dim`` and ``size`` in
+        a certain axis can be equal if the edge attached to that axis is not parametric
+        (e.g. :class:`Edge`). In the case of parametric edges (e.g. :class:`ParamEdge`),
+        `bond dimensions` can be learned, meaning that, although the tensor's shape
+        can be fixed through the whole training process, what is learned is an
+        `effective` dimension
+        
+        Similar to `size`, but if a ParamEdge is attached to an axis,
+        it is returned its dimension (number of 1's in the diagonal of
+        the matrix) rather than its total size (number of 1's and 0's
+        in the diagonal of the matrix)
+
+        Returns
+        -------
+        int
+            _description_
+        """
         return self._dim
 
     def change_dim(self, dim: Optional[int] = None) -> None:
@@ -2107,7 +2293,6 @@ class StackNode(Node):
                        address: Optional[Text] = None,
                        node_ref: Optional[AbstractNode] = None,
                        full: Optional[bool] = None,
-                       stack_idx: Optional[Tuple[slice, ...]] = None,
                        index: Optional[Tuple[slice, ...]] = None) -> None:
         """
         Change information about tensor storage when we are changing memory management.
@@ -2118,8 +2303,6 @@ class StackNode(Node):
             self._tensor_info['node_ref'] = node_ref
         if full is not None:
             self._tensor_info['full'] = full
-        if stack_idx is not None:
-            self._tensor_info['stack_idx'] = stack_idx
         if index is not None:
             self._tensor_info['index'] = index
 
@@ -2591,7 +2774,6 @@ class TensorNetwork(nn.Module):
                 node._tensor_info['address'] = node.name
                 node._tensor_info['node_ref'] = None
                 node._tensor_info['full'] = True
-                node._tensor_info['stack_idx'] = None
                 node._tensor_info['index'] = None
 
                 if isinstance(node._temp_tensor, Parameter):
@@ -2720,7 +2902,6 @@ class TensorNetwork(nn.Module):
             node._tensor_info = {'address': new_name,
                                  'node_ref': None,
                                  'full': True,
-                                 'stack_idx': None,
                                  'index': None}
             node._temp_tensor = None
             node._network = self
@@ -2957,7 +3138,6 @@ class TensorNetwork(nn.Module):
                 node._tensor_info['address'] = None
                 node._tensor_info['node_ref'] = stack_node
                 node._tensor_info['full'] = False
-                node._tensor_info['stack_idx'] = i
                 node._tensor_info['index'] = i
 
     def unset_data_nodes(self) -> None:

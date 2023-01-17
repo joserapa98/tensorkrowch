@@ -1,53 +1,63 @@
 Tensor Network Components
 =========================
 
+.. currentmodule:: tensorkrowch
 
 Axis
 ----
 
-.. autoclass:: tensorkrowch.Axis
+.. autoclass:: Axis
     :members:
 
 
 Nodes
 -----
 
-.. autoclass:: tensorkrowch.Node
+.. autoclass:: AbstractNode
     :inherited-members:
+    :members:
+
+.. autoclass:: Node
     :members:
     :noindex:
 
-.. autoclass:: tensorkrowch.ParamNode
-    :inherited-members:
+.. autoclass:: ParamNode
     :members:
 
-.. autoclass:: tensorkrowch.StackNode
-    :inherited-members:
+.. autoclass:: StackNode
     :members:
 
-.. autoclass:: tensorkrowch.ParamStackNode
-    :inherited-members:
+.. autoclass:: ParamStackNode
     :members:
 
 
 Edges
 -----
 
-.. autoclass:: tensorkrowch.Edge
+.. autoclass:: AbstractEdge
+    :inherited-members:
     :members:
 
-.. autoclass:: tensorkrowch.ParamEdge
+.. autoclass:: Edge
     :members:
 
-.. autoclass:: tensorkrowch.StackEdge
+.. autoclass:: ParamEdge
     :members:
 
-.. autoclass:: tensorkrowch.ParamStackEdge
+.. autoclass:: StackEdge
     :members:
 
+.. autoclass:: ParamStackEdge
+    :members:
+
+
+Successor
+---------
+
+.. autoclass:: Successor
 
 Tensor Network
 --------------
 
-.. autoclass:: tensorkrowch.TensorNetwork
+.. autoclass:: TensorNetwork
     :members:

@@ -6,7 +6,8 @@ that makes it easy to train Tensor Networks as machine learning
 models and include them in a deep learning pipeline.
 
 The purpose of **TensorKrowch** is that of being an *easy-to-use*,
-*higly-optimized*, *general* framework to train any Tensor Network.
+*higly-optimized*, *general* framework that enables users to build
+and train any Tensor Network.
 
 .. note::
 

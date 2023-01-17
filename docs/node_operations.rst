@@ -1,34 +1,37 @@
 Operations
 ==========
 
+.. currentmodule:: tensorkrowch
+
+.. autoclass:: Operation
 
 Basic Operations
 ----------------
 
-.. autofunction:: tensorkrowch.tprod
+.. autofunction:: tprod
 
-.. autofunction:: tensorkrowch.mul
+.. autofunction:: mul
 
-.. autofunction:: tensorkrowch.add
+.. autofunction:: add
 
-.. autofunction:: tensorkrowch.sub
+.. autofunction:: sub
 
-.. autofunction:: tensorkrowch.permute
+.. autofunction:: permute
 
 
 Node Operations
 ---------------
 
-.. autofunction:: tensorkrowch.split
+.. autofunction:: split
 
-.. autofunction:: tensorkrowch.contract_edges
+.. autofunction:: contract_edges
 
-.. autofunction:: tensorkrowch.contract_between
+.. autofunction:: contract_between
 
-.. autofunction:: tensorkrowch.stack
+.. autofunction:: stack
 
-.. autofunction:: tensorkrowch.unbind
+.. autofunction:: unbind
 
-.. autofunction:: tensorkrowch.einsum
+.. autofunction:: einsum
 
-.. autofunction:: tensorkrowch.stacked_einsum
+.. autofunction:: stacked_einsum

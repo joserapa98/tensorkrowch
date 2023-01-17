@@ -116,6 +116,11 @@
      Operations
     </a>
    </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tn_models.html">
+     Models
+    </a>
+   </li>
   </ul>
  </li>
 </ul>
@@ -216,11 +221,14 @@ title="Fullscreen mode"
  | <a href="#D"><strong>D</strong></a>
  | <a href="#E"><strong>E</strong></a>
  | <a href="#F"><strong>F</strong></a>
+ | <a href="#G"><strong>G</strong></a>
  | <a href="#I"><strong>I</strong></a>
  | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
+ | <a href="#O"><strong>O</strong></a>
  | <a href="#P"><strong>P</strong></a>
+ | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
  | <a href="#T"><strong>T</strong></a>
  | <a href="#U"><strong>U</strong></a>
@@ -238,10 +246,18 @@ title="Fullscreen mode"
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge">AbstractEdge (class in tensorkrowch)</a>
+</li>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode">AbstractNode (class in tensorkrowch)</a>
+</li>
       <li><a href="node_operations.html#tensorkrowch.add">add() (in module tensorkrowch)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.axes">axes (tensorkrowch.AbstractNode property)</a>
+</li>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.axes_names">axes_names (tensorkrowch.AbstractNode property)</a>
+</li>
       <li><a href="network_components.html#tensorkrowch.Axis">Axis (class in tensorkrowch)</a>
 </li>
   </ul></td>
@@ -250,54 +266,62 @@ title="Fullscreen mode"
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="network_components.html#tensorkrowch.Edge.change_size">change_size() (tensorkrowch.Edge method)</a>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.change_size">change_size() (tensorkrowch.AbstractEdge method)</a>
 
       <ul>
+        <li><a href="network_components.html#tensorkrowch.Edge.change_size">(tensorkrowch.Edge method)</a>
+</li>
         <li><a href="network_components.html#tensorkrowch.ParamEdge.change_size">(tensorkrowch.ParamEdge method)</a>
 </li>
       </ul></li>
       <li><a href="network_components.html#tensorkrowch.ParamEdge.compute_parameters">compute_parameters() (tensorkrowch.ParamEdge static method)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.Edge.connect">connect() (tensorkrowch.Edge method)</a>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.connect">connect() (tensorkrowch.AbstractEdge method)</a>
 
       <ul>
+        <li><a href="network_components.html#tensorkrowch.Edge.connect">(tensorkrowch.Edge method)</a>
+</li>
         <li><a href="network_components.html#tensorkrowch.ParamEdge.connect">(tensorkrowch.ParamEdge method)</a>
 </li>
       </ul></li>
       <li><a href="network_components.html#tensorkrowch.TensorNetwork.contract">contract() (tensorkrowch.TensorNetwork method)</a>
 </li>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.contract_">contract_() (tensorkrowch.AbstractEdge method)</a>
+</li>
       <li><a href="node_operations.html#tensorkrowch.contract_between">contract_between() (in module tensorkrowch)</a>
 
       <ul>
-        <li><a href="network_components.html#tensorkrowch.ParamNode.contract_between">(tensorkrowch.ParamNode method)</a>
-</li>
-        <li><a href="network_components.html#tensorkrowch.ParamStackNode.contract_between">(tensorkrowch.ParamStackNode method)</a>
-</li>
-        <li><a href="network_components.html#tensorkrowch.StackNode.contract_between">(tensorkrowch.StackNode method)</a>
+        <li><a href="network_components.html#tensorkrowch.AbstractNode.contract_between">(tensorkrowch.AbstractNode method)</a>
 </li>
       </ul></li>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.contract_between_">contract_between_() (tensorkrowch.AbstractNode method)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="network_components.html#tensorkrowch.ParamNode.contract_between_">contract_between_() (tensorkrowch.ParamNode method)</a>
-
-      <ul>
-        <li><a href="network_components.html#tensorkrowch.ParamStackNode.contract_between_">(tensorkrowch.ParamStackNode method)</a>
-</li>
-        <li><a href="network_components.html#tensorkrowch.StackNode.contract_between_">(tensorkrowch.StackNode method)</a>
-</li>
-      </ul></li>
       <li><a href="node_operations.html#tensorkrowch.contract_edges">contract_edges() (in module tensorkrowch)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.Edge.copy">copy() (tensorkrowch.Edge method)</a>
+      <li><a href="tn_models.html#tensorkrowch.ConvMPS">ConvMPS (class in tensorkrowch)</a>
+</li>
+      <li><a href="tn_models.html#tensorkrowch.ConvMPSLayer">ConvMPSLayer (class in tensorkrowch)</a>
+</li>
+      <li><a href="tn_models.html#tensorkrowch.ConvPEPS">ConvPEPS (class in tensorkrowch)</a>
+</li>
+      <li><a href="tn_models.html#tensorkrowch.ConvTree">ConvTree (class in tensorkrowch)</a>
+</li>
+      <li><a href="tn_models.html#tensorkrowch.ConvUMPS">ConvUMPS (class in tensorkrowch)</a>
+</li>
+      <li><a href="tn_models.html#tensorkrowch.ConvUMPSLayer">ConvUMPSLayer (class in tensorkrowch)</a>
+</li>
+      <li><a href="tn_models.html#tensorkrowch.ConvUPEPS">ConvUPEPS (class in tensorkrowch)</a>
+</li>
+      <li><a href="tn_models.html#tensorkrowch.ConvUTree">ConvUTree (class in tensorkrowch)</a>
+</li>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.copy">copy() (tensorkrowch.AbstractEdge method)</a>
 
       <ul>
+        <li><a href="network_components.html#tensorkrowch.Edge.copy">(tensorkrowch.Edge method)</a>
+</li>
         <li><a href="network_components.html#tensorkrowch.ParamEdge.copy">(tensorkrowch.ParamEdge method)</a>
-</li>
-        <li><a href="network_components.html#tensorkrowch.ParamNode.copy">(tensorkrowch.ParamNode method)</a>
-</li>
-        <li><a href="network_components.html#tensorkrowch.ParamStackNode.copy">(tensorkrowch.ParamStackNode method)</a>
-</li>
-        <li><a href="network_components.html#tensorkrowch.StackNode.copy">(tensorkrowch.StackNode method)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -310,28 +334,26 @@ title="Fullscreen mode"
 </li>
       <li><a href="network_components.html#tensorkrowch.TensorNetwork.delete_node">delete_node() (tensorkrowch.TensorNetwork method)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.ParamNode.dim">dim() (tensorkrowch.ParamNode method)</a>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.dim">dim() (tensorkrowch.AbstractNode method)</a>
 
       <ul>
-        <li><a href="network_components.html#tensorkrowch.ParamStackNode.dim">(tensorkrowch.ParamStackNode method)</a>
-</li>
-        <li><a href="network_components.html#tensorkrowch.StackNode.dim">(tensorkrowch.StackNode method)</a>
+        <li><a href="network_components.html#tensorkrowch.ParamEdge.dim">(tensorkrowch.ParamEdge method)</a>
 </li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="network_components.html#tensorkrowch.Edge.disconnect">disconnect() (tensorkrowch.Edge method)</a>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.disconnect">disconnect() (tensorkrowch.AbstractEdge method)</a>
 
       <ul>
+        <li><a href="network_components.html#tensorkrowch.AbstractNode.disconnect">(tensorkrowch.AbstractNode method)</a>
+</li>
+        <li><a href="network_components.html#tensorkrowch.Edge.disconnect">(tensorkrowch.Edge method)</a>
+</li>
         <li><a href="network_components.html#tensorkrowch.ParamEdge.disconnect">(tensorkrowch.ParamEdge method)</a>
 </li>
-        <li><a href="network_components.html#tensorkrowch.ParamNode.disconnect">(tensorkrowch.ParamNode method)</a>
-</li>
-        <li><a href="network_components.html#tensorkrowch.ParamStackNode.disconnect">(tensorkrowch.ParamStackNode method)</a>
-</li>
-        <li><a href="network_components.html#tensorkrowch.StackNode.disconnect">(tensorkrowch.StackNode method)</a>
-</li>
       </ul></li>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.dtype">dtype (tensorkrowch.AbstractNode property)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -340,10 +362,14 @@ title="Fullscreen mode"
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="network_components.html#tensorkrowch.Edge">Edge (class in tensorkrowch)</a>
 </li>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.edges">edges (tensorkrowch.AbstractNode property)</a>
+
+      <ul>
+        <li><a href="network_components.html#tensorkrowch.TensorNetwork.edges">(tensorkrowch.TensorNetwork property)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="network_components.html#tensorkrowch.TensorNetwork.edges">edges (tensorkrowch.TensorNetwork property)</a>
-</li>
       <li><a href="node_operations.html#tensorkrowch.einsum">einsum() (in module tensorkrowch)</a>
 </li>
   </ul></td>
@@ -357,18 +383,46 @@ title="Fullscreen mode"
   </ul></td>
 </tr></table>
 
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.get_axis">get_axis() (tensorkrowch.AbstractNode method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.get_axis_num">get_axis_num() (tensorkrowch.AbstractNode method)</a>
+</li>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.get_edge">get_edge() (tensorkrowch.AbstractNode method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.in_which_axis">in_which_axis() (tensorkrowch.AbstractNode method)</a>
+</li>
       <li><a href="network_components.html#tensorkrowch.TensorNetwork.initialize">initialize() (tensorkrowch.TensorNetwork method)</a>
 </li>
       <li><a href="network_components.html#tensorkrowch.Axis.is_batch">is_batch() (tensorkrowch.Axis method)</a>
 </li>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.is_data">is_data() (tensorkrowch.AbstractNode method)</a>
+</li>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.is_leaf">is_leaf() (tensorkrowch.AbstractNode method)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="network_components.html#tensorkrowch.Axis.is_node1">is_node1() (tensorkrowch.Axis method)</a>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.is_node1">is_node1() (tensorkrowch.AbstractNode method)</a>
+
+      <ul>
+        <li><a href="network_components.html#tensorkrowch.Axis.is_node1">(tensorkrowch.Axis method)</a>
+</li>
+      </ul></li>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.is_non_leaf">is_non_leaf() (tensorkrowch.AbstractNode method)</a>
 </li>
       <li><a href="network_components.html#tensorkrowch.ParamEdge.is_updated">is_updated() (tensorkrowch.ParamEdge method)</a>
+</li>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.is_virtual">is_virtual() (tensorkrowch.AbstractNode method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -388,16 +442,14 @@ title="Fullscreen mode"
 </li>
       <li><a href="network_components.html#tensorkrowch.ParamEdge.module_name">module_name (tensorkrowch.ParamEdge property)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.ParamNode.move_to_network">move_to_network() (tensorkrowch.ParamNode method)</a>
-
-      <ul>
-        <li><a href="network_components.html#tensorkrowch.ParamStackNode.move_to_network">(tensorkrowch.ParamStackNode method)</a>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.move_to_network">move_to_network() (tensorkrowch.AbstractNode method)</a>
 </li>
-        <li><a href="network_components.html#tensorkrowch.StackNode.move_to_network">(tensorkrowch.StackNode method)</a>
-</li>
-      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="tn_models.html#tensorkrowch.MPS">MPS (class in tensorkrowch)</a>
+</li>
+      <li><a href="tn_models.html#tensorkrowch.MPSLayer">MPSLayer (class in tensorkrowch)</a>
+</li>
       <li><a href="node_operations.html#tensorkrowch.mul">mul() (in module tensorkrowch)</a>
 </li>
   </ul></td>
@@ -406,16 +458,16 @@ title="Fullscreen mode"
 <h2 id="N">N</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="network_components.html#tensorkrowch.Axis.name">name (tensorkrowch.Axis property)</a>
-</li>
-      <li><a href="network_components.html#tensorkrowch.ParamNode.neighbours">neighbours() (tensorkrowch.ParamNode method)</a>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.name">name (tensorkrowch.AbstractNode property)</a>
 
       <ul>
-        <li><a href="network_components.html#tensorkrowch.ParamStackNode.neighbours">(tensorkrowch.ParamStackNode method)</a>
-</li>
-        <li><a href="network_components.html#tensorkrowch.StackNode.neighbours">(tensorkrowch.StackNode method)</a>
+        <li><a href="network_components.html#tensorkrowch.Axis.name">(tensorkrowch.Axis property)</a>
 </li>
       </ul></li>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.neighbours">neighbours() (tensorkrowch.AbstractNode method)</a>
+</li>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.network">network (tensorkrowch.AbstractNode property)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="usage.html#tensorkrowch.Node">Node (class in tensorkrowch)</a>
@@ -431,29 +483,27 @@ title="Fullscreen mode"
   </ul></td>
 </tr></table>
 
+<h2 id="O">O</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="node_operations.html#tensorkrowch.Operation">Operation (class in tensorkrowch)</a>
+</li>
+  </ul></td>
+</tr></table>
+
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="network_components.html#tensorkrowch.ParamNode.param_edges">param_edges() (tensorkrowch.ParamNode method)</a>
-
-      <ul>
-        <li><a href="network_components.html#tensorkrowch.ParamStackNode.param_edges">(tensorkrowch.ParamStackNode method)</a>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.param_edges">param_edges() (tensorkrowch.AbstractNode method)</a>
 </li>
-        <li><a href="network_components.html#tensorkrowch.StackNode.param_edges">(tensorkrowch.StackNode method)</a>
-</li>
-      </ul></li>
       <li><a href="network_components.html#tensorkrowch.ParamEdge">ParamEdge (class in tensorkrowch)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.Edge.parameterize">parameterize() (tensorkrowch.Edge method)</a>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.parameterize">parameterize() (tensorkrowch.AbstractEdge method)</a>
 
       <ul>
+        <li><a href="network_components.html#tensorkrowch.Edge.parameterize">(tensorkrowch.Edge method)</a>
+</li>
         <li><a href="network_components.html#tensorkrowch.ParamEdge.parameterize">(tensorkrowch.ParamEdge method)</a>
-</li>
-        <li><a href="network_components.html#tensorkrowch.ParamNode.parameterize">(tensorkrowch.ParamNode method)</a>
-</li>
-        <li><a href="network_components.html#tensorkrowch.ParamStackNode.parameterize">(tensorkrowch.ParamStackNode method)</a>
-</li>
-        <li><a href="network_components.html#tensorkrowch.StackNode.parameterize">(tensorkrowch.StackNode method)</a>
 </li>
         <li><a href="network_components.html#tensorkrowch.TensorNetwork.parameterize">(tensorkrowch.TensorNetwork method)</a>
 </li>
@@ -466,16 +516,22 @@ title="Fullscreen mode"
 </li>
       <li><a href="network_components.html#tensorkrowch.ParamStackNode">ParamStackNode (class in tensorkrowch)</a>
 </li>
+      <li><a href="tn_models.html#tensorkrowch.PEPS">PEPS (class in tensorkrowch)</a>
+</li>
       <li><a href="node_operations.html#tensorkrowch.permute">permute() (in module tensorkrowch)</a>
 
       <ul>
-        <li><a href="network_components.html#tensorkrowch.ParamNode.permute">(tensorkrowch.ParamNode method)</a>
-</li>
-        <li><a href="network_components.html#tensorkrowch.ParamStackNode.permute">(tensorkrowch.ParamStackNode method)</a>
-</li>
-        <li><a href="network_components.html#tensorkrowch.StackNode.permute">(tensorkrowch.StackNode method)</a>
+        <li><a href="network_components.html#tensorkrowch.AbstractNode.permute">(tensorkrowch.AbstractNode method)</a>
 </li>
       </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.rank">rank (tensorkrowch.AbstractNode property)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -488,26 +544,18 @@ title="Fullscreen mode"
 </li>
       <li><a href="network_components.html#tensorkrowch.ParamEdge.set_parameters">set_parameters() (tensorkrowch.ParamEdge method)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.ParamNode.set_tensor">set_tensor() (tensorkrowch.ParamNode method)</a>
-
-      <ul>
-        <li><a href="network_components.html#tensorkrowch.ParamStackNode.set_tensor">(tensorkrowch.ParamStackNode method)</a>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.set_tensor">set_tensor() (tensorkrowch.AbstractNode method)</a>
 </li>
-        <li><a href="network_components.html#tensorkrowch.StackNode.set_tensor">(tensorkrowch.StackNode method)</a>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.shape">shape (tensorkrowch.AbstractNode property)</a>
 </li>
-      </ul></li>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.size">size() (tensorkrowch.AbstractNode method)</a>
+</li>
       <li><a href="node_operations.html#tensorkrowch.split">split() (in module tensorkrowch)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.ParamNode.split_">split_() (tensorkrowch.ParamNode method)</a>
-
-      <ul>
-        <li><a href="network_components.html#tensorkrowch.ParamStackNode.split_">(tensorkrowch.ParamStackNode method)</a>
-</li>
-        <li><a href="network_components.html#tensorkrowch.StackNode.split_">(tensorkrowch.StackNode method)</a>
-</li>
-      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.split_">split_() (tensorkrowch.AbstractNode method)</a>
+</li>
       <li><a href="node_operations.html#tensorkrowch.stack">stack() (in module tensorkrowch)</a>
 </li>
       <li><a href="node_operations.html#tensorkrowch.stacked_einsum">stacked_einsum() (in module tensorkrowch)</a>
@@ -518,25 +566,25 @@ title="Fullscreen mode"
 </li>
       <li><a href="node_operations.html#tensorkrowch.sub">sub() (in module tensorkrowch)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.ParamNode.successors">successors (tensorkrowch.ParamNode property)</a>
-
-      <ul>
-        <li><a href="network_components.html#tensorkrowch.ParamStackNode.successors">(tensorkrowch.ParamStackNode property)</a>
+      <li><a href="network_components.html#tensorkrowch.Successor">Successor (class in tensorkrowch)</a>
 </li>
-        <li><a href="network_components.html#tensorkrowch.StackNode.successors">(tensorkrowch.StackNode property)</a>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.successors">successors (tensorkrowch.AbstractNode property)</a>
 </li>
-      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.tensor">tensor (tensorkrowch.AbstractNode property)</a>
+</li>
       <li><a href="network_components.html#tensorkrowch.TensorNetwork">TensorNetwork (class in tensorkrowch)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="node_operations.html#tensorkrowch.tprod">tprod() (in module tensorkrowch)</a>
+</li>
+      <li><a href="tn_models.html#tensorkrowch.Tree">Tree (class in tensorkrowch)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -544,16 +592,20 @@ title="Fullscreen mode"
 <h2 id="U">U</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="tn_models.html#tensorkrowch.UMPS">UMPS (class in tensorkrowch)</a>
+</li>
+      <li><a href="tn_models.html#tensorkrowch.UMPSLayer">UMPSLayer (class in tensorkrowch)</a>
+</li>
       <li><a href="node_operations.html#tensorkrowch.unbind">unbind() (in module tensorkrowch)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.ParamNode.unset_tensor">unset_tensor() (tensorkrowch.ParamNode method)</a>
-
-      <ul>
-        <li><a href="network_components.html#tensorkrowch.ParamStackNode.unset_tensor">(tensorkrowch.ParamStackNode method)</a>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.unset_tensor">unset_tensor() (tensorkrowch.AbstractNode method)</a>
 </li>
-        <li><a href="network_components.html#tensorkrowch.StackNode.unset_tensor">(tensorkrowch.StackNode method)</a>
+      <li><a href="tn_models.html#tensorkrowch.UPEPS">UPEPS (class in tensorkrowch)</a>
 </li>
-      </ul></li>
+      <li><a href="tn_models.html#tensorkrowch.UTree">UTree (class in tensorkrowch)</a>
+</li>
   </ul></td>
 </tr></table>
 

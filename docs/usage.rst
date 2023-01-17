@@ -10,7 +10,7 @@ To use TensorKrowch, first install it using pip:
 
 .. code-block:: console
 
-    (.venv) $ pip install tensorkrowch
+    $ pip install tensorkrowch
 
 Here is a ``snippet`` of code
 

@@ -6,3 +6,4 @@ API Reference
 
    network_components
    node_operations
+   tn_models

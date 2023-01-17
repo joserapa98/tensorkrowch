@@ -51,8 +51,16 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 master_doc = 'contents'
 
 autodoc_typehints = 'none'
-# autodoc_member_order = 'bysource'
+autodoc_member_order = 'bysource'
 autodoc_typehints_format = 'short'
+
+doctest_global_setup = """
+import tensorkrowch as tk
+import torch
+import torch.nn as nn
+"""
+
+copybutton_prompt_text = '>>> |$ '
 
 # Make that the index page does not disappear from sidebar TOC. From
 # https://stackoverflow.com/questions/18969093/how-to-include-the-toctree-in-the-sidebar-of-each-page

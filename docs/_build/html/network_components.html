@@ -491,7 +491,7 @@ a limited number of abstract methods overridden.</p>
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.tensor">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">tensor</span></span><a class="headerlink" href="#tensorkrowch.AbstractNode.tensor" title="Permalink to this definition">#</a></dt>
 <dd><p>Node’s tensor. It can be a <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code>, <code class="docutils literal notranslate"><span class="pre">torch.nn.Parameter</span></code> or
-None if the node is empty.</p>
+<code class="docutils literal notranslate"><span class="pre">None</span></code> if the node is empty.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -592,7 +592,7 @@ the size of that axis; otherwise returns the shape of the node (same as
 <a class="reference internal" href="#tensorkrowch.AbstractNode.shape" title="tensorkrowch.AbstractNode.shape"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shape</span></code></a>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – axis for which to retrieve the size.</p>
+<dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – Axis for which to retrieve the size.</p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>int or torch.Size</p>
@@ -609,7 +609,7 @@ all edges.</p>
 <p>See also <code class="xref py py-meth docutils literal notranslate"><span class="pre">Edge.dim()</span></code> and <a class="reference internal" href="#tensorkrowch.ParamEdge.dim" title="tensorkrowch.ParamEdge.dim"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ParamEdge.dim()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – axis for which to retrieve the dimension.</p>
+<dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – Axis for which to retrieve the dimension.</p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>int or torch.Size</p>
@@ -625,7 +625,7 @@ all edges.</p>
 returns the <code class="docutils literal notranslate"><span class="pre">node1</span></code> of all axes of the node.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – axis for which to retrieve the <code class="docutils literal notranslate"><span class="pre">node1</span></code>.</p>
+<dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – Axis for which to retrieve the <code class="docutils literal notranslate"><span class="pre">node1</span></code>.</p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>bool or list[bool]</p>
@@ -639,7 +639,7 @@ returns the <code class="docutils literal notranslate"><span class="pre">node1</
 <dd><p>Returns the neighbours of the node, the nodes to which it is connected.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – axis for which to retrieve the neighbour.</p>
+<dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – Axis for which to retrieve the neighbour.</p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode">AbstractNode</a> or list[<a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode">AbstractNode</a>]</p>

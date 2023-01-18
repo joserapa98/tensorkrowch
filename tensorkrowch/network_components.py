@@ -89,7 +89,8 @@ class Axis:
         Node to which the axis belongs
     node1 : bool
         Boolean indicating whether `node1` of the edge attached to this axis is
-        the node that contains the axis. Otherwise, the node is `node2` of the edge.
+        the node that contains the axis (``True``). Otherwise, the node is `node2`
+        of the edge (``False``).
         
     Examples
     --------
@@ -356,7 +357,7 @@ class AbstractNode(ABC):
     def tensor(self) -> Optional[Union[Tensor, Parameter]]:
         """
         Node's tensor. It can be a ``torch.Tensor``, ``torch.nn.Parameter`` or
-        ``None`` if the node is empty.
+        None if the node is empty.
         """
         if (self._temp_tensor is not None) or (self._tensor_info is None):
             result = self._temp_tensor
@@ -711,10 +712,76 @@ class AbstractNode(ABC):
         else:
             raise TypeError('`axis` should be int, str or Axis type')
         
+    def _add_edge(self,
+                  edge: 'AbstractEdge',
+                  axis: Ax,
+                  node1: bool = True) -> None:
+        """
+        Adds an edge to the specified axis of the node.
+
+        Parameters
+        ----------
+        edge : AbstractEdge
+            Edge that will be added.
+        axis : int, str or Axis
+            Axes where the edge will be attached.
+        node1 : bool, optional
+            Boolean indicating whether the node is the `node1` (``True``) or
+            `node2` (``False``) of the edge.
+        """
+        axis_num = self.get_axis_num(axis)
+        self._axes[axis_num]._node1 = node1
+        self._edges[axis_num] = edge
+        
+    def _reattach_edges(self, override: bool = False) -> None:
+        """
+        Substitutes current edges by copies of them that are attached to the node.
+        It can happen that an edge is not attached to the node if it is the result
+        of an :class:`Operation` and, hence, it inherits edges from the operands.
+        In that case, the new copied edges will be attached to the resultant node,
+        replacing each previous `node1` or `node2` with it (according to the `node1`
+        attribute of each axis).
+        
+        Used for inplace operations like :func:`permute_` or :func`split_` and
+        to :meth:`Node.parameterize`.
+
+        Parameters
+        ----------
+        override: bool
+            Boolean indicating if the new, reattached edges should also replace
+            the corresponding edges in the node's neighbours (``True``). Otherwise,
+            the neighbours' edges will be pointing to the original nodes from which
+            the current node inherits its edges (``False``).
+        """
+        for i, (edge, node1) in enumerate(zip(self._edges, self.is_node1())):
+            node = edge._nodes[1 - node1]
+            if node != self:
+                # New edges are always a copy, so that the original
+                # nodes have different edges from the current node
+                new_edge = edge.copy()
+                self._edges[i] = new_edge
+
+                new_edge._nodes[1 - node1] = self
+                new_edge._axes[1 - node1] = self._axes[i]
+
+                # Case of trace edges (attached to the node in two axes)
+                neighbour = new_edge._nodes[node1]
+                if neighbour == node:
+                    for j, other_edge in enumerate(self._edges):
+                        if (other_edge == edge) and (i != j):
+                            self._edges[j] = new_edge
+                            new_edge._nodes[node1] = self
+                            new_edge._axes[node1] = self._axes[j]
+
+                if override:
+                    if not new_edge.is_dangling() and (neighbour != node):
+                        neighbour._add_edge(
+                            new_edge, new_edge._axes[node1], not node1)
+        
     def get_edge(self, axis: Ax) -> 'AbstractEdge':
         """
-        Returns :class:`AbstractEdge` given the :class:`Axis` (or its name/num)
-        where it is attached to the node.
+        Returns :class:`AbstractEdge` given the :class:`Axis` (or its ``name``
+        or ``num``) where it is attached to the node.
         """
         axis_num = self.get_axis_num(axis)
         return self._edges[axis_num]
@@ -734,45 +801,40 @@ class AbstractNode(ABC):
         elif len(lst) == 1:
             return lst[0]
         else:
-            # Case of a trace edge that is attached to the node in two axes
+            # Case of trace edges (attached to the node in two axes)
             return lst
-
-    def _add_edge(self,
-                  edge: 'AbstractEdge',
-                  axis: Ax,
-                  node1: bool = True) -> None:
-        # TODO:
-        """
-        Add an edge to a given axis of the node.
-
-        Parameters
-        ----------
-        edge: edge that is to be attached
-        axis: axis to which the edge will be attached
-        node1: boolean indicating if `self` is the node1 or node2 of `edge`
-        """
-        axis_num = self.get_axis_num(axis)
-        self._axes[axis_num]._node1 = node1
-        self._edges[axis_num] = edge
 
     def param_edges(self,
                     set_param: Optional[bool] = None,
                     sizes: Optional[Sequence[int]] = None) -> Optional[bool]:
-        """
-        Return param_edges attribute or change it if set_param is provided.
+        r"""
+        Returns ``param_edges`` attribute or changes it if ``set_param`` is provided,
+        by parameterizing or de-parameterizing all edges (see also :meth:`Edge.parameterize`
+        or :meth:`ParamEdge.parameterize`).
 
         Parameters
         ----------
-        set_param: boolean indicating whether edges have to be parameterized
-            (True) or de-parameterized (False)
-        sizes: if edges are parameterized, their dimensions will match the current
-            shape, but a sequence of `sizes` can also be given to expand that shape
-            (in that case, sizes and dimensions will be different)
+        set_param : bool, optional
+            Boolean indicating whether edges have to be parameterized (``True``)
+            or de-parameterized (``False``).
+        sizes : list[int] or tuple[int], optional
+            Sizes used to expand or shrink the node's shape if desired. If edges
+            are parameterized, their dimensions will be :math:`\text{dim} =
+            \min(\text{prev_size}, \text{new_size})`
 
         Returns
         -------
-        Returns True if all edges are parametric edges, False if all edges are
-        non-parametric edges, and None if there are some edges of each type
+        bool or None
+            If ``set_param`` is not provided, returns ``True`` if all edges are
+            :class:`ParamEdges <ParamEdge>` or ``False`` if all edges are
+            :class:`Edges <Edge>`. If there are some of each type, or ``set_param``
+            is provided, returns None.
+
+        Raises
+        ------
+        ValueError
+            If ``sizes`` are provided but do not match the number of edges of
+            the node.
         """
         if set_param is None:
             all_edges = True
@@ -793,8 +855,8 @@ class AbstractNode(ABC):
         else:
             if set_param:
                 if not sizes:
-                    sizes = self.shape
-                elif len(sizes) != len(self._edges):
+                    sizes = self._shape
+                elif len(sizes) != len(self._axes):
                     raise ValueError(
                         '`sizes` length should match the number of node\'s axes')
                 for i, edge in enumerate(self._edges):
@@ -803,52 +865,15 @@ class AbstractNode(ABC):
                 for param_edge in self._edges:
                     param_edge.parameterize(False)
 
-    def _reattach_edges(self, override: bool = False) -> None:
-        """
-        When a node has edges that are a reference to other previously created
-        edges, those edges might have no reference to this node. With `reattach_edges`,
-        `node1` or `node2` of all the edges is redirected to the node, according
-        to each axis `node1` attribute.
-
-        Parameters
-        ----------
-        override: if True, the copied edges are also put in the corresponding
-            axis of the neighbours, so that the new node is connected to its
-            neighbours and vice versa. Otherwise, the new node has edges pointing
-            to the neighbours, but their edges are still connected to the original
-            node
-        """
-        for i, (edge, node1) in enumerate(zip(self._edges, self.is_node1())):
-            node = edge._nodes[1 - node1]
-            if node != self:
-                # New edges are always a copy, so that the original
-                # node has different edges than the new one
-                new_edge = edge.copy()
-                self._edges[i] = new_edge
-
-                new_edge._nodes[1 - node1] = self
-                new_edge._axes[1 - node1] = self._axes[i]
-
-                other_node = new_edge._nodes[node1]
-                if other_node == node:
-                    for j, other_edge in enumerate(self._edges):
-                        if (other_edge == edge) and (i != j):
-                            self._edges[j] = new_edge
-                            new_edge._nodes[node1] = self
-                            new_edge._axes[node1] = self._axes[j]
-
-                if override:
-                    if not new_edge.is_dangling() and (other_node != node):
-                        other_node._add_edge(
-                            new_edge, new_edge._axes[node1], not node1)
-
     def disconnect(self, axis: Optional[Ax] = None) -> None:
         """
-        Disconnect specified edges of the node if they were connected to other nodes
+        Disconnects all edges of the node if they were connected to other nodes.
+        If ``axis`` is sepcified, only the corresponding edge is disconnected.
 
         Parameters
         ----------
-        axis: which edge is to be disconnected. If None, all edges are disconnected
+        axis : int, str or Axis, optional
+            Axis whose edge will be disconnected.
         """
         if axis is not None:
             edges = [self[axis]]
@@ -861,7 +886,9 @@ class AbstractNode(ABC):
                     edge | edge
 
     @staticmethod
-    def _make_copy_tensor(shape: Shape, device: torch.device = torch.device('cpu')) -> Tensor:
+    def _make_copy_tensor(shape: Shape,
+                          device: torch.device = torch.device('cpu')) -> Tensor:
+        """Returns copy tensor (ones in the "diagonal", zeros elsewhere)."""
         copy_tensor = torch.zeros(shape, device=device)
         rank = len(shape)
         i = torch.arange(min(shape), device=device)
@@ -873,6 +900,7 @@ class AbstractNode(ABC):
                           low: float = 0.,
                           high: float = 1.,
                           device: torch.device = torch.device('cpu')) -> Tensor:
+        """Returns tensor whose entries are drawn from the uniform distribution."""
         if not isinstance(low, float):
             raise TypeError('`low` should be float type')
         if not isinstance(high, float):
@@ -886,6 +914,7 @@ class AbstractNode(ABC):
                            mean: float = 0.,
                            std: float = 1.,
                            device: torch.device = torch.device('cpu')) -> Tensor:
+        """Returns tensor whose entries are drawn from the normal distribution."""
         if not isinstance(mean, float):
             raise TypeError('`mean` should be float type')
         if not isinstance(std, float):
@@ -899,8 +928,38 @@ class AbstractNode(ABC):
                     init_method: Text = 'zeros',
                     device: torch.device = torch.device('cpu'),
                     **kwargs: float) -> Tensor:
+        """
+        Returns a tensor that can be put in the node, and is initialized according
+        to ``init_method``. By default, it has the same shape as the node.
+
+        Parameters
+        ----------
+        shape : int, list[int], tuple[int] or torch.Size, optional
+            Shape of the tensor. If None, node's shape will be used.
+        init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
+            Initialization method.
+        device : torch.device, optional
+            Device where to initialize the tensor.
+        kwargs : float
+            Keyword arguments for the different initialization methods:
+            
+            * ``low``, ``high`` for uniform initialization. See
+              `torch.rand() <https://pytorch.org/docs/stable/generated/torch.rand.html>`_
+            
+            * ``mean``, ``std`` for normal initialization. See
+              `torch.randn() <https://pytorch.org/docs/stable/generated/torch.randn.html>`_
+
+        Returns
+        -------
+        torch.Tensor
+
+        Raises
+        ------
+        ValueError
+            If ``init_method`` is not one of "zeros", "ones", "copy", "rand", "randn".
+        """
         if shape is None:
-            shape = self.shape
+            shape = self._shape
         if init_method == 'zeros':
             return torch.zeros(shape, device=device)
         elif init_method == 'ones':
@@ -915,22 +974,42 @@ class AbstractNode(ABC):
             raise ValueError('Choose a valid `init_method`: "zeros", '
                              '"ones", "copy", "rand", "randn"')
 
-    def _compatible_dims(self, tensor: Tensor) -> bool:
+    def _compatible_shape(self, tensor: Tensor) -> bool:
         """
-        Check if a tensor has a shape that is compatible with the dimensions
-        of the current node in order to set it as the new tensor
+        Checks if tensor's shape is "compatible" with the node's shape, meaning
+        that the sizes in all axes must match except for the batch axes, where
+        sizes can be different.
         """
         if len(tensor.shape) == self.rank:
             for i, dim in enumerate(tensor.shape):
                 edge = self.get_edge(i)
-                # TODO: sure? I can set any dimension in dangling edges
-                # TODO: dim() or size() -> should be size
-                if not edge.is_batch() and dim != edge.size():
+                if not edge.is_batch() and (dim != edge.size()):
                     return False
             return True
         return False
 
     def _crop_tensor(self, tensor: Tensor, allow_diff_shape: bool = False) -> Tensor:
+        """
+        Crops the tensor in case its shape is not compatible with the node's shape.
+        That is, if the tensor has a size that is smaller than the corresponding
+        size of the node for a certain axis, the tensor is cropped in that axis
+        (provided that the axis is not a batch axis). If that size is greater in
+        the tensor that in the node, raises a ``ValueError``.
+        
+        Parameters
+        ----------
+        tensor : torch.Tensor
+            Tensor to be cropped.
+        allow_diff_shape : bool
+            Boolean indicating whether different sizes are allowed for all axes
+            (``True``), rather than just for batch axes (``Falsee``). If ``True``,
+            any tensor could be set in the node, and the node's shape would change
+            accordingly.
+            
+        Returns
+        -------
+        torch.Tensor
+        """
         if len(tensor.shape) == self.rank:
             index = []
             for i, dim in enumerate(tensor.shape):
@@ -941,10 +1020,8 @@ class AbstractNode(ABC):
                 elif dim > edge.size():
                     index.append(slice(dim - edge.size(), dim))
                 else:
-                    # TODO: or padding with zeros?
-                    raise ValueError('Cannot crop tensor if its dimensions'
-                                     ' are smaller than node\'s dimensions')
-
+                    raise ValueError(f'Cannot crop tensor if its size at axis {i}'
+                                     ' is smaller than node\'s size')
             return tensor[index]
 
         else:
@@ -958,31 +1035,40 @@ class AbstractNode(ABC):
                                  device: Optional[torch.device] = None,
                                  **kwargs: float) -> None:
         """
-        Set a new node's tensor or create one with `make_tensor` and set it.
-        To set the tensor it is also used `set_tensor_format`, which depends
-        on the type of node. This can be used in any node, even in non-leaf nodes.
+        Sets a new node's tensor or creates one with :meth:`make_tensor` and sets
+        it. Before setting it, it is casted to the correct type, so that a
+        ``torch.Tensor`` can be turned into a ``nn.Parameter`` when setting it
+        in :class:`ParamNodes <ParamNode`. This can be used in any node, even in
+        non-leaf nodes.
 
         Parameters
         ----------
-        tensor: new tensor to be set in the node
-        init_method: if `tensor` is not provided, a new tensor is initialized
-            according to `init_method`
-        device: if `tensor` is not provided, device in which the new tensor
-            should be initialized
-        kwargs: keyword arguments for the initialization method
+        tensor : torch.Tensor, optional
+            Tensor to be set in the node. If None, and `init_method` is provided,
+            the tensor is created with :meth:`make_tensor`. Otherwise, a None is
+            set as node's tensor.
+        allow_diff_shape : bool, optional
+            Boolean indicating whether different sizes are allowed for all axes
+            (``True``), rather than just for batch axes (``Falsee``). If ``True``,
+            any tensor could be set in the node, and the node's shape would change
+            accordingly.
+        init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
+            Initialization method.
+        device : Optional[torch.device], optional
+            Device where to initialize the tensor.
+        kwargs : float
+            Keyword arguments for the different initialization methods. See
+            :meth:`make_tensor`.
         """
         if tensor is not None:
             if not isinstance(tensor, Tensor):
-                raise ValueError('`tensor` should be Tensor type')
+                raise TypeError('`tensor` should be torch.Tensor type')
             elif device is not None:
                 warnings.warn('`device` was specified but is being ignored. Provide '
                               'a tensor that is already in the required device')
-            if not self._compatible_dims(tensor):
+            
+            if not self._compatible_shape(tensor):
                 tensor = self._crop_tensor(tensor, allow_diff_shape)
-                # NOTE: case unbind nodes that had different shapes
-                # warnings.warn('`tensor` dimensions are not compatible with the'
-                #               ' node\'s dimensions. `tensor` has been cropped '
-                #               'before setting it to the node')
             correct_format_tensor = self._set_tensor_format(tensor)
 
         elif init_method is not None:
@@ -995,12 +1081,8 @@ class AbstractNode(ABC):
 
         else:
             correct_format_tensor = None
-            # raise ValueError('One of `tensor` or `init_method` must be provided')
 
         self._save_in_network(correct_format_tensor)
-        # print('Save in network:', time.time() - start)
-
-        # NOTE: new! to save shape instead of having to access the tensor each time
         self._shape = tensor.shape
 
     def set_tensor(self,
@@ -1009,9 +1091,41 @@ class AbstractNode(ABC):
                    device: Optional[torch.device] = None,
                    **kwargs: float) -> None:
         """
-        Set a new node's tensor for leaf nodes.
+        Sets a new node's tensor or creates one with :meth:`make_tensor` and sets
+        it. Before setting it, it is casted to the correct type, so that a
+        ``torch.Tensor`` can be turned into a ``nn.Parameter`` when setting it
+        in :class:`ParamNodes <ParamNode>`.
+        
+        This way of setting tensors is only applicable to ``leaf`` nodes. For
+        ``non-leaf`` nodes, their tensors come from the result of operations on
+        ``leaf`` tensors; hence they should not be modified. For ``data`` nodes,
+        tensors are set into nodes when calling the :meth:`TensorNetwork.forward`
+        method of :class:`tensor networks <TensorNetwork>` with a data tensor or
+        a sequence of tensors.
+        
+        Besides, this can only be used if the :class:`TensorNetwork` is not in
+        :attr:`~TensorNetwork.automemory` mode.
+
+        Parameters
+        ----------
+        tensor : torch.Tensor, optional
+            Tensor to be set in the node. If None, and `init_method` is provided,
+            the tensor is created with :meth:`make_tensor`. Otherwise, a None is
+            set as node's tensor.
+        init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
+            Initialization method.
+        device : Optional[torch.device], optional
+            Device where to initialize the tensor.
+        kwargs : float
+            Keyword arguments for the different initialization methods. See
+            :meth:`make_tensor`.
+
+        Raises
+        ------
+        ValueError
+            If the node is not a ``leaf`` node or the tensor network is in
+            ``automemory`` mode.
         """
-        # TODO: pensar bien cu'ando permito hacer set y unset
         if self._leaf and not self._network._automemory:
             self._unrestricted_set_tensor(
                 tensor=tensor, init_method=init_method, device=device, **kwargs)
@@ -1019,87 +1133,72 @@ class AbstractNode(ABC):
             for edge, size in zip(self._edges, self._shape):
                 edge._size = size
         else:
-            raise ValueError('Node\'s tensor can only be changed if it is a leaf tensor '
-                             'and the network is not in contracting mode')
+            raise ValueError('Node\'s tensor can only be changed if it is a leaf'
+                             ' tensor and the network is not in automemory mode')
 
-    def unset_tensor(self, device: torch.device = torch.device('cpu')) -> None:
-        """
-        Change node's tensor by an empty tensor.
-        """
+    def unset_tensor(self) -> None:
+        """Replaces node's tensor with None."""
         if self._leaf and not self._network._automemory:
             self._save_in_network(None)
-            # self.tensor = None  #torch.empty(self.shape, device=device)
-
-    def _assign_memory(self,
-                       address: Optional[Text] = None,
-                       node_ref: Optional['AbstractNode'] = None,
-                       full: Optional[bool] = None,
-                       index: Optional[Tuple[slice, ...]] = None) -> None:
-        """
-        Change information about tensor storage when we are changing memory management.
-        """
-        # TODO: creo que no necesito esta funci'on...
-        if address is not None:
-            self._tensor_info['address'] = address
-        if node_ref is not None:
-            self._tensor_info['node_ref'] = node_ref
-        if full is not None:
-            self._tensor_info['full'] = full
-        if index is not None:
-            # TODO: y creo que nunca uso index
-            self._tensor_info['index'] = index
 
     def _save_in_network(self, tensor: Union[Tensor, Parameter]) -> None:
-        """
-        Save new node's tensor in the network storage
-        """
+        """Saves new node's tensor in the network's memory."""
         self._network._memory_nodes[self._tensor_info['address']] = tensor
         if isinstance(tensor, Parameter):
-            if not hasattr(self, 'param_' + self._tensor_info['address']):
-                self._network.register_parameter(
-                    'param_' + self._tensor_info['address'], tensor)
-            else:
-                raise ValueError(
-                    f'Network already has attribute named {self._tensor_info["address"]}')
+            self._network.register_parameter(
+                'param_' + self._tensor_info['address'], tensor)
 
     def _record_in_inverse_memory(self):
-        node_ref = self
+        """
+        Records information of the node in network's ``inverse memory``. This
+        memory is a dictionary that, for each node used in an :class:`Operation`,
+        keeps track of:
+        
+        * The total amount of times that the node's tensor is accessed to compute
+          operations (calculated when contracting the network for the first time,
+          in ``tracing`` mode).
+          
+        * The number of accesses to the node's tensor in the current contraction.
+        
+        * Whether this node's tensor can be erased after using it for all the
+          operations in which it is involved.
+        
+        When contracting the :class:`TensorNetwork`, if the node's tensor has been
+        accessed the total amount of times it has to be accessed, and it can be
+        erased, then its tensor is indeed replaced by None.
+        """
+        net = self._network
         address = self._tensor_info['address']
-        while address is None:
-            node_ref = node_ref._tensor_info['node_ref']
+        if address is None:
+            node_ref = self._tensor_info['node_ref']
             address = node_ref._tensor_info['address']
-
-        if node_ref != self:
             check_nodes = [self, node_ref]
         else:
             check_nodes = [self]
-
-        net = self._network
+            
+        # When tracing network, node is recorded in inverse memory
         if net._tracing:
             if address in net._inverse_memory:
                 if net._inverse_memory[address]['erase']:
                     net._inverse_memory[address]['accessed'] += 1
-
-                    erase = True
-                    for node in check_nodes:
-                        erase &= node.is_non_leaf() or \
-                            node.is_data() or \
-                            (node.is_virtual() and
-                             node.name == 'stack_data_memory')
-
-                    net._inverse_memory[address]['erase'] &= erase
             else:
+                # Node can only be erased if both itself and the node from which
+                # it is taking the tensor information (node_ref) are non-leaf or
+                # data nodes (including virtual node that stores stack data tensor)
                 erase = True
                 for node in check_nodes:
                     erase &= node.is_non_leaf() or \
                         node.is_data() or \
                         (node.is_virtual() and
-                         node.name == 'stack_data_memory')
+                         node._name == 'stack_data_memory')
 
                 net._inverse_memory[address] = {
                     'accessed': 1,
                     're-accessed': 0,
                     'erase': erase}
+                
+        # When contracting network, we keep track of the number of accesses
+        # to "erasable" nodes
         else:
             if address in net._inverse_memory:
                 net._inverse_memory[address]['re-accessed'] += 1
@@ -1112,16 +1211,18 @@ class AbstractNode(ABC):
 
     def move_to_network(self,
                         network: 'TensorNetwork',
-                        visited: Optional[List] = None) -> None:
+                        visited: Optional[List['AbstractNode']] = None) -> None:
         """
-        Move node to another network. All other nodes connected to it, or
+        Moves node to another network. All other nodes connected to it, or
         to a node connected to it, etc. are also moved to the new network.
 
         Parameters
         ----------
-        network: new network to which the nodes will be moved
-        visited: list indicating the nodes that are already moved to the
-            network, used by this DFS-like algorithm
+        network : TensorNetwork
+            Tensor Network to which the nodes will be moved.
+        visited : list[AbstractNode], optional
+            List indicating the nodes that have been already moved to the new
+            network, used by this DFS-like algorithm.
         """
         if network != self._network:
             if visited is None:
@@ -1142,7 +1243,8 @@ class AbstractNode(ABC):
     def __getitem__(self, key: Ax) -> 'AbstractEdge':
         pass
 
-    def __getitem__(self, key: Union[slice, Ax]) -> Union[List['AbstractEdge'], 'AbstractEdge']:
+    def __getitem__(self, key: Union[slice, Ax]) -> Union[List['AbstractEdge'],
+                                                          'AbstractEdge']:
         if isinstance(key, slice):
             return self._edges[key]
         return self.get_edge(key)
@@ -1150,21 +1252,78 @@ class AbstractNode(ABC):
     # -----------------
     # Tensor operations
     # -----------------
-    def sum(self, axis: Optional[Sequence[Ax]] = None) -> Tensor:
+    def sum(self, axis: Optional[Union[Ax, Sequence[Ax]]] = None) -> Tensor:
+        """
+        Returns the sum of all elements in the node's tensor. If an ``axis`` is
+        specified, the sum is over that axis. If ``axis`` is a sequence of axes,
+        reduce over all of them.
+        
+        This is not a node :class:`Operation`, hence it returns a ``torch.Tensor``
+        instead of a :class:`Node`.
+        
+        See also `torch.sum() <https://pytorch.org/docs/stable/generated/torch.sum.html>`_.
+
+        Parameters
+        ----------
+        axis : int, str, Axis or list[int, str or Axis], optional
+            Axis or sequence of axes over which to reduce.
+
+        Returns
+        -------
+        torch.Tensor
+        """
         axis_num = []
         if axis is not None:
             for ax in axis:
                 axis_num.append(self.get_axis_num(ax))
         return self.tensor.sum(dim=axis_num)
 
-    def mean(self, axis: Optional[Sequence[Ax]] = None) -> Tensor:
+    def mean(self, axis: Optional[Union[Ax, Sequence[Ax]]] = None) -> Tensor:
+        """
+        Returns the mean of all elements in the node's tensor. If an ``axis`` is
+        specified, the mean is over that axis. If ``axis`` is a sequence of axes,
+        reduce over all of them.
+        
+        This is not a node :class:`Operation`, hence it returns a ``torch.Tensor``
+        instead of a :class:`Node`.
+        
+        See also `torch.mean() <https://pytorch.org/docs/stable/generated/torch.mean.html>`_.
+
+        Parameters
+        ----------
+        axis : int, str, Axis or list[int, str or Axis], optional
+            Axis or sequence of axes over which to reduce.
+
+        Returns
+        -------
+        torch.Tensor
+        """
         axis_num = []
         if axis is not None:
             for ax in axis:
                 axis_num.append(self.get_axis_num(ax))
         return self.tensor.mean(dim=axis_num)
 
-    def std(self, axis: Optional[Sequence[Ax]] = None) -> Tensor:
+    def std(self, axis: Optional[Union[Ax, Sequence[Ax]]] = None) -> Tensor:
+        """
+        Returns the std of all elements in the node's tensor. If an ``axis`` is
+        specified, the std is over that axis. If ``axis`` is a sequence of axes,
+        reduce over all of them.
+        
+        This is not a node :class:`Operation`, hence it returns a ``torch.Tensor``
+        instead of a :class:`Node`.
+        
+        See also `torch.std() <https://pytorch.org/docs/stable/generated/torch.std.html>`_.
+
+        Parameters
+        ----------
+        axis : int, str, Axis or list[int, str or Axis], optional
+            Axis or sequence of axes over which to reduce.
+
+        Returns
+        -------
+        torch.Tensor
+        """
         axis_num = []
         if axis is not None:
             for ax in axis:
@@ -1172,6 +1331,25 @@ class AbstractNode(ABC):
         return self.tensor.std(dim=axis_num)
 
     def norm(self, p=2, axis: Optional[Sequence[Ax]] = None) -> Tensor:
+        """
+        Returns the norm of all elements in the node's tensor. If an ``axis`` is
+        specified, the norm is over that axis. If ``axis`` is a sequence of axes,
+        reduce over all of them.
+        
+        This is not a node :class:`Operation`, hence it returns a ``torch.Tensor``
+        instead of a :class:`Node`.
+        
+        See also `torch.norm() <https://pytorch.org/docs/stable/generated/torch.norm.html>`_.
+
+        Parameters
+        ----------
+        axis : int, str, Axis or list[int, str or Axis], optional
+            Axis or sequence of axes over which to reduce.
+
+        Returns
+        -------
+        torch.Tensor
+        """
         axis_num = []
         if axis is not None:
             for ax in axis:
@@ -1179,7 +1357,7 @@ class AbstractNode(ABC):
         return self.tensor.norm(p=p, dim=axis_num)
 
     def __str__(self) -> Text:
-        return self.name
+        return self._name
 
     def __repr__(self) -> Text:
         return f'{self.__class__.__name__}(\n ' \
@@ -1849,6 +2027,30 @@ class Edge(AbstractEdge):
     def parameterize(self,
                      set_param: bool = True,
                      size: Optional[int] = None) -> Union['Edge', 'ParamEdge']:
+        """
+        Returns ``param_edges`` attribute or changes it if ``set_param`` is provided.
+
+        Returns
+        -------
+        Returns True if all edges are parametric edges, False if all edges are
+        non-parametric edges, and None if there are some edges of each type
+        
+
+        Parameters
+        ----------
+        set_param : bool, optional
+            Boolean indicating whether edges have to be parameterized (``True``)
+            or de-parameterized (``False``).
+        sizes : list[int] or tuple[int], optional
+            Sizes used to expand or shrink the node's shape if desired. By default,
+            if an :class:`Edge` is parameterized, its corresponding ``size`` will
+            match its ``dim``. However, if ``sizes`` are provided, 
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         if set_param:
             dim = self.dim()
             if size is not None:
@@ -2288,23 +2490,6 @@ class StackNode(Node):
                                   self._node1_lists_dict[axis._name],
                                   node1=self,
                                   axis1=axis)
-
-    def _assign_memory(self,
-                       address: Optional[Text] = None,
-                       node_ref: Optional[AbstractNode] = None,
-                       full: Optional[bool] = None,
-                       index: Optional[Tuple[slice, ...]] = None) -> None:
-        """
-        Change information about tensor storage when we are changing memory management.
-        """
-        if address is not None:
-            self._tensor_info['address'] = address
-        if node_ref is not None:
-            self._tensor_info['node_ref'] = node_ref
-        if full is not None:
-            self._tensor_info['full'] = full
-        if index is not None:
-            self._tensor_info['index'] = index
 
 
 class ParamStackNode(ParamNode):
@@ -2831,7 +3016,7 @@ class TensorNetwork(nn.Module):
             if node._tensor_info['address'] is not None:
                 self._memory_nodes[new_name] = self._memory_nodes.pop(
                     prev_name)
-                node._assign_memory(address=new_name)
+                node._tensor_info['address'] = new_name
 
                 if self._tracing and (prev_name in self._inverse_memory):
                     self._inverse_memory[new_name] = self._inverse_memory.pop(
@@ -2841,8 +3026,7 @@ class TensorNetwork(nn.Module):
             nodes_dict[new_name] = node
             self._memory_nodes[new_name] = node._temp_tensor
             node._temp_tensor = None
-            node._assign_memory(address=new_name)
-            # node._tensor_info['address'] = new_name
+            node._tensor_info['address'] = new_name
 
             # TODO: in tracing mode i do not change names, this does not happen
             # if self._tracing and (prev_name in self._inverse_memory):
@@ -3179,7 +3363,9 @@ class TensorNetwork(nn.Module):
         raise NotImplementedError(
             'Contraction methods not implemented for generic TensorNetwork class')
 
-    def forward(self, data: Optional[Tensor] = None, *args, **kwargs) -> Tensor:
+    def forward(self,
+                data: Optional[Union[Tensor, Sequence[Tensor]]] = None,
+                *args, **kwargs) -> Tensor:
         """
         Contract Tensor Network with input data with shape batch x n_features x feature.
         """

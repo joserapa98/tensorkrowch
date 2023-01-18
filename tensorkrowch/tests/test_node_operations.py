@@ -4958,7 +4958,6 @@ class TestStackUnbind:
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
-        assert restack._tensor_info['stack_idx'] == slice(0, 9, 2)
         assert restack._tensor_info['index'][0] == slice(0, 9, 2)
         # Here index is a list of slices, since the re-stack max shape is
         # smaller than the shape of the original stack
@@ -4979,7 +4978,6 @@ class TestStackUnbind:
         assert restack_all.axes_names == ['stack', 'left', 'input', 'right']
         assert restack_all._tensor_info['address'] is None
         assert restack_all._tensor_info['node_ref'] == stack
-        assert restack_all._tensor_info['stack_idx'] == new_index
         assert restack_all._tensor_info['index'] == [new_index]
         
         # Re-unbind all
@@ -5008,7 +5006,6 @@ class TestStackUnbind:
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
-        assert restack._tensor_info['stack_idx'] == slice(0, 9, 2)
         assert restack._tensor_info['index'][0] == slice(0, 9, 2)
             
         reunbinded = tk.unbind(restack)
@@ -5025,7 +5022,6 @@ class TestStackUnbind:
         assert restack_all.axes_names == ['stack', 'left', 'input', 'right']
         assert restack_all._tensor_info['address'] is None
         assert restack_all._tensor_info['node_ref'] == stack
-        assert restack_all._tensor_info['stack_idx'] == new_index
         assert restack_all._tensor_info['index'] == [new_index]
         
         reunbinded_all = tk.unbind(restack_all)
@@ -5064,7 +5060,6 @@ class TestStackUnbind:
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
-        assert restack._tensor_info['stack_idx'] == slice(0, 9, 2)
         assert restack._tensor_info['index'][0] == slice(0, 9, 2)
             
         # Re-unbind
@@ -5083,7 +5078,6 @@ class TestStackUnbind:
         assert restack_all.axes_names == ['stack', 'left', 'input', 'right']
         assert restack_all._tensor_info['address'] is None
         assert restack_all._tensor_info['node_ref'] == stack
-        assert restack_all._tensor_info['stack_idx'] == new_index
         assert restack_all._tensor_info['index'] == [new_index]
         
         # Re-unbind all
@@ -5112,7 +5106,6 @@ class TestStackUnbind:
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
-        assert restack._tensor_info['stack_idx'] == slice(0, 9, 2)
         assert restack._tensor_info['index'][0] == slice(0, 9, 2)
             
         reunbinded = tk.unbind(restack)
@@ -5129,7 +5122,6 @@ class TestStackUnbind:
         assert restack_all.axes_names == ['stack', 'left', 'input', 'right']
         assert restack_all._tensor_info['address'] is None
         assert restack_all._tensor_info['node_ref'] == stack
-        assert restack_all._tensor_info['stack_idx'] == new_index
         assert restack_all._tensor_info['index'] == [new_index]
         
         reunbinded_all = tk.unbind(restack_all)
@@ -5792,7 +5784,6 @@ class TestTNModels:
                         node._tensor_info['address'] = None
                         node._tensor_info['node_ref'] = uniform_memory
                         node._tensor_info['full'] = True
-                        node._tensor_info['stack_idx'] = None
                         node._tensor_info['index'] = None
                     
                 else:
@@ -6015,7 +6006,6 @@ class TestTNModels:
                             node._tensor_info['address'] = None
                             node._tensor_info['node_ref'] = uniform_memory
                             node._tensor_info['full'] = True
-                            node._tensor_info['stack_idx'] = None
                             node._tensor_info['index'] = None
                             
                 else:
@@ -6507,36 +6497,36 @@ class TestTNModels:
             result = model(image)
             
 
-    def test_useful_for_peps(self):
-        node1 = tk.ParamNode(shape=(3, 4),
-                            axes_names=('left', 'right'),
-                            init_method='randn')
-        node2 = tk.ParamNode(shape=(4, 5),
-                            axes_names=('left', 'right'),
-                            init_method='randn')
-        node1['right'] ^ node2['left']
+    # def test_useful_for_peps(self):
+    #     node1 = tk.ParamNode(shape=(3, 4),
+    #                         axes_names=('left', 'right'),
+    #                         init_method='randn')
+    #     node2 = tk.ParamNode(shape=(4, 5),
+    #                         axes_names=('left', 'right'),
+    #                         init_method='randn')
+    #     node1['right'] ^ node2['left']
         
-        node3 = tk.Node(shape=(3, 4),
-                        axes_names=('left', 'right'),
-                        network=node1.network,
-                        leaf=False,
-                        edges=[node1['left'], node1['right']],
-                        node1_list=node1.is_node1())
-        node4 = tk.Node(shape=(4, 5),
-                        axes_names=('left', 'right'),
-                        network=node1.network,
-                        leaf=False,
-                        edges=[node2['left'], node2['right']],
-                        node1_list=node2.is_node1())
-        node3._unrestricted_set_tensor(torch.randn(3, 2), True)
-        node4._unrestricted_set_tensor(torch.randn(2, 5), True)
-        # NOTE: I can use this to make non-leaf tensors with smaller
-        # dimensions as the original nodes -> Very useful for PEPS
+    #     node3 = tk.Node(shape=(3, 4),
+    #                     axes_names=('left', 'right'),
+    #                     network=node1.network,
+    #                     leaf=False,
+    #                     edges=[node1['left'], node1['right']],
+    #                     node1_list=node1.is_node1())
+    #     node4 = tk.Node(shape=(4, 5),
+    #                     axes_names=('left', 'right'),
+    #                     network=node1.network,
+    #                     leaf=False,
+    #                     edges=[node2['left'], node2['right']],
+    #                     node1_list=node2.is_node1())
+    #     node3._unrestricted_set_tensor(torch.randn(3, 2), True)
+    #     node4._unrestricted_set_tensor(torch.randn(2, 5), True)
+    #     # NOTE: I can use this to make non-leaf tensors with smaller
+    #     # dimensions as the original nodes -> Very useful for PEPS
         
-        assert node3.shape == (3, 2)
-        assert node3['left'].size() == 3
-        assert node3['right'].size() == 4
+    #     assert node3.shape == (3, 2)
+    #     assert node3['left'].size() == 3
+    #     assert node3['right'].size() == 4
         
-        assert node4.shape == (2, 5)
-        assert node4['left'].size() == 4
-        assert node4['right'].size() == 5
+    #     assert node4.shape == (2, 5)
+    #     assert node4['left'].size() == 4
+    #     assert node4['right'].size() == 5

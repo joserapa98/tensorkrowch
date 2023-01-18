@@ -117,7 +117,6 @@ class TestInitNode:
         assert node._tensor_info == {'address': 'my_node',
                                      'node_ref': None,
                                      'full': True,
-                                     'stack_idx': None,
                                      'index': None}
         
         net = node.network
@@ -151,7 +150,6 @@ class TestInitNode:
         assert node._tensor_info == {'address': 'node',
                                      'node_ref': None,
                                      'full': True,
-                                     'stack_idx': None,
                                      'index': None}
         
         net = node.network
@@ -185,7 +183,6 @@ class TestInitNode:
         assert node._tensor_info == {'address': 'node',
                                      'node_ref': None,
                                      'full': True,
-                                     'stack_idx': None,
                                      'index': None}
         
         net = node.network
@@ -219,7 +216,6 @@ class TestInitNode:
         assert node._tensor_info == {'address': 'node',
                                      'node_ref': None,
                                      'full': True,
-                                     'stack_idx': None,
                                      'index': None}
         
         net = node.network
@@ -252,7 +248,6 @@ class TestInitNode:
         assert node._tensor_info == {'address': 'node',
                                      'node_ref': None,
                                      'full': True,
-                                     'stack_idx': None,
                                      'index': None}
         
         net = node.network
@@ -299,7 +294,6 @@ class TestInitParamNode:
         assert node._tensor_info == {'address': 'my_node',
                                      'node_ref': None,
                                      'full': True,
-                                     'stack_idx': None,
                                      'index': None}
         
         net = node.network
@@ -348,7 +342,6 @@ class TestInitParamNode:
         assert node._tensor_info == {'address': 'paramnode',
                                      'node_ref': None,
                                      'full': True,
-                                     'stack_idx': None,
                                      'index': None}
         
         net = node.network
@@ -381,7 +374,6 @@ class TestInitParamNode:
         assert node._tensor_info == {'address': 'paramnode',
                                      'node_ref': None,
                                      'full': True,
-                                     'stack_idx': None,
                                      'index': None}
         
         net = node.network

@@ -56,7 +56,6 @@ class TestMPS:
                                                         {'cum_percentage': 0.95},
                                                         {'cutoff': 1e-5}]
                                         for sv_cut in sv_cut_dicts:
-                                            mps.delete_non_leaf()
                                             mps.canonicalize(oc=oc, mode=mode,
                                                              **sv_cut)
                                             mps.trace(example,
@@ -118,7 +117,6 @@ class TestMPS:
                                                         {'cum_percentage': 0.95},
                                                         {'cutoff': 1e-5}]
                                         for sv_cut in sv_cut_dicts:
-                                            mps.delete_non_leaf()
                                             mps.canonicalize(oc=oc, mode=mode,
                                                              **sv_cut)
                                             mps.trace(example,
@@ -180,7 +178,6 @@ class TestMPS:
                                                         {'cum_percentage': 0.95},
                                                         {'cutoff': 1e-5}]
                                         for sv_cut in sv_cut_dicts:
-                                            mps.delete_non_leaf()
                                             mps.canonicalize(oc=oc, mode=mode,
                                                              **sv_cut)
                                             mps.trace(example,
@@ -243,7 +240,6 @@ class TestMPS:
                                                         {'cum_percentage': 0.95},
                                                         {'cutoff': 1e-5}]
                                         for sv_cut in sv_cut_dicts:
-                                            mps.delete_non_leaf()
                                             mps.canonicalize(oc=oc, mode=mode,
                                                              **sv_cut)
                                             mps.trace(example,
@@ -299,7 +295,6 @@ class TestMPS:
                                                 {'cum_percentage': 0.95},
                                                 {'cutoff': 1e-5}]
                                 for sv_cut in sv_cut_dicts:
-                                    mps.delete_non_leaf()
                                     mps.canonicalize(oc=oc, mode=mode,
                                                         **sv_cut)
                                     mps.trace(example,
@@ -354,7 +349,6 @@ class TestMPS:
                                             {'cum_percentage': 0.95},
                                             {'cutoff': 1e-5}]
                             for sv_cut in sv_cut_dicts:
-                                mps.delete_non_leaf()
                                 mps.canonicalize(oc=0, mode=mode,
                                                  **sv_cut)
                                 mps.trace(example,
@@ -392,7 +386,6 @@ class TestMPS:
         mps_tensor = result.tensor
                 
         # Canonicalize and continue
-        mps.delete_non_leaf()
         mps.canonicalize_continuous()
         mps.trace(example)
         result = mps(data)
@@ -436,7 +429,6 @@ class TestMPS:
         mps_tensor = result.tensor
                 
         # Canonicalize and continue
-        mps.delete_non_leaf()
         mps.canonicalize_continuous()
         mps.trace(example)
         result = mps(data)
@@ -478,7 +470,6 @@ class TestMPS:
         mps_tensor = result.tensor
                 
         # Canonicalize and continue
-        mps.delete_non_leaf()
         mps.canonicalize_continuous()
         mps.trace(example)
         result = mps(data)
@@ -644,7 +635,6 @@ class TestConvMPS:
                                                             {'cum_percentage': 0.95},
                                                             {'cutoff': 1e-5}]
                                             for sv_cut in sv_cut_dicts:
-                                                mps.delete_non_leaf()
                                                 mps.canonicalize(oc=oc, mode=mode,
                                                                     **sv_cut)
                                                 mps.trace(example,
@@ -715,7 +705,6 @@ class TestConvMPS:
                                                             {'cum_percentage': 0.95},
                                                             {'cutoff': 1e-5}]
                                             for sv_cut in sv_cut_dicts:
-                                                mps.delete_non_leaf()
                                                 mps.canonicalize(oc=oc, mode=mode,
                                                                     **sv_cut)         
                                                 mps.trace(example,
@@ -781,7 +770,6 @@ class TestConvMPS:
                                                     {'cum_percentage': 0.95},
                                                     {'cutoff': 1e-5}]
                                     for sv_cut in sv_cut_dicts:
-                                        mps.delete_non_leaf()
                                         mps.canonicalize(oc=oc, mode=mode,
                                                          **sv_cut)
                                         mps.trace(example,
@@ -846,7 +834,6 @@ class TestConvMPS:
                                                 {'cum_percentage': 0.95},
                                                 {'cutoff': 1e-5}]
                                 for sv_cut in sv_cut_dicts:
-                                    mps.delete_non_leaf()
                                     mps.canonicalize(oc=0, mode=mode,
                                                      **sv_cut)
                                     mps.trace(example,

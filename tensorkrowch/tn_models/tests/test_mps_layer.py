@@ -58,7 +58,6 @@ class TestMPSLayer:
                                                         {'cum_percentage': 0.95},
                                                         {'cutoff': 1e-5}]
                                         for sv_cut in sv_cut_dicts:
-                                            mps.delete_non_leaf()
                                             mps.canonicalize(mode=mode, **sv_cut)
                                             mps.trace(example,
                                                       inline_input=inline_input,
@@ -121,7 +120,6 @@ class TestMPSLayer:
                                                         {'cum_percentage': 0.95},
                                                         {'cutoff': 1e-5}]
                                         for sv_cut in sv_cut_dicts:
-                                            mps.delete_non_leaf()
                                             mps.canonicalize(mode=mode, **sv_cut)
                                             mps.trace(example,
                                                       inline_input=inline_input,
@@ -186,7 +184,6 @@ class TestMPSLayer:
                                                         {'cum_percentage': 0.95},
                                                         {'cutoff': 1e-5}]
                                         for sv_cut in sv_cut_dicts:
-                                            mps.delete_non_leaf()
                                             mps.canonicalize(mode=mode, **sv_cut)
                                             mps.trace(example,
                                                       inline_input=inline_input,
@@ -252,7 +249,6 @@ class TestMPSLayer:
                                                         {'cum_percentage': 0.95},
                                                         {'cutoff': 1e-5}]
                                         for sv_cut in sv_cut_dicts:
-                                            mps.delete_non_leaf()
                                             mps.canonicalize(mode=mode, **sv_cut)
                                             mps.trace(example,
                                                       inline_input=inline_input,
@@ -308,7 +304,6 @@ class TestMPSLayer:
                                             {'cum_percentage': 0.95},
                                             {'cutoff': 1e-5}]
                             for sv_cut in sv_cut_dicts:
-                                mps.delete_non_leaf()
                                 mps.canonicalize(mode=mode, **sv_cut)
                                 mps.trace(example,
                                           inline_input=inline_input,
@@ -361,7 +356,6 @@ class TestMPSLayer:
                                             {'cum_percentage': 0.95},
                                             {'cutoff': 1e-5}]
                             for sv_cut in sv_cut_dicts:
-                                mps.delete_non_leaf()
                                 mps.canonicalize(mode=mode, **sv_cut)
                                 mps.trace(example,
                                           inline_input=inline_input,
@@ -430,7 +424,6 @@ class TestMPSLayer:
         mps_tensor = result.tensor
                 
         # Canonicalize and continue
-        mps.delete_non_leaf()
         mps.canonicalize_continuous()
         mps.trace(example)
         result = mps(data)
@@ -482,7 +475,6 @@ class TestMPSLayer:
         mps_tensor = result.tensor
                 
         # Canonicalize and continue
-        mps.delete_non_leaf()
         mps.canonicalize_continuous()
         mps.trace(example)
         result = mps(data)
@@ -532,7 +524,6 @@ class TestMPSLayer:
         mps_tensor = result.tensor
                 
         # Canonicalize and continue
-        mps.delete_non_leaf()
         mps.canonicalize_continuous()
         mps.trace(example)
         result = mps(data)
@@ -763,7 +754,6 @@ class TestConvMPSLayer:
                                                             {'cum_percentage': 0.95},
                                                             {'cutoff': 1e-5}]
                                             for sv_cut in sv_cut_dicts:
-                                                mps.delete_non_leaf()
                                                 mps.canonicalize(mode=mode, **sv_cut)
                                                 mps.trace(example,
                                                           inline_input=inline_input,
@@ -835,7 +825,6 @@ class TestConvMPSLayer:
                                                             {'cum_percentage': 0.95},
                                                             {'cutoff': 1e-5}]
                                             for sv_cut in sv_cut_dicts:
-                                                mps.delete_non_leaf()
                                                 mps.canonicalize(mode=mode, **sv_cut)
                                                 mps.trace(example,
                                                           inline_input=inline_input,
@@ -901,7 +890,6 @@ class TestConvMPSLayer:
                                                 {'cum_percentage': 0.95},
                                                 {'cutoff': 1e-5}]
                                 for sv_cut in sv_cut_dicts:
-                                    mps.delete_non_leaf()
                                     mps.canonicalize(mode=mode, **sv_cut)
                                     mps.trace(example,
                                               inline_input=inline_input,
@@ -964,7 +952,6 @@ class TestConvMPSLayer:
                                                 {'cum_percentage': 0.95},
                                                 {'cutoff': 1e-5}]
                                 for sv_cut in sv_cut_dicts:
-                                    mps.delete_non_leaf()
                                     mps.canonicalize(mode=mode, **sv_cut)
                                     mps.trace(example,
                                               inline_input=inline_input,

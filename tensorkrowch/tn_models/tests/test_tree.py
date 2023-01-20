@@ -49,7 +49,6 @@ class TestTree:
                                             {'cutoff': 1e-5}]
                             for sv_cut in sv_cut_dicts:
                                 print(mode, sv_cut)
-                                tree.delete_non_leaf()
                                 tree.canonicalize(mode=mode, **sv_cut)
                                 tree.trace(example, inline=inline)
                                 result = tree(data, inline=inline)
@@ -98,7 +97,6 @@ class TestTree:
                                             {'cutoff': 1e-5}]
                             for sv_cut in sv_cut_dicts:
                                 print(mode, sv_cut)
-                                tree.delete_non_leaf()
                                 tree.canonicalize(mode=mode, **sv_cut)
                                 tree.trace(example, inline=inline)
                                 result = tree(data, inline=inline)
@@ -147,7 +145,6 @@ class TestTree:
                                             {'cutoff': 1e-5}]
                             for sv_cut in sv_cut_dicts:
                                 print(mode, sv_cut)
-                                tree.delete_non_leaf()
                                 tree.canonicalize(mode=mode, **sv_cut)
                                 tree.trace(example, inline=inline)
                                 result = tree(data, inline=inline)
@@ -286,7 +283,6 @@ class TestConvTree:
                                             {'cutoff': 1e-5}]
                             for sv_cut in sv_cut_dicts:
                                 print(mode, sv_cut)
-                                tree.delete_non_leaf()
                                 tree.canonicalize(mode=mode, **sv_cut)
                                 tree.trace(example, inline=inline)
                                 result = tree(data, inline=inline)
@@ -341,7 +337,6 @@ class TestConvTree:
                                             {'cutoff': 1e-5}]
                             for sv_cut in sv_cut_dicts:
                                 print(mode, sv_cut)
-                                tree.delete_non_leaf()
                                 tree.canonicalize(mode=mode, **sv_cut)
                                 tree.trace(example, inline=inline)
                                 result = tree(data, inline=inline)
@@ -397,7 +392,6 @@ class TestConvTree:
                                             {'cutoff': 1e-5}]
                             for sv_cut in sv_cut_dicts:
                                 print(mode, sv_cut)
-                                tree.delete_non_leaf()
                                 tree.canonicalize(mode=mode, **sv_cut)
                                 tree.trace(example, inline=inline)
                                 result = tree(data, inline=inline)

@@ -114,7 +114,7 @@ class TestBasicOps:
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 1
         
-        net.delete_non_leaf()
+        net.clear()
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 0
@@ -160,7 +160,7 @@ class TestBasicOps:
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 1
         
-        net.delete_non_leaf()
+        net.clear()
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 0
@@ -205,7 +205,7 @@ class TestBasicOps:
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 1
         
-        net.delete_non_leaf()
+        net.clear()
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 0
@@ -250,7 +250,7 @@ class TestBasicOps:
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 1
         
-        net.delete_non_leaf()
+        net.clear()
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 0
@@ -313,7 +313,7 @@ class TestBasicOps:
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 1
         
-        net.delete_non_leaf()
+        net.clear()
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 0
@@ -368,7 +368,7 @@ class TestBasicOps:
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 1
         
-        net.delete_non_leaf()
+        net.clear()
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 0
@@ -421,7 +421,7 @@ class TestBasicOps:
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 1
         
-        net.delete_non_leaf()
+        net.clear()
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 0
@@ -474,7 +474,7 @@ class TestBasicOps:
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 1
         
-        net.delete_non_leaf()
+        net.clear()
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.non_leaf_nodes) == 0
@@ -5240,7 +5240,7 @@ class TestStackUnbind:
             
         # We have to delete non-leaf nodes, because otherwise stack operations
         # will be repeated, using the disconnected edges
-        net.delete_non_leaf()
+        net.clear()
         
         # Now we can connect them
         stack_node1 = tk.stack(nodes1)

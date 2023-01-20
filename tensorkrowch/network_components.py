@@ -245,36 +245,40 @@ class Axis:
 #                   NODES                      #
 ################################################
 Ax = Union[int, Text, Axis]
-Shape = Union[int, Sequence[int], Size]
+Shape = Union[Sequence[int], Size]
 
 
 class AbstractNode(ABC):
-    # TODO:
     """
-    Abstract class for nodes. Should be subclassed.
-
-    A node is the minimum element in a tensor network. It is
-    made up of a tensor and edges that can be connected to
-    other nodes.
-
-    Create a node. Should be subclassed before usage and
-    a limited number of abstract methods overridden.
-
-    Parameters
-    ----------
-    shape: node shape (the shape of its tensor, it is always provided)
-    axes_names: list of names for each of the node's axes
-    name: node's name
-    network: tensor network to which the node belongs
-    leaf: indicates if the node is a leaf node in the network
-    data: indicates if the node is a data node
-    virtual: indicates if the node is a virtual node
-        (e.g. stack_data_memory used to store the data tensor)
-
-    Raises
-    ------
-    TypeError
-    ValueError
+    Abstract class for all types of nodes. Defines what a node is and most of its
+    properties and methods. Since it is an abstract class, cannot be instantiated.
+    
+    A node is the minimum element in a :class:`TensorNetwork`. At its most basic
+    level, it is just a container for a tensor that stores information about its
+    neighbours (with what other nodes it is connected), edges (names to access
+    each of them, whether they are batch edges or not, etc.) or successors (nodes
+    that result from operating the node). Besides, and what is more important,
+    this information is useful to:
+    
+    * Perform tensor network :class:`Operations <Operation>` such as :func:`contraction
+      <contract_between>` of two neighbouring nodes without having to worry about
+      tensor's shapes, order of axes, etc.
+      
+    * Perform more advanced operations such as :func:`stack` or :func:`unbind`
+      saving memory and time.
+      
+    * Keep track of operations in which a node has taken place, so that several
+      steps can be skipped in further training iterations. See :meth:`TensorNetwork.trace`.
+    
+    Refer to the subclasses ``AbstractNode`` to see how to instantiate nodes:
+    
+    * :class:`Node`
+    
+    * :class:`ParamNode`
+    
+    * :class:`StackNode`
+    
+    * :class:`ParamStackNode`
     """
 
     def __init__(self,
@@ -290,10 +294,10 @@ class AbstractNode(ABC):
 
         # check shape
         if shape is not None:
-            if not isinstance(shape, (int, tuple, list, Size)):
+            if not isinstance(shape, (tuple, list, Size)):
                 raise TypeError(
-                    '`shape` should be int, tuple[int, ...], list[int, ...] or '
-                    'Size type')
+                    '`shape` should be tuple[int, ...], list[int, ...] or '
+                    'torch.Size type')
             if isinstance(shape, (tuple, list)):
                 for i in shape:
                     if not isinstance(i, int):
@@ -934,7 +938,7 @@ class AbstractNode(ABC):
 
         Parameters
         ----------
-        shape : int, list[int], tuple[int] or torch.Size, optional
+        shape : list[int], tuple[int] or torch.Size, optional
             Shape of the tensor. If None, node's shape will be used.
         init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
             Initialization method.
@@ -1054,7 +1058,7 @@ class AbstractNode(ABC):
             accordingly.
         init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
             Initialization method.
-        device : Optional[torch.device], optional
+        device : torch.device, optional
             Device where to initialize the tensor.
         kwargs : float
             Keyword arguments for the different initialization methods. See
@@ -1114,7 +1118,7 @@ class AbstractNode(ABC):
             set as node's tensor.
         init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
             Initialization method.
-        device : Optional[torch.device], optional
+        device : torch.device, optional
             Device where to initialize the tensor.
         kwargs : float
             Keyword arguments for the different initialization methods. See
@@ -1343,6 +1347,8 @@ class AbstractNode(ABC):
 
         Parameters
         ----------
+        p : int, float
+            The order of the norm.
         axis : int, str, Axis or list[int, str or Axis], optional
             Axis or sequence of axes over which to reduce.
 
@@ -1369,30 +1375,67 @@ class AbstractNode(ABC):
 
 class Node(AbstractNode):
     """
-    Base class for non-trainable nodes. Should be subclassed by
-    any new class of non-trainable nodes.
-
-    Used for fixed nodes of the network or intermediate,
-    derived nodes resulting from operations between other nodes.
+    Base class for non-trainable nodes. Should be subclassed by any class of nodes
+    that are not intended to be trained (e.g. :class:`StackNode`).
     
-    Refer to :ref:`install <installation>`
+    Can be used for fixed nodes of the :class:`TensorNetwork`, or intermediate
+    nodes that are resultant from an :class:`Operation` between nodes.
+    
+    For a complete list of properties and methods, see also :class:`AbstractNode`.
 
     Parameters
     ----------
-    override_node: boolean indicating whether the node should override
-        a node in the network with the same name (e.g. if we parameterize
-        a node, we want to replace it in the network). Refer to [`tensor`]
-    param_edges: boolean indicating whether node's edges are parameterized
-        (trainable) or not
-    tensor: tensor "contained" in the node
-    edges: list of edges to be attached to the node
-    override_edges: boolean indicating whether the provided edges should
-        be overriden when reattached (used for operations like parameterize,
-        copy and permute)
-    node1_list: list of node1 boolean values corresponding to each axis
-    init_method: method to use to initialize the node's tensor when it
-        is not provided
-    kwargs: keyword arguments for the init_method
+    shape : list[int], tuple[int], torch.Size, optional
+        Node's shape, that is, the shape of its tensor. If ``shape`` and
+        ``init_method`` are provided, a tensor will be made for the node. Otherwise,
+        ``tensor`` would be required.
+    axes_names : list[str], tuple[str], optional
+        Sequence of names for each of the node's axes. Names are used to access
+        the edge that is attached to the node in a certain axis. Hence they should
+        be all distinct.
+    name : str, optional
+        Node's name, used to access the node from de :class:`TensorNetwork` where
+        it belongs. It cannot contain blank spaces.
+    network : TensorNetwork, optional
+        Tensor network where the node should belong. If None, a new tensor network,
+        will be created to contain the node.
+    leaf : bool, optional
+        Boolean indicating if the node is a ``leaf`` node. If a node is neither
+        ``leaf`` nor ``data`` nor ``virtual``, it is ``non-leaf``.
+    data : bool, optional
+        Boolean indicating if the node is a ``data`` node.
+    virtual : bool, optional
+        Boolean indicating if the node is a ``virtual`` node.
+    override_node : bool, optional
+        Boolean indicating whether the node should override (``True``) another
+        node in the network that has the same name (e.g. if a node is parameterized,
+        it would be required that a new :class:`ParamNode` replaces the non-parameterized
+        node in the network).
+    param_edges : bool, optional
+        Boolean indicating whether all node's edges should be :class:`ParamEdges
+        <ParamEdge>` (``True``) or not (``False``).
+    tensor : torch.Tensor, optional
+        Tensor that is to be stored in the node. If None, ``shape`` and ``init_method``
+        will be required.
+    edges : list[AbstractEdge], optional
+        List of edges that are to be attached to the node. This can be used in
+        case the node inherits the edges from other node(s), like in :class:`Operations
+        <Operation>`.
+    override_edges : bool, optional
+        Boolean indicating whether the provided ``edges`` should be overriden
+        (``True``) when reattached (e.g. if a node is parameterized, it would
+        be required that the new :class:`ParamNode`'s edges are indeed connected
+        to it, instead of to the original non-parameterized node).
+    node1_list : list[bool], optional
+        If ``edges`` are provided, the list of ``node1`` attributes of each edge
+        should also be provided.
+    init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
+        Initialization method.
+    device : torch.device, optional
+        Device where to initialize the tensor.
+    kwargs : float
+        Keyword arguments for the different initialization methods. See
+        :meth:`AbstractNode.make_tensor`.
     """
 
     def __init__(self,
@@ -1410,6 +1453,7 @@ class Node(AbstractNode):
                  override_edges: bool = False,
                  node1_list: Optional[List[bool]] = None,
                  init_method: Optional[Text] = None,
+                 device: Optional[torch.device] = None,
                  **kwargs: float) -> None:
 
         # shape and tensor
@@ -1419,7 +1463,7 @@ class Node(AbstractNode):
             elif tensor.shape == shape:
                 shape = None
             else:
-                raise ValueError('If both `shape` or `tensor` are given,'
+                raise ValueError('If both `shape` or `tensor` are given, '
                                  '`tensor`\'s shape should be equal to `shape`')
         if shape is not None:
             super().__init__(shape=shape,
@@ -1440,22 +1484,18 @@ class Node(AbstractNode):
 
         # edges
         if edges is None:
-            self._edges = [self.make_edge(ax, param_edges) for ax in self.axes]
+            self._edges = [self._make_edge(ax, param_edges) for ax in self._axes]
         else:
             if node1_list is None:
                 raise ValueError(
                     'If `edges` are provided, `node1_list` should also be provided')
-            for i, axis in enumerate(self.axes):
+            for i, axis in enumerate(self._axes):
                 if not isinstance(node1_list[i], bool):
-                    raise TypeError('`node1_list` should be List[bool] type')
+                    raise TypeError('`node1_list` should be list[bool] type')
                 axis._node1 = node1_list[i]
             self._edges = edges[:]
-            if self._leaf:  # and not self._network._automemory:
-                # TODO: parameterize, permute, copy, etc.
+            if self._leaf and not self._network._automemory:
                 self._reattach_edges(override=override_edges)
-                # TODO: no se para que puse eso, no es bueno,
-                # cuando hago permute en MPs contract, acabo aqu'i, y
-                # creo nuevos edges malos en lugar de los que quer'ia usar
 
         # network
         self._network._add_node(self, override=override_node)
@@ -1463,7 +1503,7 @@ class Node(AbstractNode):
         if shape is not None:
             if init_method is not None:
                 self._unrestricted_set_tensor(
-                    init_method=init_method, **kwargs)
+                    init_method=init_method, device=device, **kwargs)
         else:
             self._unrestricted_set_tensor(tensor=tensor)
 
@@ -1472,12 +1512,37 @@ class Node(AbstractNode):
     # -------
     @staticmethod
     def _set_tensor_format(tensor: Tensor) -> Tensor:
+        """Returns a torch.Tensor if input tensor is given as nn.Parameter."""
         if isinstance(tensor, Parameter):
             return tensor.detach()
         return tensor
+    
+    def _make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
+        """Makes Edges or ParamEdges depending on the ``param_edges`` attribute"""
+        if param_edges:
+            return ParamEdge(node1=self, axis1=axis)
+        return Edge(node1=self, axis1=axis)
 
     def parameterize(self, set_param: bool = True) -> Union['Node', 'ParamNode']:
-        # TODO: solo se puede hacer para nodos leaf and not net.automemory
+        """
+        Replaces the node with a parameterized version of it, that is, turns a
+        fixed :class:`Node` into a trainable :class:`ParamNode`.
+        
+        Since the node is `replaced`, it will be completely removed from the network,
+        and its neighbours will point to the new parameterized node.
+        
+        Parameters
+        ----------
+        set_param : bool
+            Boolean indicating whether the node should be parameterized (``True``).
+            Otherwise (``False``), the non-parameterized node itself will be
+            returned.
+
+        Returns
+        -------
+        Node or ParamNode
+            The original node or a parameterized version of it.
+        """
         if set_param:
             new_node = ParamNode(shape=self.shape,
                                  axes_names=self.axes_names,
@@ -1489,25 +1554,21 @@ class Node(AbstractNode):
                                  edges=self._edges,
                                  override_edges=True,
                                  node1_list=self.is_node1())
-            # TODO: para un modo en el que se haga todo inplace: 'util para DMRG por ejemplo
-            # new_node = ParamNode(shape=self.shape,
-            #                      axes_names=self.axes_names,
-            #                      name='parameterized_' + self._name,
-            #                      network=self._network,
-            #                      override_node=False,
-            #                      leaf=False,
-            #                      param_edges=self.param_edges(),
-            #                      tensor=self.tensor,
-            #                      edges=self._edges,
-            #                      override_edges=True,
-            #                      node1_list=self.is_node1())
             return new_node
         else:
             return self
 
     def copy(self) -> 'Node':
-        # TODO: solo se puede hacer para nodos leaf and not net.automemory??
-        new_node = Node(shape=self.shape,
+        """
+        Returns a copy of the node. That is, returns a node whose tensor is a copy
+        of the original, whose edges are directly inherited (these are not copies,
+        but the exact same edges) and whose name is extended with the prefix ``"copy_"``.
+
+        Returns
+        -------
+        Node
+        """
+        new_node = Node(shape=self._shape,
                         axes_names=self.axes_names,
                         name='copy_' + self._name,
                         network=self._network,
@@ -1517,35 +1578,25 @@ class Node(AbstractNode):
                         node1_list=self.is_node1())
         return new_node
 
-    def make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
-        if param_edges:
-            return ParamEdge(node1=self, axis1=axis)
-        return Edge(node1=self, axis1=axis)
 
-
-class ParamNode(AbstractNode):
+class ParamNode(Node):
     """
-    Class for trainable nodes. Subclass of PyTorch nn.Module.
-    Should be subclassed by any new class of trainable nodes.
-
-    Used as initial nodes of a tensor network that is to be trained.
-
-    Parameters
-    ----------
-    override_node: boolean indicating whether the node should override
-        a node in the network with the same name (e.g. if we parameterize
-        a node, we want to replace it in the network)
-    param_edges: boolean indicating whether node's edges are parameterized
-        (trainable) or not
-    tensor: tensor "contained" in the node
-    edges: list of edges to be attached to the node
-    override_edges: boolean indicating whether the provided edges should
-        be overriden when reattached (used for operations like parameterize,
-        copy and permute)
-    node1_list: list of node1 boolean values corresponding to each axis
-    init_method: method to use to initialize the node's tensor when it
-        is not provided
-    kwargs: keyword arguments for the init_method
+    Class for trainable nodes. Should be subclassed by any class of nodes that
+    are intended to be trained (e.g. :class:`ParamStackNode`).
+    
+    Should be used as the initial nodes conforming the :class:`TensorNetwork`,
+    if it is going to be trained. When operating these initial nodes, the resultant
+    nodes will be non-parameterized (e.g. :class:`Node`, :class:`StackNode`).
+    
+    The main difference with :class:`Nodes <Node>` is that ``ParamNodes`` have
+    ``nn.Parameter`` tensors instead of ``torch.Tensor``. Therefore, a ``ParamNode``
+    is a sort of `parameter` that is attached to the :class:`TensorNetwork` (which
+    is itself a ``nn.Module``). That is, the list of parameters of the tensor
+    network module contains the tensors of all ``ParamNodes``. 
+    
+    To see how to initialize `` ParamNodes``, see :class:`Node`.
+    
+    For a complete list of properties and methods, see also :class:`AbstractNode`.
     """
 
     def __init__(self,
@@ -1563,6 +1614,7 @@ class ParamNode(AbstractNode):
                  override_edges: bool = False,
                  node1_list: Optional[List[bool]] = None,
                  init_method: Optional[Text] = None,
+                 device: Optional[torch.device] = None,
                  **kwargs: float) -> None:
 
         # data
@@ -1574,65 +1626,38 @@ class ParamNode(AbstractNode):
             raise ValueError(
                 'ParamNode is always a leaf node. Cannot set leaf to False')
 
-        # shape and tensor
-        if (shape is None) == (tensor is None):
-            if shape is None:
-                raise ValueError('One of `shape` or `tensor` must be provided')
-            elif tensor.shape == shape:
-                shape = None
-            else:
-                raise ValueError('If both `shape` or `tensor` are given,'
-                                 '`tensor`\'s shape should be equal to `shape`')
-        if shape is not None:
-            AbstractNode.__init__(self,
-                                  shape=shape,
-                                  axes_names=axes_names,
-                                  name=name,
-                                  network=network,
-                                  leaf=leaf,
-                                  data=data,
-                                  virtual=virtual)
-        else:
-            AbstractNode.__init__(self,
-                                  shape=tensor.shape,
-                                  axes_names=axes_names,
-                                  name=name,
-                                  network=network,
-                                  leaf=leaf,
-                                  data=data,
-                                  virtual=virtual)
-
-        # edges
-        if edges is None:
-            self._edges = [self.make_edge(ax, param_edges) for ax in self.axes]
-        else:
-            if node1_list is None:
-                raise ValueError(
-                    'If `edges` are provided, `node1_list` should also be provided')
-            for i, axis in enumerate(self.axes):
-                if not isinstance(node1_list[i], bool):
-                    raise TypeError('`node1_list` should be List[bool] type')
-                axis._node1 = node1_list[i]
-            self._edges = edges[:]
-            if self._leaf:  # and not self._network._automemory:
-                # TODO: no estoy seguro que haya que hacerlo siempre
-                self._reattach_edges(override=override_edges)
-
-        # network
-        self._network._add_node(self, override=override_node)
-
-        if shape is not None:
-            if init_method is not None:
-                self._unrestricted_set_tensor(
-                    init_method=init_method, **kwargs)
-        else:
-            self._unrestricted_set_tensor(tensor=tensor)
+        super().__init__(shape=shape,
+                         axes_names=axes_names,
+                         name=name,
+                         network=network,
+                         leaf=leaf,
+                         data=data,
+                         virtual=virtual,
+                         override_node=override_node,
+                         param_edges=param_edges,
+                         tensor=tensor,
+                         edges=edges,
+                         override_edges=override_edges,
+                         node1_list=node1_list,
+                         init_method=init_method,
+                         device=device,
+                         **kwargs)
 
     # ----------
     # Properties
     # ----------
     @property
     def grad(self) -> Optional[Tensor]:
+        """
+        Returns gradient of the param-node's tensor.
+        
+        See also `torch.Tensor.grad()
+        <https://pytorch.org/docs/stable/generated/torch.Tensor.grad.html>`_
+
+        Returns
+        -------
+        torch.Tensor or None
+        """
         if self._tensor_info['address'] is None:
             aux_node = self._tensor_info['node_ref']
             tensor = aux_node._network._memory_nodes[aux_node._tensor_info['address']]
@@ -1655,16 +1680,31 @@ class ParamNode(AbstractNode):
     # -------
     @staticmethod
     def _set_tensor_format(tensor: Tensor) -> Parameter:
-        """
-        If a Parameter is provided, the ParamNode will use such parameter
-        instead of creating a new Parameter object, thus creating a dependence
-        """
+        """Returns a nn.Parameter if input tensor is just torch.Tensor."""
         if isinstance(tensor, Parameter):
             return tensor
         return Parameter(tensor)
 
     def parameterize(self, set_param: bool = True) -> Union['Node', 'ParamNode']:
-        # TODO: solo se puede hacer para nodos leaf and not net.automemory
+        """
+        Replaces the param-node with a de-parameterized version of it, that is,
+        turns a :class:`ParamNode` into a non-trainable, fixed :class:`Node`.
+        
+        Since the param-node is `replaced`, it will be completely removed from
+        the network, and its neighbours will point to the new node.
+        
+        Parameters
+        ----------
+        set_param : bool
+            Boolean indicating whether the node should stay parameterized
+            (``True``), thus returning the param-node itself. Otherwise (``False``),
+            the param-node will be de-parameterized.
+
+        Returns
+        -------
+        ParamNode or Node
+            The original node or a de-parameterized version of it.
+        """
         if not set_param:
             new_node = Node(shape=self.shape,
                             axes_names=self.axes_names,
@@ -1681,7 +1721,16 @@ class ParamNode(AbstractNode):
             return self
 
     def copy(self) -> 'ParamNode':
-        # TODO: solo se puede hacer para nodos leaf and not net.automemory??
+        """
+        Returns a copy of the param-node. That is, returns a param-node whose
+        tensor is a copy of the original, whose edges are directly inherited
+        (these are not copies, but the exact same edges) and whose name is
+        extended with the prefix ``"copy_"``.
+
+        Returns
+        -------
+        ParamNode
+        """
         new_node = ParamNode(shape=self.shape,
                              axes_names=self.axes_names,
                              name='copy_' + self._name,
@@ -1691,11 +1740,6 @@ class ParamNode(AbstractNode):
                              edges=self._edges,
                              node1_list=self.is_node1())
         return new_node
-
-    def make_edge(self, axis: Axis, param_edges: bool) -> Union['ParamEdge', 'Edge']:
-        if param_edges:
-            return ParamEdge(node1=self, axis1=axis)
-        return Edge(node1=self, axis1=axis)
 
 
 ################################################
@@ -2476,7 +2520,7 @@ class StackNode(Node):
     def node1_lists_dict(self) -> Dict[Text, List[bool]]:
         return self._node1_lists_dict
 
-    def make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
+    def _make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
         # TODO: param_edges not used here
         if axis.num == 0:
             # Stack axis
@@ -2568,7 +2612,7 @@ class ParamStackNode(ParamNode):
     def node1_lists_dict(self) -> Dict[Text, List[bool]]:
         return self._node1_lists_dict
 
-    def make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
+    def _make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
         # TODO: param_edges not used here
         if axis.num == 0:
             # Stack axis
@@ -2819,7 +2863,7 @@ class TensorNetwork(nn.Module):
     @automemory.setter
     def automemory(self, automem: bool) -> None:
         # TODO: necesito rehacer todo?
-        self.delete_non_leaf()
+        self.clear()
         self._automemory = automem
 
     @property
@@ -2829,10 +2873,11 @@ class TensorNetwork(nn.Module):
     @unbind_mode.setter
     def unbind_mode(self, unbind: bool) -> None:
         # TODO: necesito rehacer todo?
-        self.delete_non_leaf()
+        self.clear()
         self._unbind_mode = unbind
 
     def trace(self, example: Optional[Tensor] = None, *args, **kwargs) -> None:
+        """Trace TensorNetwork contraction."""
         with torch.no_grad():
             self._tracing = True
             self(example, *args, **kwargs)
@@ -2930,7 +2975,10 @@ class TensorNetwork(nn.Module):
         self._remove_node(node, move_names)
         # TODO: del node
 
-    def delete_non_leaf(self):
+    def clear(self):
+        """
+        Elimina todos los non leaf y vuelve a poner a cada nodo leaf su propia memoria
+        """
         # TODO: tarda mogoll'on, tengo que arreglarlo
         self._list_ops = []
         self._inverse_memory = dict()
@@ -3214,7 +3262,7 @@ class TensorNetwork(nn.Module):
         if self.non_leaf_nodes:
             warnings.warn('Non-leaf nodes will be removed before parameterizing '
                           'the TN')
-            self.delete_non_leaf()
+            self.clear()
 
         for node in list(net.leaf_nodes.values()):
             param_node = node.parameterize(set_param)

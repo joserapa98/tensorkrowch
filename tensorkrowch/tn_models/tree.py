@@ -274,6 +274,10 @@ class Tree(TensorNetwork):
         mode: can be either 'svd', 'svdr' or 'qr'
         """
         if len(self.layers) > 1:
+            
+            prev_automemory = self._automemory
+            self.automemory = False
+            
             for i in range(len(self.layers) - 1):
                 layer1 = self.layers[i]
                 layer2 = self.layers[i + 1]
@@ -284,6 +288,8 @@ class Tree(TensorNetwork):
                                                           cutoff=cutoff)
                 self.layers[i] = layer1
                 self.layers[i + 1] = layer2
+                
+            self.automemory = prev_automemory
             
         self.param_bond(set_param=self._param_bond)
 

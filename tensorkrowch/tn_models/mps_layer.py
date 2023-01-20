@@ -561,6 +561,10 @@ class MPSLayer(TensorNetwork):
                      rank: Optional[int] = None,
                      cum_percentage: Optional[float] = None,
                      cutoff: Optional[float] = None) -> None:
+        
+        prev_automemory = self._automemory
+        self.automemory = False
+        
         # Left
         left_nodes = []
         if self.left_node is not None:
@@ -646,6 +650,8 @@ class MPSLayer(TensorNetwork):
             if 'right' in node.axes_names:
                 d_bond.append(node['right'].size())
         self._d_bond = d_bond
+        
+        self.automemory = prev_automemory
     
     def _project_to_d_bond(self, nodes, d_bond, side='right'):
         if side == 'left':
@@ -769,6 +775,9 @@ class MPSLayer(TensorNetwork):
         if self._boundary != 'obc':
             raise ValueError('`canonicalize_continuous` can only be used if '
                              'boundary is `obc`')
+            
+        prev_automemory = self._automemory
+        self.automemory = False
         
         self.output_node.get_axis('output').name = 'input'
         
@@ -796,7 +805,7 @@ class MPSLayer(TensorNetwork):
             
             if not node['input'].is_dangling():
                 self.delete_node(node.neighbours('input'))
-        self.delete_non_leaf()
+        self.clear()
         
         self.output_node.get_axis('input').name = 'output'
             
@@ -807,6 +816,8 @@ class MPSLayer(TensorNetwork):
         for node, data_node in zip(nodes[l + 1:],
                                    list(self._data_nodes.values())[l + 1:]):
             node['input'] ^ data_node['feature']
+            
+        self.automemory = prev_automemory
 
 
 class UMPSLayer(TensorNetwork):

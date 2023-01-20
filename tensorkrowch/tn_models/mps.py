@@ -398,6 +398,10 @@ class MPS(TensorNetwork):
         oc: orthogonality center position
         mode: can be either 'svd', 'svdr' or 'qr'
         """
+        
+        prev_automemory = self._automemory
+        self.automemory = False
+        
         if oc is None:
             oc = self._n_sites - 1
         elif oc >= self._n_sites:
@@ -464,6 +468,8 @@ class MPS(TensorNetwork):
             if 'right' in node.axes_names:
                 d_bond.append(node['right'].size())
         self._d_bond = d_bond
+        
+        self.automemory = prev_automemory
         
     def _project_to_d_bond(self, nodes, d_bond, side='right'):
         if side == 'left':
@@ -587,6 +593,9 @@ class MPS(TensorNetwork):
         if self._boundary != 'obc':
             raise ValueError('`canonicalize_continuous` can only be used if '
                              'boundary is `obc`')
+            
+        prev_automemory = self._automemory
+        self.automemory = False
         
         nodes = [self.left_node] + self.mats_env + [self.right_node]
         for node in nodes:
@@ -611,10 +620,12 @@ class MPS(TensorNetwork):
             
             if not node['input'].is_dangling():
                 self.delete_node(node.neighbours('input'))
-        self.delete_non_leaf()
+        self.clear()
             
         for node, data_node in zip(nodes, self._data_nodes.values()):
             node['input'] ^ data_node['feature']
+            
+        self.automemory = prev_automemory
 
 
 class UMPS(TensorNetwork):

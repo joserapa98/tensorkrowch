@@ -2357,7 +2357,7 @@ class TestTensorNetwork:
         assert len(net.non_leaf_nodes) == 1
         assert len(net.edges) == 5
         
-    def test_delete_non_leaf(self):
+    def test_clear(self):
         net = tk.TensorNetwork(name='net')
         for i in range(4):
             _ = tk.Node(shape=(2, 5, 2),
@@ -2385,7 +2385,7 @@ class TestTensorNetwork:
         assert len(net.non_leaf_nodes) == 3
         assert len(net.edges) == 6
         
-        net.delete_non_leaf()
+        net.clear()
         assert len(net.nodes) == 4
         assert len(net.leaf_nodes) == 4
         assert len(net.non_leaf_nodes) == 0

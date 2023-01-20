@@ -775,6 +775,10 @@ title="Fullscreen mode"
                      <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        
+        <span class="n">prev_automemory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_automemory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="kc">False</span>
+        
         <span class="c1"># Left</span>
         <span class="n">left_nodes</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -860,6 +864,8 @@ title="Fullscreen mode"
             <span class="k">if</span> <span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
                 <span class="n">d_bond</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span> <span class="o">=</span> <span class="n">d_bond</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="n">prev_automemory</span>
     
     <span class="k">def</span> <span class="nf">_project_to_d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">side</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
@@ -983,6 +989,9 @@ title="Fullscreen mode"
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">!=</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`canonicalize_continuous` can only be used if &#39;</span>
                              <span class="s1">&#39;boundary is `obc`&#39;</span><span class="p">)</span>
+            
+        <span class="n">prev_automemory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_automemory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="kc">False</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">output_node</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;output&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;input&#39;</span>
         
@@ -1010,7 +1019,7 @@ title="Fullscreen mode"
             
             <span class="k">if</span> <span class="ow">not</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">delete_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">delete_non_leaf</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">output_node</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;output&#39;</span>
             
@@ -1020,7 +1029,9 @@ title="Fullscreen mode"
             <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">data_node</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">data_node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">nodes</span><span class="p">[</span><span class="n">l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:],</span>
                                    <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="n">l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:]):</span>
-            <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">data_node</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span></div>
+            <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">data_node</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="n">prev_automemory</span></div>
 
 
 <div class="viewcode-block" id="UMPSLayer"><a class="viewcode-back" href="../../../tn_models.html#tensorkrowch.UMPSLayer">[docs]</a><span class="k">class</span> <span class="nc">UMPSLayer</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>

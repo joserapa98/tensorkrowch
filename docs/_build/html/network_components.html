@@ -463,31 +463,29 @@ the node that contains the axis. Otherwise, the node is <cite>node2</cite> of th
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">AbstractNode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">leaf</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">virtual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#AbstractNode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode" title="Permalink to this definition">#</a></dt>
-<dd><p>Abstract class for nodes. Should be subclassed.</p>
-<p>A node is the minimum element in a tensor network. It is
-made up of a tensor and edges that can be connected to
-other nodes.</p>
-<p>Create a node. Should be subclassed before usage and
-a limited number of abstract methods overridden.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>shape</strong> (<em>node shape</em><em> (</em><em>the shape of its tensor</em><em>, </em><em>it is always provided</em><em>)</em>) – </p></li>
-<li><p><strong>axes_names</strong> (<em>list of names for each of the node's axes</em>) – </p></li>
-<li><p><strong>name</strong> (<em>node's name</em>) – </p></li>
-<li><p><strong>network</strong> (<em>tensor network to which the node belongs</em>) – </p></li>
-<li><p><strong>leaf</strong> (<em>indicates if the node is a leaf node in the network</em>) – </p></li>
-<li><p><strong>data</strong> (<em>indicates if the node is a data node</em>) – </p></li>
-<li><p><strong>virtual</strong> (<em>indicates if the node is a virtual node</em>) – (e.g. stack_data_memory used to store the data tensor)</p></li>
+<dd><p>Abstract class for all types of nodes. Defines what a node is and most of its
+properties and methods. Since it is an abstract class, cannot be instantiated.</p>
+<p>A node is the minimum element in a <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>. At its most basic
+level, it is just a container for a tensor that stores information about its
+neighbours (with what other nodes it is connected), edges (names to access
+each of them, whether they are batch edges or not, etc.) or successors (nodes
+that result from operating the node). Besides, and what is more important,
+this information is useful to:</p>
+<ul class="simple">
+<li><p>Perform tensor network <a class="reference internal" href="node_operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operations</span></code></a> such as <a class="reference internal" href="node_operations.html#tensorkrowch.contract_between" title="tensorkrowch.contract_between"><code class="xref py py-func docutils literal notranslate"><span class="pre">contraction</span></code></a> of two neighbouring nodes without having to worry about
+tensor’s shapes, order of axes, etc.</p></li>
+<li><p>Perform more advanced operations such as <a class="reference internal" href="node_operations.html#tensorkrowch.stack" title="tensorkrowch.stack"><code class="xref py py-func docutils literal notranslate"><span class="pre">stack()</span></code></a> or <a class="reference internal" href="node_operations.html#tensorkrowch.unbind" title="tensorkrowch.unbind"><code class="xref py py-func docutils literal notranslate"><span class="pre">unbind()</span></code></a>
+saving memory and time.</p></li>
+<li><p>Keep track of operations in which a node has taken place, so that several
+steps can be skipped in further training iterations. See <a class="reference internal" href="#tensorkrowch.TensorNetwork.trace" title="tensorkrowch.TensorNetwork.trace"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TensorNetwork.trace()</span></code></a>.</p></li>
 </ul>
-</dd>
-<dt class="field-even">Raises</dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>TypeError</strong> – </p></li>
-<li><p><strong>ValueError</strong> – </p></li>
+<p>Refer to the subclasses <code class="docutils literal notranslate"><span class="pre">AbstractNode</span></code> to see how to instantiate nodes:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a></p></li>
+<li><p><a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a></p></li>
+<li><p><a class="reference internal" href="#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">StackNode</span></code></a></p></li>
+<li><p><a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a></p></li>
 </ul>
-</dd>
-</dl>
 <dl class="py property">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.tensor">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">tensor</span></span><a class="headerlink" href="#tensorkrowch.AbstractNode.tensor" title="Permalink to this definition">#</a></dt>
@@ -726,7 +724,7 @@ to <code class="docutils literal notranslate"><span class="pre">init_method</spa
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>shape</strong> (<em>int</em><em>, </em><em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>] or </em><em>torch.Size</em><em>, </em><em>optional</em>) – Shape of the tensor. If None, node’s shape will be used.</p></li>
+<li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>] or </em><em>torch.Size</em><em>, </em><em>optional</em>) – Shape of the tensor. If None, node’s shape will be used.</p></li>
 <li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;}</em><em>, </em><em>optional</em>) – Initialization method.</p></li>
 <li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensor.</p></li>
 <li><p><strong>kwargs</strong> (<em>float</em>) – <p>Keyword arguments for the different initialization methods:</p>
@@ -770,7 +768,7 @@ a sequence of tensors.</p>
 the tensor is created with <a class="reference internal" href="#tensorkrowch.AbstractNode.make_tensor" title="tensorkrowch.AbstractNode.make_tensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">make_tensor()</span></code></a>. Otherwise, a None is
 set as node’s tensor.</p></li>
 <li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;}</em><em>, </em><em>optional</em>) – Initialization method.</p></li>
-<li><p><strong>device</strong> (<em>Optional</em><em>[</em><em>torch.device</em><em>]</em><em>, </em><em>optional</em>) – Device where to initialize the tensor.</p></li>
+<li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensor.</p></li>
 <li><p><strong>kwargs</strong> (<em>float</em>) – Keyword arguments for the different initialization methods. See
 <a class="reference internal" href="#tensorkrowch.AbstractNode.make_tensor" title="tensorkrowch.AbstractNode.make_tensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">make_tensor()</span></code></a>.</p></li>
 </ul>
@@ -872,7 +870,10 @@ instead of a <a class="reference internal" href="usage.html#tensorkrowch.Node" t
 <p>See also <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.norm.html">torch.norm()</a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em>, </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em> or </em><em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em><em>, </em><em>optional</em>) – Axis or sequence of axes over which to reduce.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p</strong> (<em>int</em><em>, </em><em>float</em>) – The order of the norm.</p></li>
+<li><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em>, </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em> or </em><em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em><em>, </em><em>optional</em>) – Axis or sequence of axes over which to reduce.</p></li>
+</ul>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>torch.Tensor</p>
@@ -914,52 +915,151 @@ between batch edges that share name in both nodes</p>
 
 <dl class="py class">
 <dt class="sig sig-object py">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">leaf</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">virtual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1_list</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#Node"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Base class for non-trainable nodes. Should be subclassed by
-any new class of non-trainable nodes.</p>
-<p>Used for fixed nodes of the network or intermediate,
-derived nodes resulting from operations between other nodes.</p>
-<p>Refer to <a class="reference internal" href="usage.html#installation"><span class="std std-ref">install</span></a></p>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">leaf</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">virtual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1_list</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#Node"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Base class for non-trainable nodes. Should be subclassed by any class of nodes
+that are not intended to be trained (e.g. <a class="reference internal" href="#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">StackNode</span></code></a>).</p>
+<p>Can be used for fixed nodes of the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>, or intermediate
+nodes that are resultant from an <a class="reference internal" href="node_operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operation</span></code></a> between nodes.</p>
+<p>For a complete list of properties and methods, see also <a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractNode</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>override_node</strong> (<em>boolean indicating whether the node should override</em>) – a node in the network with the same name (e.g. if we parameterize
-a node, we want to replace it in the network). Refer to [<cite>tensor</cite>]</p></li>
-<li><p><strong>param_edges</strong> (<em>boolean indicating whether node's edges are parameterized</em>) – (trainable) or not</p></li>
-<li><p><strong>tensor</strong> (<em>tensor &quot;contained&quot; in the node</em>) – </p></li>
-<li><p><strong>edges</strong> (<em>list of edges to be attached to the node</em>) – </p></li>
-<li><p><strong>override_edges</strong> (<em>boolean indicating whether the provided edges should</em>) – be overriden when reattached (used for operations like parameterize,
-copy and permute)</p></li>
-<li><p><strong>node1_list</strong> (<em>list of node1 boolean values corresponding to each axis</em>) – </p></li>
-<li><p><strong>init_method</strong> (<em>method to use to initialize the node's tensor when it</em>) – is not provided</p></li>
-<li><p><strong>kwargs</strong> (<em>keyword arguments for the init_method</em>) – </p></li>
+<li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>]</em><em>, </em><em>torch.Size</em><em>, </em><em>optional</em>) – Node’s shape, that is, the shape of its tensor. If <code class="docutils literal notranslate"><span class="pre">shape</span></code> and
+<code class="docutils literal notranslate"><span class="pre">init_method</span></code> are provided, a tensor will be made for the node. Otherwise,
+<code class="docutils literal notranslate"><span class="pre">tensor</span></code> would be required.</p></li>
+<li><p><strong>axes_names</strong> (<em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – Sequence of names for each of the node’s axes. Names are used to access
+the edge that is attached to the node in a certain axis. Hence they should
+be all distinct.</p></li>
+<li><p><strong>name</strong> (<em>str</em><em>, </em><em>optional</em>) – Node’s name, used to access the node from de <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> where
+it belongs. It cannot contain blank spaces.</p></li>
+<li><p><strong>network</strong> (<a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><em>TensorNetwork</em></a><em>, </em><em>optional</em>) – Tensor network where the node should belong. If None, a new tensor network,
+will be created to contain the node.</p></li>
+<li><p><strong>leaf</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">leaf</span></code> node. If a node is neither
+<code class="docutils literal notranslate"><span class="pre">leaf</span></code> nor <code class="docutils literal notranslate"><span class="pre">data</span></code> nor <code class="docutils literal notranslate"><span class="pre">virtual</span></code>, it is <code class="docutils literal notranslate"><span class="pre">non-leaf</span></code>.</p></li>
+<li><p><strong>data</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">data</span></code> node.</p></li>
+<li><p><strong>virtual</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">virtual</span></code> node.</p></li>
+<li><p><strong>override_node</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether the node should override (<code class="docutils literal notranslate"><span class="pre">True</span></code>) another
+node in the network that has the same name (e.g. if a node is parameterized,
+it would be required that a new <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> replaces the non-parameterized
+node in the network).</p></li>
+<li><p><strong>param_edges</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether all node’s edges should be <a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdges</span></code></a> (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or not (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+<li><p><strong>tensor</strong> (<em>torch.Tensor</em><em>, </em><em>optional</em>) – Tensor that is to be stored in the node. If None, <code class="docutils literal notranslate"><span class="pre">shape</span></code> and <code class="docutils literal notranslate"><span class="pre">init_method</span></code>
+will be required.</p></li>
+<li><p><strong>edges</strong> (<em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.AbstractEdge" title="tensorkrowch.AbstractEdge"><em>AbstractEdge</em></a><em>]</em><em>, </em><em>optional</em>) – List of edges that are to be attached to the node. This can be used in
+case the node inherits the edges from other node(s), like in <a class="reference internal" href="node_operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operations</span></code></a>.</p></li>
+<li><p><strong>override_edges</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether the provided <code class="docutils literal notranslate"><span class="pre">edges</span></code> should be overriden
+(<code class="docutils literal notranslate"><span class="pre">True</span></code>) when reattached (e.g. if a node is parameterized, it would
+be required that the new <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a>’s edges are indeed connected
+to it, instead of to the original non-parameterized node).</p></li>
+<li><p><strong>node1_list</strong> (<em>list</em><em>[</em><em>bool</em><em>]</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">edges</span></code> are provided, the list of <code class="docutils literal notranslate"><span class="pre">node1</span></code> attributes of each edge
+should also be provided.</p></li>
+<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;}</em><em>, </em><em>optional</em>) – Initialization method.</p></li>
+<li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensor.</p></li>
+<li><p><strong>kwargs</strong> (<em>float</em>) – Keyword arguments for the different initialization methods. See
+<a class="reference internal" href="#tensorkrowch.AbstractNode.make_tensor" title="tensorkrowch.AbstractNode.make_tensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">AbstractNode.make_tensor()</span></code></a>.</p></li>
 </ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">parameterize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#Node.parameterize"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Replaces the node with a parameterized version of it, that is, turns a
+fixed <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> into a trainable <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a>.</p>
+<p>Since the node is <cite>replaced</cite>, it will be completely removed from the network,
+and its neighbours will point to the new parameterized node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>set_param</strong> (<em>bool</em>) – Boolean indicating whether the node should be parameterized (<code class="docutils literal notranslate"><span class="pre">True</span></code>).
+Otherwise (<code class="docutils literal notranslate"><span class="pre">False</span></code>), the non-parameterized node itself will be
+returned.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The original node or a parameterized version of it.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a> or <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a></p>
 </dd>
 </dl>
 </dd></dl>
 
-<dl class="py class">
-<dt class="sig sig-object py" id="tensorkrowch.ParamNode">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ParamNode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">leaf</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">virtual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1_list</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamNode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamNode" title="Permalink to this definition">#</a></dt>
-<dd><p>Class for trainable nodes. Subclass of PyTorch nn.Module.
-Should be subclassed by any new class of trainable nodes.</p>
-<p>Used as initial nodes of a tensor network that is to be trained.</p>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#Node.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Returns a copy of the node. That is, returns a node whose tensor is a copy
+of the original, whose edges are directly inherited (these are not copies,
+but the exact same edges) and whose name is extended with the prefix <code class="docutils literal notranslate"><span class="pre">&quot;copy_&quot;</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>override_node</strong> (<em>boolean indicating whether the node should override</em>) – a node in the network with the same name (e.g. if we parameterize
-a node, we want to replace it in the network)</p></li>
-<li><p><strong>param_edges</strong> (<em>boolean indicating whether node's edges are parameterized</em>) – (trainable) or not</p></li>
-<li><p><strong>tensor</strong> (<em>tensor &quot;contained&quot; in the node</em>) – </p></li>
-<li><p><strong>edges</strong> (<em>list of edges to be attached to the node</em>) – </p></li>
-<li><p><strong>override_edges</strong> (<em>boolean indicating whether the provided edges should</em>) – be overriden when reattached (used for operations like parameterize,
-copy and permute)</p></li>
-<li><p><strong>node1_list</strong> (<em>list of node1 boolean values corresponding to each axis</em>) – </p></li>
-<li><p><strong>init_method</strong> (<em>method to use to initialize the node's tensor when it</em>) – is not provided</p></li>
-<li><p><strong>kwargs</strong> (<em>keyword arguments for the init_method</em>) – </p></li>
-</ul>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="tensorkrowch.ParamNode">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ParamNode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">leaf</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">virtual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1_list</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamNode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamNode" title="Permalink to this definition">#</a></dt>
+<dd><p>Class for trainable nodes. Should be subclassed by any class of nodes that
+are intended to be trained (e.g. <a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a>).</p>
+<p>Should be used as the initial nodes conforming the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>,
+if it is going to be trained. When operating these initial nodes, the resultant
+nodes will be non-parameterized (e.g. <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a>, <a class="reference internal" href="#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">StackNode</span></code></a>).</p>
+<p>The main difference with <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Nodes</span></code></a> is that <code class="docutils literal notranslate"><span class="pre">ParamNodes</span></code> have
+<code class="docutils literal notranslate"><span class="pre">nn.Parameter</span></code> tensors instead of <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code>. Therefore, a <code class="docutils literal notranslate"><span class="pre">ParamNode</span></code>
+is a sort of <cite>parameter</cite> that is attached to the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> (which
+is itself a <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code>). That is, the list of parameters of the tensor
+network module contains the tensors of all <code class="docutils literal notranslate"><span class="pre">ParamNodes</span></code>.</p>
+<p>To see how to initialize `` ParamNodes``, see <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a>.</p>
+<p>For a complete list of properties and methods, see also <a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractNode</span></code></a>.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.ParamNode.grad">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">grad</span></span><a class="headerlink" href="#tensorkrowch.ParamNode.grad" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns gradient of the param-node’s tensor.</p>
+<p>See also <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.Tensor.grad.html">torch.Tensor.grad()</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>torch.Tensor or None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.ParamNode.parameterize">
+<span class="sig-name descname"><span class="pre">parameterize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamNode.parameterize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamNode.parameterize" title="Permalink to this definition">#</a></dt>
+<dd><p>Replaces the param-node with a de-parameterized version of it, that is,
+turns a <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> into a non-trainable, fixed <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a>.</p>
+<p>Since the param-node is <cite>replaced</cite>, it will be completely removed from
+the network, and its neighbours will point to the new node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>set_param</strong> (<em>bool</em>) – Boolean indicating whether the node should stay parameterized
+(<code class="docutils literal notranslate"><span class="pre">True</span></code>), thus returning the param-node itself. Otherwise (<code class="docutils literal notranslate"><span class="pre">False</span></code>),
+the param-node will be de-parameterized.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The original node or a de-parameterized version of it.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a> or <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.ParamNode.copy">
+<span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamNode.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamNode.copy" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns a copy of the param-node. That is, returns a param-node whose
+tensor is a copy of the original, whose edges are directly inherited
+(these are not copies, but the exact same edges) and whose name is
+extended with the prefix <code class="docutils literal notranslate"><span class="pre">&quot;copy_&quot;</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a></p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -1291,10 +1391,22 @@ methods are not implemented. Useful for experimentation.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.TensorNetwork.trace">
+<span class="sig-name descname"><span class="pre">trace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">example</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#TensorNetwork.trace"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.TensorNetwork.trace" title="Permalink to this definition">#</a></dt>
+<dd><p>Trace TensorNetwork contraction.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.TensorNetwork.delete_node">
 <span class="sig-name descname"><span class="pre">delete_node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">move_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#TensorNetwork.delete_node"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.TensorNetwork.delete_node" title="Permalink to this definition">#</a></dt>
 <dd><p>This function disconnects the node from its neighbours and
 removes it from the TN</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.TensorNetwork.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#TensorNetwork.clear"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.TensorNetwork.clear" title="Permalink to this definition">#</a></dt>
+<dd><p>Elimina todos los non leaf y vuelve a poner a cada nodo leaf su propia memoria</p>
 </dd></dl>
 
 <dl class="py method">

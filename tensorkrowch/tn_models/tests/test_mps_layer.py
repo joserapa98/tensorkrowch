@@ -461,7 +461,11 @@ class TestMPSLayer:
                           n_labels=5,
                           boundary='obc',
                           param_bond=True)
-        mps.output_node.tensor = torch.randn(mps.output_node.shape)
+        
+        tensor = torch.randn(mps.output_node.shape) * 1e-9
+        aux = torch.eye(tensor.shape[0], tensor.shape[2])
+        tensor[:, 0, :] = aux
+        mps.output_node.tensor = tensor
                 
         # Contract MPS
         result = mps.left_node

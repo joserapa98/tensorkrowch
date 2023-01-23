@@ -392,7 +392,7 @@ title="Fullscreen mode"
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Axis name, used to access edges by name of the axis. Is cannot contain</span>
+<span class="sd">        Axis name, used to access edges by name of the axis. It cannot contain</span>
 <span class="sd">        blank spaces or special characters since it is intended to be used as</span>
 <span class="sd">        name of submodules.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -434,14 +434,16 @@ title="Fullscreen mode"
     <span class="c1"># methods</span>
 <div class="viewcode-block" id="Axis.is_node1"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Axis.is_node1">[docs]</a>    <span class="k">def</span> <span class="nf">is_node1</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Boolean indicating whether `node1` of the edge attached to this axis is</span>
-<span class="sd">        the node that contains the axis. Otherwise, the node is `node2` of the edge.</span>
+<span class="sd">        Returns boolean indicating whether `node1` of the edge attached to this</span>
+<span class="sd">        axis is the node that contains the axis. Otherwise, the node is `node2`</span>
+<span class="sd">        of the edge.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_node1</span></div>
 
 <div class="viewcode-block" id="Axis.is_batch"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Axis.is_batch">[docs]</a>    <span class="k">def</span> <span class="nf">is_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Boolean indicating whether the edge in this axis is used as a batch edge.</span>
+<span class="sd">        Returns boolean indicating whether the edge in this axis is used as a</span>
+<span class="sd">        batch edge.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batch</span></div>
 
@@ -484,7 +486,7 @@ title="Fullscreen mode"
 <span class="sd">    * Keep track of operations in which a node has taken place, so that several</span>
 <span class="sd">      steps can be skipped in further training iterations. See :meth:`TensorNetwork.trace`.</span>
 <span class="sd">    </span>
-<span class="sd">    Refer to the subclasses ``AbstractNode`` to see how to instantiate nodes:</span>
+<span class="sd">    Refer to the subclasses of ``AbstractNode`` to see how to instantiate nodes:</span>
 <span class="sd">    </span>
 <span class="sd">    * :class:`Node`</span>
 <span class="sd">    </span>
@@ -655,7 +657,7 @@ title="Fullscreen mode"
     <span class="k">def</span> <span class="nf">successors</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Text</span><span class="p">,</span> <span class="s1">&#39;Successor&#39;</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Dictionary with :class:`Operations &lt;Operation&gt;`&#39; names as keys, and the</span>
-<span class="sd">        list of successors of the node as values.</span>
+<span class="sd">        list of :class:`Successors &lt;Successor&gt;` of the node as values.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_successors</span>
     
@@ -1959,19 +1961,34 @@ title="Fullscreen mode"
 <span class="c1">################################################</span>
 <span class="c1">#                   EDGES                      #</span>
 <span class="c1">################################################</span>
-<span class="n">EdgeParameter</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">]</span>
-<span class="n">_DEFAULT_SHIFT</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span>
-<span class="n">_DEFAULT_SLOPE</span> <span class="o">=</span> <span class="mf">20.</span>
-
 
 <div class="viewcode-block" id="AbstractEdge"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractEdge">[docs]</a><span class="k">class</span> <span class="nc">AbstractEdge</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Abstract class for edges. Should be subclassed.</span>
+<span class="sd">    Abstract class for all types of edges. Defines what an edge is and some of its</span>
+<span class="sd">    properties and methods. Since it is an abstract class, cannot be instantiated.</span>
 
-<span class="sd">    An edge is just a wrap up of references to the nodes it connects.</span>
-
-<span class="sd">    Create an edge. Should be subclassed before usage and</span>
-<span class="sd">    a limited number of abstract methods overridden.</span>
+<span class="sd">    An edge is nothing more than an object that wraps references to the nodes it</span>
+<span class="sd">    connects. Thus it stores information like the nodes it connects, the corresponding</span>
+<span class="sd">    nodes&#39; axes it is attached to, whether it is dangling or batch, its size and</span>
+<span class="sd">    dim, etc.</span>
+<span class="sd">    </span>
+<span class="sd">    Above all, its importance lies in that edges enable to connect nodes, forming</span>
+<span class="sd">    any possible graph, and perform easily :class:`Operations &lt;Operation&gt;` like</span>
+<span class="sd">    contracting and splitting nodes.</span>
+<span class="sd">    </span>
+<span class="sd">    Furthermore, edges have specific operations like :meth:`contract_` or :meth:`svd_`</span>
+<span class="sd">    (and its variations) that allow inplace modification of the :class:`TensorNetwork`.</span>
+<span class="sd">    </span>
+<span class="sd">    Refer to the subclasses of ``AbstractEdge`` to see how to instantiate edges:</span>
+<span class="sd">    </span>
+<span class="sd">    * :class:`Edge`</span>
+<span class="sd">    </span>
+<span class="sd">    * :class:`ParamEdge`</span>
+<span class="sd">    </span>
+<span class="sd">    * :class:`StackEdge`</span>
+<span class="sd">    </span>
+<span class="sd">    * :class:`ParamStackEdge`</span>
+<span class="sd">    </span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2006,7 +2023,7 @@ title="Fullscreen mode"
         <span class="c1"># check node2 and axis2</span>
         <span class="k">if</span> <span class="p">(</span><span class="n">node2</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="o">!=</span> <span class="p">(</span><span class="n">axis2</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s1">&#39;`node2` and `axis2` must either be both None or both not be None&#39;</span><span class="p">)</span>
+                <span class="s1">&#39;`node2` and `axis2` must both be None or both not be None&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">node2</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node2</span><span class="p">,</span> <span class="n">AbstractNode</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`node2` should be AbstractNode type&#39;</span><span class="p">)</span>
@@ -2015,7 +2032,7 @@ title="Fullscreen mode"
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis2</span><span class="p">,</span> <span class="n">Axis</span><span class="p">):</span>
                 <span class="n">axis2</span> <span class="o">=</span> <span class="n">node2</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="n">axis2</span><span class="p">)</span>
 
-            <span class="k">if</span> <span class="n">node1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis1</span><span class="o">.</span><span class="n">num</span><span class="p">]</span> <span class="o">!=</span> <span class="n">node2</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis2</span><span class="o">.</span><span class="n">num</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">node1</span><span class="o">.</span><span class="n">_shape</span><span class="p">[</span><span class="n">axis1</span><span class="o">.</span><span class="n">_num</span><span class="p">]</span> <span class="o">!=</span> <span class="n">node2</span><span class="o">.</span><span class="n">_shape</span><span class="p">[</span><span class="n">axis2</span><span class="o">.</span><span class="n">_num</span><span class="p">]:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Sizes of `axis1` and `axis2` should match&#39;</span><span class="p">)</span>
             <span class="k">if</span> <span class="p">(</span><span class="n">node2</span> <span class="o">==</span> <span class="n">node1</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">axis2</span> <span class="o">==</span> <span class="n">axis1</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -2023,37 +2040,65 @@ title="Fullscreen mode"
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span> <span class="o">=</span> <span class="p">[</span><span class="n">axis1</span><span class="p">,</span> <span class="n">axis2</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_size</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis1</span><span class="o">.</span><span class="n">num</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_size</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">_shape</span><span class="p">[</span><span class="n">axis1</span><span class="o">.</span><span class="n">_num</span><span class="p">]</span>
 
     <span class="c1"># ----------</span>
     <span class="c1"># Properties</span>
     <span class="c1"># ----------</span>
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">node1</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns `node1` of the edge.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">node2</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns `node2` of the edge. If the edge is dangling, it is None.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns a list with `node1` and `node2`.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">axis1</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Axis</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns axis where the edge is attached to `node1`.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">axis2</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Axis</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns axis where the edge is attached to `node2`. If the edge is dangling,</span>
+<span class="sd">        it is None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">axes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Axis</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a list of axes where the edge is attached to `node1` and `node2`,</span>
+<span class="sd">        respectively.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns edge&#39;s name. It is formed with the corresponding nodes&#39; and axes&#39;</span>
+<span class="sd">        names.</span>
+<span class="sd">        </span>
+<span class="sd">        Example</span>
+<span class="sd">        -------</span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3), name=&#39;nodeA&#39;, axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; edge = nodeA[&#39;right&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; print(edge.name)</span>
+<span class="sd">        nodeA[right] &lt;-&gt; None</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4), name=&#39;nodeB&#39;, axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; print(new_edge.name)</span>
+<span class="sd">        nodeA[right] &lt;-&gt; nodeB[left]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
             <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1">[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1">] &lt;-&gt; None&#39;</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1">[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1">] &lt;-&gt; &#39;</span> \
@@ -2107,137 +2152,21 @@ title="Fullscreen mode"
     <span class="c1"># -------</span>
     <span class="c1"># Methods</span>
     <span class="c1"># -------</span>
-    <span class="k">def</span> <span class="nf">is_dangling</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">node2</span> <span class="ow">is</span> <span class="kc">None</span>
+<div class="viewcode-block" id="AbstractEdge.is_dangling"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractEdge.is_dangling">[docs]</a>    <span class="k">def</span> <span class="nf">is_dangling</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boolean indicating whether the edge is a dangling edge.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">node2</span> <span class="ow">is</span> <span class="kc">None</span></div>
 
-    <span class="k">def</span> <span class="nf">is_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="o">.</span><span class="n">is_batch</span><span class="p">()</span>
+<div class="viewcode-block" id="AbstractEdge.is_batch"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractEdge.is_batch">[docs]</a>    <span class="k">def</span> <span class="nf">is_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boolean indicating whether the edge is a batch edge.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="o">.</span><span class="n">is_batch</span><span class="p">()</span></div>
 
-    <span class="k">def</span> <span class="nf">is_attached_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node1</span> <span class="o">==</span> <span class="n">node</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node2</span> <span class="o">==</span> <span class="n">node</span><span class="p">)</span>
+<div class="viewcode-block" id="AbstractEdge.is_attached_to"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractEdge.is_attached_to">[docs]</a>    <span class="k">def</span> <span class="nf">is_attached_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boolean indicating whether the edge is attached to ``node``.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node1</span> <span class="o">==</span> <span class="n">node</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node2</span> <span class="o">==</span> <span class="n">node</span><span class="p">)</span></div>
 
-    <span class="k">def</span> <span class="nf">size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_size</span>
-
-    <span class="k">def</span> <span class="nf">svd_aux</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                <span class="n">side</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
-                <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="c1"># TODO: problema del futuro xd</span>
-        <span class="n">contracted_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">contract</span><span class="p">()</span>
-
-        <span class="n">lst_permute_all</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">lst_batches</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">lst_batches_names</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">lst_reshape_edges1</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">edges</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">contracted_node</span><span class="o">.</span><span class="n">edges</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_batch</span><span class="p">()</span> <span class="ow">and</span> <span class="n">edge</span><span class="o">.</span><span class="n">axis1</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node2</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
-                    <span class="n">lst_permute_all</span> <span class="o">=</span> <span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">+</span> <span class="n">lst_permute_all</span>
-                    <span class="n">lst_batches</span> <span class="o">=</span> <span class="p">[</span><span class="n">edge</span><span class="o">.</span><span class="n">size</span><span class="p">()]</span> <span class="o">+</span> <span class="n">lst_batches</span>
-                    <span class="n">lst_batches_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">edge</span><span class="o">.</span><span class="n">axis1</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">+</span> <span class="n">lst_batches_names</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">lst_permute_all</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
-                    <span class="n">lst_reshape_edges1</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">edge</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
-                <span class="n">idx</span> <span class="o">+=</span> <span class="mi">1</span>
-
-        <span class="n">lst_reshape_edges2</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node2</span><span class="o">.</span><span class="n">edges</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">contracted_node</span><span class="o">.</span><span class="n">edges</span><span class="p">:</span>
-                <span class="n">lst_permute_all</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
-                <span class="n">lst_reshape_edges2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">edge</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
-                <span class="n">idx</span> <span class="o">+=</span> <span class="mi">1</span>
-
-        <span class="n">contracted_tensor</span> <span class="o">=</span> <span class="n">contracted_node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span> \
-            <span class="n">permute</span><span class="p">(</span><span class="o">*</span><span class="n">lst_permute_all</span><span class="p">)</span><span class="o">.</span> \
-            <span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="n">lst_batches</span> <span class="o">+</span>
-                      <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">lst_reshape_edges1</span><span class="p">)</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()]</span> <span class="o">+</span>
-                      <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">lst_reshape_edges2</span><span class="p">)</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()]))</span>
-        <span class="n">u</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">vh</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">contracted_tensor</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">cum_percentage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="s1">&#39;Only one of `rank` and `cum_percentage` should be provided&#39;</span><span class="p">)</span>
-            <span class="n">percentages</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">s</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span>
-                                                        <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
-            <span class="n">cum_percentage_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
-                <span class="n">cum_percentage</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">percentages</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-            <span class="n">rank</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">percentages</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
-                <span class="n">p</span> <span class="o">=</span> <span class="n">percentages</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span>
-                <span class="n">rank</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">ge</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">cum_percentage_tensor</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
-                    <span class="k">break</span>
-
-        <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s1">&#39;One of `rank` and `cum_percentage` should be provided&#39;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">rank</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
-            <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">]</span>
-            <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">]</span>
-            <span class="n">vh</span> <span class="o">=</span> <span class="n">vh</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">,</span> <span class="p">:]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">rank</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">side</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
-            <span class="n">u</span> <span class="o">=</span> <span class="n">u</span> <span class="o">@</span> <span class="n">torch</span><span class="o">.</span><span class="n">diag_embed</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">side</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span><span class="p">:</span>
-            <span class="n">vh</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">diag_embed</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">@</span> <span class="n">vh</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># TODO: could be changed to bool or &quot;node1&quot;/&quot;node2&quot;</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`side` can only be &quot;left&quot; or &quot;right&quot;&#39;</span><span class="p">)</span>
-
-        <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="n">lst_batches</span> <span class="o">+</span> <span class="n">lst_reshape_edges1</span> <span class="o">+</span> <span class="p">[</span><span class="n">rank</span><span class="p">]))</span>
-        <span class="n">vh</span> <span class="o">=</span> <span class="n">vh</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="n">lst_batches</span> <span class="o">+</span> <span class="p">[</span><span class="n">rank</span><span class="p">]</span> <span class="o">+</span> <span class="n">lst_reshape_edges2</span><span class="p">))</span>
-
-        <span class="n">n_batches</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">lst_batches</span><span class="p">)</span>
-        <span class="n">lst_permute1</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="n">idx_batch</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">edges</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">edge</span> <span class="o">==</span> <span class="bp">self</span><span class="p">:</span>
-                <span class="n">lst_permute1</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_batch</span><span class="p">()</span> <span class="ow">and</span> <span class="n">edge</span><span class="o">.</span><span class="n">axis1</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">lst_batches_names</span><span class="p">:</span>
-                    <span class="n">lst_permute1</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">idx_batch</span><span class="p">)</span>
-                    <span class="n">idx_batch</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">lst_permute1</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n_batches</span> <span class="o">+</span> <span class="n">idx</span><span class="p">)</span>
-                    <span class="n">idx</span> <span class="o">+=</span> <span class="mi">1</span>
-
-        <span class="n">lst_permute2</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node2</span><span class="o">.</span><span class="n">edges</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">edge</span> <span class="o">==</span> <span class="bp">self</span><span class="p">:</span>
-                <span class="n">lst_permute2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n_batches</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_batch</span><span class="p">():</span>
-                    <span class="n">found</span> <span class="o">=</span> <span class="kc">False</span>
-                    <span class="k">for</span> <span class="n">idx_name</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lst_batches_names</span><span class="p">):</span>
-                        <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">axis1</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">name</span><span class="p">:</span>
-                            <span class="n">found</span> <span class="o">=</span> <span class="kc">True</span>
-                            <span class="n">lst_permute2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">idx_name</span><span class="p">)</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
-                        <span class="n">lst_permute2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n_batches</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">idx</span><span class="p">)</span>
-                        <span class="n">idx</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">lst_permute2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n_batches</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">idx</span><span class="p">)</span>
-                    <span class="n">idx</span> <span class="o">+=</span> <span class="mi">1</span>
-
-        <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="o">*</span><span class="n">lst_permute1</span><span class="p">)</span>
-        <span class="n">vh</span> <span class="o">=</span> <span class="n">vh</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="o">*</span><span class="n">lst_permute2</span><span class="p">)</span>
-
-        <span class="n">net</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">_network</span>
-        <span class="n">net</span><span class="o">.</span><span class="n">_list_ops</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span><span class="p">:</span>
-            <span class="n">node</span><span class="o">.</span><span class="n">_successors</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="n">net</span><span class="o">.</span><span class="n">delete_node</span><span class="p">(</span><span class="n">contracted_node</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">change_size</span><span class="p">(</span><span class="n">rank</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">u</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">node2</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">vh</span>
+<div class="viewcode-block" id="AbstractEdge.size"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractEdge.size">[docs]</a>    <span class="k">def</span> <span class="nf">size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns edge&#39;s size.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_size</span></div>
 
     <span class="k">def</span> <span class="fm">__xor__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s1">&#39;AbstractEdge&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;AbstractEdge&#39;</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
@@ -2347,6 +2276,11 @@ title="Fullscreen mode"
         <span class="k">return</span> <span class="n">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div></div>
 
 
+<span class="n">EdgeParameter</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">]</span>
+<span class="n">_DEFAULT_SHIFT</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span>
+<span class="n">_DEFAULT_SLOPE</span> <span class="o">=</span> <span class="mf">1.</span>
+
+
 <div class="viewcode-block" id="ParamEdge"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge">[docs]</a><span class="k">class</span> <span class="nc">ParamEdge</span><span class="p">(</span><span class="n">AbstractEdge</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for trainable edges. Subclass of PyTorch nn.Module.</span>
@@ -2385,10 +2319,12 @@ title="Fullscreen mode"
                               <span class="s1">&#39;when initializing the edge, since dim was provided&#39;</span><span class="p">)</span>
             <span class="n">shift</span><span class="p">,</span> <span class="n">slope</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_parameters</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">axis1</span><span class="p">),</span> <span class="n">dim</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">shift</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">shift</span> <span class="o">=</span> <span class="n">_DEFAULT_SHIFT</span>
-            <span class="k">if</span> <span class="n">slope</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">slope</span> <span class="o">=</span> <span class="n">_DEFAULT_SLOPE</span>
+            <span class="n">shift</span><span class="p">,</span> <span class="n">slope</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_parameters</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">axis1</span><span class="p">),</span> <span class="n">node1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">axis1</span><span class="p">))</span>
+            
+            <span class="c1"># if shift is None:</span>
+            <span class="c1">#     shift = _DEFAULT_SHIFT</span>
+            <span class="c1"># if slope is None:</span>
+            <span class="c1">#     slope = _DEFAULT_SLOPE</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_sigmoid</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sigmoid</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_matrix</span> <span class="o">=</span> <span class="kc">None</span>
@@ -2451,7 +2387,8 @@ title="Fullscreen mode"
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`dim` should be int type&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">dim</span> <span class="o">&gt;</span> <span class="n">size</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`dim` should be smaller or equal than `size`&#39;</span><span class="p">)</span>
-        <span class="n">shift</span> <span class="o">=</span> <span class="p">(</span><span class="n">size</span> <span class="o">-</span> <span class="n">dim</span><span class="p">)</span> <span class="o">-</span> <span class="mf">0.5</span>
+        <span class="c1"># shift = (size - dim) - 0.5</span>
+        <span class="n">shift</span> <span class="o">=</span> <span class="n">dim</span> <span class="o">-</span> <span class="mf">0.5</span>
         <span class="n">slope</span> <span class="o">=</span> <span class="n">_DEFAULT_SLOPE</span>
         <span class="k">return</span> <span class="n">shift</span><span class="p">,</span> <span class="n">slope</span></div>
 
@@ -2461,14 +2398,18 @@ title="Fullscreen mode"
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set both parameters, update them and set the new matrix</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">tensor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">device</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">device</span>
+        
         <span class="k">if</span> <span class="n">shift</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shift</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shift</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
                 <span class="n">shift</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">shift</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_shift</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">shift</span><span class="p">))</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_prev_shift</span> <span class="o">=</span> <span class="n">shift</span>
-            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shift</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_shift</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">shift</span><span class="p">))</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_prev_shift</span> <span class="o">=</span> <span class="n">shift</span>
+                <span class="k">if</span> <span class="n">device</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_shift</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">shift</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_shift</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">shift</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_prev_shift</span> <span class="o">=</span> <span class="n">_DEFAULT_SHIFT</span>
             <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shift</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_shift</span> <span class="o">=</span> <span class="n">shift</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_prev_shift</span> <span class="o">=</span> <span class="n">shift</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
@@ -2476,12 +2417,12 @@ title="Fullscreen mode"
                 <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
                     <span class="s1">&#39;`shift` should be int, float or Parameter type&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">slope</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">slope</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">slope</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
                 <span class="n">slope</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">slope</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_slope</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">slope</span><span class="p">))</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_prev_slope</span> <span class="o">=</span> <span class="n">slope</span>
-            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">slope</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_slope</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">slope</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">device</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_slope</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">slope</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_slope</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">slope</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_prev_slope</span> <span class="o">=</span> <span class="n">slope</span>
             <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">slope</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
                 <span class="c1"># TODO: eligible device</span>
@@ -2490,6 +2431,7 @@ title="Fullscreen mode"
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
                     <span class="s1">&#39;`slope` should be int, float or Parameter type&#39;</span><span class="p">)</span>
+        
         <span class="bp">self</span><span class="o">.</span><span class="n">set_matrix</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="ParamEdge.is_updated"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.is_updated">[docs]</a>    <span class="k">def</span> <span class="nf">is_updated</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>  <span class="c1"># TODO: creo que esto no sirve para nada, lo podemos borrar</span>
@@ -2515,7 +2457,8 @@ title="Fullscreen mode"
         <span class="n">matrix</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()),</span>
                              <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
         <span class="n">i</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">(),</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
-        <span class="n">matrix</span><span class="p">[(</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slope</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="p">))</span>
+        <span class="c1"># matrix[(i, i)] = self.sigmoid(self.slope * (i - self.shift))</span>
+        <span class="n">matrix</span><span class="p">[(</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slope</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shift</span> <span class="o">-</span> <span class="n">i</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">matrix</span></div>
 
 <div class="viewcode-block" id="ParamEdge.set_matrix"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.set_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">set_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>

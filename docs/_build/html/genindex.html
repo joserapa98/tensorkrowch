@@ -252,13 +252,21 @@ title="Fullscreen mode"
 </li>
       <li><a href="node_operations.html#tensorkrowch.add">add() (in module tensorkrowch)</a>
 </li>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.axes">axes (tensorkrowch.AbstractEdge property)</a>
+
+      <ul>
+        <li><a href="network_components.html#tensorkrowch.AbstractNode.axes">(tensorkrowch.AbstractNode property)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="network_components.html#tensorkrowch.AbstractNode.axes">axes (tensorkrowch.AbstractNode property)</a>
-</li>
       <li><a href="network_components.html#tensorkrowch.AbstractNode.axes_names">axes_names (tensorkrowch.AbstractNode property)</a>
 </li>
       <li><a href="network_components.html#tensorkrowch.Axis">Axis (class in tensorkrowch)</a>
+</li>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.axis1">axis1 (tensorkrowch.AbstractEdge property)</a>
+</li>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.axis2">axis2 (tensorkrowch.AbstractEdge property)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -410,14 +418,22 @@ title="Fullscreen mode"
 </li>
       <li><a href="network_components.html#tensorkrowch.TensorNetwork.initialize">initialize() (tensorkrowch.TensorNetwork method)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.Axis.is_batch">is_batch() (tensorkrowch.Axis method)</a>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.is_attached_to">is_attached_to() (tensorkrowch.AbstractEdge method)</a>
 </li>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.is_batch">is_batch() (tensorkrowch.AbstractEdge method)</a>
+
+      <ul>
+        <li><a href="network_components.html#tensorkrowch.Axis.is_batch">(tensorkrowch.Axis method)</a>
+</li>
+      </ul></li>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.is_dangling">is_dangling() (tensorkrowch.AbstractEdge method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="network_components.html#tensorkrowch.AbstractNode.is_data">is_data() (tensorkrowch.AbstractNode method)</a>
 </li>
       <li><a href="network_components.html#tensorkrowch.AbstractNode.is_leaf">is_leaf() (tensorkrowch.AbstractNode method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="network_components.html#tensorkrowch.AbstractNode.is_node1">is_node1() (tensorkrowch.AbstractNode method)</a>
 
       <ul>
@@ -468,9 +484,11 @@ title="Fullscreen mode"
 <h2 id="N">N</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="network_components.html#tensorkrowch.AbstractNode.name">name (tensorkrowch.AbstractNode property)</a>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.name">name (tensorkrowch.AbstractEdge property)</a>
 
       <ul>
+        <li><a href="network_components.html#tensorkrowch.AbstractNode.name">(tensorkrowch.AbstractNode property)</a>
+</li>
         <li><a href="network_components.html#tensorkrowch.Axis.name">(tensorkrowch.Axis property)</a>
 </li>
       </ul></li>
@@ -480,12 +498,20 @@ title="Fullscreen mode"
 </li>
       <li><a href="usage.html#tensorkrowch.Node">Node (class in tensorkrowch)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="network_components.html#tensorkrowch.Axis.node">node (tensorkrowch.Axis property)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.TensorNetwork.nodes">nodes (tensorkrowch.TensorNetwork property)</a>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.node1">node1 (tensorkrowch.AbstractEdge property)</a>
 </li>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.node2">node2 (tensorkrowch.AbstractEdge property)</a>
+</li>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.nodes">nodes (tensorkrowch.AbstractEdge property)</a>
+
+      <ul>
+        <li><a href="network_components.html#tensorkrowch.TensorNetwork.nodes">(tensorkrowch.TensorNetwork property)</a>
+</li>
+      </ul></li>
       <li><a href="network_components.html#tensorkrowch.TensorNetwork.non_leaf_nodes">non_leaf_nodes (tensorkrowch.TensorNetwork property)</a>
 </li>
       <li><a href="network_components.html#tensorkrowch.AbstractNode.norm">norm() (tensorkrowch.AbstractNode method)</a>
@@ -562,8 +588,12 @@ title="Fullscreen mode"
 </li>
       <li><a href="network_components.html#tensorkrowch.AbstractNode.shape">shape (tensorkrowch.AbstractNode property)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.AbstractNode.size">size() (tensorkrowch.AbstractNode method)</a>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.size">size() (tensorkrowch.AbstractEdge method)</a>
+
+      <ul>
+        <li><a href="network_components.html#tensorkrowch.AbstractNode.size">(tensorkrowch.AbstractNode method)</a>
 </li>
+      </ul></li>
       <li><a href="node_operations.html#tensorkrowch.split">split() (in module tensorkrowch)</a>
 </li>
       <li><a href="network_components.html#tensorkrowch.AbstractNode.split_">split_() (tensorkrowch.AbstractNode method)</a>
@@ -587,6 +617,8 @@ title="Fullscreen mode"
       <li><a href="network_components.html#tensorkrowch.AbstractNode.successors">successors (tensorkrowch.AbstractNode property)</a>
 </li>
       <li><a href="network_components.html#tensorkrowch.AbstractNode.sum">sum() (tensorkrowch.AbstractNode method)</a>
+</li>
+      <li><a href="network_components.html#tensorkrowch.AbstractEdge.svd_">svd_() (tensorkrowch.AbstractEdge method)</a>
 </li>
   </ul></td>
 </tr></table>

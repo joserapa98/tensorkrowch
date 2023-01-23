@@ -1,5 +1,13 @@
-Results of doctest builder run on 2023-01-18 12:55:27
+Results of doctest builder run on 2023-01-23 18:26:47
 =====================================================
+
+Document: network_components
+----------------------------
+1 items passed all tests:
+  17 tests in default
+17 tests in 1 items.
+17 passed and 0 failed.
+Test passed.
 
 Document: usage
 ---------------
@@ -9,17 +17,9 @@ Document: usage
 3 passed and 0 failed.
 Test passed.
 
-Document: network_components
-----------------------------
-1 items passed all tests:
-  11 tests in default
-11 tests in 1 items.
-11 passed and 0 failed.
-Test passed.
-
 Doctest summary
 ===============
-   14 tests
+   20 tests
     0 failures in tests
     0 failures in setup code
     0 failures in cleanup code

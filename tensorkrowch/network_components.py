@@ -441,7 +441,7 @@ class AbstractNode(ABC):
     def successors(self) -> Dict[Text, 'Successor']:
         """
         Dictionary with :class:`Operations <Operation>`' names as keys, and the
-        list of successors of the node as values.
+        list of :class:`Successors <Successor>` of the node as values.
         """
         return self._successors
     

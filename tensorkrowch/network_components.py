@@ -178,7 +178,7 @@ class Axis:
     @property
     def name(self) -> Text:
         """
-        Axis name, used to access edges by name of the axis. Is cannot contain
+        Axis name, used to access edges by name of the axis. It cannot contain
         blank spaces or special characters since it is intended to be used as
         name of submodules.
         """
@@ -220,14 +220,16 @@ class Axis:
     # methods
     def is_node1(self) -> bool:
         """
-        Boolean indicating whether `node1` of the edge attached to this axis is
-        the node that contains the axis. Otherwise, the node is `node2` of the edge.
+        Returns boolean indicating whether `node1` of the edge attached to this
+        axis is the node that contains the axis. Otherwise, the node is `node2`
+        of the edge.
         """
         return self._node1
 
     def is_batch(self) -> bool:
         """
-        Boolean indicating whether the edge in this axis is used as a batch edge.
+        Returns boolean indicating whether the edge in this axis is used as a
+        batch edge.
         """
         return self._batch
 
@@ -270,7 +272,7 @@ class AbstractNode(ABC):
     * Keep track of operations in which a node has taken place, so that several
       steps can be skipped in further training iterations. See :meth:`TensorNetwork.trace`.
     
-    Refer to the subclasses ``AbstractNode`` to see how to instantiate nodes:
+    Refer to the subclasses of ``AbstractNode`` to see how to instantiate nodes:
     
     * :class:`Node`
     
@@ -1745,19 +1747,34 @@ class ParamNode(Node):
 ################################################
 #                   EDGES                      #
 ################################################
-EdgeParameter = Union[int, float, Parameter]
-_DEFAULT_SHIFT = -0.5
-_DEFAULT_SLOPE = 20.
-
 
 class AbstractEdge(ABC):
     """
-    Abstract class for edges. Should be subclassed.
+    Abstract class for all types of edges. Defines what an edge is and some of its
+    properties and methods. Since it is an abstract class, cannot be instantiated.
 
-    An edge is just a wrap up of references to the nodes it connects.
-
-    Create an edge. Should be subclassed before usage and
-    a limited number of abstract methods overridden.
+    An edge is nothing more than an object that wraps references to the nodes it
+    connects. Thus it stores information like the nodes it connects, the corresponding
+    nodes' axes it is attached to, whether it is dangling or batch, its size and
+    dim, etc.
+    
+    Above all, its importance lies in that edges enable to connect nodes, forming
+    any possible graph, and perform easily :class:`Operations <Operation>` like
+    contracting and splitting nodes.
+    
+    Furthermore, edges have specific operations like :meth:`contract_` or :meth:`svd_`
+    (and its variations) that allow inplace modification of the :class:`TensorNetwork`.
+    
+    Refer to the subclasses of ``AbstractEdge`` to see how to instantiate edges:
+    
+    * :class:`Edge`
+    
+    * :class:`ParamEdge`
+    
+    * :class:`StackEdge`
+    
+    * :class:`ParamStackEdge`
+    
 
     Parameters
     ----------
@@ -1792,7 +1809,7 @@ class AbstractEdge(ABC):
         # check node2 and axis2
         if (node2 is None) != (axis2 is None):
             raise ValueError(
-                '`node2` and `axis2` must either be both None or both not be None')
+                '`node2` and `axis2` must both be None or both not be None')
         if node2 is not None:
             if not isinstance(node2, AbstractNode):
                 raise TypeError('`node2` should be AbstractNode type')
@@ -1801,7 +1818,7 @@ class AbstractEdge(ABC):
             if not isinstance(axis2, Axis):
                 axis2 = node2.get_axis(axis2)
 
-            if node1.shape[axis1.num] != node2.shape[axis2.num]:
+            if node1._shape[axis1._num] != node2._shape[axis2._num]:
                 raise ValueError('Sizes of `axis1` and `axis2` should match')
             if (node2 == node1) and (axis2 == axis1):
                 raise ValueError(
@@ -1809,37 +1826,65 @@ class AbstractEdge(ABC):
 
         self._nodes = [node1, node2]
         self._axes = [axis1, axis2]
-        self._size = node1.shape[axis1.num]
+        self._size = node1._shape[axis1._num]
 
     # ----------
     # Properties
     # ----------
     @property
     def node1(self) -> AbstractNode:
+        """Returns `node1` of the edge."""
         return self._nodes[0]
 
     @property
     def node2(self) -> AbstractNode:
+        """Returns `node2` of the edge. If the edge is dangling, it is None."""
         return self._nodes[1]
     
     @property
     def nodes(self) -> List[AbstractNode]:
+        """Returns a list with `node1` and `node2`."""
         return self._nodes
 
     @property
     def axis1(self) -> Axis:
+        """Returns axis where the edge is attached to `node1`."""
         return self._axes[0]
 
     @property
     def axis2(self) -> Axis:
+        """
+        Returns axis where the edge is attached to `node2`. If the edge is dangling,
+        it is None.
+        """
         return self._axes[1]
     
     @property
     def axes(self) -> List[Axis]:
+        """
+        Returns a list of axes where the edge is attached to `node1` and `node2`,
+        respectively.
+        """
         return self._nodes
 
     @property
     def name(self) -> Text:
+        """
+        Returns edge's name. It is formed with the corresponding nodes' and axes'
+        names.
+        
+        Example
+        -------
+        >>> nodeA = tk.Node(shape=(2, 3), name='nodeA', axes_names=['left', 'right'])
+        >>> edge = nodeA['right']
+        >>> print(edge.name)
+        nodeA[right] <-> None
+        
+        >>> nodeB = tk.Node(shape=(3, 4), name='nodeB', axes_names=['left', 'right'])
+        >>> new_edge = nodeA['right'] ^ nodeB['left']
+        >>> print(new_edge.name)
+        nodeA[right] <-> nodeB[left]
+        """
         if self.is_dangling():
             return f'{self.node1._name}[{self.axis1._name}] <-> None'
         return f'{self.node1._name}[{self.axis1._name}] <-> ' \
@@ -1894,136 +1939,20 @@ class AbstractEdge(ABC):
     # Methods
     # -------
     def is_dangling(self) -> bool:
+        """Returns boolean indicating whether the edge is a dangling edge."""
         return self.node2 is None
 
     def is_batch(self) -> bool:
+        """Returns boolean indicating whether the edge is a batch edge."""
         return self.axis1.is_batch()
 
     def is_attached_to(self, node: AbstractNode) -> bool:
+        """Returns boolean indicating whether the edge is attached to ``node``."""
         return (self.node1 == node) or (self.node2 == node)
 
     def size(self) -> int:
+        """Returns edge's size."""
         return self._size
-
-    def svd_aux(self,
-                side='left',
-                rank: Optional[int] = None,
-                cum_percentage: Optional[float] = None) -> None:
-        # TODO: problema del futuro xd
-        contracted_node = self.contract()
-
-        lst_permute_all = []
-        lst_batches = []
-        lst_batches_names = []
-        lst_reshape_edges1 = []
-        idx = 0
-        for edge in self.node1.edges:
-            if edge in contracted_node.edges:
-                if edge.is_batch() and edge.axis1.name in self.node2.axes_names:
-                    lst_permute_all = [idx] + lst_permute_all
-                    lst_batches = [edge.size()] + lst_batches
-                    lst_batches_names = [edge.axis1.name] + lst_batches_names
-                else:
-                    lst_permute_all.append(idx)
-                    lst_reshape_edges1.append(edge.size())
-                idx += 1
-
-        lst_reshape_edges2 = []
-        for edge in self.node2.edges:
-            if edge in contracted_node.edges:
-                lst_permute_all.append(idx)
-                lst_reshape_edges2.append(edge.size())
-                idx += 1
-
-        contracted_tensor = contracted_node.tensor. \
-            permute(*lst_permute_all). \
-            reshape(*(lst_batches +
-                      [torch.tensor(lst_reshape_edges1).prod().item()] +
-                      [torch.tensor(lst_reshape_edges2).prod().item()]))
-        u, s, vh = torch.linalg.svd(contracted_tensor, full_matrices=False)
-
-        if cum_percentage is not None:
-            if rank is not None:
-                raise ValueError(
-                    'Only one of `rank` and `cum_percentage` should be provided')
-            percentages = s.cumsum(-1) / s.sum(-1).view(*
-                                                        s.shape[:-1], 1).expand(s.shape)
-            cum_percentage_tensor = torch.tensor(
-                cum_percentage).repeat(percentages.shape[:-1])
-            rank = 0
-            for i in range(percentages.shape[-1]):
-                p = percentages[..., i]
-                rank += 1
-                if torch.ge(p, cum_percentage_tensor).all():
-                    break
-
-        if rank is None:
-            raise ValueError(
-                'One of `rank` and `cum_percentage` should be provided')
-        if rank <= len(s):
-            u = u[..., :rank]
-            s = s[..., :rank]
-            vh = vh[..., :rank, :]
-        else:
-            rank = len(s)
-
-        if side == 'left':
-            u = u @ torch.diag_embed(s)
-        elif side == 'right':
-            vh = torch.diag_embed(s) @ vh
-        else:
-            # TODO: could be changed to bool or "node1"/"node2"
-            raise ValueError('`side` can only be "left" or "right"')
-
-        u = u.reshape(*(lst_batches + lst_reshape_edges1 + [rank]))
-        vh = vh.reshape(*(lst_batches + [rank] + lst_reshape_edges2))
-
-        n_batches = len(lst_batches)
-        lst_permute1 = []
-        idx = 0
-        idx_batch = 0
-        for edge in self.node1.edges:
-            if edge == self:
-                lst_permute1.append(len(u.shape) - 1)
-            else:
-                if edge.is_batch() and edge.axis1.name in lst_batches_names:
-                    lst_permute1.append(idx_batch)
-                    idx_batch += 1
-                else:
-                    lst_permute1.append(n_batches + idx)
-                    idx += 1
-
-        lst_permute2 = []
-        idx = 0
-        for edge in self.node2.edges:
-            if edge == self:
-                lst_permute2.append(n_batches)
-            else:
-                if edge.is_batch():
-                    found = False
-                    for idx_name, name in enumerate(lst_batches_names):
-                        if edge.axis1.name == name:
-                            found = True
-                            lst_permute2.append(idx_name)
-                    if not found:
-                        lst_permute2.append(n_batches + 1 + idx)
-                        idx += 1
-                else:
-                    lst_permute2.append(n_batches + 1 + idx)
-                    idx += 1
-
-        u = u.permute(*lst_permute1)
-        vh = vh.permute(*lst_permute2)
-
-        net = self.node1._network
-        net._list_ops = []
-        for node in self._nodes:
-            node._successors = dict()
-        net.delete_node(contracted_node, False)
-
-        self.change_size(rank)
-        self.node1.tensor = u
-        self.node2.tensor = vh
 
     def __xor__(self, other: 'AbstractEdge') -> 'AbstractEdge':
         return self.connect(other)
@@ -2133,6 +2062,11 @@ class Edge(AbstractEdge):
         return disconnect(self)
 
 
+EdgeParameter = Union[int, float, Parameter]
+_DEFAULT_SHIFT = -0.5
+_DEFAULT_SLOPE = 1.
+
+
 class ParamEdge(AbstractEdge, nn.Module):
     """
     Class for trainable edges. Subclass of PyTorch nn.Module.
@@ -2171,10 +2105,12 @@ class ParamEdge(AbstractEdge, nn.Module):
                               'when initializing the edge, since dim was provided')
             shift, slope = self.compute_parameters(node1.size(axis1), dim)
         else:
-            if shift is None:
-                shift = _DEFAULT_SHIFT
-            if slope is None:
-                slope = _DEFAULT_SLOPE
+            shift, slope = self.compute_parameters(node1.size(axis1), node1.size(axis1))
+            
+            # if shift is None:
+            #     shift = _DEFAULT_SHIFT
+            # if slope is None:
+            #     slope = _DEFAULT_SLOPE
 
         self._sigmoid = nn.Sigmoid()
         self._matrix = None
@@ -2237,7 +2173,8 @@ class ParamEdge(AbstractEdge, nn.Module):
             raise TypeError('`dim` should be int type')
         if dim > size:
             raise ValueError('`dim` should be smaller or equal than `size`')
-        shift = (size - dim) - 0.5
+        # shift = (size - dim) - 0.5
+        shift = dim - 0.5
         slope = _DEFAULT_SLOPE
         return shift, slope
 
@@ -2247,14 +2184,18 @@ class ParamEdge(AbstractEdge, nn.Module):
         """
         Set both parameters, update them and set the new matrix
         """
+        device = None
+        if self.node1.tensor is not None:
+            device = self.node1.tensor.device
+        
         if shift is not None:
-            if isinstance(shift, int):
+            if isinstance(shift, (int, float)):
                 shift = float(shift)
-                self._shift = Parameter(torch.tensor(shift))
-                self._prev_shift = shift
-            elif isinstance(shift, float):
-                self._shift = Parameter(torch.tensor(shift))
-                self._prev_shift = shift
+                if device is None:
+                    self._shift = Parameter(torch.tensor(shift))
+                else:
+                    self._shift = Parameter(torch.tensor(shift).to(device))
+                self._prev_shift = _DEFAULT_SHIFT
             elif isinstance(shift, Parameter):
                 self._shift = shift
                 self._prev_shift = shift.item()
@@ -2262,12 +2203,12 @@ class ParamEdge(AbstractEdge, nn.Module):
                 raise TypeError(
                     '`shift` should be int, float or Parameter type')
         if slope is not None:
-            if isinstance(slope, int):
+            if isinstance(slope, (int, float)):
                 slope = float(slope)
-                self._slope = Parameter(torch.tensor(slope))
-                self._prev_slope = slope
-            elif isinstance(slope, float):
-                self._slope = Parameter(torch.tensor(slope))
+                if device is None:
+                    self._slope = Parameter(torch.tensor(slope))
+                else:
+                    self._slope = Parameter(torch.tensor(slope).to(device))
                 self._prev_slope = slope
             elif isinstance(slope, Parameter):
                 # TODO: eligible device
@@ -2276,6 +2217,7 @@ class ParamEdge(AbstractEdge, nn.Module):
             else:
                 raise TypeError(
                     '`slope` should be int, float or Parameter type')
+        
         self.set_matrix()
 
     def is_updated(self) -> bool:  # TODO: creo que esto no sirve para nada, lo podemos borrar
@@ -2301,7 +2243,8 @@ class ParamEdge(AbstractEdge, nn.Module):
         matrix = torch.zeros((self.size(), self.size()),
                              device=self.shift.device)
         i = torch.arange(self.size(), device=self.shift.device)
-        matrix[(i, i)] = self.sigmoid(self.slope * (i - self.shift))
+        # matrix[(i, i)] = self.sigmoid(self.slope * (i - self.shift))
+        matrix[(i, i)] = self.sigmoid(self.slope * (self.shift - i))
         return matrix
 
     def set_matrix(self) -> None:

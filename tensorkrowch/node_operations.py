@@ -968,6 +968,32 @@ def svd_(edge,
          rank: Optional[int] = None,
          cum_percentage: Optional[float] = None,
          cutoff: Optional[float] = None) -> Tuple[Node, Node]:
+    """
+    Edge SVD inplace.
+
+    Parameters
+    ----------
+    edge : _type_
+        _description_
+    side : str, optional
+        _description_, by default 'left'
+    rank : Optional[int], optional
+        _description_, by default None
+    cum_percentage : Optional[float], optional
+        _description_, by default None
+    cutoff : Optional[float], optional
+        _description_, by default None
+
+    Returns
+    -------
+    Tuple[Node, Node]
+        _description_
+
+    Raises
+    ------
+    ValueError
+        _description_
+    """
     
     if edge.is_dangling():
         raise ValueError('Edge should be connected to perform SVD')

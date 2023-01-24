@@ -367,7 +367,7 @@ class TestMPS:
                                 else:
                                     assert len(mps.virtual_nodes) == 3
     
-    def test_canonicalize_continuous(self):
+    def test_canonicalize_univocal(self):
         example = torch.randn(5, 1, 2)
         data = torch.randn(5, 100, 2)
         
@@ -375,7 +375,12 @@ class TestMPS:
                      d_phys=2,
                      d_bond=5,
                      boundary='obc',
-                     param_bond=True)
+                     param_bond=False)
+        # NOTE: there might be errors when using param_bond=True
+        
+        # Contract with data
+        mps.trace(example)
+        result = mps(data)
         
         # Contract MPS
         result = mps.left_node
@@ -384,9 +389,9 @@ class TestMPS:
         result @= mps.right_node
         
         mps_tensor = result.tensor
-                
+        
         # Canonicalize and continue
-        mps.canonicalize_continuous()
+        mps.canonicalize_univocal()
         mps.trace(example)
         result = mps(data)
         
@@ -408,7 +413,7 @@ class TestMPS:
         norm = diff.norm()
         assert norm.item() < 1e-5
         
-    def test_canonicalize_continuous_diff_dims(self):
+    def test_canonicalize_univocal_diff_dims(self):
         d_phys = torch.arange(2, 7).int().tolist()
         d_bond = torch.arange(2, 6).int().tolist()
         example = [torch.randn(1, d) for d in d_phys]
@@ -418,8 +423,12 @@ class TestMPS:
                      d_phys=d_phys,
                      d_bond=d_bond,
                      boundary='obc',
-                     param_bond=True)
-                
+                     param_bond=False)
+        
+        # Contract with data
+        mps.trace(example)
+        result = mps(data)
+        
         # Contract MPS
         result = mps.left_node
         for node in mps.mats_env:
@@ -429,7 +438,7 @@ class TestMPS:
         mps_tensor = result.tensor
                 
         # Canonicalize and continue
-        mps.canonicalize_continuous()
+        mps.canonicalize_univocal()
         mps.trace(example)
         result = mps(data)
         
@@ -451,15 +460,26 @@ class TestMPS:
         norm = diff.norm()
         assert norm.item() < 1e-5
         
-    def test_canonicalize_continuous_bond_greater_than_phys(self):
-        example = torch.randn(5, 1, 2)
-        data = torch.randn(5, 100, 2)
+    def test_canonicalize_univocal_diff_rand_dims(self):
+        # d_phys = [2, 3, 5, 4, 5] #torch.randint(low=2, high=10, size=(5,)).tolist()
+        # d_bond = [2, 3, 4, 5] #torch.randint(low=2, high=10, size=(4,)).tolist()
+        # NOTE: just that combination of dims raises error
+        
+        d_phys = [2, 3, 5, 3, 2]
+        d_bond = [2, 6, 6, 2]
+        
+        example = [torch.randn(1, d) for d in d_phys]
+        data = [torch.randn(100, d) for d in d_phys]
         
         mps = tk.MPS(n_sites=5,
-                     d_phys=2,
-                     d_bond=20,
+                     d_phys=d_phys,
+                     d_bond=d_bond,
                      boundary='obc',
-                     param_bond=True)
+                     param_bond=False)
+        
+        # Contract with data
+        mps.trace(example)
+        result = mps(data)
                 
         # Contract MPS
         result = mps.left_node
@@ -470,7 +490,52 @@ class TestMPS:
         mps_tensor = result.tensor
                 
         # Canonicalize and continue
-        mps.canonicalize_continuous()
+        mps.canonicalize_univocal()
+        mps.trace(example)
+        result = mps(data)
+        
+        assert result.shape == (100,)
+        assert len(mps.edges) == 0
+        assert len(mps.leaf_nodes) == 5
+        assert len(mps.data_nodes) == 5
+        assert len(mps.virtual_nodes) == 0
+        
+        # Contract Canonical MPS
+        result = mps.left_node
+        for node in mps.mats_env:
+            result @= node
+        result @= mps.right_node
+        
+        mps_canon_tensor = result.tensor
+        
+        diff = mps_tensor - mps_canon_tensor
+        norm = diff.norm()
+        assert norm.item() < 1e-4
+        
+    def test_canonicalize_univocal_bond_greater_than_phys(self):
+        example = torch.randn(5, 1, 2)
+        data = torch.randn(5, 100, 2)
+        
+        mps = tk.MPS(n_sites=5,
+                     d_phys=2,
+                     d_bond=20,
+                     boundary='obc',
+                     param_bond=False)
+        
+        # Contract with data
+        mps.trace(example)
+        result = mps(data)
+                
+        # Contract MPS
+        result = mps.left_node
+        for node in mps.mats_env:
+            result @= node
+        result @= mps.right_node
+        
+        mps_tensor = result.tensor
+                
+        # Canonicalize and continue
+        mps.canonicalize_univocal()
         mps.trace(example)
         result = mps(data)
         

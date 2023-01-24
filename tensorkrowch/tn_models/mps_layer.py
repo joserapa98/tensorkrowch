@@ -654,6 +654,8 @@ class MPSLayer(TensorNetwork):
         self.automemory = prev_automemory
     
     def _project_to_d_bond(self, nodes, d_bond, side='right'):
+        device = nodes[0].tensor.device
+        
         if side == 'left':
             nodes.reverse()
         elif side != 'right':
@@ -672,11 +674,11 @@ class MPSLayer(TensorNetwork):
                 proj_mat_node = Node(shape=(*d_phys_lst,d_bond),
                                      axes_names=(*(['input'] * len(d_phys_lst)),
                                                  'd_bond'),
-                                     name='proj_mat_node',
+                                     name=f'proj_mat_node_{side}',
                                      network=self)
                 
                 proj_mat_node.tensor = torch.eye(torch.tensor(d_phys_lst).prod().int().item(),
-                                                 d_bond).view(*d_phys_lst, -1)
+                                                 d_bond).view(*d_phys_lst, -1).to(device)
                 for k in range(j + 1):
                     nodes[k]['input'] ^ proj_mat_node[k]
                     
@@ -691,11 +693,11 @@ class MPSLayer(TensorNetwork):
             proj_mat_node = Node(shape=(*d_phys_lst, d_bond),
                                  axes_names=(*(['input'] * len(d_phys_lst)),
                                              'd_bond'),
-                                 name='proj_mat_node',
+                                 name=f'proj_mat_node_{side}',
                                  network=self)
             
             proj_mat_node.tensor = torch.eye(torch.tensor(d_phys_lst).prod().int().item(),
-                                             d_bond).view(*d_phys_lst, -1)
+                                             d_bond).view(*d_phys_lst, -1).to(device)
             for k in range(j + 1):
                 nodes[k]['input'] ^ proj_mat_node[k]
                 
@@ -709,10 +711,10 @@ class MPSLayer(TensorNetwork):
             d_phys = nodes[k]['input'].size()
             proj_vec_node = Node(shape=(d_phys,),
                                  axes_names=('input',),
-                                 name='proj_vec_node',
+                                 name=f'proj_vec_node_{side}_({k})',
                                  network=self)
             
-            proj_vec_node.tensor = torch.eye(d_phys, 1).squeeze()
+            proj_vec_node.tensor = torch.eye(d_phys, 1).squeeze().to(device)
             nodes[k]['input'] ^ proj_vec_node['input']
             line_mat_nodes.append(proj_vec_node @ nodes[k])
             
@@ -725,7 +727,7 @@ class MPSLayer(TensorNetwork):
             
         return result  # d_bond x left/right
     
-    def _aux_canonicalize_continuous(self, nodes, idx, left_nodeL):
+    def _aux_canonicalize_univocal(self, nodes, idx, left_nodeL):
         L = nodes[idx]  # left x input x right
         left_nodeC = None
         
@@ -771,9 +773,9 @@ class MPSLayer(TensorNetwork):
             
         return L, left_nodeC
         
-    def canonicalize_continuous(self):
+    def canonicalize_univocal(self):
         if self._boundary != 'obc':
-            raise ValueError('`canonicalize_continuous` can only be used if '
+            raise ValueError('`canonicalize_univocal` can only be used if '
                              'boundary is `obc`')
             
         prev_automemory = self._automemory
@@ -791,7 +793,7 @@ class MPSLayer(TensorNetwork):
         # new_tensors.append(torch.eye(self._d_phys[0], self._d_bond[0]))
         left_nodeC = None
         for i in range(self._n_sites):
-            tensor, left_nodeC = self._aux_canonicalize_continuous(nodes=nodes,
+            tensor, left_nodeC = self._aux_canonicalize_univocal(nodes=nodes,
                                                                    idx=i,
                                                                    left_nodeL=left_nodeC)
             new_tensors.append(tensor)
@@ -814,7 +816,7 @@ class MPSLayer(TensorNetwork):
                                    list(self._data_nodes.values())[:l]):
             node['input'] ^ data_node['feature']
         for node, data_node in zip(nodes[l + 1:],
-                                   list(self._data_nodes.values())[l + 1:]):
+                                   list(self._data_nodes.values())[l:]):
             node['input'] ^ data_node['feature']
             
         self.automemory = prev_automemory

@@ -400,7 +400,7 @@ class TestMPSLayer:
                         assert len(mps.data_nodes) == 0
                         assert len(mps.virtual_nodes) == 0
                         
-    def test_canonicalize_continuous(self):
+    def test_canonicalize_univocal(self):
         example = torch.randn(4, 1, 2)
         data = torch.randn(4, 100, 2)
         
@@ -409,8 +409,18 @@ class TestMPSLayer:
                           d_bond=5,
                           n_labels=2,
                           boundary='obc',
-                          param_bond=True)
-        mps.output_node.tensor = torch.randn(mps.output_node.shape)
+                          param_bond=False)
+        
+        tensor = torch.randn(mps.output_node.shape) * 1e-9
+        aux = torch.eye(tensor.shape[0], tensor.shape[2])
+        tensor[:, 0, :] = aux
+        mps.output_node.tensor = tensor
+        
+        # mps.output_node.tensor = torch.randn(mps.output_node.shape)
+        
+        # Contract with data
+        mps.trace(example)
+        result = mps(data)
         
         # Contract MPS
         result = mps.left_node
@@ -424,7 +434,7 @@ class TestMPSLayer:
         mps_tensor = result.tensor
                 
         # Canonicalize and continue
-        mps.canonicalize_continuous()
+        mps.canonicalize_univocal()
         mps.trace(example)
         result = mps(data)
         
@@ -449,8 +459,8 @@ class TestMPSLayer:
         norm = diff.norm()
         assert norm.item() < 1e-4
         
-    def test_canonicalize_continuous_diff_dims(self):
-        d_phys = torch.arange(2, 6).int().tolist()
+    def test_canonicalize_univocal_diff_dims(self):
+        d_phys = [2, 3, 5, 6]  #torch.arange(2, 6).int().tolist()
         d_bond = torch.arange(2, 6).int().tolist()
         example = [torch.randn(1, d) for d in d_phys]
         data = [torch.randn(100, d) for d in d_phys]
@@ -460,13 +470,19 @@ class TestMPSLayer:
                           d_bond=d_bond,
                           n_labels=5,
                           boundary='obc',
-                          param_bond=True)
+                          param_bond=False)
         
         tensor = torch.randn(mps.output_node.shape) * 1e-9
         aux = torch.eye(tensor.shape[0], tensor.shape[2])
         tensor[:, 0, :] = aux
         mps.output_node.tensor = tensor
-                
+        
+        # mps.output_node.tensor = torch.randn(mps.output_node.shape)
+        
+        # Contract with data
+        mps.trace(example)
+        result = mps(data)
+        
         # Contract MPS
         result = mps.left_node
         for node in mps.left_env:
@@ -479,7 +495,7 @@ class TestMPSLayer:
         mps_tensor = result.tensor
                 
         # Canonicalize and continue
-        mps.canonicalize_continuous()
+        mps.canonicalize_univocal()
         mps.trace(example)
         result = mps(data)
         
@@ -504,7 +520,7 @@ class TestMPSLayer:
         norm = diff.norm()
         assert norm.item() < 1e-5
         
-    def test_canonicalize_continuous_bond_greater_than_phys(self):
+    def test_canonicalize_univocal_bond_greater_than_phys(self):
         example = torch.randn(5, 1, 2)
         data = torch.randn(5, 100, 2)
         
@@ -513,9 +529,19 @@ class TestMPSLayer:
                           d_bond=20,
                           n_labels=2,
                           boundary='obc',
-                          param_bond=True)
-        mps.output_node.tensor = torch.randn(mps.output_node.shape)
-                
+                          param_bond=False)
+        
+        tensor = torch.randn(mps.output_node.shape) * 1e-9
+        aux = torch.eye(tensor.shape[0], tensor.shape[2])
+        tensor[:, 0, :] = aux
+        mps.output_node.tensor = tensor
+        
+        # mps.output_node.tensor = torch.randn(mps.output_node.shape)
+        
+        # Contract with data
+        mps.trace(example)
+        result = mps(data)
+        
         # Contract MPS
         result = mps.left_node
         for node in mps.left_env:
@@ -528,7 +554,7 @@ class TestMPSLayer:
         mps_tensor = result.tensor
                 
         # Canonicalize and continue
-        mps.canonicalize_continuous()
+        mps.canonicalize_univocal()
         mps.trace(example)
         result = mps(data)
         

@@ -939,7 +939,7 @@ title="Fullscreen mode"
             
         <span class="k">return</span> <span class="n">result</span>  <span class="c1"># d_bond x left/right</span>
     
-    <span class="k">def</span> <span class="nf">_aux_canonicalize_continuous</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">left_nodeL</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_aux_canonicalize_univocal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">left_nodeL</span><span class="p">):</span>
         <span class="n">L</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>  <span class="c1"># left x input x right</span>
         <span class="n">left_nodeC</span> <span class="o">=</span> <span class="kc">None</span>
         
@@ -985,9 +985,9 @@ title="Fullscreen mode"
             
         <span class="k">return</span> <span class="n">L</span><span class="p">,</span> <span class="n">left_nodeC</span>
         
-    <span class="k">def</span> <span class="nf">canonicalize_continuous</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">canonicalize_univocal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">!=</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`canonicalize_continuous` can only be used if &#39;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`canonicalize_univocal` can only be used if &#39;</span>
                              <span class="s1">&#39;boundary is `obc`&#39;</span><span class="p">)</span>
             
         <span class="n">prev_automemory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_automemory</span>
@@ -1005,7 +1005,7 @@ title="Fullscreen mode"
         <span class="c1"># new_tensors.append(torch.eye(self._d_phys[0], self._d_bond[0]))</span>
         <span class="n">left_nodeC</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_sites</span><span class="p">):</span>
-            <span class="n">tensor</span><span class="p">,</span> <span class="n">left_nodeC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_aux_canonicalize_continuous</span><span class="p">(</span><span class="n">nodes</span><span class="o">=</span><span class="n">nodes</span><span class="p">,</span>
+            <span class="n">tensor</span><span class="p">,</span> <span class="n">left_nodeC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_aux_canonicalize_univocal</span><span class="p">(</span><span class="n">nodes</span><span class="o">=</span><span class="n">nodes</span><span class="p">,</span>
                                                                    <span class="n">idx</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
                                                                    <span class="n">left_nodeL</span><span class="o">=</span><span class="n">left_nodeC</span><span class="p">)</span>
             <span class="n">new_tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>

@@ -2821,6 +2821,8 @@ class TensorNetwork(nn.Module):
 
     def trace(self, example: Optional[Tensor] = None, *args, **kwargs) -> None:
         """Trace TensorNetwork contraction."""
+        self.clear()
+        
         with torch.no_grad():
             self._tracing = True
             self(example, *args, **kwargs)

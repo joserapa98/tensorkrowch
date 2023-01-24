@@ -261,7 +261,7 @@ class MPS(TensorNetwork):
             self.mats_env_data = list(map(lambda node: node.neighbours('input'),
                                           self.mats_env))
 
-    def _input_contraction(self, inline_input: bool = True) -> Tuple[Optional[List[Node]],
+    def _input_contraction(self, inline_input: bool = False) -> Tuple[Optional[List[Node]],
                                                                      Optional[List[Node]]]:
         if inline_input:
             mats_result = []
@@ -369,7 +369,7 @@ class MPS(TensorNetwork):
 
         return self._contract_envs_inline(aux_nodes)
 
-    def contract(self, inline_input=True, inline_mats=True) -> Node:
+    def contract(self, inline_input=False, inline_mats=False) -> Node:
         start = time.time()
         mats_env = self._input_contraction(inline_input)
         if PRINT_MODE: print('\tInput:', time.time() - start)
@@ -794,7 +794,7 @@ class UMPS(TensorNetwork):
             self.mats_env_data = list(map(lambda node: node.neighbours('input'),
                                           self.mats_env))
 
-    def _input_contraction(self, inline_input=True) -> Tuple[Optional[List[Node]],
+    def _input_contraction(self, inline_input=False) -> Tuple[Optional[List[Node]],
                                                              Optional[List[Node]]]:
         if inline_input:
             mats_result = []
@@ -900,7 +900,7 @@ class UMPS(TensorNetwork):
 
         return self._contract_envs_inline(aux_nodes)
 
-    def contract(self, inline_input=True, inline_mats=True) -> Node:
+    def contract(self, inline_input=False, inline_mats=False) -> Node:
         start = time.time()
         mats_env = self._input_contraction(inline_input)
         if PRINT_MODE: print('\tInput:', time.time() - start)

@@ -259,9 +259,9 @@ title="Fullscreen mode"
                                 <span class="n">print_list</span><span class="p">,</span> <span class="n">stack_unequal_tensors</span><span class="p">,</span> <span class="n">tab_string</span><span class="p">)</span>
 
 
-<span class="c1">################################################</span>
-<span class="c1">#                    AXIS                      #</span>
-<span class="c1">################################################</span>
+<span class="c1">###############################################################################</span>
+<span class="c1">#                                     AXIS                                    #</span>
+<span class="c1">###############################################################################</span>
 <div class="viewcode-block" id="Axis"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Axis">[docs]</a><span class="k">class</span> <span class="nc">Axis</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    The axes are the objects that stick edges to nodes. Every :class:`node &lt;AbstractNode&gt;`</span>
@@ -290,7 +290,8 @@ title="Fullscreen mode"
 <span class="sd">      `node1` or `node2`.</span>
 <span class="sd">      </span>
 <span class="sd">    Even though we can create Axis instances, that will not be usually the case,</span>
-<span class="sd">    since axes are automatically created when instantiating a new :class:`node &lt;AbstractNode&gt;`.</span>
+<span class="sd">    since axes are automatically created when instantiating a new :class:`node</span>
+<span class="sd">    &lt;AbstractNode&gt;`.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -457,9 +458,9 @@ title="Fullscreen mode"
         <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">( </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1"> (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_num</span><span class="si">}</span><span class="s1">) )&#39;</span></div>
 
 
-<span class="c1">################################################</span>
-<span class="c1">#                   NODES                      #</span>
-<span class="c1">################################################</span>
+<span class="c1">###############################################################################</span>
+<span class="c1">#                                    NODES                                    #</span>
+<span class="c1">###############################################################################</span>
 <span class="n">Ax</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Text</span><span class="p">,</span> <span class="n">Axis</span><span class="p">]</span>
 <span class="n">Shape</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">Size</span><span class="p">]</span>
 
@@ -1778,7 +1779,8 @@ title="Fullscreen mode"
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a copy of the node. That is, returns a node whose tensor is a copy</span>
 <span class="sd">        of the original, whose edges are directly inherited (these are not copies,</span>
-<span class="sd">        but the exact same edges) and whose name is extended with the prefix ``&quot;copy_&quot;``.</span>
+<span class="sd">        but the exact same edges) and whose name is extended with the prefix</span>
+<span class="sd">        ``&quot;copy_&quot;``.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -1958,10 +1960,9 @@ title="Fullscreen mode"
         <span class="k">return</span> <span class="n">new_node</span></div></div>
 
 
-<span class="c1">################################################</span>
-<span class="c1">#                   EDGES                      #</span>
-<span class="c1">################################################</span>
-
+<span class="c1">###############################################################################</span>
+<span class="c1">#                                    EDGES                                    #</span>
+<span class="c1">###############################################################################</span>
 <div class="viewcode-block" id="AbstractEdge"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractEdge">[docs]</a><span class="k">class</span> <span class="nc">AbstractEdge</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Abstract class for all types of edges. Defines what an edge is and some of its</span>
@@ -1973,7 +1974,7 @@ title="Fullscreen mode"
 <span class="sd">    dim, etc.</span>
 <span class="sd">    </span>
 <span class="sd">    Above all, its importance lies in that edges enable to connect nodes, forming</span>
-<span class="sd">    any possible graph, and perform easily :class:`Operations &lt;Operation&gt;` like</span>
+<span class="sd">    any possible graph, and to perform easily :class:`Operations &lt;Operation&gt;` like</span>
 <span class="sd">    contracting and splitting nodes.</span>
 <span class="sd">    </span>
 <span class="sd">    Furthermore, edges have specific operations like :meth:`contract_` or :meth:`svd_`</span>
@@ -1988,20 +1989,6 @@ title="Fullscreen mode"
 <span class="sd">    * :class:`StackEdge`</span>
 <span class="sd">    </span>
 <span class="sd">    * :class:`ParamStackEdge`</span>
-<span class="sd">    </span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    node1: first node to which the edge is connected</span>
-<span class="sd">    axis1: axis of `node1` where the edge is attached</span>
-<span class="sd">    node2: second, optional, node to which the edge is connected</span>
-<span class="sd">    axis2: axis of `node2` where the edge is attached</span>
-
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    ValueError</span>
-<span class="sd">    TypeError</span>
-
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -2111,43 +2098,27 @@ title="Fullscreen mode"
     <span class="k">def</span> <span class="nf">dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
         <span class="k">pass</span>
 
-<div class="viewcode-block" id="AbstractEdge.change_size"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractEdge.change_size">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">change_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Change size of edge, thus changing sizes of adjacent nodes (node1 and node2)</span>
-<span class="sd">        at axis1 and axis2, respectively</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">pass</span></div>
+        <span class="k">pass</span>
 
-<div class="viewcode-block" id="AbstractEdge.parameterize"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractEdge.parameterize">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                      <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
                      <span class="n">size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;AbstractEdge&#39;</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Substitute current edge by a (de-)parameterized version of it</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">pass</span></div>
+        <span class="k">pass</span>
 
-<div class="viewcode-block" id="AbstractEdge.copy"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractEdge.copy">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;AbstractEdge&#39;</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Create a new edge referencing the same nodes at the same axis</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">pass</span></div>
+        <span class="k">pass</span>
 
-<div class="viewcode-block" id="AbstractEdge.connect"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractEdge.connect">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s1">&#39;AbstractEdge&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;AbstractEdge&#39;</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Connect two edges</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">pass</span></div>
+        <span class="k">pass</span>
 
-<div class="viewcode-block" id="AbstractEdge.disconnect"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractEdge.disconnect">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="s1">&#39;AbstractEdge&#39;</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Disconnect one edge (from itself)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">pass</span></div>
+        <span class="k">pass</span>
 
     <span class="c1"># -------</span>
     <span class="c1"># Methods</span>
@@ -2175,8 +2146,9 @@ title="Fullscreen mode"
         <span class="k">if</span> <span class="n">other</span> <span class="o">==</span> <span class="bp">self</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot disconnect one edge from another, different one. &#39;</span>
-                             <span class="s1">&#39;Edge should be disconnected from itself&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;Cannot disconnect one edge from another, different one. &#39;</span>
+                <span class="s1">&#39;Edge should be disconnected from itself&#39;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
@@ -2191,19 +2163,45 @@ title="Fullscreen mode"
 
 <div class="viewcode-block" id="Edge"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Edge">[docs]</a><span class="k">class</span> <span class="nc">Edge</span><span class="p">(</span><span class="n">AbstractEdge</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Base class for non-trainable edges. Should be subclassed</span>
-<span class="sd">    by any new class of non-trainable edges.</span>
-
-<span class="sd">    Used by default to create a non-trainable node.</span>
+<span class="sd">    Base class for non-trainable edges. Should be subclassed by any new class</span>
+<span class="sd">    of non-trainable edges.</span>
+<span class="sd">    </span>
+<span class="sd">    This basic type of edge is the default for both :class:`Node` and</span>
+<span class="sd">    :class:`ParamNode`.</span>
+<span class="sd">    </span>
+<span class="sd">    For a complete list of properties and methods, see also :class:`AbstractEdge`.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    node1 : AbstractNode</span>
+<span class="sd">        First node to which the edge is connected.</span>
+<span class="sd">    axis1: int, str or Axis</span>
+<span class="sd">        Axis of ``node1`` where the edge is attached.</span>
+<span class="sd">    node2 : AbstractNode, optional</span>
+<span class="sd">        Second node to which the edge is connected. If None, the edge will be</span>
+<span class="sd">        dangling.</span>
+<span class="sd">    axis2 : int, str, Axis, optional</span>
+<span class="sd">        Axis of ``node2`` where the edge is attached.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># -------</span>
     <span class="c1"># Methods</span>
     <span class="c1"># -------</span>
-    <span class="k">def</span> <span class="nf">dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+<div class="viewcode-block" id="Edge.dim"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Edge.dim">[docs]</a>    <span class="k">def</span> <span class="nf">dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns dimension of tensor at the corresponding axis. For edges, this</span>
+<span class="sd">        coincides with the size of the tensor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Edge.change_size"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Edge.change_size">[docs]</a>    <span class="k">def</span> <span class="nf">change_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Changes size of the edge, thus changing the size of tensors of `node1`</span>
+<span class="sd">        and `node2` at the corresponding axes. If new size is smaller, the tensor</span>
+<span class="sd">        will be cropped; if larger, the tensor will be expanded with zeros. In</span>
+<span class="sd">        both cases, the process (cropping/expanding) occurs at the &quot;left&quot;, &quot;top&quot;,</span>
+<span class="sd">        &quot;front&quot;, etc. of each dimension.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`size` should be int type&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_size</span> <span class="o">=</span> <span class="n">size</span>
@@ -2215,35 +2213,36 @@ title="Fullscreen mode"
                      <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
                      <span class="n">size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Edge&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns ``param_edges`` attribute or changes it if ``set_param`` is provided.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        Returns True if all edges are parametric edges, False if all edges are</span>
-<span class="sd">        non-parametric edges, and None if there are some edges of each type</span>
+<span class="sd">        Replaces the edge with a parameterized version of it, that is, turns a</span>
+<span class="sd">        fixed :class:`Edge` into a trainable :class:`ParamEdge`.</span>
 <span class="sd">        </span>
-
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        set_param : bool, optional</span>
-<span class="sd">            Boolean indicating whether edges have to be parameterized (``True``)</span>
-<span class="sd">            or de-parameterized (``False``).</span>
-<span class="sd">        sizes : list[int] or tuple[int], optional</span>
-<span class="sd">            Sizes used to expand or shrink the node&#39;s shape if desired. By default,</span>
-<span class="sd">            if an :class:`Edge` is parameterized, its corresponding ``size`` will</span>
-<span class="sd">            match its ``dim``. However, if ``sizes`` are provided, </span>
+<span class="sd">        set_param : bool</span>
+<span class="sd">            Boolean indicating whether the edge should be parameterized (``True``).</span>
+<span class="sd">            Otherwise (``False``), the non-parameterized edge itself will be</span>
+<span class="sd">            returned.</span>
+<span class="sd">        size : int, optional</span>
+<span class="sd">            Size used to expand or crop the node&#39;s tensor at the corresponding</span>
+<span class="sd">            axis. When an edge is parameterized, its new dimension will be by</span>
+<span class="sd">            default equal to the size of the original edge. However, the size</span>
+<span class="sd">            can be different from the dimension in param-edges, so a larger size</span>
+<span class="sd">            could be chosen for the parameterized edge (if the new size is smaller,</span>
+<span class="sd">            the dimension will be equal to it).</span>
+<span class="sd">            </span>
+<span class="sd">            See also :meth:`ParamEdge.dim`.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        _type_</span>
-<span class="sd">            _description_</span>
+<span class="sd">        Edge or ParamEdge</span>
+<span class="sd">            The original edge or a parameterized version of it.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">set_param</span><span class="p">:</span>
             <span class="n">dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">change_size</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
             <span class="n">new_edge</span> <span class="o">=</span> <span class="n">ParamEdge</span><span class="p">(</span><span class="n">node1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="p">,</span>
-                                 <span class="n">dim</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()),</span>
+                                 <span class="n">dim</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_size</span><span class="p">),</span>
                                  <span class="n">node2</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">node2</span><span class="p">,</span> <span class="n">axis2</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">axis2</span><span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">node2</span><span class="o">.</span><span class="n">_add_edge</span><span class="p">(</span><span class="n">new_edge</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis2</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
@@ -2256,7 +2255,10 @@ title="Fullscreen mode"
             <span class="k">return</span> <span class="bp">self</span></div>
 
 <div class="viewcode-block" id="Edge.copy"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Edge.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Edge&#39;</span><span class="p">:</span>
-        <span class="c1"># TODO: cuando copiams edge tenemos que añadirlo a la TN?</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a copy of the edge, that is, a new edge referencing the same</span>
+<span class="sd">        nodes at the same axes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">new_edge</span> <span class="o">=</span> <span class="n">Edge</span><span class="p">(</span><span class="n">node1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="p">,</span>
                         <span class="n">node2</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">node2</span><span class="p">,</span> <span class="n">axis2</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">axis2</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">new_edge</span></div>
@@ -2270,9 +2272,55 @@ title="Fullscreen mode"
         <span class="k">pass</span>
 
 <div class="viewcode-block" id="Edge.connect"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Edge.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Edge&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Edge&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Connects dangling edge to another dangling edge.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : Edge or ParamEdge</span>
+<span class="sd">            The other edge to which current edge will be connected. If it is an</span>
+<span class="sd">            :class:`Edge`, a new edge will be returned. If it is a :class:`ParamEdge`,</span>
+<span class="sd">            a new param-edge will be returned.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Edge or ParamEdge</span>
+<span class="sd">        </span>
+<span class="sd">        Example</span>
+<span class="sd">        -------</span>
+<span class="sd">        To connect two edges, the overloaded operator ``^`` can also be used.</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3), name=&#39;nodeA&#39;, axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4), name=&#39;nodeB&#39;, axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]  # Same as .connect()</span>
+<span class="sd">        &gt;&gt;&gt; print(new_edge.name)</span>
+<span class="sd">        nodeA[right] &lt;-&gt; nodeB[left]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Edge.disconnect"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Edge.disconnect">[docs]</a>    <span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="s1">&#39;Edge&#39;</span><span class="p">,</span> <span class="s1">&#39;Edge&#39;</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Disconnects connected edge, that is, the connected edge is splitted into</span>
+<span class="sd">        two dangling edges, one for each node.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple[Edge, Edge]</span>
+<span class="sd">        </span>
+<span class="sd">        Example</span>
+<span class="sd">        -------</span>
+<span class="sd">        To disconnect an edge, the overloaded operator ``|`` can also be used.</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3), name=&#39;nodeA&#39;, axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4), name=&#39;nodeB&#39;, axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; new_edgeA, new_edgeB = new_edge | new_edge  # Same as .disconnect()</span>
+<span class="sd">        &gt;&gt;&gt; print(new_edgeA.name)</span>
+<span class="sd">        nodeA[right] &lt;-&gt; None</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; print(new_edgeB.name)</span>
+<span class="sd">        nodeB[left] &lt;-&gt; None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div></div>
 
 
@@ -2283,8 +2331,62 @@ title="Fullscreen mode"
 
 <div class="viewcode-block" id="ParamEdge"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge">[docs]</a><span class="k">class</span> <span class="nc">ParamEdge</span><span class="p">(</span><span class="n">AbstractEdge</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Class for trainable edges. Subclass of PyTorch nn.Module.</span>
-<span class="sd">    Should be subclassed by any new class of trainable edges.</span>
+<span class="sd">    Base class for trainable edges. Subclass of Pytorch ``nn.Module``.</span>
+<span class="sd">    </span>
+<span class="sd">    A parametric edge is an edge whose dimension can be learned. To do so, each</span>
+<span class="sd">    param-edge carries a diagonal square matrix that has the same size as the edge.</span>
+<span class="sd">    The diagonal is filled with as many 1&#39;s as the dimension, and the rest with</span>
+<span class="sd">    0&#39;s.</span>
+<span class="sd">    </span>
+<span class="sd">    The dimension is modelled by a sigmoid following the equation:</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+<span class="sd">    </span>
+<span class="sd">        D_{i,i} = \sigma(slope \cdot (shift - i))</span>
+<span class="sd">        </span>
+<span class="sd">    where :math:`D_{i,i}` are the elements of the diagonal, :math:`\sigma` is the</span>
+<span class="sd">    sigmoid function, and ``slope`` and ``shift`` are the learnable parameters.</span>
+<span class="sd">    When a certain dimension is specified, ``shift`` is initialized as ``dim - 0.5``,</span>
+<span class="sd">    so that the sigmoid has non-zero gradient at the current dimension. Hence,</span>
+<span class="sd">    during training the matrix will not have only 1&#39;s and 0&#39;s, but some numbers</span>
+<span class="sd">    close to 1, and some others between 0 and 1. The dimension will be taken as</span>
+<span class="sd">    the number of elements in the diagonal that are greater than 0.5.</span>
+<span class="sd">    </span>
+<span class="sd">    This implementation is based on the following work: `&lt;https://arxiv.org/abs/2203.03366&gt;`_</span>
+<span class="sd">    </span>
+<span class="sd">    .. note::</span>
+<span class="sd">        Although param-edges can be used without causing any error, it is not</span>
+<span class="sd">        clear if the dimension can be really learned this way. Following the</span>
+<span class="sd">        original `paper &lt;https://arxiv.org/abs/2203.03366&gt;`_, a regularization</span>
+<span class="sd">        should be added to the loss function in order to have non-zero gradients.</span>
+<span class="sd">        However, in our experiments, that was not enough to drive the training</span>
+<span class="sd">        towards a regime where the dimension plays a relevant role.</span>
+<span class="sd">        </span>
+<span class="sd">        Hence, this class will not be updated until further investigation is</span>
+<span class="sd">        carried out.</span>
+<span class="sd">    </span>
+<span class="sd">    For a complete list of properties and methods, see also :class:`AbstractEdge`.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    node1 : AbstractNode</span>
+<span class="sd">        First node to which the edge is connected.</span>
+<span class="sd">    axis1: int, str or Axis</span>
+<span class="sd">        Axis of ``node1`` where the edge is attached.</span>
+<span class="sd">    dim : int, optional</span>
+<span class="sd">        Dimension of the param-edge. It can be specified so that ``shift`` and </span>
+<span class="sd">        ``slope`` are constructed to fulfill the dimension requirement. If ``dim``,</span>
+<span class="sd">        ``shift`` and ``slope`` are not specified, the size of ``node1`` at</span>
+<span class="sd">        ``axis1`` will be taken as dimension.</span>
+<span class="sd">    shift : int, float or nn.Parameter, optional</span>
+<span class="sd">        Shift parameter involved in the sigmoid function.</span>
+<span class="sd">    slope : int, float or nn.Parameter, optional</span>
+<span class="sd">        Slope parameter involved in the sigmoid function.</span>
+<span class="sd">    node2 : AbstractNode, optional</span>
+<span class="sd">        Second node to which the edge is connected. If None, the edge will be</span>
+<span class="sd">        dangling.</span>
+<span class="sd">    axis2 : int, str, Axis, optional</span>
+<span class="sd">        Axis of ``node2`` where the edge is attached.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -2320,11 +2422,6 @@ title="Fullscreen mode"
             <span class="n">shift</span><span class="p">,</span> <span class="n">slope</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_parameters</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">axis1</span><span class="p">),</span> <span class="n">dim</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">shift</span><span class="p">,</span> <span class="n">slope</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_parameters</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">axis1</span><span class="p">),</span> <span class="n">node1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">axis1</span><span class="p">))</span>
-            
-            <span class="c1"># if shift is None:</span>
-            <span class="c1">#     shift = _DEFAULT_SHIFT</span>
-            <span class="c1"># if slope is None:</span>
-            <span class="c1">#     slope = _DEFAULT_SLOPE</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_sigmoid</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sigmoid</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_matrix</span> <span class="o">=</span> <span class="kc">None</span>
@@ -2339,6 +2436,7 @@ title="Fullscreen mode"
     <span class="c1"># ----------</span>
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">shift</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Parameter</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns shift of the param-edge.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shift</span>
 
     <span class="nd">@shift</span><span class="o">.</span><span class="n">setter</span>
@@ -2347,6 +2445,7 @@ title="Fullscreen mode"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">slope</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Parameter</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns slope of the param-edge.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slope</span>
 
     <span class="nd">@slope</span><span class="o">.</span><span class="n">setter</span>
@@ -2355,18 +2454,30 @@ title="Fullscreen mode"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns diagonal square matrix that models the dimension.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">set_matrix</span><span class="p">()</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_matrix</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">grad</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]]:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="o">.</span><span class="n">grad</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">slope</span><span class="o">.</span><span class="n">grad</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns tuple with gradients of ``shift`` and ``slope``.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shift</span><span class="o">.</span><span class="n">grad</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slope</span><span class="o">.</span><span class="n">grad</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">module_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Create adapted name to be used when calling it as a submodule of</span>
-<span class="sd">        a tensor network</span>
+<span class="sd">        Returns param-edge&#39;s name to be used when calling it as submodule of a</span>
+<span class="sd">        :class:`TensorNetwork`. It is similar to :meth:`~AbstractEdge.name` but</span>
+<span class="sd">        avoiding blank spaces and special symbols.</span>
+<span class="sd">        </span>
+<span class="sd">        Example</span>
+<span class="sd">        -------</span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3), name=&#39;nodeA&#39;, axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4), name=&#39;nodeB&#39;, axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; new_paramedge = new_edge.parameterize()</span>
+<span class="sd">        &gt;&gt;&gt; print(new_paramedge.module_name)</span>
+<span class="sd">        edge_nodeA_right_nodeB_left</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
             <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;edge_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1">&#39;</span>
@@ -2379,7 +2490,10 @@ title="Fullscreen mode"
 <div class="viewcode-block" id="ParamEdge.compute_parameters"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.compute_parameters">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">compute_parameters</span><span class="p">(</span><span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Compute shift and slope parameters given a certain size and dimension</span>
+<span class="sd">        Computes ``shift`` and ``slope`` parameters given a certain size and</span>
+<span class="sd">        dimension. ``size`` will determine the size of the diagonal square matrix</span>
+<span class="sd">        that models the dimension, and ``dim`` will determine the number of 1&#39;s</span>
+<span class="sd">        that must be in the diagonal.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`size` should be int type&#39;</span><span class="p">)</span>
@@ -2387,7 +2501,6 @@ title="Fullscreen mode"
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`dim` should be int type&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">dim</span> <span class="o">&gt;</span> <span class="n">size</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`dim` should be smaller or equal than `size`&#39;</span><span class="p">)</span>
-        <span class="c1"># shift = (size - dim) - 0.5</span>
         <span class="n">shift</span> <span class="o">=</span> <span class="n">dim</span> <span class="o">-</span> <span class="mf">0.5</span>
         <span class="n">slope</span> <span class="o">=</span> <span class="n">_DEFAULT_SLOPE</span>
         <span class="k">return</span> <span class="n">shift</span><span class="p">,</span> <span class="n">slope</span></div>
@@ -2396,7 +2509,8 @@ title="Fullscreen mode"
                        <span class="n">shift</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">EdgeParameter</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                        <span class="n">slope</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">EdgeParameter</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Set both parameters, update them and set the new matrix</span>
+<span class="sd">        Sets the provided ``shift`` and ``slope`` parameters to be the new parameters</span>
+<span class="sd">        of the param-edge, and creates the corresponding matrix.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">device</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">tensor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -2409,13 +2523,11 @@ title="Fullscreen mode"
                     <span class="bp">self</span><span class="o">.</span><span class="n">_shift</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">shift</span><span class="p">))</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_shift</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">shift</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_prev_shift</span> <span class="o">=</span> <span class="n">_DEFAULT_SHIFT</span>
             <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shift</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_shift</span> <span class="o">=</span> <span class="n">shift</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_prev_shift</span> <span class="o">=</span> <span class="n">shift</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                    <span class="s1">&#39;`shift` should be int, float or Parameter type&#39;</span><span class="p">)</span>
+                    <span class="s1">&#39;`shift` should be int, float or nn.Parameter type&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">slope</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">slope</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
                 <span class="n">slope</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">slope</span><span class="p">)</span>
@@ -2423,50 +2535,36 @@ title="Fullscreen mode"
                     <span class="bp">self</span><span class="o">.</span><span class="n">_slope</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">slope</span><span class="p">))</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_slope</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">slope</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_prev_slope</span> <span class="o">=</span> <span class="n">slope</span>
             <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">slope</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
-                <span class="c1"># TODO: eligible device</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_slope</span> <span class="o">=</span> <span class="n">slope</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_prev_slope</span> <span class="o">=</span> <span class="n">slope</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                    <span class="s1">&#39;`slope` should be int, float or Parameter type&#39;</span><span class="p">)</span>
+                    <span class="s1">&#39;`slope` should be int, float or nn.Parameter type&#39;</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">set_matrix</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="ParamEdge.is_updated"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.is_updated">[docs]</a>    <span class="k">def</span> <span class="nf">is_updated</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>  <span class="c1"># TODO: creo que esto no sirve para nada, lo podemos borrar</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Track if shift and slope have changed during training, in order</span>
-<span class="sd">        to set the new corresponding matrix</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_prev_shift</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shift</span><span class="o">.</span><span class="n">item</span><span class="p">())</span> <span class="ow">and</span> \
-                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_prev_slope</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slope</span><span class="o">.</span><span class="n">item</span><span class="p">()):</span>
-            <span class="k">return</span> <span class="kc">True</span>
-        <span class="k">return</span> <span class="kc">False</span></div>
-
-    <span class="k">def</span> <span class="nf">sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sigmoid</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<div class="viewcode-block" id="ParamEdge.sigmoid"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.sigmoid">[docs]</a>    <span class="k">def</span> <span class="nf">sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sigmoid function.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sigmoid</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="ParamEdge.make_matrix"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.make_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">make_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Create the matrix depending on shift and slope. The matrix is</span>
-<span class="sd">        near the identity, although it might have some zeros in the first</span>
-<span class="sd">        positions of the diagonal (dimension is equal to number of 1&#39;s, while</span>
-<span class="sd">        size is equal to the matrix size)</span>
+<span class="sd">        Creates the matrix based on ``shift`` and ``slope``. The matrix is a</span>
+<span class="sd">        diagonal square matrix with (almost) 1&#39;s and 0&#39;s in the diagonal.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">matrix</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()),</span>
                              <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
         <span class="n">i</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">(),</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
-        <span class="c1"># matrix[(i, i)] = self.sigmoid(self.slope * (i - self.shift))</span>
         <span class="n">matrix</span><span class="p">[(</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slope</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shift</span> <span class="o">-</span> <span class="n">i</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">matrix</span></div>
 
 <div class="viewcode-block" id="ParamEdge.set_matrix"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.set_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">set_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Create the matrix and set it, also updating the dimension</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates the matrix and sets it, also updating the dimension.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_matrix</span><span class="p">()</span>
         <span class="n">signs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_matrix</span><span class="o">.</span><span class="n">diagonal</span><span class="p">()</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span>
+        
+        <span class="c1"># Dimension is the number of elements in the diagonal that are greater</span>
+        <span class="c1"># than 0.5</span>
         <span class="n">dim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">signs</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span>
                               <span class="n">signs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">signs</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
         <span class="k">if</span> <span class="n">dim</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
@@ -2477,34 +2575,43 @@ title="Fullscreen mode"
 <div class="viewcode-block" id="ParamEdge.dim"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.dim">[docs]</a>    <span class="k">def</span> <span class="nf">dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Here, `dimension` is not the same as `size`. The ``dim`` and ``size`` in</span>
-<span class="sd">        a certain axis can be equal if the edge attached to that axis is not parametric</span>
-<span class="sd">        (e.g. :class:`Edge`). In the case of parametric edges (e.g. :class:`ParamEdge`),</span>
-<span class="sd">        `bond dimensions` can be learned, meaning that, although the tensor&#39;s shape</span>
-<span class="sd">        can be fixed through the whole training process, what is learned is an</span>
-<span class="sd">        `effective` dimension</span>
+<span class="sd">        a certain axis can be equal if the edge attached to that axis is not</span>
+<span class="sd">        parametric (e.g. :class:`Edge`). In the case of parametric edges (e.g.</span>
+<span class="sd">        :class:`ParamEdge`), `bond dimensions` can be learned, meaning that,</span>
+<span class="sd">        although the tensor&#39;s shape can be fixed through the whole training process,</span>
+<span class="sd">        what is learned is an `effective` dimension.</span>
 <span class="sd">        </span>
-<span class="sd">        Similar to `size`, but if a ParamEdge is attached to an axis,</span>
-<span class="sd">        it is returned its dimension (number of 1&#39;s in the diagonal of</span>
-<span class="sd">        the matrix) rather than its total size (number of 1&#39;s and 0&#39;s</span>
-<span class="sd">        in the diagonal of the matrix)</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        int</span>
-<span class="sd">            _description_</span>
+<span class="sd">        The dimension is modelled by a sigmoid following the equation:</span>
+<span class="sd">    </span>
+<span class="sd">        .. math::</span>
+<span class="sd">        </span>
+<span class="sd">            D_{i,i} = \sigma(slope \cdot (shift - i))</span>
+<span class="sd">            </span>
+<span class="sd">        as explained :class:`here &lt;AbstractEdge&gt;`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim</span></div>
 
-    <span class="k">def</span> <span class="nf">change_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">dim</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">():</span>
-            <span class="n">shift</span><span class="p">,</span> <span class="n">slope</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_parameters</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">(),</span> <span class="n">dim</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span><span class="n">shift</span><span class="p">,</span> <span class="n">slope</span><span class="p">)</span>
+<div class="viewcode-block" id="ParamEdge.change_dim"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.change_dim">[docs]</a>    <span class="k">def</span> <span class="nf">change_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Changes dimension of param-edge, setting new ``shift`` and ``slope``.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">dim</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim</span><span class="p">:</span>
+            <span class="n">shift</span><span class="p">,</span> <span class="n">slope</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_parameters</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_size</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span><span class="n">shift</span><span class="p">,</span> <span class="n">slope</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="ParamEdge.change_size"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.change_size">[docs]</a>    <span class="k">def</span> <span class="nf">change_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Changes size of the param-edge, thus changing the size of tensors of `node1`</span>
+<span class="sd">        and `node2` at the corresponding axes. If new size is smaller, the tensor</span>
+<span class="sd">        will be cropped; if larger, the tensor will be expanded with zeros. In</span>
+<span class="sd">        both cases, the process (cropping/expanding) occurs at the &quot;left&quot;, &quot;top&quot;,</span>
+<span class="sd">        &quot;front&quot;, etc. of each dimension.</span>
+<span class="sd">        </span>
+<span class="sd">        If the new size is smaller than the dimension, it will be set as the new</span>
+<span class="sd">        dimension.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`size` should be int type&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_size</span> <span class="o">=</span> <span class="n">size</span>
-        <span class="n">shift</span><span class="p">,</span> <span class="n">slope</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_parameters</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">()))</span>
+        <span class="n">shift</span><span class="p">,</span> <span class="n">slope</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_parameters</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim</span><span class="p">))</span>
         <span class="n">device</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shift</span><span class="o">.</span><span class="n">device</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span><span class="n">shift</span><span class="p">,</span> <span class="n">slope</span><span class="p">)</span>
@@ -2515,8 +2622,23 @@ title="Fullscreen mode"
         <span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">_change_axis_size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="ParamEdge.parameterize"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                     <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-                     <span class="n">size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Edge&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">]:</span>
+                     <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Edge&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Replaces the param-edge with a de-parameterized version of it, that is,</span>
+<span class="sd">        turns a trainable :class:`ParamEdge` into a fixed :class:`Edge`. The size</span>
+<span class="sd">        of the new edge will match the dimension of the param-edge.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        set_param : bool</span>
+<span class="sd">            Boolean indicating whether the edge should be de-parameterized (``True``).</span>
+<span class="sd">            Otherwise (``False``), the parameterized edge itself will be returned.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ParamEdge or Edge</span>
+<span class="sd">            The original edge or a de-parameterized version of it.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">set_param</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">change_size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">())</span>
             <span class="n">new_edge</span> <span class="o">=</span> <span class="n">Edge</span><span class="p">(</span><span class="n">node1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="p">,</span>
@@ -2532,8 +2654,12 @@ title="Fullscreen mode"
             <span class="k">return</span> <span class="bp">self</span></div>
 
 <div class="viewcode-block" id="ParamEdge.copy"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a copy of the param-edge, that is, a new param-edge referencing</span>
+<span class="sd">        the same nodes at the same axes, with the same ``shift`` and ``slope``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">new_edge</span> <span class="o">=</span> <span class="n">ParamEdge</span><span class="p">(</span><span class="n">node1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="p">,</span>
-                             <span class="n">shift</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">slope</span><span class="p">,</span>
+                             <span class="n">shift</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_shift</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_slope</span><span class="p">,</span>
                              <span class="n">node2</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">node2</span><span class="p">,</span> <span class="n">axis2</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">axis2</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">new_edge</span></div>
 
@@ -2546,15 +2672,69 @@ title="Fullscreen mode"
         <span class="k">pass</span>
 
 <div class="viewcode-block" id="ParamEdge.connect"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Edge&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Connects dangling param-edge to another dangling edge or param-edge. The</span>
+<span class="sd">        result will always be a param-edge.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : Edge or ParamEdge</span>
+<span class="sd">            The other edge to which current edge will be connected. If it is an</span>
+<span class="sd">            :class:`Edge`, a new edge will be returned. If it is a :class:`ParamEdge`,</span>
+<span class="sd">            a new param-edge will be returned.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ParamEdge</span>
+<span class="sd">        </span>
+<span class="sd">        Example</span>
+<span class="sd">        -------</span>
+<span class="sd">        To connect two edges, the overloaded operator ``^`` can also be used.</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3), name=&#39;nodeA&#39;, axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4), name=&#39;nodeB&#39;, axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; nodeA[&#39;right&#39;].parameterize()</span>
+<span class="sd">        ParamEdge( nodeA[right] &lt;-&gt; None )  (Dangling Edge)</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; new_paramedge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]  # Same as .connect()</span>
+<span class="sd">        &gt;&gt;&gt; print(new_paramedge.name)</span>
+<span class="sd">        nodeA[right] &lt;-&gt; nodeB[left]</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; new_paramedge</span>
+<span class="sd">        ParamEdge( nodeA[right] &lt;-&gt; nodeB[left] )</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="ParamEdge.disconnect"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.disconnect">[docs]</a>    <span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="s1">&#39;ParamEdge&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Disconnects connected param-edge, that is, the connected param-edge is</span>
+<span class="sd">        splitted into two dangling param-edges, one for each node.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple[ParamEdge, ParamEdge]</span>
+<span class="sd">        </span>
+<span class="sd">        Example</span>
+<span class="sd">        -------</span>
+<span class="sd">        To disconnect an edge, the overloaded operator ``|`` can also be used.</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3), name=&#39;nodeA&#39;, axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4), name=&#39;nodeB&#39;, axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; new_paramedge = new_edge.parameterize()</span>
+<span class="sd">        &gt;&gt;&gt; new_edgeA, new_edgeB = new_paramedge | new_paramedge  # Same as .disconnect()</span>
+<span class="sd">        &gt;&gt;&gt; new_edgeA</span>
+<span class="sd">        ParamEdge( nodeA[right] &lt;-&gt; None )  (Dangling Edge)</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; new_edgeB</span>
+<span class="sd">        ParamEdge( nodeB[left] &lt;-&gt; None )  (Dangling Edge)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div></div>
 
 
-<span class="c1">################################################</span>
-<span class="c1">#                    STACKS                    #</span>
-<span class="c1">################################################</span>
+<span class="c1">###############################################################################</span>
+<span class="c1">#                                    STACKS                                   #</span>
+<span class="c1">###############################################################################</span>
 <span class="c1"># TODO: hacer privados</span>
 <span class="c1"># TODO: queda comprobar stacks</span>
 <span class="c1"># TODO: ver si se puede reestructurar, igual un AbstractStackNode que aglutine</span>
@@ -2883,9 +3063,9 @@ title="Fullscreen mode"
     <span class="c1"># TODO: Cual es la dimension de este edge si apilo las matrices??</span>
 
 
-<span class="c1">################################################</span>
-<span class="c1">#                TENSOR NETWORK                #</span>
-<span class="c1">################################################</span>
+<span class="c1">###############################################################################</span>
+<span class="c1">#                                TENSOR NETWORK                               #</span>
+<span class="c1">###############################################################################</span>
 <div class="viewcode-block" id="Successor"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Successor">[docs]</a><span class="k">class</span> <span class="nc">Successor</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for successors. Object that stores information about</span>
@@ -3035,6 +3215,8 @@ title="Fullscreen mode"
 
 <div class="viewcode-block" id="TensorNetwork.trace"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.TensorNetwork.trace">[docs]</a>    <span class="k">def</span> <span class="nf">trace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">example</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Trace TensorNetwork contraction.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        
         <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_tracing</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="bp">self</span><span class="p">(</span><span class="n">example</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
@@ -3653,9 +3835,10 @@ title="Fullscreen mode"
     <span class="c1"># TODO: Function to allocate one memory tensor for each node, like old mode</span>
 
 
-<span class="c1">################################################</span>
-<span class="c1">#               EDGE OPERATIONS                #</span>
-<span class="c1">################################################</span>
+
+<span class="c1">###############################################################################</span>
+<span class="c1">#                               EDGE OPERATIONS                               #</span>
+<span class="c1">###############################################################################</span>
 <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="n">edge1</span><span class="p">:</span> <span class="n">AbstractEdge</span><span class="p">,</span> <span class="n">edge2</span><span class="p">:</span> <span class="n">AbstractEdge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Connect two dangling, non-batch edges.</span>

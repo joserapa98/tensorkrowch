@@ -607,7 +607,7 @@ the size of that axis; otherwise returns the shape of the node (same as
 <dd><p>Returns the dimensions of the node’s tensor. If <code class="docutils literal notranslate"><span class="pre">axis</span></code> is specified,
 returns the dimension of that edge; otherwise returns the dimensions of
 all edges.</p>
-<p>See also <code class="xref py py-meth docutils literal notranslate"><span class="pre">Edge.dim()</span></code> and <a class="reference internal" href="#tensorkrowch.ParamEdge.dim" title="tensorkrowch.ParamEdge.dim"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ParamEdge.dim()</span></code></a>.</p>
+<p>See also <a class="reference internal" href="#tensorkrowch.Edge.dim" title="tensorkrowch.Edge.dim"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Edge.dim()</span></code></a> and <a class="reference internal" href="#tensorkrowch.ParamEdge.dim" title="tensorkrowch.ParamEdge.dim"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ParamEdge.dim()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – Axis for which to retrieve the dimension.</p>
@@ -989,7 +989,8 @@ returned.</p>
 <span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#Node.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Returns a copy of the node. That is, returns a node whose tensor is a copy
 of the original, whose edges are directly inherited (these are not copies,
-but the exact same edges) and whose name is extended with the prefix <code class="docutils literal notranslate"><span class="pre">&quot;copy_&quot;</span></code>.</p>
+but the exact same edges) and whose name is extended with the prefix
+<code class="docutils literal notranslate"><span class="pre">&quot;copy_&quot;</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
@@ -1091,7 +1092,7 @@ connects. Thus it stores information like the nodes it connects, the correspondi
 nodes’ axes it is attached to, whether it is dangling or batch, its size and
 dim, etc.</p>
 <p>Above all, its importance lies in that edges enable to connect nodes, forming
-any possible graph, and perform easily <a class="reference internal" href="node_operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operations</span></code></a> like
+any possible graph, and to perform easily <a class="reference internal" href="node_operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operations</span></code></a> like
 contracting and splitting nodes.</p>
 <p>Furthermore, edges have specific operations like <a class="reference internal" href="#tensorkrowch.AbstractEdge.contract_" title="tensorkrowch.AbstractEdge.contract_"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract_()</span></code></a> or <a class="reference internal" href="#tensorkrowch.AbstractEdge.svd_" title="tensorkrowch.AbstractEdge.svd_"><code class="xref py py-meth docutils literal notranslate"><span class="pre">svd_()</span></code></a>
 (and its variations) that allow inplace modification of the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>.</p>
@@ -1102,22 +1103,6 @@ contracting and splitting nodes.</p>
 <li><p><a class="reference internal" href="#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">StackEdge</span></code></a></p></li>
 <li><p><a class="reference internal" href="#tensorkrowch.ParamStackEdge" title="tensorkrowch.ParamStackEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackEdge</span></code></a></p></li>
 </ul>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>node1</strong> (<em>first node to which the edge is connected</em>) – </p></li>
-<li><p><strong>axis1</strong> (axis of <cite>node1</cite> where the edge is attached) – </p></li>
-<li><p><strong>node2</strong> (<em>second</em><em>, </em><em>optional</em><em>, </em><em>node to which the edge is connected</em>) – </p></li>
-<li><p><strong>axis2</strong> (axis of <cite>node2</cite> where the edge is attached) – </p></li>
-</ul>
-</dd>
-<dt class="field-even">Raises</dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>ValueError</strong> – </p></li>
-<li><p><strong>TypeError</strong> – </p></li>
-</ul>
-</dd>
-</dl>
 <dl class="py property">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractEdge.node1">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">node1</span></span><a class="headerlink" href="#tensorkrowch.AbstractEdge.node1" title="Permalink to this definition">#</a></dt>
@@ -1174,37 +1159,6 @@ names.</p>
 <span class="go">nodeA[right] &lt;-&gt; nodeB[left]</span>
 </pre></div>
 </div>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.AbstractEdge.change_size">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">change_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#AbstractEdge.change_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractEdge.change_size" title="Permalink to this definition">#</a></dt>
-<dd><p>Change size of edge, thus changing sizes of adjacent nodes (node1 and node2)
-at axis1 and axis2, respectively</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.AbstractEdge.parameterize">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">parameterize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#AbstractEdge.parameterize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractEdge.parameterize" title="Permalink to this definition">#</a></dt>
-<dd><p>Substitute current edge by a (de-)parameterized version of it</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.AbstractEdge.copy">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#AbstractEdge.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractEdge.copy" title="Permalink to this definition">#</a></dt>
-<dd><p>Create a new edge referencing the same nodes at the same axis</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.AbstractEdge.connect">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#AbstractEdge.connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractEdge.connect" title="Permalink to this definition">#</a></dt>
-<dd><p>Connect two edges</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.AbstractEdge.disconnect">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">disconnect</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#AbstractEdge.disconnect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractEdge.disconnect" title="Permalink to this definition">#</a></dt>
-<dd><p>Disconnect one edge (from itself)</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1268,42 +1222,65 @@ at axis1 and axis2, respectively</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.Edge">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Edge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#Edge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Edge" title="Permalink to this definition">#</a></dt>
-<dd><p>Base class for non-trainable edges. Should be subclassed
-by any new class of non-trainable edges.</p>
-<p>Used by default to create a non-trainable node.</p>
+<dd><p>Base class for non-trainable edges. Should be subclassed by any new class
+of non-trainable edges.</p>
+<p>This basic type of edge is the default for both <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> and
+<a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a>.</p>
+<p>For a complete list of properties and methods, see also <a class="reference internal" href="#tensorkrowch.AbstractEdge" title="tensorkrowch.AbstractEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractEdge</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>node1</strong> (<a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a>) – First node to which the edge is connected.</p></li>
+<li><p><strong>axis1</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a>) – Axis of <code class="docutils literal notranslate"><span class="pre">node1</span></code> where the edge is attached.</p></li>
+<li><p><strong>node2</strong> (<a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>, </em><em>optional</em>) – Second node to which the edge is connected. If None, the edge will be
+dangling.</p></li>
+<li><p><strong>axis2</strong> (<em>int</em><em>, </em><em>str</em><em>, </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – Axis of <code class="docutils literal notranslate"><span class="pre">node2</span></code> where the edge is attached.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.Edge.dim">
+<span class="sig-name descname"><span class="pre">dim</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#Edge.dim"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Edge.dim" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns dimension of tensor at the corresponding axis. For edges, this
+coincides with the size of the tensor.</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.Edge.change_size">
 <span class="sig-name descname"><span class="pre">change_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#Edge.change_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Edge.change_size" title="Permalink to this definition">#</a></dt>
-<dd><p>Change size of edge, thus changing sizes of adjacent nodes (node1 and node2)
-at axis1 and axis2, respectively</p>
+<dd><p>Changes size of the edge, thus changing the size of tensors of <cite>node1</cite>
+and <cite>node2</cite> at the corresponding axes. If new size is smaller, the tensor
+will be cropped; if larger, the tensor will be expanded with zeros. In
+both cases, the process (cropping/expanding) occurs at the “left”, “top”,
+“front”, etc. of each dimension.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.Edge.parameterize">
 <span class="sig-name descname"><span class="pre">parameterize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#Edge.parameterize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Edge.parameterize" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns <code class="docutils literal notranslate"><span class="pre">param_edges</span></code> attribute or changes it if <code class="docutils literal notranslate"><span class="pre">set_param</span></code> is provided.</p>
+<dd><p>Replaces the edge with a parameterized version of it, that is, turns a
+fixed <a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edge</span></code></a> into a trainable <a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p><ul class="simple">
-<li><p><em>Returns True if all edges are parametric edges, False if all edges are</em></p></li>
-<li><p><em>non-parametric edges, and None if there are some edges of each type</em></p></li>
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>set_param</strong> (<em>bool</em>) – Boolean indicating whether the edge should be parameterized (<code class="docutils literal notranslate"><span class="pre">True</span></code>).
+Otherwise (<code class="docutils literal notranslate"><span class="pre">False</span></code>), the non-parameterized edge itself will be
+returned.</p></li>
+<li><p><strong>size</strong> (<em>int</em><em>, </em><em>optional</em>) – <p>Size used to expand or crop the node’s tensor at the corresponding
+axis. When an edge is parameterized, its new dimension will be by
+default equal to the size of the original edge. However, the size
+can be different from the dimension in param-edges, so a larger size
+could be chosen for the parameterized edge (if the new size is smaller,
+the dimension will be equal to it).</p>
+<p>See also <a class="reference internal" href="#tensorkrowch.ParamEdge.dim" title="tensorkrowch.ParamEdge.dim"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ParamEdge.dim()</span></code></a>.</p>
+</p></li>
 </ul>
-</p>
 </dd>
-<dt class="field-even">Parameters</dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>set_param</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether edges have to be parameterized (<code class="docutils literal notranslate"><span class="pre">True</span></code>)
-or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
-<li><p><strong>sizes</strong> (<em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em><em>, </em><em>optional</em>) – Sizes used to expand or shrink the node’s shape if desired. By default,
-if an <a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edge</span></code></a> is parameterized, its corresponding <code class="docutils literal notranslate"><span class="pre">size</span></code> will
-match its <code class="docutils literal notranslate"><span class="pre">dim</span></code>. However, if <code class="docutils literal notranslate"><span class="pre">sizes</span></code> are provided,</p></li>
-</ul>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The original edge or a parameterized version of it.</p>
 </dd>
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>_description_</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>_type_</p>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a> or <a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge">ParamEdge</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1311,19 +1288,59 @@ match its <code class="docutils literal notranslate"><span class="pre">dim</span
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.Edge.copy">
 <span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#Edge.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Edge.copy" title="Permalink to this definition">#</a></dt>
-<dd><p>Create a new edge referencing the same nodes at the same axis</p>
+<dd><p>Returns a copy of the edge, that is, a new edge referencing the same
+nodes at the same axes.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.Edge.connect">
 <span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#Edge.connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Edge.connect" title="Permalink to this definition">#</a></dt>
-<dd><p>Connect two edges</p>
+<dd><p>Connects dangling edge to another dangling edge.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>other</strong> (<a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a><em> or </em><a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><em>ParamEdge</em></a>) – The other edge to which current edge will be connected. If it is an
+<a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edge</span></code></a>, a new edge will be returned. If it is a <a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>,
+a new param-edge will be returned.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a> or <a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge">ParamEdge</a></p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<p>To connect two edges, the overloaded operator <code class="docutils literal notranslate"><span class="pre">^</span></code> can also be used.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeA&#39;</span><span class="p">,</span> <span class="n">axes_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodeB</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeB&#39;</span><span class="p">,</span> <span class="n">axes_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_edge</span> <span class="o">=</span> <span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">nodeB</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>  <span class="c1"># Same as .connect()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">new_edge</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="go">nodeA[right] &lt;-&gt; nodeB[left]</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.Edge.disconnect">
 <span class="sig-name descname"><span class="pre">disconnect</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#Edge.disconnect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Edge.disconnect" title="Permalink to this definition">#</a></dt>
-<dd><p>Disconnect one edge (from itself)</p>
+<dd><p>Disconnects connected edge, that is, the connected edge is splitted into
+two dangling edges, one for each node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple[<a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a>, <a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a>]</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<p>To disconnect an edge, the overloaded operator <code class="docutils literal notranslate"><span class="pre">|</span></code> can also be used.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeA&#39;</span><span class="p">,</span> <span class="n">axes_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodeB</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeB&#39;</span><span class="p">,</span> <span class="n">axes_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_edge</span> <span class="o">=</span> <span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">nodeB</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_edgeA</span><span class="p">,</span> <span class="n">new_edgeB</span> <span class="o">=</span> <span class="n">new_edge</span> <span class="o">|</span> <span class="n">new_edge</span>  <span class="c1"># Same as .disconnect()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">new_edgeA</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="go">nodeA[right] &lt;-&gt; None</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">new_edgeB</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="go">nodeB[left] &lt;-&gt; None</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </dd></dl>
@@ -1331,101 +1348,246 @@ match its <code class="docutils literal notranslate"><span class="pre">dim</span
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.ParamEdge">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ParamEdge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamEdge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamEdge" title="Permalink to this definition">#</a></dt>
-<dd><p>Class for trainable edges. Subclass of PyTorch nn.Module.
-Should be subclassed by any new class of trainable edges.</p>
+<dd><p>Base class for trainable edges. Subclass of Pytorch <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code>.</p>
+<p>A parametric edge is an edge whose dimension can be learned. To do so, each
+param-edge carries a diagonal square matrix that has the same size as the edge.
+The diagonal is filled with as many 1’s as the dimension, and the rest with
+0’s.</p>
+<p>The dimension is modelled by a sigmoid following the equation:</p>
+<div class="math notranslate nohighlight">
+\[D_{i,i} = \sigma(slope \cdot (shift - i))\]</div>
+<p>where <span class="math notranslate nohighlight">\(D_{i,i}\)</span> are the elements of the diagonal, <span class="math notranslate nohighlight">\(\sigma\)</span> is the
+sigmoid function, and <code class="docutils literal notranslate"><span class="pre">slope</span></code> and <code class="docutils literal notranslate"><span class="pre">shift</span></code> are the learnable parameters.
+When a certain dimension is specified, <code class="docutils literal notranslate"><span class="pre">shift</span></code> is initialized as <code class="docutils literal notranslate"><span class="pre">dim</span> <span class="pre">-</span> <span class="pre">0.5</span></code>,
+so that the sigmoid has non-zero gradient at the current dimension. Hence,
+during training the matrix will not have only 1’s and 0’s, but some numbers
+close to 1, and some others between 0 and 1. The dimension will be taken as
+the number of elements in the diagonal that are greater than 0.5.</p>
+<p>This implementation is based on the following work: <a class="reference external" href="https://arxiv.org/abs/2203.03366">https://arxiv.org/abs/2203.03366</a></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although param-edges can be used without causing any error, it is not
+clear if the dimension can be really learned this way. Following the
+original <a class="reference external" href="https://arxiv.org/abs/2203.03366">paper</a>, a regularization
+should be added to the loss function in order to have non-zero gradients.
+However, in our experiments, that was not enough to drive the training
+towards a regime where the dimension plays a relevant role.</p>
+<p>Hence, this class will not be updated until further investigation is
+carried out.</p>
+</div>
+<p>For a complete list of properties and methods, see also <a class="reference internal" href="#tensorkrowch.AbstractEdge" title="tensorkrowch.AbstractEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractEdge</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>node1</strong> (<a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a>) – First node to which the edge is connected.</p></li>
+<li><p><strong>axis1</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a>) – Axis of <code class="docutils literal notranslate"><span class="pre">node1</span></code> where the edge is attached.</p></li>
+<li><p><strong>dim</strong> (<em>int</em><em>, </em><em>optional</em>) – Dimension of the param-edge. It can be specified so that <code class="docutils literal notranslate"><span class="pre">shift</span></code> and
+<code class="docutils literal notranslate"><span class="pre">slope</span></code> are constructed to fulfill the dimension requirement. If <code class="docutils literal notranslate"><span class="pre">dim</span></code>,
+<code class="docutils literal notranslate"><span class="pre">shift</span></code> and <code class="docutils literal notranslate"><span class="pre">slope</span></code> are not specified, the size of <code class="docutils literal notranslate"><span class="pre">node1</span></code> at
+<code class="docutils literal notranslate"><span class="pre">axis1</span></code> will be taken as dimension.</p></li>
+<li><p><strong>shift</strong> (<em>int</em><em>, </em><em>float</em><em> or </em><em>nn.Parameter</em><em>, </em><em>optional</em>) – Shift parameter involved in the sigmoid function.</p></li>
+<li><p><strong>slope</strong> (<em>int</em><em>, </em><em>float</em><em> or </em><em>nn.Parameter</em><em>, </em><em>optional</em>) – Slope parameter involved in the sigmoid function.</p></li>
+<li><p><strong>node2</strong> (<a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>, </em><em>optional</em>) – Second node to which the edge is connected. If None, the edge will be
+dangling.</p></li>
+<li><p><strong>axis2</strong> (<em>int</em><em>, </em><em>str</em><em>, </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – Axis of <code class="docutils literal notranslate"><span class="pre">node2</span></code> where the edge is attached.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.ParamEdge.shift">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">shift</span></span><a class="headerlink" href="#tensorkrowch.ParamEdge.shift" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns shift of the param-edge.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.ParamEdge.slope">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">slope</span></span><a class="headerlink" href="#tensorkrowch.ParamEdge.slope" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns slope of the param-edge.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.ParamEdge.matrix">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">matrix</span></span><a class="headerlink" href="#tensorkrowch.ParamEdge.matrix" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns diagonal square matrix that models the dimension.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.ParamEdge.grad">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">grad</span></span><a class="headerlink" href="#tensorkrowch.ParamEdge.grad" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns tuple with gradients of <code class="docutils literal notranslate"><span class="pre">shift</span></code> and <code class="docutils literal notranslate"><span class="pre">slope</span></code>.</p>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="tensorkrowch.ParamEdge.module_name">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">module_name</span></span><a class="headerlink" href="#tensorkrowch.ParamEdge.module_name" title="Permalink to this definition">#</a></dt>
-<dd><p>Create adapted name to be used when calling it as a submodule of
-a tensor network</p>
+<dd><p>Returns param-edge’s name to be used when calling it as submodule of a
+<a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>. It is similar to <a class="reference internal" href="#tensorkrowch.AbstractEdge.name" title="tensorkrowch.AbstractEdge.name"><code class="xref py py-meth docutils literal notranslate"><span class="pre">name()</span></code></a> but
+avoiding blank spaces and special symbols.</p>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeA&#39;</span><span class="p">,</span> <span class="n">axes_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodeB</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeB&#39;</span><span class="p">,</span> <span class="n">axes_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_edge</span> <span class="o">=</span> <span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">nodeB</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_paramedge</span> <span class="o">=</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">new_paramedge</span><span class="o">.</span><span class="n">module_name</span><span class="p">)</span>
+<span class="go">edge_nodeA_right_nodeB_left</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.ParamEdge.compute_parameters">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">compute_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamEdge.compute_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamEdge.compute_parameters" title="Permalink to this definition">#</a></dt>
-<dd><p>Compute shift and slope parameters given a certain size and dimension</p>
+<dd><p>Computes <code class="docutils literal notranslate"><span class="pre">shift</span></code> and <code class="docutils literal notranslate"><span class="pre">slope</span></code> parameters given a certain size and
+dimension. <code class="docutils literal notranslate"><span class="pre">size</span></code> will determine the size of the diagonal square matrix
+that models the dimension, and <code class="docutils literal notranslate"><span class="pre">dim</span></code> will determine the number of 1’s
+that must be in the diagonal.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.ParamEdge.set_parameters">
 <span class="sig-name descname"><span class="pre">set_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shift</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamEdge.set_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamEdge.set_parameters" title="Permalink to this definition">#</a></dt>
-<dd><p>Set both parameters, update them and set the new matrix</p>
+<dd><p>Sets the provided <code class="docutils literal notranslate"><span class="pre">shift</span></code> and <code class="docutils literal notranslate"><span class="pre">slope</span></code> parameters to be the new parameters
+of the param-edge, and creates the corresponding matrix.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.ParamEdge.is_updated">
-<span class="sig-name descname"><span class="pre">is_updated</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamEdge.is_updated"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamEdge.is_updated" title="Permalink to this definition">#</a></dt>
-<dd><p>Track if shift and slope have changed during training, in order
-to set the new corresponding matrix</p>
+<dt class="sig sig-object py" id="tensorkrowch.ParamEdge.sigmoid">
+<span class="sig-name descname"><span class="pre">sigmoid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamEdge.sigmoid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamEdge.sigmoid" title="Permalink to this definition">#</a></dt>
+<dd><p>Sigmoid function.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.ParamEdge.make_matrix">
 <span class="sig-name descname"><span class="pre">make_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamEdge.make_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamEdge.make_matrix" title="Permalink to this definition">#</a></dt>
-<dd><p>Create the matrix depending on shift and slope. The matrix is
-near the identity, although it might have some zeros in the first
-positions of the diagonal (dimension is equal to number of 1’s, while
-size is equal to the matrix size)</p>
+<dd><p>Creates the matrix based on <code class="docutils literal notranslate"><span class="pre">shift</span></code> and <code class="docutils literal notranslate"><span class="pre">slope</span></code>. The matrix is a
+diagonal square matrix with (almost) 1’s and 0’s in the diagonal.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.ParamEdge.set_matrix">
 <span class="sig-name descname"><span class="pre">set_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamEdge.set_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamEdge.set_matrix" title="Permalink to this definition">#</a></dt>
-<dd><p>Create the matrix and set it, also updating the dimension</p>
+<dd><p>Creates the matrix and sets it, also updating the dimension.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.ParamEdge.dim">
 <span class="sig-name descname"><span class="pre">dim</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamEdge.dim"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamEdge.dim" title="Permalink to this definition">#</a></dt>
 <dd><p>Here, <cite>dimension</cite> is not the same as <cite>size</cite>. The <code class="docutils literal notranslate"><span class="pre">dim</span></code> and <code class="docutils literal notranslate"><span class="pre">size</span></code> in
-a certain axis can be equal if the edge attached to that axis is not parametric
-(e.g. <a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edge</span></code></a>). In the case of parametric edges (e.g. <a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>),
-<cite>bond dimensions</cite> can be learned, meaning that, although the tensor’s shape
-can be fixed through the whole training process, what is learned is an
-<cite>effective</cite> dimension</p>
-<p>Similar to <cite>size</cite>, but if a ParamEdge is attached to an axis,
-it is returned its dimension (number of 1’s in the diagonal of
-the matrix) rather than its total size (number of 1’s and 0’s
-in the diagonal of the matrix)</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>_description_</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>int</p>
-</dd>
-</dl>
+a certain axis can be equal if the edge attached to that axis is not
+parametric (e.g. <a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edge</span></code></a>). In the case of parametric edges (e.g.
+<a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>), <cite>bond dimensions</cite> can be learned, meaning that,
+although the tensor’s shape can be fixed through the whole training process,
+what is learned is an <cite>effective</cite> dimension.</p>
+<p>The dimension is modelled by a sigmoid following the equation:</p>
+<div class="math notranslate nohighlight">
+\[D_{i,i} = \sigma(slope \cdot (shift - i))\]</div>
+<p>as explained <a class="reference internal" href="#tensorkrowch.AbstractEdge" title="tensorkrowch.AbstractEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">here</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.ParamEdge.change_dim">
+<span class="sig-name descname"><span class="pre">change_dim</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamEdge.change_dim"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamEdge.change_dim" title="Permalink to this definition">#</a></dt>
+<dd><p>Changes dimension of param-edge, setting new <code class="docutils literal notranslate"><span class="pre">shift</span></code> and <code class="docutils literal notranslate"><span class="pre">slope</span></code>.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.ParamEdge.change_size">
 <span class="sig-name descname"><span class="pre">change_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamEdge.change_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamEdge.change_size" title="Permalink to this definition">#</a></dt>
-<dd><p>Change size of edge, thus changing sizes of adjacent nodes (node1 and node2)
-at axis1 and axis2, respectively</p>
+<dd><p>Changes size of the param-edge, thus changing the size of tensors of <cite>node1</cite>
+and <cite>node2</cite> at the corresponding axes. If new size is smaller, the tensor
+will be cropped; if larger, the tensor will be expanded with zeros. In
+both cases, the process (cropping/expanding) occurs at the “left”, “top”,
+“front”, etc. of each dimension.</p>
+<p>If the new size is smaller than the dimension, it will be set as the new
+dimension.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.ParamEdge.parameterize">
-<span class="sig-name descname"><span class="pre">parameterize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamEdge.parameterize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamEdge.parameterize" title="Permalink to this definition">#</a></dt>
-<dd><p>Substitute current edge by a (de-)parameterized version of it</p>
+<span class="sig-name descname"><span class="pre">parameterize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamEdge.parameterize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamEdge.parameterize" title="Permalink to this definition">#</a></dt>
+<dd><p>Replaces the param-edge with a de-parameterized version of it, that is,
+turns a trainable <a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a> into a fixed <a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edge</span></code></a>. The size
+of the new edge will match the dimension of the param-edge.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>set_param</strong> (<em>bool</em>) – Boolean indicating whether the edge should be de-parameterized (<code class="docutils literal notranslate"><span class="pre">True</span></code>).
+Otherwise (<code class="docutils literal notranslate"><span class="pre">False</span></code>), the parameterized edge itself will be returned.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The original edge or a de-parameterized version of it.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge">ParamEdge</a> or <a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.ParamEdge.copy">
 <span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamEdge.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamEdge.copy" title="Permalink to this definition">#</a></dt>
-<dd><p>Create a new edge referencing the same nodes at the same axis</p>
+<dd><p>Returns a copy of the param-edge, that is, a new param-edge referencing
+the same nodes at the same axes, with the same <code class="docutils literal notranslate"><span class="pre">shift</span></code> and <code class="docutils literal notranslate"><span class="pre">slope</span></code>.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.ParamEdge.connect">
 <span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamEdge.connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamEdge.connect" title="Permalink to this definition">#</a></dt>
-<dd><p>Connect two edges</p>
+<dd><p>Connects dangling param-edge to another dangling edge or param-edge. The
+result will always be a param-edge.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>other</strong> (<a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a><em> or </em><a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><em>ParamEdge</em></a>) – The other edge to which current edge will be connected. If it is an
+<a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edge</span></code></a>, a new edge will be returned. If it is a <a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>,
+a new param-edge will be returned.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge">ParamEdge</a></p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<p>To connect two edges, the overloaded operator <code class="docutils literal notranslate"><span class="pre">^</span></code> can also be used.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeA&#39;</span><span class="p">,</span> <span class="n">axes_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodeB</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeB&#39;</span><span class="p">,</span> <span class="n">axes_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
+<span class="go">ParamEdge( nodeA[right] &lt;-&gt; None )  (Dangling Edge)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">new_paramedge</span> <span class="o">=</span> <span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">nodeB</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>  <span class="c1"># Same as .connect()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">new_paramedge</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="go">nodeA[right] &lt;-&gt; nodeB[left]</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">new_paramedge</span>
+<span class="go">ParamEdge( nodeA[right] &lt;-&gt; nodeB[left] )</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.ParamEdge.disconnect">
 <span class="sig-name descname"><span class="pre">disconnect</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamEdge.disconnect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamEdge.disconnect" title="Permalink to this definition">#</a></dt>
-<dd><p>Disconnect one edge (from itself)</p>
+<dd><p>Disconnects connected param-edge, that is, the connected param-edge is
+splitted into two dangling param-edges, one for each node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple[<a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge">ParamEdge</a>, <a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge">ParamEdge</a>]</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<p>To disconnect an edge, the overloaded operator <code class="docutils literal notranslate"><span class="pre">|</span></code> can also be used.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeA&#39;</span><span class="p">,</span> <span class="n">axes_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodeB</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeB&#39;</span><span class="p">,</span> <span class="n">axes_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_edge</span> <span class="o">=</span> <span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">nodeB</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_paramedge</span> <span class="o">=</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_edgeA</span><span class="p">,</span> <span class="n">new_edgeB</span> <span class="o">=</span> <span class="n">new_paramedge</span> <span class="o">|</span> <span class="n">new_paramedge</span>  <span class="c1"># Same as .disconnect()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_edgeA</span>
+<span class="go">ParamEdge( nodeA[right] &lt;-&gt; None )  (Dangling Edge)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">new_edgeB</span>
+<span class="go">ParamEdge( nodeB[left] &lt;-&gt; None )  (Dangling Edge)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </dd></dl>
@@ -1442,6 +1604,12 @@ Used for stacked contractions</p>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ParamStackEdge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edges</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1_lists</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamStackEdge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamStackEdge" title="Permalink to this definition">#</a></dt>
 <dd><p>Base class for stacks of trainable edges.
 Used for stacked contractions</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.ParamStackEdge.matrix">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">matrix</span></span><a class="headerlink" href="#tensorkrowch.ParamStackEdge.matrix" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns diagonal square matrix that models the dimension.</p>
+</dd></dl>
+
 </dd></dl>
 
 </section>

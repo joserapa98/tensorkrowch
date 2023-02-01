@@ -274,11 +274,11 @@ title="Fullscreen mode"
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="network_components.html#tensorkrowch.AbstractEdge.change_size">change_size() (tensorkrowch.AbstractEdge method)</a>
+      <li><a href="network_components.html#tensorkrowch.ParamEdge.change_dim">change_dim() (tensorkrowch.ParamEdge method)</a>
+</li>
+      <li><a href="network_components.html#tensorkrowch.Edge.change_size">change_size() (tensorkrowch.Edge method)</a>
 
       <ul>
-        <li><a href="network_components.html#tensorkrowch.Edge.change_size">(tensorkrowch.Edge method)</a>
-</li>
         <li><a href="network_components.html#tensorkrowch.ParamEdge.change_size">(tensorkrowch.ParamEdge method)</a>
 </li>
       </ul></li>
@@ -286,11 +286,9 @@ title="Fullscreen mode"
 </li>
       <li><a href="network_components.html#tensorkrowch.ParamEdge.compute_parameters">compute_parameters() (tensorkrowch.ParamEdge static method)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.AbstractEdge.connect">connect() (tensorkrowch.AbstractEdge method)</a>
+      <li><a href="network_components.html#tensorkrowch.Edge.connect">connect() (tensorkrowch.Edge method)</a>
 
       <ul>
-        <li><a href="network_components.html#tensorkrowch.Edge.connect">(tensorkrowch.Edge method)</a>
-</li>
         <li><a href="network_components.html#tensorkrowch.ParamEdge.connect">(tensorkrowch.ParamEdge method)</a>
 </li>
       </ul></li>
@@ -326,11 +324,9 @@ title="Fullscreen mode"
 </li>
       <li><a href="tn_models.html#tensorkrowch.ConvUTree">ConvUTree (class in tensorkrowch)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.AbstractEdge.copy">copy() (tensorkrowch.AbstractEdge method)</a>
+      <li><a href="network_components.html#tensorkrowch.Edge.copy">copy() (tensorkrowch.Edge method)</a>
 
       <ul>
-        <li><a href="network_components.html#tensorkrowch.Edge.copy">(tensorkrowch.Edge method)</a>
-</li>
         <li><a href="network_components.html#tensorkrowch.ParamEdge.copy">(tensorkrowch.ParamEdge method)</a>
 </li>
         <li><a href="network_components.html#tensorkrowch.ParamNode.copy">(tensorkrowch.ParamNode method)</a>
@@ -349,16 +345,16 @@ title="Fullscreen mode"
       <li><a href="network_components.html#tensorkrowch.AbstractNode.dim">dim() (tensorkrowch.AbstractNode method)</a>
 
       <ul>
+        <li><a href="network_components.html#tensorkrowch.Edge.dim">(tensorkrowch.Edge method)</a>
+</li>
         <li><a href="network_components.html#tensorkrowch.ParamEdge.dim">(tensorkrowch.ParamEdge method)</a>
 </li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="network_components.html#tensorkrowch.AbstractEdge.disconnect">disconnect() (tensorkrowch.AbstractEdge method)</a>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.disconnect">disconnect() (tensorkrowch.AbstractNode method)</a>
 
       <ul>
-        <li><a href="network_components.html#tensorkrowch.AbstractNode.disconnect">(tensorkrowch.AbstractNode method)</a>
-</li>
         <li><a href="network_components.html#tensorkrowch.Edge.disconnect">(tensorkrowch.Edge method)</a>
 </li>
         <li><a href="network_components.html#tensorkrowch.ParamEdge.disconnect">(tensorkrowch.ParamEdge method)</a>
@@ -406,8 +402,12 @@ title="Fullscreen mode"
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="network_components.html#tensorkrowch.AbstractNode.get_edge">get_edge() (tensorkrowch.AbstractNode method)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.ParamNode.grad">grad (tensorkrowch.ParamNode property)</a>
+      <li><a href="network_components.html#tensorkrowch.ParamEdge.grad">grad (tensorkrowch.ParamEdge property)</a>
+
+      <ul>
+        <li><a href="network_components.html#tensorkrowch.ParamNode.grad">(tensorkrowch.ParamNode property)</a>
 </li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -442,8 +442,6 @@ title="Fullscreen mode"
       </ul></li>
       <li><a href="network_components.html#tensorkrowch.AbstractNode.is_non_leaf">is_non_leaf() (tensorkrowch.AbstractNode method)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.ParamEdge.is_updated">is_updated() (tensorkrowch.ParamEdge method)</a>
-</li>
       <li><a href="network_components.html#tensorkrowch.AbstractNode.is_virtual">is_virtual() (tensorkrowch.AbstractNode method)</a>
 </li>
   </ul></td>
@@ -464,12 +462,18 @@ title="Fullscreen mode"
 </li>
       <li><a href="network_components.html#tensorkrowch.AbstractNode.make_tensor">make_tensor() (tensorkrowch.AbstractNode method)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.AbstractNode.mean">mean() (tensorkrowch.AbstractNode method)</a>
+      <li><a href="network_components.html#tensorkrowch.ParamEdge.matrix">matrix (tensorkrowch.ParamEdge property)</a>
+
+      <ul>
+        <li><a href="network_components.html#tensorkrowch.ParamStackEdge.matrix">(tensorkrowch.ParamStackEdge property)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.ParamEdge.module_name">module_name (tensorkrowch.ParamEdge property)</a>
+      </ul></li>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.mean">mean() (tensorkrowch.AbstractNode method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="network_components.html#tensorkrowch.ParamEdge.module_name">module_name (tensorkrowch.ParamEdge property)</a>
+</li>
       <li><a href="network_components.html#tensorkrowch.AbstractNode.move_to_network">move_to_network() (tensorkrowch.AbstractNode method)</a>
 </li>
       <li><a href="tn_models.html#tensorkrowch.MPS">MPS (class in tensorkrowch)</a>
@@ -536,11 +540,9 @@ title="Fullscreen mode"
 </li>
       <li><a href="network_components.html#tensorkrowch.ParamEdge">ParamEdge (class in tensorkrowch)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.AbstractEdge.parameterize">parameterize() (tensorkrowch.AbstractEdge method)</a>
+      <li><a href="network_components.html#tensorkrowch.Edge.parameterize">parameterize() (tensorkrowch.Edge method)</a>
 
       <ul>
-        <li><a href="network_components.html#tensorkrowch.Edge.parameterize">(tensorkrowch.Edge method)</a>
-</li>
         <li><a href="network_components.html#tensorkrowch.ParamEdge.parameterize">(tensorkrowch.ParamEdge method)</a>
 </li>
         <li><a href="network_components.html#tensorkrowch.ParamNode.parameterize">(tensorkrowch.ParamNode method)</a>
@@ -588,18 +590,24 @@ title="Fullscreen mode"
 </li>
       <li><a href="network_components.html#tensorkrowch.AbstractNode.shape">shape (tensorkrowch.AbstractNode property)</a>
 </li>
+      <li><a href="network_components.html#tensorkrowch.ParamEdge.shift">shift (tensorkrowch.ParamEdge property)</a>
+</li>
+      <li><a href="network_components.html#tensorkrowch.ParamEdge.sigmoid">sigmoid() (tensorkrowch.ParamEdge method)</a>
+</li>
       <li><a href="network_components.html#tensorkrowch.AbstractEdge.size">size() (tensorkrowch.AbstractEdge method)</a>
 
       <ul>
         <li><a href="network_components.html#tensorkrowch.AbstractNode.size">(tensorkrowch.AbstractNode method)</a>
 </li>
       </ul></li>
-      <li><a href="node_operations.html#tensorkrowch.split">split() (in module tensorkrowch)</a>
+      <li><a href="network_components.html#tensorkrowch.ParamEdge.slope">slope (tensorkrowch.ParamEdge property)</a>
 </li>
-      <li><a href="network_components.html#tensorkrowch.AbstractNode.split_">split_() (tensorkrowch.AbstractNode method)</a>
+      <li><a href="node_operations.html#tensorkrowch.split">split() (in module tensorkrowch)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="network_components.html#tensorkrowch.AbstractNode.split_">split_() (tensorkrowch.AbstractNode method)</a>
+</li>
       <li><a href="node_operations.html#tensorkrowch.stack">stack() (in module tensorkrowch)</a>
 </li>
       <li><a href="node_operations.html#tensorkrowch.stacked_einsum">stacked_einsum() (in module tensorkrowch)</a>

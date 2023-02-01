@@ -45,9 +45,9 @@ from tensorkrowch.utils import (check_name_style, enum_repeated_names, erase_enu
                                 print_list, stack_unequal_tensors, tab_string)
 
 
-################################################
-#                    AXIS                      #
-################################################
+###############################################################################
+#                                     AXIS                                    #
+###############################################################################
 class Axis:
     """
     The axes are the objects that stick edges to nodes. Every :class:`node <AbstractNode>`
@@ -76,7 +76,8 @@ class Axis:
       `node1` or `node2`.
       
     Even though we can create Axis instances, that will not be usually the case,
-    since axes are automatically created when instantiating a new :class:`node <AbstractNode>`.
+    since axes are automatically created when instantiating a new :class:`node
+    <AbstractNode>`.
 
     Parameters
     ----------
@@ -243,9 +244,9 @@ class Axis:
         return f'{self.__class__.__name__}( {self._name} ({self._num}) )'
 
 
-################################################
-#                   NODES                      #
-################################################
+###############################################################################
+#                                    NODES                                    #
+###############################################################################
 Ax = Union[int, Text, Axis]
 Shape = Union[Sequence[int], Size]
 
@@ -1564,7 +1565,8 @@ class Node(AbstractNode):
         """
         Returns a copy of the node. That is, returns a node whose tensor is a copy
         of the original, whose edges are directly inherited (these are not copies,
-        but the exact same edges) and whose name is extended with the prefix ``"copy_"``.
+        but the exact same edges) and whose name is extended with the prefix
+        ``"copy_"``.
 
         Returns
         -------
@@ -1744,10 +1746,237 @@ class ParamNode(Node):
         return new_node
 
 
-################################################
-#                   EDGES                      #
-################################################
+###############################################################################
+#                                 STACK NODES                                 #
+###############################################################################
+class StackNode(Node):
+    """
+    Class for stacked nodes. This is a node that stores the information
+    of a list of nodes that are stacked in order to perform some operation
+    """
 
+    def __init__(self,
+                 nodes: Optional[Sequence[AbstractNode]] = None,
+                 axes_names: Optional[Sequence[Text]] = None,
+                 name: Optional[Text] = None,
+                 network: Optional['TensorNetwork'] = None,
+                 override_node: bool = False,
+                 tensor: Optional[Tensor] = None,
+                 edges: Optional[List['AbstractEdge']] = None,
+                 node1_list: Optional[List[bool]] = None) -> None:
+
+        if nodes is not None:
+
+            if not isinstance(nodes, (list, tuple)):
+                raise TypeError('`nodes` should be a list or tuple of nodes')
+
+            for node in nodes:
+                if isinstance(node, (StackNode, ParamStackNode)):
+                    raise TypeError(
+                        'Cannot create a stack using (Param)StackNode\'s')
+
+            # TODO: Y en la misma TN todos
+            for i in range(len(nodes[:-1])):
+                if not isinstance(nodes[i], type(nodes[i + 1])):
+                    raise TypeError('Cannot stack nodes of different types. Nodes '
+                                    'must be either all Node or all ParamNode type')
+                if nodes[i].rank != nodes[i + 1].rank:
+                    raise ValueError(
+                        'Cannot stack nodes with different number of edges')
+                if nodes[i].axes_names != nodes[i + 1].axes_names:
+                    raise ValueError(
+                        'Stacked nodes must have the same name for each axis')
+                if nodes[i].network != nodes[i + 1].network:
+                    raise ValueError(
+                        'Stacked nodes must all be in the same network')
+                for edge1, edge2 in zip(nodes[i].edges, nodes[i + 1].edges):
+                    if not isinstance(edge1, type(edge2)):
+                        raise TypeError('Cannot stack nodes with edges of different types. '
+                                        'The edges that are attached to the same axis in '
+                                        'each node must be either all Edge or all ParamEdge type')
+
+            edges_dict = dict()
+            node1_lists_dict = dict()
+            for node in nodes:
+                for axis in node._axes:
+                    edge = node[axis]
+                    if axis._name not in edges_dict:
+                        edges_dict[axis._name] = [edge]
+                        node1_lists_dict[axis._name] = [axis._node1]
+                    else:
+                        edges_dict[axis._name].append(edge)
+                        node1_lists_dict[axis._name].append(axis._node1)
+
+            self._edges_dict = edges_dict
+            self._node1_lists_dict = node1_lists_dict
+            # self.nodes = nodes
+
+            # stacked_tensor = torch.stack([node.tensor for node in nodes])
+            if tensor is None:
+                # TODO: not sure if this is necessary
+                tensor = stack_unequal_tensors([node.tensor for node in nodes])
+            super().__init__(axes_names=['stack'] + nodes[0].axes_names,
+                             name=name,
+                             network=nodes[0]._network,
+                             leaf=False,
+                             override_node=override_node,
+                             tensor=tensor)
+
+        else:
+            if axes_names is None:
+                raise ValueError(
+                    'If `nodes` are not provided, `axes_names` must be given')
+            if network is None:
+                raise ValueError(
+                    'If `nodes` are not provided, `network` must be given')
+            if tensor is None:
+                raise ValueError(
+                    'If `nodes` are not provided, `tensor` must be given')
+            if edges is None:
+                raise ValueError(
+                    'If `nodes` are not provided, `edges` must be given')
+            if node1_list is None:
+                raise ValueError(
+                    'If `nodes` are not provided, `node1_list` must be given')
+
+            edges_dict = dict()
+            node1_lists_dict = dict()
+            for axis_name, edge in zip(axes_names[1:], edges[1:]):
+                edges_dict[axis_name] = edge.edges
+                node1_lists_dict[axis_name] = edge.node1_lists
+
+            self._edges_dict = edges_dict
+            self._node1_lists_dict = node1_lists_dict
+            # self.nodes = nodes
+
+            super().__init__(axes_names=axes_names,
+                             name=name,
+                             network=network,
+                             leaf=False,
+                             override_node=override_node,
+                             tensor=tensor,
+                             edges=edges,
+                             node1_list=node1_list)
+
+    @property
+    def edges_dict(self) -> Dict[Text, List['AbstractEdge']]:
+        return self._edges_dict
+
+    @property
+    def node1_lists_dict(self) -> Dict[Text, List[bool]]:
+        return self._node1_lists_dict
+
+    def _make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
+        # TODO: param_edges not used here
+        if axis.num == 0:
+            # Stack axis
+            return Edge(node1=self, axis1=axis)
+        elif isinstance(self._edges_dict[axis._name][0], Edge):
+            return StackEdge(self._edges_dict[axis._name],
+                             self._node1_lists_dict[axis._name],
+                             node1=self, axis1=axis)
+        elif isinstance(self._edges_dict[axis._name][0], ParamEdge):
+            return ParamStackEdge(self._edges_dict[axis._name],
+                                  self._node1_lists_dict[axis._name],
+                                  node1=self,
+                                  axis1=axis)
+
+
+class ParamStackNode(ParamNode):
+    """
+    Class for parametric stacked nodes. This is a node that stores the information
+    of a list of parametric nodes that are stacked in order to perform some operation
+    """
+
+    def __init__(self,
+                 nodes: Sequence[AbstractNode],
+                 name: Optional[Text] = None,
+                 virtual: bool = False,
+                 override_node: bool = False,
+                 tensor: Optional[Tensor] = None) -> None:
+
+        if not isinstance(nodes, (list, tuple)):
+            raise TypeError('`nodes` should be a list or tuple of nodes')
+
+        for node in nodes:
+            if isinstance(node, (StackNode, ParamStackNode)):
+                raise TypeError(
+                    'Cannot create a stack using (Param)StackNode\'s')
+
+        # TODO: Y en la misma TN todos
+        for i in range(len(nodes[:-1])):
+            if not isinstance(nodes[i], type(nodes[i + 1])):
+                raise TypeError('Cannot stack nodes of different types. Nodes '
+                                'must be either all Node or all ParamNode type')
+            if nodes[i].rank != nodes[i + 1].rank:
+                raise ValueError(
+                    'Cannot stack nodes with different number of edges')
+            if nodes[i].axes_names != nodes[i + 1].axes_names:
+                raise ValueError(
+                    'Stacked nodes must have the same name for each axis')
+            if nodes[i].network != nodes[i + 1].network:
+                raise ValueError(
+                    'Stacked nodes must all be in the same network')
+            for edge1, edge2 in zip(nodes[i].edges, nodes[i + 1].edges):
+                if not isinstance(edge1, type(edge2)):
+                    raise TypeError('Cannot stack nodes with edges of different types. '
+                                    'The edges that are attached to the same axis in '
+                                    'each node must be either all Edge or all ParamEdge type')
+
+        edges_dict = dict()
+        node1_lists_dict = dict()
+        for node in nodes:
+            for axis in node._axes:
+                edge = node[axis]
+                if axis._name not in edges_dict:
+                    edges_dict[axis._name] = [edge]
+                    node1_lists_dict[axis._name] = [axis._node1]
+                else:
+                    edges_dict[axis._name].append(edge)
+                    node1_lists_dict[axis._name].append(axis._node1)
+
+        self._edges_dict = edges_dict
+        self._node1_lists_dict = node1_lists_dict
+        self.nodes = nodes
+
+        # stacked_tensor = torch.stack([node.tensor for node in nodes])
+        if tensor is None:
+            tensor = stack_unequal_tensors([node.tensor for node in nodes])
+        super().__init__(axes_names=['stack'] + nodes[0].axes_names,
+                         name=name,
+                         network=nodes[0]._network,
+                         virtual=virtual,
+                         #  leaf=False,
+                         override_node=override_node,
+                         tensor=tensor)
+
+    @property
+    def edges_dict(self) -> Dict[Text, List['AbstractEdge']]:
+        return self._edges_dict
+
+    @property
+    def node1_lists_dict(self) -> Dict[Text, List[bool]]:
+        return self._node1_lists_dict
+
+    def _make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
+        # TODO: param_edges not used here
+        if axis.num == 0:
+            # Stack axis
+            return Edge(node1=self, axis1=axis)
+        elif isinstance(self._edges_dict[axis._name][0], Edge):
+            return StackEdge(self._edges_dict[axis._name],
+                             self._node1_lists_dict[axis._name],
+                             node1=self, axis1=axis)
+        elif isinstance(self._edges_dict[axis._name][0], ParamEdge):
+            return ParamStackEdge(self._edges_dict[axis._name],
+                                  self._node1_lists_dict[axis._name],
+                                  node1=self,
+                                  axis1=axis)
+            
+            
+###############################################################################
+#                                    EDGES                                    #
+###############################################################################
 class AbstractEdge(ABC):
     """
     Abstract class for all types of edges. Defines what an edge is and some of its
@@ -1759,7 +1988,7 @@ class AbstractEdge(ABC):
     dim, etc.
     
     Above all, its importance lies in that edges enable to connect nodes, forming
-    any possible graph, and perform easily :class:`Operations <Operation>` like
+    any possible graph, and to perform easily :class:`Operations <Operation>` like
     contracting and splitting nodes.
     
     Furthermore, edges have specific operations like :meth:`contract_` or :meth:`svd_`
@@ -1774,20 +2003,6 @@ class AbstractEdge(ABC):
     * :class:`StackEdge`
     
     * :class:`ParamStackEdge`
-    
-
-    Parameters
-    ----------
-    node1: first node to which the edge is connected
-    axis1: axis of `node1` where the edge is attached
-    node2: second, optional, node to which the edge is connected
-    axis2: axis of `node2` where the edge is attached
-
-    Raises
-    ------
-    ValueError
-    TypeError
-
     """
 
     def __init__(self,
@@ -1899,40 +2114,24 @@ class AbstractEdge(ABC):
 
     @abstractmethod
     def change_size(self, size: int) -> None:
-        """
-        Change size of edge, thus changing sizes of adjacent nodes (node1 and node2)
-        at axis1 and axis2, respectively
-        """
         pass
 
     @abstractmethod
     def parameterize(self,
                      set_param: bool,
                      size: Optional[int] = None) -> 'AbstractEdge':
-        """
-        Substitute current edge by a (de-)parameterized version of it
-        """
         pass
 
     @abstractmethod
     def copy(self) -> 'AbstractEdge':
-        """
-        Create a new edge referencing the same nodes at the same axis
-        """
         pass
 
     @abstractmethod
     def connect(self, other: 'AbstractEdge') -> 'AbstractEdge':
-        """
-        Connect two edges
-        """
         pass
 
     @abstractmethod
     def disconnect(self) -> List['AbstractEdge']:
-        """
-        Disconnect one edge (from itself)
-        """
         pass
 
     # -------
@@ -1961,8 +2160,9 @@ class AbstractEdge(ABC):
         if other == self:
             return self.disconnect()
         else:
-            raise ValueError('Cannot disconnect one edge from another, different one. '
-                             'Edge should be disconnected from itself')
+            raise ValueError(
+                'Cannot disconnect one edge from another, different one. '
+                'Edge should be disconnected from itself')
 
     def __str__(self) -> Text:
         return self.name
@@ -1977,19 +2177,45 @@ class AbstractEdge(ABC):
 
 class Edge(AbstractEdge):
     """
-    Base class for non-trainable edges. Should be subclassed
-    by any new class of non-trainable edges.
-
-    Used by default to create a non-trainable node.
+    Base class for non-trainable edges. Should be subclassed by any new class
+    of non-trainable edges.
+    
+    This basic type of edge is the default for both :class:`Node` and
+    :class:`ParamNode`.
+    
+    For a complete list of properties and methods, see also :class:`AbstractEdge`.
+    
+    Parameters
+    ----------
+    node1 : AbstractNode
+        First node to which the edge is connected.
+    axis1: int, str or Axis
+        Axis of ``node1`` where the edge is attached.
+    node2 : AbstractNode, optional
+        Second node to which the edge is connected. If None, the edge will be
+        dangling.
+    axis2 : int, str, Axis, optional
+        Axis of ``node2`` where the edge is attached.
     """
 
     # -------
     # Methods
     # -------
     def dim(self) -> int:
+        """
+        Returns dimension of tensor at the corresponding axis. For edges, this
+        coincides with the size of the tensor.
+        """
         return self.size()
 
     def change_size(self, size: int) -> None:
+        """
+        Changes size of the edge, thus changing the size of tensors of `node1`
+        and `node2` at the corresponding axes. If new size is smaller, the tensor
+        will be cropped; if larger, the tensor will be expanded with zeros. In
+        both cases, the process (cropping/expanding) occurs at the "left", "top",
+        "front", etc. of each dimension.
+        """
         if not isinstance(size, int):
             TypeError('`size` should be int type')
         self._size = size
@@ -2001,35 +2227,36 @@ class Edge(AbstractEdge):
                      set_param: bool = True,
                      size: Optional[int] = None) -> Union['Edge', 'ParamEdge']:
         """
-        Returns ``param_edges`` attribute or changes it if ``set_param`` is provided.
-
-        Returns
-        -------
-        Returns True if all edges are parametric edges, False if all edges are
-        non-parametric edges, and None if there are some edges of each type
+        Replaces the edge with a parameterized version of it, that is, turns a
+        fixed :class:`Edge` into a trainable :class:`ParamEdge`.
         
-
         Parameters
         ----------
-        set_param : bool, optional
-            Boolean indicating whether edges have to be parameterized (``True``)
-            or de-parameterized (``False``).
-        sizes : list[int] or tuple[int], optional
-            Sizes used to expand or shrink the node's shape if desired. By default,
-            if an :class:`Edge` is parameterized, its corresponding ``size`` will
-            match its ``dim``. However, if ``sizes`` are provided, 
+        set_param : bool
+            Boolean indicating whether the edge should be parameterized (``True``).
+            Otherwise (``False``), the non-parameterized edge itself will be
+            returned.
+        size : int, optional
+            Size used to expand or crop the node's tensor at the corresponding
+            axis. When an edge is parameterized, its new dimension will be by
+            default equal to the size of the original edge. However, the size
+            can be different from the dimension in param-edges, so a larger size
+            could be chosen for the parameterized edge (if the new size is smaller,
+            the dimension will be equal to it).
+            
+            See also :meth:`ParamEdge.dim`.
 
         Returns
         -------
-        _type_
-            _description_
+        Edge or ParamEdge
+            The original edge or a parameterized version of it.
         """
         if set_param:
             dim = self.dim()
             if size is not None:
                 self.change_size(size)
             new_edge = ParamEdge(node1=self.node1, axis1=self.axis1,
-                                 dim=min(dim, self.size()),
+                                 dim=min(dim, self._size),
                                  node2=self.node2, axis2=self.axis2)
             if not self.is_dangling():
                 self.node2._add_edge(new_edge, self.axis2, False)
@@ -2042,7 +2269,10 @@ class Edge(AbstractEdge):
             return self
 
     def copy(self) -> 'Edge':
-        # TODO: cuando copiams edge tenemos que añadirlo a la TN?
+        """
+        Returns a copy of the edge, that is, a new edge referencing the same
+        nodes at the same axes.
+        """
         new_edge = Edge(node1=self.node1, axis1=self.axis1,
                         node2=self.node2, axis2=self.axis2)
         return new_edge
@@ -2056,21 +2286,119 @@ class Edge(AbstractEdge):
         pass
 
     def connect(self, other: Union['Edge', 'ParamEdge']) -> Union['Edge', 'ParamEdge']:
+        """
+        Connects dangling edge to another dangling edge.
+        
+        Parameters
+        ----------
+        other : Edge or ParamEdge
+            The other edge to which current edge will be connected. If it is an
+            :class:`Edge`, a new edge will be returned. If it is a :class:`ParamEdge`,
+            a new param-edge will be returned.
+
+        Returns
+        -------
+        Edge or ParamEdge
+        
+        Example
+        -------
+        To connect two edges, the overloaded operator ``^`` can also be used.
+        
+        >>> nodeA = tk.Node(shape=(2, 3), name='nodeA', axes_names=['left', 'right'])
+        >>> nodeB = tk.Node(shape=(3, 4), name='nodeB', axes_names=['left', 'right'])
+        >>> new_edge = nodeA['right'] ^ nodeB['left']  # Same as .connect()
+        >>> print(new_edge.name)
+        nodeA[right] <-> nodeB[left]
+        """
         return connect(self, other)
 
     def disconnect(self) -> Tuple['Edge', 'Edge']:
+        """
+        Disconnects connected edge, that is, the connected edge is splitted into
+        two dangling edges, one for each node.
+
+        Returns
+        -------
+        tuple[Edge, Edge]
+        
+        Example
+        -------
+        To disconnect an edge, the overloaded operator ``|`` can also be used.
+        
+        >>> nodeA = tk.Node(shape=(2, 3), name='nodeA', axes_names=['left', 'right'])
+        >>> nodeB = tk.Node(shape=(3, 4), name='nodeB', axes_names=['left', 'right'])
+        >>> new_edge = nodeA['right'] ^ nodeB['left']
+        >>> new_edgeA, new_edgeB = new_edge | new_edge  # Same as .disconnect()
+        >>> print(new_edgeA.name)
+        nodeA[right] <-> None
+        
+        >>> print(new_edgeB.name)
+        nodeB[left] <-> None
+        """
         return disconnect(self)
 
 
 EdgeParameter = Union[int, float, Parameter]
-_DEFAULT_SHIFT = -0.5
 _DEFAULT_SLOPE = 1.
-
 
 class ParamEdge(AbstractEdge, nn.Module):
     """
-    Class for trainable edges. Subclass of PyTorch nn.Module.
-    Should be subclassed by any new class of trainable edges.
+    Base class for trainable edges. Subclass of Pytorch ``nn.Module``.
+    
+    A parametric edge is an edge whose dimension can be learned. To do so, each
+    param-edge carries a diagonal square matrix that has the same size as the edge.
+    The diagonal is filled with as many 1's as the dimension, and the rest with
+    0's.
+    
+    The dimension is modelled by a sigmoid following the equation:
+    
+    .. math::
+    
+        D_{i,i} = \sigma(slope \cdot (shift - i))
+        
+    where :math:`D_{i,i}` are the elements of the diagonal, :math:`\sigma` is the
+    sigmoid function, and ``slope`` and ``shift`` are the learnable parameters.
+    When a certain dimension is specified, ``shift`` is initialized as ``dim - 0.5``,
+    so that the sigmoid has non-zero gradient at the current dimension. Hence,
+    during training the matrix will not have only 1's and 0's, but some numbers
+    close to 1, and some others between 0 and 1. The dimension will be taken as
+    the number of elements in the diagonal that are greater than 0.5.
+    
+    This implementation is based on the following work: `<https://arxiv.org/abs/2203.03366>`_
+    
+    .. note::
+        Although param-edges can be used without causing any error, it is not
+        clear if the dimension can be really learned this way. Following the
+        original `paper <https://arxiv.org/abs/2203.03366>`_, a regularization
+        should be added to the loss function in order to have non-zero gradients.
+        However, in our experiments, that was not enough to drive the training
+        towards a regime where the dimension plays a relevant role.
+        
+        Hence, this class will not be updated until further investigation is
+        carried out.
+    
+    For a complete list of properties and methods, see also :class:`AbstractEdge`.
+    
+    Parameters
+    ----------
+    node1 : AbstractNode
+        First node to which the edge is connected.
+    axis1: int, str or Axis
+        Axis of ``node1`` where the edge is attached.
+    dim : int, optional
+        Dimension of the param-edge. It can be specified so that ``shift`` and 
+        ``slope`` are constructed to fulfill the dimension requirement. If ``dim``,
+        ``shift`` and ``slope`` are not specified, the size of ``node1`` at
+        ``axis1`` will be taken as dimension.
+    shift : int, float or nn.Parameter, optional
+        Shift parameter involved in the sigmoid function.
+    slope : int, float or nn.Parameter, optional
+        Slope parameter involved in the sigmoid function.
+    node2 : AbstractNode, optional
+        Second node to which the edge is connected. If None, the edge will be
+        dangling.
+    axis2 : int, str, Axis, optional
+        Axis of ``node2`` where the edge is attached.
     """
 
     def __init__(self,
@@ -2106,11 +2434,6 @@ class ParamEdge(AbstractEdge, nn.Module):
             shift, slope = self.compute_parameters(node1.size(axis1), dim)
         else:
             shift, slope = self.compute_parameters(node1.size(axis1), node1.size(axis1))
-            
-            # if shift is None:
-            #     shift = _DEFAULT_SHIFT
-            # if slope is None:
-            #     slope = _DEFAULT_SLOPE
 
         self._sigmoid = nn.Sigmoid()
         self._matrix = None
@@ -2125,6 +2448,7 @@ class ParamEdge(AbstractEdge, nn.Module):
     # ----------
     @property
     def shift(self) -> Parameter:
+        """Returns shift of the param-edge."""
         return self._shift
 
     @shift.setter
@@ -2133,6 +2457,7 @@ class ParamEdge(AbstractEdge, nn.Module):
 
     @property
     def slope(self) -> Parameter:
+        """Returns slope of the param-edge."""
         return self._slope
 
     @slope.setter
@@ -2141,18 +2466,30 @@ class ParamEdge(AbstractEdge, nn.Module):
 
     @property
     def matrix(self) -> Tensor:
+        """Returns diagonal square matrix that models the dimension."""
         self.set_matrix()
         return self._matrix
 
     @property
     def grad(self) -> Tuple[Optional[Tensor], Optional[Tensor]]:
-        return self.shift.grad, self.slope.grad
+        """Returns tuple with gradients of ``shift`` and ``slope``."""
+        return self._shift.grad, self._slope.grad
 
     @property
     def module_name(self) -> Text:
         """
-        Create adapted name to be used when calling it as a submodule of
-        a tensor network
+        Returns param-edge's name to be used when calling it as submodule of a
+        :class:`TensorNetwork`. It is similar to :meth:`~AbstractEdge.name` but
+        avoiding blank spaces and special symbols.
+        
+        Example
+        -------
+        >>> nodeA = tk.Node(shape=(2, 3), name='nodeA', axes_names=['left', 'right'])
+        >>> nodeB = tk.Node(shape=(3, 4), name='nodeB', axes_names=['left', 'right'])
+        >>> new_edge = nodeA['right'] ^ nodeB['left']
+        >>> new_paramedge = new_edge.parameterize()
+        >>> print(new_paramedge.module_name)
+        edge_nodeA_right_nodeB_left
         """
         if self.is_dangling():
             return f'edge_{self.node1._name}_{self.axis1._name}'
@@ -2165,7 +2502,10 @@ class ParamEdge(AbstractEdge, nn.Module):
     @staticmethod
     def compute_parameters(size: int, dim: int) -> Tuple[float, float]:
         """
-        Compute shift and slope parameters given a certain size and dimension
+        Computes ``shift`` and ``slope`` parameters given a certain size and
+        dimension. ``size`` will determine the size of the diagonal square matrix
+        that models the dimension, and ``dim`` will determine the number of 1's
+        that must be in the diagonal.
         """
         if not isinstance(size, int):
             raise TypeError('`size` should be int type')
@@ -2173,7 +2513,6 @@ class ParamEdge(AbstractEdge, nn.Module):
             raise TypeError('`dim` should be int type')
         if dim > size:
             raise ValueError('`dim` should be smaller or equal than `size`')
-        # shift = (size - dim) - 0.5
         shift = dim - 0.5
         slope = _DEFAULT_SLOPE
         return shift, slope
@@ -2182,7 +2521,8 @@ class ParamEdge(AbstractEdge, nn.Module):
                        shift: Optional[EdgeParameter] = None,
                        slope: Optional[EdgeParameter] = None):
         """
-        Set both parameters, update them and set the new matrix
+        Sets the provided ``shift`` and ``slope`` parameters to be the new parameters
+        of the param-edge, and creates the corresponding matrix.
         """
         device = None
         if self.node1.tensor is not None:
@@ -2195,13 +2535,11 @@ class ParamEdge(AbstractEdge, nn.Module):
                     self._shift = Parameter(torch.tensor(shift))
                 else:
                     self._shift = Parameter(torch.tensor(shift).to(device))
-                self._prev_shift = _DEFAULT_SHIFT
             elif isinstance(shift, Parameter):
                 self._shift = shift
-                self._prev_shift = shift.item()
             else:
                 raise TypeError(
-                    '`shift` should be int, float or Parameter type')
+                    '`shift` should be int, float or nn.Parameter type')
         if slope is not None:
             if isinstance(slope, (int, float)):
                 slope = float(slope)
@@ -2209,50 +2547,36 @@ class ParamEdge(AbstractEdge, nn.Module):
                     self._slope = Parameter(torch.tensor(slope))
                 else:
                     self._slope = Parameter(torch.tensor(slope).to(device))
-                self._prev_slope = slope
             elif isinstance(slope, Parameter):
-                # TODO: eligible device
                 self._slope = slope
-                self._prev_slope = slope.item()
             else:
                 raise TypeError(
-                    '`slope` should be int, float or Parameter type')
+                    '`slope` should be int, float or nn.Parameter type')
         
         self.set_matrix()
 
-    def is_updated(self) -> bool:  # TODO: creo que esto no sirve para nada, lo podemos borrar
-        """
-        Track if shift and slope have changed during training, in order
-        to set the new corresponding matrix
-        """
-        if (self._prev_shift == self._shift.item()) and \
-                (self._prev_slope == self._slope.item()):
-            return True
-        return False
-
     def sigmoid(self, x: Tensor) -> Tensor:
+        """Sigmoid function."""
         return self._sigmoid(x)
 
     def make_matrix(self) -> Tensor:
         """
-        Create the matrix depending on shift and slope. The matrix is
-        near the identity, although it might have some zeros in the first
-        positions of the diagonal (dimension is equal to number of 1's, while
-        size is equal to the matrix size)
+        Creates the matrix based on ``shift`` and ``slope``. The matrix is a
+        diagonal square matrix with (almost) 1's and 0's in the diagonal.
         """
         matrix = torch.zeros((self.size(), self.size()),
                              device=self.shift.device)
         i = torch.arange(self.size(), device=self.shift.device)
-        # matrix[(i, i)] = self.sigmoid(self.slope * (i - self.shift))
         matrix[(i, i)] = self.sigmoid(self.slope * (self.shift - i))
         return matrix
 
     def set_matrix(self) -> None:
-        """
-        Create the matrix and set it, also updating the dimension
-        """
+        """Creates the matrix and sets it, also updating the dimension."""
         self._matrix = self.make_matrix()
         signs = torch.sign(self._matrix.diagonal() - 0.5)
+        
+        # Dimension is the number of elements in the diagonal that are greater
+        # than 0.5
         dim = int(torch.where(signs == 1,
                               signs, torch.zeros_like(signs)).sum())
         if dim <= 0:
@@ -2263,34 +2587,43 @@ class ParamEdge(AbstractEdge, nn.Module):
     def dim(self) -> int:
         """
         Here, `dimension` is not the same as `size`. The ``dim`` and ``size`` in
-        a certain axis can be equal if the edge attached to that axis is not parametric
-        (e.g. :class:`Edge`). In the case of parametric edges (e.g. :class:`ParamEdge`),
-        `bond dimensions` can be learned, meaning that, although the tensor's shape
-        can be fixed through the whole training process, what is learned is an
-        `effective` dimension
+        a certain axis can be equal if the edge attached to that axis is not
+        parametric (e.g. :class:`Edge`). In the case of parametric edges (e.g.
+        :class:`ParamEdge`), `bond dimensions` can be learned, meaning that,
+        although the tensor's shape can be fixed through the whole training process,
+        what is learned is an `effective` dimension.
         
-        Similar to `size`, but if a ParamEdge is attached to an axis,
-        it is returned its dimension (number of 1's in the diagonal of
-        the matrix) rather than its total size (number of 1's and 0's
-        in the diagonal of the matrix)
-
-        Returns
-        -------
-        int
-            _description_
+        The dimension is modelled by a sigmoid following the equation:
+    
+        .. math::
+        
+            D_{i,i} = \sigma(slope \cdot (shift - i))
+            
+        as explained :class:`here <AbstractEdge>`.
         """
         return self._dim
 
     def change_dim(self, dim: Optional[int] = None) -> None:
-        if dim != self.dim():
-            shift, slope = self.compute_parameters(self.size(), dim)
+        """Changes dimension of param-edge, setting new ``shift`` and ``slope``."""
+        if dim != self._dim:
+            shift, slope = self.compute_parameters(self._size, dim)
             self.set_parameters(shift, slope)
 
     def change_size(self, size: int) -> None:
+        """
+        Changes size of the param-edge, thus changing the size of tensors of `node1`
+        and `node2` at the corresponding axes. If new size is smaller, the tensor
+        will be cropped; if larger, the tensor will be expanded with zeros. In
+        both cases, the process (cropping/expanding) occurs at the "left", "top",
+        "front", etc. of each dimension.
+        
+        If the new size is smaller than the dimension, it will be set as the new
+        dimension.
+        """
         if not isinstance(size, int):
             TypeError('`size` should be int type')
         self._size = size
-        shift, slope = self.compute_parameters(size, min(size, self.dim()))
+        shift, slope = self.compute_parameters(size, min(size, self._dim))
         device = self._shift.device
 
         self.set_parameters(shift, slope)
@@ -2301,8 +2634,23 @@ class ParamEdge(AbstractEdge, nn.Module):
         self.node1._change_axis_size(self.axis1, size)
 
     def parameterize(self,
-                     set_param: bool = True,
-                     size: Optional[int] = None) -> Union['Edge', 'ParamEdge']:
+                     set_param: bool = True) -> Union['Edge', 'ParamEdge']:
+        """
+        Replaces the param-edge with a de-parameterized version of it, that is,
+        turns a trainable :class:`ParamEdge` into a fixed :class:`Edge`. The size
+        of the new edge will match the dimension of the param-edge.
+        
+        Parameters
+        ----------
+        set_param : bool
+            Boolean indicating whether the edge should be de-parameterized (``True``).
+            Otherwise (``False``), the parameterized edge itself will be returned.
+
+        Returns
+        -------
+        ParamEdge or Edge
+            The original edge or a de-parameterized version of it.
+        """
         if not set_param:
             self.change_size(self.dim())
             new_edge = Edge(node1=self.node1, axis1=self.axis1,
@@ -2318,8 +2666,12 @@ class ParamEdge(AbstractEdge, nn.Module):
             return self
 
     def copy(self) -> 'ParamEdge':
+        """
+        Returns a copy of the param-edge, that is, a new param-edge referencing
+        the same nodes at the same axes, with the same ``shift`` and ``slope``.
+        """
         new_edge = ParamEdge(node1=self.node1, axis1=self.axis1,
-                             shift=self.shift, slope=self.slope,
+                             shift=self._shift, slope=self._slope,
                              node2=self.node2, axis2=self.axis2)
         return new_edge
 
@@ -2332,245 +2684,69 @@ class ParamEdge(AbstractEdge, nn.Module):
         pass
 
     def connect(self, other: Union['Edge', 'ParamEdge']) -> 'ParamEdge':
+        """
+        Connects dangling param-edge to another dangling edge or param-edge. The
+        result will always be a param-edge.
+        
+        Parameters
+        ----------
+        other : Edge or ParamEdge
+            The other edge to which current edge will be connected. If it is an
+            :class:`Edge`, a new edge will be returned. If it is a :class:`ParamEdge`,
+            a new param-edge will be returned.
+
+        Returns
+        -------
+        ParamEdge
+        
+        Example
+        -------
+        To connect two edges, the overloaded operator ``^`` can also be used.
+        
+        >>> nodeA = tk.Node(shape=(2, 3), name='nodeA', axes_names=['left', 'right'])
+        >>> nodeB = tk.Node(shape=(3, 4), name='nodeB', axes_names=['left', 'right'])
+        >>> nodeA['right'].parameterize()
+        ParamEdge( nodeA[right] <-> None )  (Dangling Edge)
+        
+        >>> new_paramedge = nodeA['right'] ^ nodeB['left']  # Same as .connect()
+        >>> print(new_paramedge.name)
+        nodeA[right] <-> nodeB[left]
+        
+        >>> new_paramedge
+        ParamEdge( nodeA[right] <-> nodeB[left] )
+        """
         return connect(self, other)
 
     def disconnect(self) -> Tuple['ParamEdge', 'ParamEdge']:
+        """
+        Disconnects connected param-edge, that is, the connected param-edge is
+        splitted into two dangling param-edges, one for each node.
+
+        Returns
+        -------
+        tuple[ParamEdge, ParamEdge]
+        
+        Example
+        -------
+        To disconnect an edge, the overloaded operator ``|`` can also be used.
+        
+        >>> nodeA = tk.Node(shape=(2, 3), name='nodeA', axes_names=['left', 'right'])
+        >>> nodeB = tk.Node(shape=(3, 4), name='nodeB', axes_names=['left', 'right'])
+        >>> new_edge = nodeA['right'] ^ nodeB['left']
+        >>> new_paramedge = new_edge.parameterize()
+        >>> new_edgeA, new_edgeB = new_paramedge | new_paramedge  # Same as .disconnect()
+        >>> new_edgeA
+        ParamEdge( nodeA[right] <-> None )  (Dangling Edge)
+        
+        >>> new_edgeB
+        ParamEdge( nodeB[left] <-> None )  (Dangling Edge)
+        """
         return disconnect(self)
 
 
-################################################
-#                    STACKS                    #
-################################################
-# TODO: hacer privados
-# TODO: queda comprobar stacks
-# TODO: ver si se puede reestructurar, igual un AbstractStackNode que aglutine
-#  ambas clases y luego hacer subclases de Node y Paramnode
-# TODO: añadir unbind como metodo interno
-class StackNode(Node):
-    """
-    Class for stacked nodes. This is a node that stores the information
-    of a list of nodes that are stacked in order to perform some operation
-    """
-
-    def __init__(self,
-                 nodes: Optional[Sequence[AbstractNode]] = None,
-                 axes_names: Optional[Sequence[Text]] = None,
-                 name: Optional[Text] = None,
-                 network: Optional['TensorNetwork'] = None,
-                 override_node: bool = False,
-                 tensor: Optional[Tensor] = None,
-                 edges: Optional[List['AbstractEdge']] = None,
-                 node1_list: Optional[List[bool]] = None) -> None:
-
-        if nodes is not None:
-
-            if not isinstance(nodes, (list, tuple)):
-                raise TypeError('`nodes` should be a list or tuple of nodes')
-
-            for node in nodes:
-                if isinstance(node, (StackNode, ParamStackNode)):
-                    raise TypeError(
-                        'Cannot create a stack using (Param)StackNode\'s')
-
-            # TODO: Y en la misma TN todos
-            for i in range(len(nodes[:-1])):
-                if not isinstance(nodes[i], type(nodes[i + 1])):
-                    raise TypeError('Cannot stack nodes of different types. Nodes '
-                                    'must be either all Node or all ParamNode type')
-                if nodes[i].rank != nodes[i + 1].rank:
-                    raise ValueError(
-                        'Cannot stack nodes with different number of edges')
-                if nodes[i].axes_names != nodes[i + 1].axes_names:
-                    raise ValueError(
-                        'Stacked nodes must have the same name for each axis')
-                if nodes[i].network != nodes[i + 1].network:
-                    raise ValueError(
-                        'Stacked nodes must all be in the same network')
-                for edge1, edge2 in zip(nodes[i].edges, nodes[i + 1].edges):
-                    if not isinstance(edge1, type(edge2)):
-                        raise TypeError('Cannot stack nodes with edges of different types. '
-                                        'The edges that are attached to the same axis in '
-                                        'each node must be either all Edge or all ParamEdge type')
-
-            edges_dict = dict()
-            node1_lists_dict = dict()
-            for node in nodes:
-                for axis in node._axes:
-                    edge = node[axis]
-                    if axis._name not in edges_dict:
-                        edges_dict[axis._name] = [edge]
-                        node1_lists_dict[axis._name] = [axis._node1]
-                    else:
-                        edges_dict[axis._name].append(edge)
-                        node1_lists_dict[axis._name].append(axis._node1)
-
-            self._edges_dict = edges_dict
-            self._node1_lists_dict = node1_lists_dict
-            # self.nodes = nodes
-
-            # stacked_tensor = torch.stack([node.tensor for node in nodes])
-            if tensor is None:
-                # TODO: not sure if this is necessary
-                tensor = stack_unequal_tensors([node.tensor for node in nodes])
-            super().__init__(axes_names=['stack'] + nodes[0].axes_names,
-                             name=name,
-                             network=nodes[0]._network,
-                             leaf=False,
-                             override_node=override_node,
-                             tensor=tensor)
-
-        else:
-            if axes_names is None:
-                raise ValueError(
-                    'If `nodes` are not provided, `axes_names` must be given')
-            if network is None:
-                raise ValueError(
-                    'If `nodes` are not provided, `network` must be given')
-            if tensor is None:
-                raise ValueError(
-                    'If `nodes` are not provided, `tensor` must be given')
-            if edges is None:
-                raise ValueError(
-                    'If `nodes` are not provided, `edges` must be given')
-            if node1_list is None:
-                raise ValueError(
-                    'If `nodes` are not provided, `node1_list` must be given')
-
-            edges_dict = dict()
-            node1_lists_dict = dict()
-            for axis_name, edge in zip(axes_names[1:], edges[1:]):
-                edges_dict[axis_name] = edge.edges
-                node1_lists_dict[axis_name] = edge.node1_lists
-
-            self._edges_dict = edges_dict
-            self._node1_lists_dict = node1_lists_dict
-            # self.nodes = nodes
-
-            super().__init__(axes_names=axes_names,
-                             name=name,
-                             network=network,
-                             leaf=False,
-                             override_node=override_node,
-                             tensor=tensor,
-                             edges=edges,
-                             node1_list=node1_list)
-
-    @property
-    def edges_dict(self) -> Dict[Text, List[AbstractEdge]]:
-        return self._edges_dict
-
-    @property
-    def node1_lists_dict(self) -> Dict[Text, List[bool]]:
-        return self._node1_lists_dict
-
-    def _make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
-        # TODO: param_edges not used here
-        if axis.num == 0:
-            # Stack axis
-            return Edge(node1=self, axis1=axis)
-        elif isinstance(self._edges_dict[axis._name][0], Edge):
-            return StackEdge(self._edges_dict[axis._name],
-                             self._node1_lists_dict[axis._name],
-                             node1=self, axis1=axis)
-        elif isinstance(self._edges_dict[axis._name][0], ParamEdge):
-            return ParamStackEdge(self._edges_dict[axis._name],
-                                  self._node1_lists_dict[axis._name],
-                                  node1=self,
-                                  axis1=axis)
-
-
-class ParamStackNode(ParamNode):
-    """
-    Class for parametric stacked nodes. This is a node that stores the information
-    of a list of parametric nodes that are stacked in order to perform some operation
-    """
-
-    def __init__(self,
-                 nodes: Sequence[AbstractNode],
-                 name: Optional[Text] = None,
-                 virtual: bool = False,
-                 override_node: bool = False,
-                 tensor: Optional[Tensor] = None) -> None:
-
-        if not isinstance(nodes, (list, tuple)):
-            raise TypeError('`nodes` should be a list or tuple of nodes')
-
-        for node in nodes:
-            if isinstance(node, (StackNode, ParamStackNode)):
-                raise TypeError(
-                    'Cannot create a stack using (Param)StackNode\'s')
-
-        # TODO: Y en la misma TN todos
-        for i in range(len(nodes[:-1])):
-            if not isinstance(nodes[i], type(nodes[i + 1])):
-                raise TypeError('Cannot stack nodes of different types. Nodes '
-                                'must be either all Node or all ParamNode type')
-            if nodes[i].rank != nodes[i + 1].rank:
-                raise ValueError(
-                    'Cannot stack nodes with different number of edges')
-            if nodes[i].axes_names != nodes[i + 1].axes_names:
-                raise ValueError(
-                    'Stacked nodes must have the same name for each axis')
-            if nodes[i].network != nodes[i + 1].network:
-                raise ValueError(
-                    'Stacked nodes must all be in the same network')
-            for edge1, edge2 in zip(nodes[i].edges, nodes[i + 1].edges):
-                if not isinstance(edge1, type(edge2)):
-                    raise TypeError('Cannot stack nodes with edges of different types. '
-                                    'The edges that are attached to the same axis in '
-                                    'each node must be either all Edge or all ParamEdge type')
-
-        edges_dict = dict()
-        node1_lists_dict = dict()
-        for node in nodes:
-            for axis in node._axes:
-                edge = node[axis]
-                if axis._name not in edges_dict:
-                    edges_dict[axis._name] = [edge]
-                    node1_lists_dict[axis._name] = [axis._node1]
-                else:
-                    edges_dict[axis._name].append(edge)
-                    node1_lists_dict[axis._name].append(axis._node1)
-
-        self._edges_dict = edges_dict
-        self._node1_lists_dict = node1_lists_dict
-        self.nodes = nodes
-
-        # stacked_tensor = torch.stack([node.tensor for node in nodes])
-        if tensor is None:
-            tensor = stack_unequal_tensors([node.tensor for node in nodes])
-        super().__init__(axes_names=['stack'] + nodes[0].axes_names,
-                         name=name,
-                         network=nodes[0]._network,
-                         virtual=virtual,
-                         #  leaf=False,
-                         override_node=override_node,
-                         tensor=tensor)
-
-    @property
-    def edges_dict(self) -> Dict[Text, List[AbstractEdge]]:
-        return self._edges_dict
-
-    @property
-    def node1_lists_dict(self) -> Dict[Text, List[bool]]:
-        return self._node1_lists_dict
-
-    def _make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
-        # TODO: param_edges not used here
-        if axis.num == 0:
-            # Stack axis
-            return Edge(node1=self, axis1=axis)
-        elif isinstance(self._edges_dict[axis._name][0], Edge):
-            return StackEdge(self._edges_dict[axis._name],
-                             self._node1_lists_dict[axis._name],
-                             node1=self, axis1=axis)
-        elif isinstance(self._edges_dict[axis._name][0], ParamEdge):
-            return ParamStackEdge(self._edges_dict[axis._name],
-                                  self._node1_lists_dict[axis._name],
-                                  node1=self,
-                                  axis1=axis)
-
-
+###############################################################################
+#                                 STACK EDGES                                 #
+###############################################################################
 AbstractStackNode = Union[StackNode, ParamStackNode]
 
 
@@ -2669,9 +2845,165 @@ class ParamStackEdge(AbstractStackEdge, ParamEdge):
     # TODO: Cual es la dimension de este edge si apilo las matrices??
 
 
-################################################
-#                TENSOR NETWORK                #
-################################################
+###############################################################################
+#                               EDGE OPERATIONS                               #
+###############################################################################
+def connect(edge1: AbstractEdge, edge2: AbstractEdge) -> Union[Edge, ParamEdge]:
+    """
+    Connect two dangling, non-batch edges.
+    """
+    # TODO: no puedo capar el conectar nodos no-leaf, pero no tiene el resultado esperado,
+    #  en realidad estás conectando los nodos originales (leaf)
+    if edge1 == edge2:
+        return edge1
+
+    for edge in [edge1, edge2]:
+        if not edge.is_dangling():
+            raise ValueError(f'Edge {edge!s} is not a dangling edge. '
+                             f'This edge points to nodes: {edge.node1!s} and {edge.node2!s}')
+        if edge.is_batch():
+            raise ValueError(f'Edge {edge!s} is a batch edge')
+    # if edge1 == edge2:
+    #     raise ValueError(f'Cannot connect edge {edge1!s} to itself')
+    if edge1.dim() != edge2.dim():
+        raise ValueError(f'Cannot connect edges of unequal dimension. '
+                         f'Dimension of edge {edge1!s}: {edge1.dim()}. '
+                         f'Dimension of edge {edge2!s}: {edge2.dim()}')
+    if edge1.size() != edge2.size():
+        # Keep the minimum size
+        if edge1.size() < edge2.size():
+            edge2.change_size(edge1.size())
+        elif edge1.size() > edge2.size():
+            edge1.change_size(edge2.size())
+
+    node1, axis1 = edge1.node1, edge1.axis1
+    node2, axis2 = edge2.node1, edge2.axis1
+    net1, net2 = node1._network, node2._network
+
+    if net1 != net2:
+        node2.move_to_network(net1)
+    net1._remove_edge(edge1)
+    net1._remove_edge(edge2)
+    net = net1
+
+    if isinstance(edge1, ParamEdge) == isinstance(edge2, ParamEdge):
+        if isinstance(edge1, ParamEdge):
+            if isinstance(edge1, ParamStackEdge):
+                new_edge = ParamStackEdge(edges=edge1.edges, node1_lists=edge1.node1_lists,
+                                          node1=node1, axis1=axis1,
+                                          node2=node2, axis2=axis2)
+                # net._add_edge(new_edge)
+            else:
+                shift = edge1.shift
+                slope = edge1.slope
+                new_edge = ParamEdge(node1=node1, axis1=axis1,
+                                     shift=shift, slope=slope,
+                                     node2=node2, axis2=axis2)
+                net._add_edge(new_edge)
+        else:
+            if isinstance(edge1, StackEdge):
+                new_edge = StackEdge(edges=edge1.edges, node1_lists=edge1.node1_lists,
+                                     node1=node1, axis1=axis1,
+                                     node2=node2, axis2=axis2)
+            else:
+                new_edge = Edge(node1=node1, axis1=axis1,
+                                node2=node2, axis2=axis2)
+    else:
+        if isinstance(edge1, ParamEdge):
+            shift = edge1.shift
+            slope = edge1.slope
+        else:
+            shift = edge2.shift
+            slope = edge2.slope
+        new_edge = ParamEdge(node1=node1, axis1=axis1,
+                             shift=shift, slope=slope,
+                             node2=node2, axis2=axis2)
+        net._add_edge(new_edge)
+
+    node1._add_edge(new_edge, axis1, True)
+    node2._add_edge(new_edge, axis2, False)
+    return new_edge
+
+
+def connect_stack(edge1: AbstractStackEdge, edge2: AbstractStackEdge):
+    """
+    Connect stack edges only if their lists of edges are the same
+    (coming from already connected edges)
+    """
+    if not isinstance(edge1, AbstractStackEdge) or \
+            not isinstance(edge2, AbstractStackEdge):
+        raise TypeError('Both edges should be (Param)StackEdge\'s')
+
+    if edge1.edges != edge2.edges:
+        raise ValueError('Cannot connect stack edges whose lists of'
+                         ' edges are not the same. They will be the '
+                         'same when both lists contain edges connecting'
+                         ' the nodes that formed the stack nodes.')
+    return connect(edge1=edge1, edge2=edge2)
+
+
+def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
+                                                      Union[Edge, ParamEdge]]:
+    """
+    Disconnect an edge, returning a couple of dangling edges
+    """
+    if edge.is_dangling():
+        raise ValueError('Cannot disconnect a dangling edge')
+
+    nodes = []
+    axes = []
+    for axis, node in zip(edge._axes, edge._nodes):
+        if edge in node._edges:
+            nodes.append(node)
+            axes.append(axis)
+
+    new_edges = []
+    first = True
+    for axis, node in zip(axes, nodes):
+        if isinstance(edge, Edge):
+            if isinstance(edge, StackEdge):
+                new_edge = StackEdge(edges=edge.edges,
+                                     node1_lists=edge.node1_lists,
+                                     node1=node,
+                                     axis1=axis)
+                new_edges.append(new_edge)
+
+            else:
+                new_edge = Edge(node1=node, axis1=axis)
+                new_edges.append(new_edge)
+
+                net = node._network
+                net._add_edge(new_edge)
+        else:
+            if isinstance(edge, ParamStackEdge):
+                new_edge = ParamStackEdge(edges=edge.edges,
+                                          node1_lists=edge.node1_lists,
+                                          node1=node,
+                                          axis1=axis)
+                new_edges.append(new_edge)
+
+            else:
+                shift = edge.shift
+                slope = edge.slope
+                new_edge = ParamEdge(node1=node, axis1=axis,
+                                     shift=shift, slope=slope)
+                new_edges.append(new_edge)
+
+                net = node._network
+                if first:
+                    net._remove_edge(edge)
+                    first = False
+                net._add_edge(new_edge)
+
+    for axis, node, new_edge in zip(axes, nodes, new_edges):
+        node._add_edge(new_edge, axis, True)
+
+    return tuple(new_edges)
+
+
+###############################################################################
+#                                   SUCCESSOR                                 #
+###############################################################################
 class Successor:
     """
     Class for successors. Object that stores information about
@@ -2697,6 +3029,9 @@ class Successor:
         self.hints = hints
 
 
+###############################################################################
+#                                TENSOR NETWORK                               #
+###############################################################################
 class TensorNetwork(nn.Module):
     """
     General class for Tensor Networks. Subclass of PyTorch nn.Module.
@@ -3439,159 +3774,3 @@ class TensorNetwork(nn.Module):
     # TODO: Function to build instructions and reallocate memory, optimized for a function
     #  (se deben reasignar los par'ametros)
     # TODO: Function to allocate one memory tensor for each node, like old mode
-
-
-################################################
-#               EDGE OPERATIONS                #
-################################################
-def connect(edge1: AbstractEdge, edge2: AbstractEdge) -> Union[Edge, ParamEdge]:
-    """
-    Connect two dangling, non-batch edges.
-    """
-    # TODO: no puedo capar el conectar nodos no-leaf, pero no tiene el resultado esperado,
-    #  en realidad estás conectando los nodos originales (leaf)
-    if edge1 == edge2:
-        return edge1
-
-    for edge in [edge1, edge2]:
-        if not edge.is_dangling():
-            raise ValueError(f'Edge {edge!s} is not a dangling edge. '
-                             f'This edge points to nodes: {edge.node1!s} and {edge.node2!s}')
-        if edge.is_batch():
-            raise ValueError(f'Edge {edge!s} is a batch edge')
-    # if edge1 == edge2:
-    #     raise ValueError(f'Cannot connect edge {edge1!s} to itself')
-    if edge1.dim() != edge2.dim():
-        raise ValueError(f'Cannot connect edges of unequal dimension. '
-                         f'Dimension of edge {edge1!s}: {edge1.dim()}. '
-                         f'Dimension of edge {edge2!s}: {edge2.dim()}')
-    if edge1.size() != edge2.size():
-        # Keep the minimum size
-        if edge1.size() < edge2.size():
-            edge2.change_size(edge1.size())
-        elif edge1.size() > edge2.size():
-            edge1.change_size(edge2.size())
-
-    node1, axis1 = edge1.node1, edge1.axis1
-    node2, axis2 = edge2.node1, edge2.axis1
-    net1, net2 = node1._network, node2._network
-
-    if net1 != net2:
-        node2.move_to_network(net1)
-    net1._remove_edge(edge1)
-    net1._remove_edge(edge2)
-    net = net1
-
-    if isinstance(edge1, ParamEdge) == isinstance(edge2, ParamEdge):
-        if isinstance(edge1, ParamEdge):
-            if isinstance(edge1, ParamStackEdge):
-                new_edge = ParamStackEdge(edges=edge1.edges, node1_lists=edge1.node1_lists,
-                                          node1=node1, axis1=axis1,
-                                          node2=node2, axis2=axis2)
-                # net._add_edge(new_edge)
-            else:
-                shift = edge1.shift
-                slope = edge1.slope
-                new_edge = ParamEdge(node1=node1, axis1=axis1,
-                                     shift=shift, slope=slope,
-                                     node2=node2, axis2=axis2)
-                net._add_edge(new_edge)
-        else:
-            if isinstance(edge1, StackEdge):
-                new_edge = StackEdge(edges=edge1.edges, node1_lists=edge1.node1_lists,
-                                     node1=node1, axis1=axis1,
-                                     node2=node2, axis2=axis2)
-            else:
-                new_edge = Edge(node1=node1, axis1=axis1,
-                                node2=node2, axis2=axis2)
-    else:
-        if isinstance(edge1, ParamEdge):
-            shift = edge1.shift
-            slope = edge1.slope
-        else:
-            shift = edge2.shift
-            slope = edge2.slope
-        new_edge = ParamEdge(node1=node1, axis1=axis1,
-                             shift=shift, slope=slope,
-                             node2=node2, axis2=axis2)
-        net._add_edge(new_edge)
-
-    node1._add_edge(new_edge, axis1, True)
-    node2._add_edge(new_edge, axis2, False)
-    return new_edge
-
-
-def connect_stack(edge1: AbstractStackEdge, edge2: AbstractStackEdge):
-    """
-    Connect stack edges only if their lists of edges are the same
-    (coming from already connected edges)
-    """
-    if not isinstance(edge1, AbstractStackEdge) or \
-            not isinstance(edge2, AbstractStackEdge):
-        raise TypeError('Both edges should be (Param)StackEdge\'s')
-
-    if edge1.edges != edge2.edges:
-        raise ValueError('Cannot connect stack edges whose lists of'
-                         ' edges are not the same. They will be the '
-                         'same when both lists contain edges connecting'
-                         ' the nodes that formed the stack nodes.')
-    return connect(edge1=edge1, edge2=edge2)
-
-
-def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
-                                                      Union[Edge, ParamEdge]]:
-    """
-    Disconnect an edge, returning a couple of dangling edges
-    """
-    if edge.is_dangling():
-        raise ValueError('Cannot disconnect a dangling edge')
-
-    nodes = []
-    axes = []
-    for axis, node in zip(edge._axes, edge._nodes):
-        if edge in node._edges:
-            nodes.append(node)
-            axes.append(axis)
-
-    new_edges = []
-    first = True
-    for axis, node in zip(axes, nodes):
-        if isinstance(edge, Edge):
-            if isinstance(edge, StackEdge):
-                new_edge = StackEdge(edges=edge.edges,
-                                     node1_lists=edge.node1_lists,
-                                     node1=node,
-                                     axis1=axis)
-                new_edges.append(new_edge)
-
-            else:
-                new_edge = Edge(node1=node, axis1=axis)
-                new_edges.append(new_edge)
-
-                net = node._network
-                net._add_edge(new_edge)
-        else:
-            if isinstance(edge, ParamStackEdge):
-                new_edge = ParamStackEdge(edges=edge.edges,
-                                          node1_lists=edge.node1_lists,
-                                          node1=node,
-                                          axis1=axis)
-                new_edges.append(new_edge)
-
-            else:
-                shift = edge.shift
-                slope = edge.slope
-                new_edge = ParamEdge(node1=node, axis1=axis,
-                                     shift=shift, slope=slope)
-                new_edges.append(new_edge)
-
-                net = node._network
-                if first:
-                    net._remove_edge(edge)
-                    first = False
-                net._add_edge(new_edge)
-
-    for axis, node, new_edge in zip(axes, nodes, new_edges):
-        node._add_edge(new_edge, axis, True)
-
-    return tuple(new_edges)

@@ -2339,6 +2339,7 @@ class Edge(AbstractEdge):
 
 
 EdgeParameter = Union[int, float, Parameter]
+_DEFAULT_SHIFT = -0.5
 _DEFAULT_SLOPE = 1.
 
 class ParamEdge(AbstractEdge, nn.Module):
@@ -2433,7 +2434,10 @@ class ParamEdge(AbstractEdge, nn.Module):
                               'when initializing the edge, since dim was provided')
             shift, slope = self.compute_parameters(node1.size(axis1), dim)
         else:
-            shift, slope = self.compute_parameters(node1.size(axis1), node1.size(axis1))
+            if shift is None:
+                shift = _DEFAULT_SHIFT
+            if slope is None:
+                slope = _DEFAULT_SLOPE
 
         self._sigmoid = nn.Sigmoid()
         self._matrix = None
@@ -2513,7 +2517,8 @@ class ParamEdge(AbstractEdge, nn.Module):
             raise TypeError('`dim` should be int type')
         if dim > size:
             raise ValueError('`dim` should be smaller or equal than `size`')
-        shift = dim - 0.5
+        # shift = dim - 0.5
+        shift = (size - dim) - 0.5
         slope = _DEFAULT_SLOPE
         return shift, slope
 
@@ -2567,7 +2572,8 @@ class ParamEdge(AbstractEdge, nn.Module):
         matrix = torch.zeros((self.size(), self.size()),
                              device=self.shift.device)
         i = torch.arange(self.size(), device=self.shift.device)
-        matrix[(i, i)] = self.sigmoid(self.slope * (self.shift - i))
+        # matrix[(i, i)] = self.sigmoid(self.slope * (self.shift - i))
+        matrix[(i, i)] = self.sigmoid(self.slope * (i - self.shift))
         return matrix
 
     def set_matrix(self) -> None:

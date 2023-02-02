@@ -5492,14 +5492,14 @@ class TestStackUnbind:
         assert stack_node.edges_dict['input_1'][0].shift == -1.
         assert stack_node.edges_dict['input_1'][0].slope == 30.
         assert stack_node.edges_dict['input_1'][1].shift == -0.5
-        assert stack_node.edges_dict['input_1'][1].slope == 20.
+        assert stack_node.edges_dict['input_1'][1].slope == 1.
 
         # Parameters of each edge remain the same even after connecting
         stack_node['input_1'] ^ stack_input_1['feature']
         assert stack_node.edges_dict['input_1'][0].shift == -1.
         assert stack_node.edges_dict['input_1'][0].slope == 30.
         assert stack_node.edges_dict['input_1'][1].shift == -0.5
-        assert stack_node.edges_dict['input_1'][1].slope == 20.
+        assert stack_node.edges_dict['input_1'][1].slope == 1.
         
     def test_unbind_no_stack(self):
         node = tk.Node(shape=(10, 2),

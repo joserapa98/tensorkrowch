@@ -39,7 +39,7 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Operations" href="node_operations.html" />
+    <link rel="next" title="Node Operations" href="node_operations.html" />
     <link rel="prev" title="API Reference" href="api.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
@@ -118,7 +118,7 @@
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="node_operations.html">
-     Operations
+     Node Operations
     </a>
    </li>
    <li class="toctree-l2">
@@ -1013,7 +1013,7 @@ nodes will be non-parameterized (e.g. <a class="reference internal" href="usage.
 is a sort of <cite>parameter</cite> that is attached to the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> (which
 is itself a <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code>). That is, the list of parameters of the tensor
 network module contains the tensors of all <code class="docutils literal notranslate"><span class="pre">ParamNodes</span></code>.</p>
-<p>To see how to initialize `` ParamNodes``, see <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a>.</p>
+<p>To see how to initialize <code class="docutils literal notranslate"><span class="pre">ParamNodes</span></code>, see <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a>.</p>
 <p>For a complete list of properties and methods, see also <a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractNode</span></code></a>.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="tensorkrowch.ParamNode.grad">
@@ -1068,15 +1068,181 @@ extended with the prefix <code class="docutils literal notranslate"><span class=
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.StackNode">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">StackNode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nodes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1_list</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#StackNode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.StackNode" title="Permalink to this definition">#</a></dt>
-<dd><p>Class for stacked nodes. This is a node that stores the information
-of a list of nodes that are stacked in order to perform some operation</p>
+<dd><p>Class for stacked nodes. <code class="docutils literal notranslate"><span class="pre">StackNodes</span></code> are nodes that store the information
+of a list of nodes that are stacked via <a class="reference internal" href="node_operations.html#tensorkrowch.stack" title="tensorkrowch.stack"><code class="xref py py-func docutils literal notranslate"><span class="pre">stack()</span></code></a>, although they can also
+be initialized directly. To do so, there are two options:</p>
+<ul class="simple">
+<li><p>Provide a sequence of nodes: if <code class="docutils literal notranslate"><span class="pre">nodes</span></code> are provided, their tensors will
+be stacked and stored in the <code class="docutils literal notranslate"><span class="pre">StackNode</span></code>. It is necessary that all nodes
+are of the same type (<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> or <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a>), have the same
+rank (although dimension of each leg can be different for different nodes;
+in which case smaller tensors are extended with 0’s to match the dimensions
+of the largest tensor in the stack), same axes names (to ensure only the
+<cite>same kind</cite> of nodes are stacked), belong to the same network and have edges
+with the same type in each axis (<a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edge</span></code></a> or <a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>).</p></li>
+<li><p>Provide a stacked tensor: if the stacked <code class="docutils literal notranslate"><span class="pre">tensor</span></code> is provided, it is also
+necessary to specify the <code class="docutils literal notranslate"><span class="pre">axes_names</span></code>, <code class="docutils literal notranslate"><span class="pre">network</span></code>, <code class="docutils literal notranslate"><span class="pre">edges</span></code>, <code class="docutils literal notranslate"><span class="pre">node1_list</span></code>.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">StackNodes</span></code> have an additional axis for the new <cite>stack</cite> dimension, which
+is a batch edge. This way, some contractions can be computed in parallel by
+first stacking two sequences of nodes (connected pair-wise), performing the
+batch contraction and finally unbinding the <code class="docutils literal notranslate"><span class="pre">StackNodes</span></code> to retrieve just
+one sequence of nodes.</p>
+<p>For the rest of the axes, a list of the edges corresponding to all nodes in
+the stack is stored, so that, when <a class="reference internal" href="node_operations.html#tensorkrowch.unbind" title="tensorkrowch.unbind"><code class="xref py py-func docutils literal notranslate"><span class="pre">unbinding</span></code></a> the stack, it
+can be inferred to which nodes the unbinded nodes have to be connected.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nodes</strong> (<em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>] or </em><em>tuple</em><em>[</em><a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>]</em><em>, </em><em>optional</em>) – Sequence of nodes that are to be stacked.</p></li>
+<li><p><strong>axes_names</strong> (<em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – Sequence of names for each of the node’s axes. Names are used to access
+the edge that is attached to the node in a certain axis. Hence they should
+be all distinct. Necessary if <code class="docutils literal notranslate"><span class="pre">nodes</span></code> are not provided.</p></li>
+<li><p><strong>name</strong> (<em>str</em><em>, </em><em>optional</em>) – Node’s name, used to access the node from de <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> where
+it belongs. It cannot contain blank spaces.</p></li>
+<li><p><strong>network</strong> (<a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><em>TensorNetwork</em></a><em>, </em><em>optional</em>) – Tensor network where the node should belong. Necessary if <code class="docutils literal notranslate"><span class="pre">nodes</span></code> are
+not provided.</p></li>
+<li><p><strong>override_node</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether the node should override (<code class="docutils literal notranslate"><span class="pre">True</span></code>) another
+node in the network that has the same name (e.g. if a node is parameterized,
+it would be required that a new <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> replaces the non-parameterized
+node in the network).</p></li>
+<li><p><strong>tensor</strong> (<em>torch.Tensor</em><em>, </em><em>optional</em>) – Tensor that is to be stored in the node. Necessary if <code class="docutils literal notranslate"><span class="pre">nodes</span></code> are not
+provided.</p></li>
+<li><p><strong>edges</strong> (<em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.AbstractEdge" title="tensorkrowch.AbstractEdge"><em>AbstractEdge</em></a><em>]</em><em>, </em><em>optional</em>) – List of edges that are to be attached to the node. Necessary if <code class="docutils literal notranslate"><span class="pre">nodes</span></code>
+are not provided.</p></li>
+<li><p><strong>node1_list</strong> (<em>list</em><em>[</em><em>bool</em><em>]</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">edges</span></code> are provided, the list of <code class="docutils literal notranslate"><span class="pre">node1</span></code> attributes of each edge
+should also be provided. Necessary if <code class="docutils literal notranslate"><span class="pre">nodes</span></code> are not provided.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">net</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+<span class="gp">... </span>                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                  <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">)</span>
+<span class="gp">... </span>         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,),</span>
+<span class="gp">... </span>                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;feature&#39;</span><span class="p">,),</span>
+<span class="gp">... </span>                 <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">)</span>
+<span class="gp">... </span>        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">_</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stack_nodes</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stack_data</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># It is necessary to re-connect stacks</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">stack_nodes</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack_data</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">stack_nodes</span> <span class="o">@</span> <span class="n">stack_data</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="go">unbind_0</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">axes</span><span class="p">)</span>
+<span class="go">[Axis( left (0) ), Axis( right (1) )]</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="go">torch.Size([2, 2])</span>
+</pre></div>
+</div>
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.StackNode.edges_dict">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">edges_dict</span></span><a class="headerlink" href="#tensorkrowch.StackNode.edges_dict" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns dictionary with list of edges of each axis.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.StackNode.node1_lists_dict">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">node1_lists_dict</span></span><a class="headerlink" href="#tensorkrowch.StackNode.node1_lists_dict" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns a dictionary with list of <code class="docutils literal notranslate"><span class="pre">node1_list</span></code> attribute of each axis.</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.ParamStackNode">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ParamStackNode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nodes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">virtual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamStackNode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamStackNode" title="Permalink to this definition">#</a></dt>
-<dd><p>Class for parametric stacked nodes. This is a node that stores the information
-of a list of parametric nodes that are stacked in order to perform some operation</p>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ParamStackNode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nodes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">virtual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamStackNode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamStackNode" title="Permalink to this definition">#</a></dt>
+<dd><p>Class for parametric stacked nodes. They are essentially the same as
+<a class="reference internal" href="#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">StackNodes</span></code></a> but they are also <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNodes</span></code></a>.
+They are used to optimize memory usage and save some time when the first
+operation that occurs to param-nodes in a contraction (that might be
+computed several times during training) is <a class="reference internal" href="node_operations.html#tensorkrowch.stack" title="tensorkrowch.stack"><code class="xref py py-func docutils literal notranslate"><span class="pre">stack()</span></code></a>. If this is the case,
+the param-nodes no longer store their own tensors, but rather they make
+reference to a slide of a greater <code class="docutils literal notranslate"><span class="pre">ParamStackNode</span></code> (if <code class="docutils literal notranslate"><span class="pre">automemory</span></code> attribute
+of the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>). Hence, that first <a class="reference internal" href="node_operations.html#tensorkrowch.stack" title="tensorkrowch.stack"><code class="xref py py-func docutils literal notranslate"><span class="pre">stack()</span></code></a>
+is never computed.</p>
+<p><code class="docutils literal notranslate"><span class="pre">ParamStackNodes</span></code> can only be instantiated by providing a sequence of nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nodes</strong> (<em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>] or </em><em>tuple</em><em>[</em><a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>]</em><em>, </em><em>optional</em>) – Sequence of nodes that are to be stacked.</p></li>
+<li><p><strong>name</strong> (<em>str</em><em>, </em><em>optional</em>) – Node’s name, used to access the node from de <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> where
+it belongs. It cannot contain blank spaces.</p></li>
+<li><p><strong>virtual</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">virtual</span></code> node. Since it will be
+used mainly for the case described <a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">here</span></code></a>, the
+node will be virtual, since it will not be an <cite>effective</cite> part of the
+tensor network, but rather a <cite>virtual</cite> node used just to store tensors.</p></li>
+<li><p><strong>override_node</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether the node should override (<code class="docutils literal notranslate"><span class="pre">True</span></code>) another
+node in the network that has the same name (e.g. if a node is parameterized,
+it would be required that a new <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> replaces the non-parameterized
+node in the network).</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">net</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">net</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+<span class="gp">... </span>                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                  <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">,</span>
+<span class="gp">... </span>                  <span class="n">param_node</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">... </span>         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,),</span>
+<span class="gp">... </span>                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;feature&#39;</span><span class="p">,),</span>
+<span class="gp">... </span>                 <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">)</span>
+<span class="gp">... </span>        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">_</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stack_nodes</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stack_nodes</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;my_stack&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># ._tensor_info has info regarding where the node&#39;s tensor is stored</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="go">my_stack</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">stack_data</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># It is necessary to re-connect stacks</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">stack_nodes</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack_data</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">stack_nodes</span> <span class="o">@</span> <span class="n">stack_data</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="go">unbind_0</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">axes</span><span class="p">)</span>
+<span class="go">[Axis( left (0) ), Axis( right (1) )]</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="go">torch.Size([2, 2])</span>
+</pre></div>
+</div>
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.ParamStackNode.edges_dict">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">edges_dict</span></span><a class="headerlink" href="#tensorkrowch.ParamStackNode.edges_dict" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns dictionary with list of edges of each axis.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.ParamStackNode.node1_lists_dict">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">node1_lists_dict</span></span><a class="headerlink" href="#tensorkrowch.ParamStackNode.node1_lists_dict" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns a dictionary with list of <code class="docutils literal notranslate"><span class="pre">node1_list</span></code> attribute of each axis.</p>
+</dd></dl>
+
 </dd></dl>
 
 </section>
@@ -1351,18 +1517,27 @@ two dangling edges, one for each node.</p>
 <dd><p>Base class for trainable edges. Subclass of Pytorch <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code>.</p>
 <p>A parametric edge is an edge whose dimension can be learned. To do so, each
 param-edge carries a diagonal square matrix that has the same size as the edge.
-The diagonal is filled with as many 1’s as the dimension, and the rest with
-0’s.</p>
+The diagonal is filled with 0’s and 1’s (as many as the dimension).</p>
 <p>The dimension is modelled by a sigmoid following the equation:</p>
 <div class="math notranslate nohighlight">
-\[D_{i,i} = \sigma(slope \cdot (shift - i))\]</div>
-<p>where <span class="math notranslate nohighlight">\(D_{i,i}\)</span> are the elements of the diagonal, <span class="math notranslate nohighlight">\(\sigma\)</span> is the
+\[D_{i,i} = \sigma(slope \cdot (i - shift))\]</div>
+<p>where <span class="math notranslate nohighlight">\(D_{i,j}\)</span> is the diagonal square matrix, <span class="math notranslate nohighlight">\(\sigma\)</span> is the
 sigmoid function, and <code class="docutils literal notranslate"><span class="pre">slope</span></code> and <code class="docutils literal notranslate"><span class="pre">shift</span></code> are the learnable parameters.
-When a certain dimension is specified, <code class="docutils literal notranslate"><span class="pre">shift</span></code> is initialized as <code class="docutils literal notranslate"><span class="pre">dim</span> <span class="pre">-</span> <span class="pre">0.5</span></code>,
-so that the sigmoid has non-zero gradient at the current dimension. Hence,
-during training the matrix will not have only 1’s and 0’s, but some numbers
-close to 1, and some others between 0 and 1. The dimension will be taken as
-the number of elements in the diagonal that are greater than 0.5.</p>
+When a certain dimension is specified, <code class="docutils literal notranslate"><span class="pre">shift</span></code> is initialized as <code class="docutils literal notranslate"><span class="pre">(size</span>
+<span class="pre">-</span> <span class="pre">dim)</span> <span class="pre">-</span> <span class="pre">0.5</span></code>, so that the sigmoid has non-zero gradient at the current
+dimension. Hence, during training the matrix will not only have 0’s and 1’s
+on the diagonal, but some numbers between 0 and 1, and some others close to
+1. The dimension will be taken as the number of elements in the diagonal that
+are greater than 0.5.</p>
+<p>This way, when contracting two nodes connected with a <code class="docutils literal notranslate"><span class="pre">ParamEdge</span></code>, its matrix
+will be included in the contraction via:</p>
+<div class="math notranslate nohighlight">
+\[T_{\alpha_1, \ldots, \alpha_n, \beta_1, \ldots, \beta_m} =
+    \sum_{\gamma}{T^{node_1}_{\alpha_1, \ldots, \alpha_n, \gamma}
+    D_{\gamma, \gamma}T^{node_2}_{\gamma, \beta_1, \ldots, \beta_n}}\]</div>
+<p>Conversely, for <a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edges</span></code></a>, <span class="math notranslate nohighlight">\(D_{i,j}\)</span> would be the identity
+matrix, thus having no effect on the contraction. Hence, <span class="math notranslate nohighlight">\(D_{i,j}\)</span> models
+an effective dimension for <code class="docutils literal notranslate"><span class="pre">ParamEdges</span></code>.</p>
 <p>This implementation is based on the following work: <a class="reference external" href="https://arxiv.org/abs/2203.03366">https://arxiv.org/abs/2203.03366</a></p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -1460,7 +1635,7 @@ of the param-edge, and creates the corresponding matrix.</p>
 <dt class="sig sig-object py" id="tensorkrowch.ParamEdge.make_matrix">
 <span class="sig-name descname"><span class="pre">make_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamEdge.make_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamEdge.make_matrix" title="Permalink to this definition">#</a></dt>
 <dd><p>Creates the matrix based on <code class="docutils literal notranslate"><span class="pre">shift</span></code> and <code class="docutils literal notranslate"><span class="pre">slope</span></code>. The matrix is a
-diagonal square matrix with (almost) 1’s and 0’s in the diagonal.</p>
+diagonal square matrix with (almost) 0’s and 1’s on the diagonal.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1480,7 +1655,7 @@ although the tensor’s shape can be fixed through the whole training process,
 what is learned is an <cite>effective</cite> dimension.</p>
 <p>The dimension is modelled by a sigmoid following the equation:</p>
 <div class="math notranslate nohighlight">
-\[D_{i,i} = \sigma(slope \cdot (shift - i))\]</div>
+\[D_{i,i} = \sigma(slope \cdot (i - shift))\]</div>
 <p>as explained <a class="reference internal" href="#tensorkrowch.AbstractEdge" title="tensorkrowch.AbstractEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">here</span></code></a>.</p>
 </dd></dl>
 
@@ -1597,17 +1772,182 @@ splitted into two dangling param-edges, one for each node.</p>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">StackEdge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edges</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1_lists</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#StackEdge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.StackEdge" title="Permalink to this definition">#</a></dt>
 <dd><p>Base class for stacks of non-trainable edges.
 Used for stacked contractions</p>
+<p>Class for non-trainable stack edges. They are just like <a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edges</span></code></a>
+but used when stacking a collection of nodes into a <a class="reference internal" href="#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">StackNode</span></code></a>. When
+doing this, all edges of the stacked nodes must be kept, since they have the
+information regarding the nodes’ neighbours, which will be used when :func:
+<cite>unbinding &lt;unbind&gt;</cite> the stack. Thus, <code class="docutils literal notranslate"><span class="pre">StackEdges</span></code> have two additional
+properties, <code class="docutils literal notranslate"><span class="pre">edges</span></code> and <code class="docutils literal notranslate"><span class="pre">node`_lists</span></code>, that is, the edges of all stacked
+nodes corresponding to a certain axis, and their <code class="docutils literal notranslate"><span class="pre">node1_list</span></code>’s.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>edges</strong> (<em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a><em>]</em>) – List of non-trainable edges that will be stacked.</p></li>
+<li><p><strong>node1_lists</strong> (<em>list</em><em>[</em><em>bool</em><em>]</em>) – List of <code class="docutils literal notranslate"><span class="pre">node1_list</span></code>’s corresponding to each edge in <code class="docutils literal notranslate"><span class="pre">edges</span></code>.</p></li>
+<li><p><strong>node1</strong> (<a class="reference internal" href="#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><em>StackNode</em></a><em> or </em><a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><em>ParamStackNode</em></a>) – First node to which the edge is connected.</p></li>
+<li><p><strong>axis1</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a>) – Axis of <code class="docutils literal notranslate"><span class="pre">node1</span></code> where the edge is attached.</p></li>
+<li><p><strong>node2</strong> (<a class="reference internal" href="#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><em>StackNode</em></a><em> or </em><a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><em>ParamStackNode</em></a><em>, </em><em>optional</em>) – Second node to which the edge is connected. If None, the edge will be
+dangling.</p></li>
+<li><p><strong>axis2</strong> (<em>int</em><em>, </em><em>str</em><em>, </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – Axis of <code class="docutils literal notranslate"><span class="pre">node2</span></code> where the edge is attached.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.StackEdge.edges">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">edges</span></span><a class="headerlink" href="#tensorkrowch.StackEdge.edges" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns list of stacked edges corresponding to this axis.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.StackEdge.node1_lists">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">node1_lists</span></span><a class="headerlink" href="#tensorkrowch.StackEdge.node1_lists" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns list of <code class="docutils literal notranslate"><span class="pre">node1_list</span></code>’s corresponding to this axis.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.StackEdge.connect">
+<span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#StackEdge.connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.StackEdge.connect" title="Permalink to this definition">#</a></dt>
+<dd><p>Same as <a class="reference internal" href="#tensorkrowch.Edge.connect" title="tensorkrowch.Edge.connect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">connect()</span></code></a> but it is verified that all stacked edges
+corresponding to both <code class="docutils literal notranslate"><span class="pre">StackEdges</span></code> are the same. That is, this is a
+redundant operation to re-connect a list of edges that should be already
+connected. However, this is mandatory, since when stacking two sequences
+of nodes independently it cannot be inferred that the resultant <code class="docutils literal notranslate"><span class="pre">StackNodes</span></code>
+had to be connected.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>other</strong> (<a class="reference internal" href="#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge"><em>StackEdge</em></a>) – The other edge to which current edge will be connected.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge">StackEdge</a></p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<p>To connect two stack-edges, the overloaded operator <code class="docutils literal notranslate"><span class="pre">^</span></code> can also be used.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">net</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+<span class="gp">... </span>                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                  <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">)</span>
+<span class="gp">... </span>         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,),</span>
+<span class="gp">... </span>                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;feature&#39;</span><span class="p">,),</span>
+<span class="gp">... </span>                 <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">)</span>
+<span class="gp">... </span>        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">_</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stack_nodes</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stack_data</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># It is necessary to re-connect stacks to be able to contract</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">stack_nodes</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack_data</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.ParamStackEdge">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ParamStackEdge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edges</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1_lists</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamStackEdge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamStackEdge" title="Permalink to this definition">#</a></dt>
-<dd><p>Base class for stacks of trainable edges.
-Used for stacked contractions</p>
+<dd><p>Class for stacks of trainable edges. Just as for <a class="reference internal" href="#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">StackEdge</span></code></a>, this
+class is the stacked version of <a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>, with the additional
+properties <code class="docutils literal notranslate"><span class="pre">edges</span></code> and <code class="docutils literal notranslate"><span class="pre">node1_lists</span></code>.</p>
+<p>Furthermore, since <code class="docutils literal notranslate"><span class="pre">ParamEdges</span></code> have a trainable dimension modelled via
+a diagonal square matrix, and this might be different for every param-edge
+that is being stacked, <code class="docutils literal notranslate"><span class="pre">ParamStackEdge</span></code> will model the dimension differently.</p>
+<p>Instead of constructing a diagonal matrix, it will construct a 3-rank tensor
+<span class="math notranslate nohighlight">\(D^b_{i,j}\)</span> such that, for each <span class="math notranslate nohighlight">\(b\)</span>, it is the matrix of the
+<span class="math notranslate nohighlight">\(b\)</span>
+that are connected with a <code class="docutils literal notranslate"><span class="pre">ParamStackEdge</span></code>, its 3-rank tensor will be
+included in the contraction via</p>
+<div class="math notranslate nohighlight">
+\[T^b_{\alpha_1, \ldots, \alpha_n, \beta_1, \ldots, \beta_m} =
+    \sum_{\gamma}{T^{node_1, b}_{\alpha_1, \ldots, \alpha_n, \gamma}
+    D^b_{\gamma, \gamma}T^{node_2, b}_{\gamma, \beta_1, \ldots, \beta_n}}\]</div>
+<p>That is, the 3-rank tensor also performs a batch contraction.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although param-edges can be used without causing any error, it is not
+clear if the dimension can be really learned this way. Following the
+original <a class="reference external" href="https://arxiv.org/abs/2203.03366">paper</a>, a regularization
+should be added to the loss function in order to have non-zero gradients.
+However, in our experiments, that was not enough to drive the training
+towards a regime where the dimension plays a relevant role.</p>
+<p>Hence, this class will not be updated until further investigation is
+carried out.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>edges</strong> (<em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><em>ParamEdge</em></a><em>]</em>) – List of non-trainable param-edges that will be stacked.</p></li>
+<li><p><strong>node1_lists</strong> (<em>list</em><em>[</em><em>bool</em><em>]</em>) – List of <code class="docutils literal notranslate"><span class="pre">node1_list</span></code>’s corresponding to each edge in <code class="docutils literal notranslate"><span class="pre">edges</span></code>.</p></li>
+<li><p><strong>node1</strong> (<a class="reference internal" href="#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><em>StackNode</em></a><em> or </em><a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><em>ParamStackNode</em></a>) – First node to which the edge is connected.</p></li>
+<li><p><strong>axis1</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a>) – Axis of <code class="docutils literal notranslate"><span class="pre">node1</span></code> where the edge is attached.</p></li>
+<li><p><strong>node2</strong> (<a class="reference internal" href="#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><em>StackNode</em></a><em> or </em><a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><em>ParamStackNode</em></a><em>, </em><em>optional</em>) – Second node to which the edge is connected. If None, the edge will be
+dangling.</p></li>
+<li><p><strong>axis2</strong> (<em>int</em><em>, </em><em>str</em><em>, </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – Axis of <code class="docutils literal notranslate"><span class="pre">node2</span></code> where the edge is attached.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.ParamStackEdge.edges">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">edges</span></span><a class="headerlink" href="#tensorkrowch.ParamStackEdge.edges" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns list of stacked edges corresponding to this axis.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.ParamStackEdge.node1_lists">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">node1_lists</span></span><a class="headerlink" href="#tensorkrowch.ParamStackEdge.node1_lists" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns list of <code class="docutils literal notranslate"><span class="pre">node1_list</span></code>’s corresponding to this axis.</p>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="tensorkrowch.ParamStackEdge.matrix">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">matrix</span></span><a class="headerlink" href="#tensorkrowch.ParamStackEdge.matrix" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns diagonal square matrix that models the dimension.</p>
+<dd><p>Returns 3-rank tensor that models the dimension of all stacked edges.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.ParamStackEdge.connect">
+<span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamStackEdge.connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamStackEdge.connect" title="Permalink to this definition">#</a></dt>
+<dd><p>Same as <a class="reference internal" href="#tensorkrowch.ParamEdge.connect" title="tensorkrowch.ParamEdge.connect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">connect()</span></code></a> but it is verified that all stacked
+edges corresponding to both <code class="docutils literal notranslate"><span class="pre">ParamStackEdges</span></code> are the same. That is,
+this is a redundant operation to re-connect a list of edges that should
+be already connected. However, this is mandatory, since when stacking
+two sequences of nodes independently it cannot be inferred that the
+resultant <code class="docutils literal notranslate"><span class="pre">ParamStackNodes</span></code> had to be connected.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>other</strong> (<a class="reference internal" href="#tensorkrowch.ParamStackEdge" title="tensorkrowch.ParamStackEdge"><em>ParamStackEdge</em></a>) – The other edge to which current edge will be connected.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.ParamStackEdge" title="tensorkrowch.ParamStackEdge">ParamStackEdge</a></p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<p>To connect two stack-edges, the overloaded operator <code class="docutils literal notranslate"><span class="pre">^</span></code> can also be used.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">net</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+<span class="gp">... </span>                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                  <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">,</span>
+<span class="gp">... </span>                  <span class="n">param_edges</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">... </span>         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,),</span>
+<span class="gp">... </span>                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;feature&#39;</span><span class="p">,),</span>
+<span class="gp">... </span>                 <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">)</span>
+<span class="gp">... </span>        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">_</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stack_nodes</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stack_data</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># It is necessary to re-connect stacks to be able to contract</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">stack_nodes</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack_data</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </dd></dl>
@@ -1773,7 +2113,7 @@ computing forward.</p>
     <a class='right-next' id="next-link" href="node_operations.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Operations</p>
+        <p class="prev-next-title">Node Operations</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>

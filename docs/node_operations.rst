@@ -1,12 +1,27 @@
-Operations
-==========
+Node Operations
+===============
 
 .. currentmodule:: tensorkrowch
 
+
+Connect/Disconnect Edges
+------------------------
+
+.. autofunction:: connect
+
+.. autofunction:: connect_stack
+
+.. autofunction:: disconnect
+
+
+Operation Class
+---------------
+
 .. autoclass:: Operation
 
-Basic Operations
-----------------
+
+Tensor-like Operations
+----------------------
 
 .. autofunction:: tprod
 
@@ -19,8 +34,8 @@ Basic Operations
 .. autofunction:: permute
 
 
-Node Operations
----------------
+Node-like Operations
+--------------------
 
 .. autofunction:: split
 

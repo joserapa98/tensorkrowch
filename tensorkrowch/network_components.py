@@ -1521,7 +1521,10 @@ class Node(AbstractNode):
         return tensor
     
     def _make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
-        """Makes Edges or ParamEdges depending on the ``param_edges`` attribute"""
+        """
+        Makes ``Edges`` or ``ParamEdges`` depending on the ``param_edges``
+        attribute.
+        """
         if param_edges:
             return ParamEdge(node1=self, axis1=axis)
         return Edge(node1=self, axis1=axis)
@@ -1598,7 +1601,7 @@ class ParamNode(Node):
     is itself a ``nn.Module``). That is, the list of parameters of the tensor
     network module contains the tensors of all ``ParamNodes``. 
     
-    To see how to initialize `` ParamNodes``, see :class:`Node`.
+    To see how to initialize ``ParamNodes``, see :class:`Node`.
     
     For a complete list of properties and methods, see also :class:`AbstractNode`.
     """
@@ -1751,8 +1754,90 @@ class ParamNode(Node):
 ###############################################################################
 class StackNode(Node):
     """
-    Class for stacked nodes. This is a node that stores the information
-    of a list of nodes that are stacked in order to perform some operation
+    Class for stacked nodes. ``StackNodes`` are nodes that store the information
+    of a list of nodes that are stacked via :func:`stack`, although they can also
+    be initialized directly. To do so, there are two options:
+    
+    * Provide a sequence of nodes: if ``nodes`` are provided, their tensors will
+      be stacked and stored in the ``StackNode``. It is necessary that all nodes
+      are of the same type (:class:`Node` or :class:`ParamNode`), have the same
+      rank (although dimension of each leg can be different for different nodes;
+      in which case smaller tensors are extended with 0's to match the dimensions
+      of the largest tensor in the stack), same axes names (to ensure only the
+      `same kind` of nodes are stacked), belong to the same network and have edges
+      with the same type in each axis (:class:`Edge` or :class:`ParamEdge`).
+      
+    * Provide a stacked tensor: if the stacked ``tensor`` is provided, it is also
+      necessary to specify the ``axes_names``, ``network``, ``edges``, ``node1_list``.
+      
+    ``StackNodes`` have an additional axis for the new `stack` dimension, which
+    is a batch edge. This way, some contractions can be computed in parallel by
+    first stacking two sequences of nodes (connected pair-wise), performing the
+    batch contraction and finally unbinding the ``StackNodes`` to retrieve just
+    one sequence of nodes.
+    
+    For the rest of the axes, a list of the edges corresponding to all nodes in
+    the stack is stored, so that, when :func:`unbinding <unbind>` the stack, it
+    can be inferred to which nodes the unbinded nodes have to be connected.
+    
+    Parameters
+    ----------
+    nodes : list[AbstractNode] or tuple[AbstractNode], optional
+        Sequence of nodes that are to be stacked.
+    axes_names : list[str], tuple[str], optional
+        Sequence of names for each of the node's axes. Names are used to access
+        the edge that is attached to the node in a certain axis. Hence they should
+        be all distinct. Necessary if ``nodes`` are not provided.
+    name : str, optional
+        Node's name, used to access the node from de :class:`TensorNetwork` where
+        it belongs. It cannot contain blank spaces.
+    network : TensorNetwork, optional
+        Tensor network where the node should belong. Necessary if ``nodes`` are
+        not provided.
+    override_node : bool, optional
+        Boolean indicating whether the node should override (``True``) another
+        node in the network that has the same name (e.g. if a node is parameterized,
+        it would be required that a new :class:`ParamNode` replaces the non-parameterized
+        node in the network).
+    tensor : torch.Tensor, optional
+        Tensor that is to be stored in the node. Necessary if ``nodes`` are not
+        provided.
+    edges : list[AbstractEdge], optional
+        List of edges that are to be attached to the node. Necessary if ``nodes``
+        are not provided.
+    node1_list : list[bool], optional
+        If ``edges`` are provided, the list of ``node1`` attributes of each edge
+        should also be provided. Necessary if ``nodes`` are not provided.
+        
+    Example
+    -------
+    >>> net = tk.TensorNetwork()
+    >>> nodes = [tk.randn(shape=(2, 4, 2),
+    ...                   axes_names=('left', 'input', 'right'),
+    ...                   network=net)
+    ...          for _ in range(10)]
+    >>> data = [tk.randn(shape=(4,),
+    ...                  axes_names=('feature',),
+    ...                  network=net)
+    ...         for _ in range(10)]
+    ...
+    >>> for i in range(10):
+    ...     _ = nodes[i]['input'] ^ data[i]['feature']
+    ...
+    >>> stack_nodes = tk.stack(nodes)
+    >>> stack_data = tk.stack(data)
+    ...
+    >>> # It is necessary to re-connect stacks
+    >>> _ = stack_nodes['input'] ^ stack_data['feature']
+    >>> result = tk.unbind(stack_nodes @ stack_data)
+    >>> print(result[0].name)
+    unbind_0
+    
+    >>> print(result[0].axes)
+    [Axis( left (0) ), Axis( right (1) )]
+    
+    >>> print(result[0].shape)
+    torch.Size([2, 2])
     """
 
     def __init__(self,
@@ -1766,7 +1851,6 @@ class StackNode(Node):
                  node1_list: Optional[List[bool]] = None) -> None:
 
         if nodes is not None:
-
             if not isinstance(nodes, (list, tuple)):
                 raise TypeError('`nodes` should be a list or tuple of nodes')
 
@@ -1775,7 +1859,7 @@ class StackNode(Node):
                     raise TypeError(
                         'Cannot create a stack using (Param)StackNode\'s')
 
-            # TODO: Y en la misma TN todos
+            # Check all nodes share properties
             for i in range(len(nodes[:-1])):
                 if not isinstance(nodes[i], type(nodes[i + 1])):
                     raise TypeError('Cannot stack nodes of different types. Nodes '
@@ -1786,16 +1870,17 @@ class StackNode(Node):
                 if nodes[i].axes_names != nodes[i + 1].axes_names:
                     raise ValueError(
                         'Stacked nodes must have the same name for each axis')
-                if nodes[i].network != nodes[i + 1].network:
+                if nodes[i]._network != nodes[i + 1]._network:
                     raise ValueError(
                         'Stacked nodes must all be in the same network')
-                for edge1, edge2 in zip(nodes[i].edges, nodes[i + 1].edges):
+                for edge1, edge2 in zip(nodes[i]._edges, nodes[i + 1]._edges):
                     if not isinstance(edge1, type(edge2)):
-                        raise TypeError('Cannot stack nodes with edges of different types. '
-                                        'The edges that are attached to the same axis in '
-                                        'each node must be either all Edge or all ParamEdge type')
+                        raise TypeError('Cannot stack nodes with edges of different'
+                                        ' types. The edges that are attached to'
+                                        ' the same axis in each node must be either'
+                                        ' all Edge or all ParamEdge type')
 
-            edges_dict = dict()
+            edges_dict = dict()  # Each axis has a list of edges
             node1_lists_dict = dict()
             for node in nodes:
                 for axis in node._axes:
@@ -1809,11 +1894,8 @@ class StackNode(Node):
 
             self._edges_dict = edges_dict
             self._node1_lists_dict = node1_lists_dict
-            # self.nodes = nodes
 
-            # stacked_tensor = torch.stack([node.tensor for node in nodes])
             if tensor is None:
-                # TODO: not sure if this is necessary
                 tensor = stack_unequal_tensors([node.tensor for node in nodes])
             super().__init__(axes_names=['stack'] + nodes[0].axes_names,
                              name=name,
@@ -1823,6 +1905,8 @@ class StackNode(Node):
                              tensor=tensor)
 
         else:
+            # Case stacked tensor is provided, and there is no need of having
+            # to stack the nodes' tensors
             if axes_names is None:
                 raise ValueError(
                     'If `nodes` are not provided, `axes_names` must be given')
@@ -1847,7 +1931,6 @@ class StackNode(Node):
 
             self._edges_dict = edges_dict
             self._node1_lists_dict = node1_lists_dict
-            # self.nodes = nodes
 
             super().__init__(axes_names=axes_names,
                              name=name,
@@ -1860,15 +1943,20 @@ class StackNode(Node):
 
     @property
     def edges_dict(self) -> Dict[Text, List['AbstractEdge']]:
+        """Returns dictionary with list of edges of each axis."""
         return self._edges_dict
 
     @property
     def node1_lists_dict(self) -> Dict[Text, List[bool]]:
+        """Returns a dictionary with list of ``node1_list`` attribute of each axis."""
         return self._node1_lists_dict
 
     def _make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
-        # TODO: param_edges not used here
-        if axis.num == 0:
+        """
+        Makes ``StackEdges`` or ``ParamStackEdges`` depending on the ``param_edges``
+        attribute. Also makes an ``Edge`` for the stack dimension.
+        """
+        if axis._num == 0:
             # Stack axis
             return Edge(node1=self, axis1=axis)
         elif isinstance(self._edges_dict[axis._name][0], Edge):
@@ -1884,16 +1972,79 @@ class StackNode(Node):
 
 class ParamStackNode(ParamNode):
     """
-    Class for parametric stacked nodes. This is a node that stores the information
-    of a list of parametric nodes that are stacked in order to perform some operation
+    Class for parametric stacked nodes. They are essentially the same as
+    :class:`StackNodes <StackNode>` but they are also :class:`ParamNodes <ParamNode>`.
+    They are used to optimize memory usage and save some time when the first
+    operation that occurs to param-nodes in a contraction (that might be
+    computed several times during training) is :func:`stack`. If this is the case,
+    the param-nodes no longer store their own tensors, but rather they make
+    reference to a slide of a greater ``ParamStackNode`` (if ``automemory`` attribute
+    of the :class:`TensorNetwork` is set to ``True``). Hence, that first :func:`stack`
+    is never computed.
+    
+    ``ParamStackNodes`` can only be instantiated by providing a sequence of nodes.
+    
+    Parameters
+    ----------
+    nodes : list[AbstractNode] or tuple[AbstractNode], optional
+        Sequence of nodes that are to be stacked.
+    name : str, optional
+        Node's name, used to access the node from de :class:`TensorNetwork` where
+        it belongs. It cannot contain blank spaces.
+    virtual : bool, optional
+        Boolean indicating if the node is a ``virtual`` node. Since it will be
+        used mainly for the case described :class:`here <ParamStackNode>`, the
+        node will be virtual, since it will not be an `effective` part of the
+        tensor network, but rather a `virtual` node used just to store tensors.
+    override_node : bool, optional
+        Boolean indicating whether the node should override (``True``) another
+        node in the network that has the same name (e.g. if a node is parameterized,
+        it would be required that a new :class:`ParamNode` replaces the non-parameterized
+        node in the network).
+        
+    Example
+    -------
+    >>> net = tk.TensorNetwork()
+    >>> net.automemory = True
+    >>> nodes = [tk.randn(shape=(2, 4, 2),
+    ...                   axes_names=('left', 'input', 'right'),
+    ...                   network=net,
+    ...                   param_node=True)
+    ...          for _ in range(10)]
+    >>> data = [tk.randn(shape=(4,),
+    ...                  axes_names=('feature',),
+    ...                  network=net)
+    ...         for _ in range(10)]
+    ...
+    >>> for i in range(10):
+    ...     _ = nodes[i]['input'] ^ data[i]['feature']
+    ...
+    >>> stack_nodes = tk.stack(nodes)
+    >>> stack_nodes.name = 'my_stack'
+    >>> # ._tensor_info has info regarding where the node's tensor is stored
+    >>> print(nodes[0]._tensor_info['node_ref'].name)
+    my_stack
+    
+    >>> stack_data = tk.stack(data)
+    ...
+    >>> # It is necessary to re-connect stacks
+    >>> _ = stack_nodes['input'] ^ stack_data['feature']
+    >>> result = tk.unbind(stack_nodes @ stack_data)
+    >>> print(result[0].name)
+    unbind_0
+    
+    >>> print(result[0].axes)
+    [Axis( left (0) ), Axis( right (1) )]
+    
+    >>> print(result[0].shape)
+    torch.Size([2, 2])
     """
 
     def __init__(self,
                  nodes: Sequence[AbstractNode],
                  name: Optional[Text] = None,
                  virtual: bool = False,
-                 override_node: bool = False,
-                 tensor: Optional[Tensor] = None) -> None:
+                 override_node: bool = False) -> None:
 
         if not isinstance(nodes, (list, tuple)):
             raise TypeError('`nodes` should be a list or tuple of nodes')
@@ -1903,7 +2054,6 @@ class ParamStackNode(ParamNode):
                 raise TypeError(
                     'Cannot create a stack using (Param)StackNode\'s')
 
-        # TODO: Y en la misma TN todos
         for i in range(len(nodes[:-1])):
             if not isinstance(nodes[i], type(nodes[i + 1])):
                 raise TypeError('Cannot stack nodes of different types. Nodes '
@@ -1914,14 +2064,15 @@ class ParamStackNode(ParamNode):
             if nodes[i].axes_names != nodes[i + 1].axes_names:
                 raise ValueError(
                     'Stacked nodes must have the same name for each axis')
-            if nodes[i].network != nodes[i + 1].network:
+            if nodes[i]._network != nodes[i + 1]._network:
                 raise ValueError(
                     'Stacked nodes must all be in the same network')
-            for edge1, edge2 in zip(nodes[i].edges, nodes[i + 1].edges):
+            for edge1, edge2 in zip(nodes[i]._edges, nodes[i + 1]._edges):
                 if not isinstance(edge1, type(edge2)):
-                    raise TypeError('Cannot stack nodes with edges of different types. '
-                                    'The edges that are attached to the same axis in '
-                                    'each node must be either all Edge or all ParamEdge type')
+                    raise TypeError('Cannot stack nodes with edges of different'
+                                    ' types. The edges that are attached to the'
+                                    ' same axis in each node must be either all'
+                                    ' Edge or all ParamEdge type')
 
         edges_dict = dict()
         node1_lists_dict = dict()
@@ -1939,27 +2090,29 @@ class ParamStackNode(ParamNode):
         self._node1_lists_dict = node1_lists_dict
         self.nodes = nodes
 
-        # stacked_tensor = torch.stack([node.tensor for node in nodes])
-        if tensor is None:
-            tensor = stack_unequal_tensors([node.tensor for node in nodes])
+        tensor = stack_unequal_tensors([node.tensor for node in nodes])
         super().__init__(axes_names=['stack'] + nodes[0].axes_names,
                          name=name,
                          network=nodes[0]._network,
                          virtual=virtual,
-                         #  leaf=False,
                          override_node=override_node,
                          tensor=tensor)
 
     @property
     def edges_dict(self) -> Dict[Text, List['AbstractEdge']]:
+        """Returns dictionary with list of edges of each axis."""
         return self._edges_dict
 
     @property
     def node1_lists_dict(self) -> Dict[Text, List[bool]]:
+        """Returns a dictionary with list of ``node1_list`` attribute of each axis."""
         return self._node1_lists_dict
 
     def _make_edge(self, axis: Axis, param_edges: bool) -> Union['Edge', 'ParamEdge']:
-        # TODO: param_edges not used here
+        """
+        Makes ``StackEdges`` or ``ParamStackEdges`` depending on the ``param_edges``
+        attribute. Also makes an ``Edge`` for the stack dimension.
+        """
         if axis.num == 0:
             # Stack axis
             return Edge(node1=self, axis1=axis)
@@ -2342,28 +2495,42 @@ EdgeParameter = Union[int, float, Parameter]
 _DEFAULT_SHIFT = -0.5
 _DEFAULT_SLOPE = 1.
 
+
 class ParamEdge(AbstractEdge, nn.Module):
-    """
+    r"""
     Base class for trainable edges. Subclass of Pytorch ``nn.Module``.
     
     A parametric edge is an edge whose dimension can be learned. To do so, each
     param-edge carries a diagonal square matrix that has the same size as the edge.
-    The diagonal is filled with as many 1's as the dimension, and the rest with
-    0's.
+    The diagonal is filled with 0's and 1's (as many as the dimension).
     
     The dimension is modelled by a sigmoid following the equation:
     
     .. math::
     
-        D_{i,i} = \sigma(slope \cdot (shift - i))
+        D_{i,i} = \sigma(slope \cdot (i - shift))
         
-    where :math:`D_{i,i}` are the elements of the diagonal, :math:`\sigma` is the
+    where :math:`D_{i,j}` is the diagonal square matrix, :math:`\sigma` is the
     sigmoid function, and ``slope`` and ``shift`` are the learnable parameters.
-    When a certain dimension is specified, ``shift`` is initialized as ``dim - 0.5``,
-    so that the sigmoid has non-zero gradient at the current dimension. Hence,
-    during training the matrix will not have only 1's and 0's, but some numbers
-    close to 1, and some others between 0 and 1. The dimension will be taken as
-    the number of elements in the diagonal that are greater than 0.5.
+    When a certain dimension is specified, ``shift`` is initialized as ``(size
+    - dim) - 0.5``, so that the sigmoid has non-zero gradient at the current
+    dimension. Hence, during training the matrix will not only have 0's and 1's
+    on the diagonal, but some numbers between 0 and 1, and some others close to
+    1. The dimension will be taken as the number of elements in the diagonal that
+    are greater than 0.5.
+    
+    This way, when contracting two nodes connected with a ``ParamEdge``, its matrix
+    will be included in the contraction via:
+    
+    .. math::
+    
+        T_{\alpha_1, \ldots, \alpha_n, \beta_1, \ldots, \beta_m} =
+            \sum_{\gamma}{T^{node_1}_{\alpha_1, \ldots, \alpha_n, \gamma}
+            D_{\gamma, \gamma}T^{node_2}_{\gamma, \beta_1, \ldots, \beta_n}}
+            
+    Conversely, for :class:`Edges <Edge>`, :math:`D_{i,j}` would be the identity
+    matrix, thus having no effect on the contraction. Hence, :math:`D_{i,j}` models
+    an effective dimension for ``ParamEdges``.
     
     This implementation is based on the following work: `<https://arxiv.org/abs/2203.03366>`_
     
@@ -2567,7 +2734,7 @@ class ParamEdge(AbstractEdge, nn.Module):
     def make_matrix(self) -> Tensor:
         """
         Creates the matrix based on ``shift`` and ``slope``. The matrix is a
-        diagonal square matrix with (almost) 1's and 0's in the diagonal.
+        diagonal square matrix with (almost) 0's and 1's on the diagonal.
         """
         matrix = torch.zeros((self.size(), self.size()),
                              device=self.shift.device)
@@ -2603,7 +2770,7 @@ class ParamEdge(AbstractEdge, nn.Module):
     
         .. math::
         
-            D_{i,i} = \sigma(slope \cdot (shift - i))
+            D_{i,i} = \sigma(slope \cdot (i - shift))
             
         as explained :class:`here <AbstractEdge>`.
         """
@@ -2758,12 +2925,18 @@ AbstractStackNode = Union[StackNode, ParamStackNode]
 
 class AbstractStackEdge(AbstractEdge):
     """
-    Abstract class for stack edges
+    Abstract class for stack edges. It is just like :class:`AbstractEdge` but
+    with properties ``edges`` and ``node1_lists``.
     """
 
     @property
     @abstractmethod
     def edges(self) -> List[AbstractEdge]:
+        pass
+    
+    @property
+    @abstractmethod
+    def node1_lists(self) -> List[AbstractEdge]:
         pass
 
 
@@ -2771,6 +2944,30 @@ class StackEdge(AbstractStackEdge, Edge):
     """
     Base class for stacks of non-trainable edges.
     Used for stacked contractions
+    
+    Class for non-trainable stack edges. They are just like :class:`Edges <Edge>`
+    but used when stacking a collection of nodes into a :class:`StackNode`. When
+    doing this, all edges of the stacked nodes must be kept, since they have the
+    information regarding the nodes' neighbours, which will be used when :func:
+    `unbinding <unbind>` the stack. Thus, ``StackEdges`` have two additional
+    properties, ``edges`` and ``node`_lists``, that is, the edges of all stacked
+    nodes corresponding to a certain axis, and their ``node1_list``'s.
+    
+    Parameters
+    ----------
+    edges : list[Edge]
+        List of non-trainable edges that will be stacked.
+    node1_lists : list[bool]
+        List of ``node1_list``'s corresponding to each edge in ``edges``.
+    node1 : StackNode or ParamStackNode
+        First node to which the edge is connected.
+    axis1: int, str or Axis
+        Axis of ``node1`` where the edge is attached.
+    node2 : StackNode or ParamStackNode, optional
+        Second node to which the edge is connected. If None, the edge will be
+        dangling.
+    axis2 : int, str, Axis, optional
+        Axis of ``node2`` where the edge is attached.
     """
 
     def __init__(self,
@@ -2788,20 +2985,109 @@ class StackEdge(AbstractStackEdge, Edge):
 
     @property
     def edges(self) -> List[Edge]:
+        """Returns list of stacked edges corresponding to this axis."""
         return self._edges
 
     @property
     def node1_lists(self) -> List[bool]:
+        """Returns list of ``node1_list``'s corresponding to this axis."""
         return self._node1_lists
+    
+    def connect(self, other: 'StackEdge') -> 'StackEdge':
+        """
+        Same as :meth:`~Edge.connect` but it is verified that all stacked edges
+        corresponding to both ``StackEdges`` are the same. That is, this is a
+        redundant operation to re-connect a list of edges that should be already
+        connected. However, this is mandatory, since when stacking two sequences
+        of nodes independently it cannot be inferred that the resultant ``StackNodes``
+        had to be connected.
+        
+        Parameters
+        ----------
+        other : StackEdge
+            The other edge to which current edge will be connected.
 
-    def __xor__(self, other: 'StackEdge') -> Edge:
+        Returns
+        -------
+        StackEdge
+        
+        Example
+        -------
+        To connect two stack-edges, the overloaded operator ``^`` can also be used.
+        
+        >>> net = tk.TensorNetwork()
+        >>> nodes = [tk.randn(shape=(2, 4, 2),
+        ...                   axes_names=('left', 'input', 'right'),
+        ...                   network=net)
+        ...          for _ in range(10)]
+        >>> data = [tk.randn(shape=(4,),
+        ...                  axes_names=('feature',),
+        ...                  network=net)
+        ...         for _ in range(10)]
+        ...
+        >>> for i in range(10):
+        ...     _ = nodes[i]['input'] ^ data[i]['feature']
+        ...
+        >>> stack_nodes = tk.stack(nodes)
+        >>> stack_data = tk.stack(data)
+        ...
+        >>> # It is necessary to re-connect stacks to be able to contract
+        >>> _ = stack_nodes['input'] ^ stack_data['feature']
+        """
         return connect_stack(self, other)
 
 
 class ParamStackEdge(AbstractStackEdge, ParamEdge):
-    """
-    Base class for stacks of trainable edges.
-    Used for stacked contractions
+    r"""
+    Class for stacks of trainable edges. Just as for :class:`StackEdge`, this
+    class is the stacked version of :class:`ParamEdge`, with the additional
+    properties ``edges`` and ``node1_lists``.
+    
+    Furthermore, since ``ParamEdges`` have a trainable dimension modelled via
+    a diagonal square matrix, and this might be different for every param-edge
+    that is being stacked, ``ParamStackEdge`` will model the dimension differently.
+    
+    Instead of constructing a diagonal matrix, it will construct a 3-rank tensor
+    :math:`D^b_{i,j}` such that, for each :math:`b`, it is the matrix of the
+    :math:`b`th edge (or extended with 0's so that its size matches the size of
+    the largest matrix in the stack). This way, when contracting two ``StackNodes``
+    that are connected with a ``ParamStackEdge``, its 3-rank tensor will be
+    included in the contraction via
+    
+    .. math::
+    
+        T^b_{\alpha_1, \ldots, \alpha_n, \beta_1, \ldots, \beta_m} =
+            \sum_{\gamma}{T^{node_1, b}_{\alpha_1, \ldots, \alpha_n, \gamma}
+            D^b_{\gamma, \gamma}T^{node_2, b}_{\gamma, \beta_1, \ldots, \beta_n}}
+            
+    That is, the 3-rank tensor also performs a batch contraction.
+    
+    .. note::
+        Although param-edges can be used without causing any error, it is not
+        clear if the dimension can be really learned this way. Following the
+        original `paper <https://arxiv.org/abs/2203.03366>`_, a regularization
+        should be added to the loss function in order to have non-zero gradients.
+        However, in our experiments, that was not enough to drive the training
+        towards a regime where the dimension plays a relevant role.
+        
+        Hence, this class will not be updated until further investigation is
+        carried out.
+    
+    Parameters
+    ----------
+    edges : list[ParamEdge]
+        List of non-trainable param-edges that will be stacked.
+    node1_lists : list[bool]
+        List of ``node1_list``'s corresponding to each edge in ``edges``.
+    node1 : StackNode or ParamStackNode
+        First node to which the edge is connected.
+    axis1: int, str or Axis
+        Axis of ``node1`` where the edge is attached.
+    node2 : StackNode or ParamStackNode, optional
+        Second node to which the edge is connected. If None, the edge will be
+        dangling.
+    axis2 : int, str, Axis, optional
+        Axis of ``node2`` where the edge is attached.
     """
 
     def __init__(self,
@@ -2815,22 +3101,23 @@ class ParamStackEdge(AbstractStackEdge, ParamEdge):
         self._node1_lists = node1_lists
         ParamEdge.__init__(self,
                            node1=node1, axis1=axis1,
-                           #    shift=self._edges[0].shift,
-                           #    slope=self._edges[0].slope,
                            node2=node2, axis2=axis2)
 
     @property
     def edges(self) -> List[ParamEdge]:
+        """Returns list of stacked edges corresponding to this axis."""
         return self._edges
 
     @property
     def node1_lists(self) -> List[bool]:
+        """Returns list of ``node1_list``'s corresponding to this axis."""
         return self._node1_lists
 
     @property
     def matrix(self) -> Tensor:
+        """Returns 3-rank tensor that models the dimension of all stacked edges."""
         mats = []
-        for edge in self.edges:
+        for edge in self._edges:
             mats.append(edge.matrix)
         stacked_mats = stack_unequal_tensors(mats)
 
@@ -2844,11 +3131,50 @@ class ParamStackEdge(AbstractStackEdge, ParamEdge):
             stacked_mats = nn.functional.pad(stacked_mats, pad)
 
         return stacked_mats
+    
+    def connect(self, other: 'ParamStackEdge') -> 'ParamStackEdge':
+        """
+        Same as :meth:`~ParamEdge.connect` but it is verified that all stacked
+        edges corresponding to both ``ParamStackEdges`` are the same. That is,
+        this is a redundant operation to re-connect a list of edges that should
+        be already connected. However, this is mandatory, since when stacking
+        two sequences of nodes independently it cannot be inferred that the
+        resultant ``ParamStackNodes`` had to be connected.
+        
+        Parameters
+        ----------
+        other : ParamStackEdge
+            The other edge to which current edge will be connected.
 
-    def __xor__(self, other: 'ParamStackEdge') -> ParamEdge:
+        Returns
+        -------
+        ParamStackEdge
+        
+        Example
+        -------
+        To connect two stack-edges, the overloaded operator ``^`` can also be used.
+        
+        >>> net = tk.TensorNetwork()
+        >>> nodes = [tk.randn(shape=(2, 4, 2),
+        ...                   axes_names=('left', 'input', 'right'),
+        ...                   network=net,
+        ...                   param_edges=True)
+        ...          for _ in range(10)]
+        >>> data = [tk.randn(shape=(4,),
+        ...                  axes_names=('feature',),
+        ...                  network=net)
+        ...         for _ in range(10)]
+        ...
+        >>> for i in range(10):
+        ...     _ = nodes[i]['input'] ^ data[i]['feature']
+        ...
+        >>> stack_nodes = tk.stack(nodes)
+        >>> stack_data = tk.stack(data)
+        ...
+        >>> # It is necessary to re-connect stacks to be able to contract
+        >>> _ = stack_nodes['input'] ^ stack_data['feature']
+        """
         return connect_stack(self, other)
-
-    # TODO: Cual es la dimension de este edge si apilo las matrices??
 
 
 ###############################################################################
@@ -2940,7 +3266,7 @@ def connect_stack(edge1: AbstractStackEdge, edge2: AbstractStackEdge):
             not isinstance(edge2, AbstractStackEdge):
         raise TypeError('Both edges should be (Param)StackEdge\'s')
 
-    if edge1.edges != edge2.edges:
+    if edge1._edges != edge2._edges:
         raise ValueError('Cannot connect stack edges whose lists of'
                          ' edges are not the same. They will be the '
                          'same when both lists contain edges connecting'
@@ -3049,6 +3375,7 @@ class TensorNetwork(nn.Module):
     and perform site-wise contractions, even though network contraction
     methods are not implemented. Useful for experimentation.
     """
+    # TODO: explicar automemory en docs
     
     operations = dict()
 

@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Operations &#8212; TensorKrowch 00.00.01 documentation</title>
+    <title>Node Operations &#8212; TensorKrowch 00.00.01 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -116,7 +116,7 @@
    </li>
    <li class="toctree-l2 current active">
     <a class="current reference internal" href="#">
-     Operations
+     Node Operations
     </a>
    </li>
    <li class="toctree-l2">
@@ -259,13 +259,23 @@ title="Print to PDF"
     <nav id="bd-toc-nav" aria-label="Page">
         <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#basic-operations">
-   Basic Operations
+  <a class="reference internal nav-link" href="#connect-disconnect-edges">
+   Connect/Disconnect Edges
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#node-operations">
-   Node Operations
+  <a class="reference internal nav-link" href="#operation-class">
+   Operation Class
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#tensor-like-operations">
+   Tensor-like Operations
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#node-like-operations">
+   Node-like Operations
   </a>
  </li>
 </ul>
@@ -277,7 +287,7 @@ title="Print to PDF"
         <div class="col pl-md-3 pl-lg-5 content-container">
             <!-- Table of contents that is only displayed when printing the page -->
             <div id="jb-print-docs-body" class="onlyprint">
-                <h1>Operations</h1>
+                <h1>Node Operations</h1>
                 <!-- Table of contents -->
                 <div id="print-main-content">
                     <div id="jb-print-toc">
@@ -288,13 +298,23 @@ title="Print to PDF"
                         <nav aria-label="Page">
                             <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#basic-operations">
-   Basic Operations
+  <a class="reference internal nav-link" href="#connect-disconnect-edges">
+   Connect/Disconnect Edges
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#node-operations">
-   Node Operations
+  <a class="reference internal nav-link" href="#operation-class">
+   Operation Class
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#tensor-like-operations">
+   Tensor-like Operations
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#node-like-operations">
+   Node-like Operations
   </a>
  </li>
 </ul>
@@ -307,15 +327,40 @@ title="Print to PDF"
                 
               <div>
                 
-  <section id="operations">
-<h1>Operations<a class="headerlink" href="#operations" title="Permalink to this headline">#</a></h1>
+  <section id="node-operations">
+<h1>Node Operations<a class="headerlink" href="#node-operations" title="Permalink to this headline">#</a></h1>
+<section id="connect-disconnect-edges">
+<h2>Connect/Disconnect Edges<a class="headerlink" href="#connect-disconnect-edges" title="Permalink to this headline">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.connect">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edge1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.connect" title="Permalink to this definition">#</a></dt>
+<dd><p>Connect two dangling, non-batch edges.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.connect_stack">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">connect_stack</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edge1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#connect_stack"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.connect_stack" title="Permalink to this definition">#</a></dt>
+<dd><p>Connect stack edges only if their lists of edges are the same
+(coming from already connected edges)</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.disconnect">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">disconnect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edge</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#disconnect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.disconnect" title="Permalink to this definition">#</a></dt>
+<dd><p>Disconnect an edge, returning a couple of dangling edges</p>
+</dd></dl>
+
+</section>
+<section id="operation-class">
+<h2>Operation Class<a class="headerlink" href="#operation-class" title="Permalink to this headline">#</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.Operation">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Operation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_first</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/node_operations.html#Operation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Operation" title="Permalink to this definition">#</a></dt>
 <dd></dd></dl>
 
-<section id="basic-operations">
-<h2>Basic Operations<a class="headerlink" href="#basic-operations" title="Permalink to this headline">#</a></h2>
+</section>
+<section id="tensor-like-operations">
+<h2>Tensor-like Operations<a class="headerlink" href="#tensor-like-operations" title="Permalink to this headline">#</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.tprod">
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">tprod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.tprod" title="Permalink to this definition">#</a></dt>
@@ -350,8 +395,8 @@ title="Print to PDF"
 </dd></dl>
 
 </section>
-<section id="node-operations">
-<h2>Node Operations<a class="headerlink" href="#node-operations" title="Permalink to this headline">#</a></h2>
+<section id="node-like-operations">
+<h2>Node-like Operations<a class="headerlink" href="#node-like-operations" title="Permalink to this headline">#</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.split">
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">split</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.split" title="Permalink to this definition">#</a></dt>

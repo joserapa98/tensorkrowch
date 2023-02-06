@@ -954,51 +954,6 @@ title="Fullscreen mode"
         <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]</span><span class="o">.</span><span class="n">_node1</span> <span class="o">=</span> <span class="n">node1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]</span> <span class="o">=</span> <span class="n">edge</span>
         
-    <span class="k">def</span> <span class="nf">_reattach_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">override</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Substitutes current edges by copies of them that are attached to the node.</span>
-<span class="sd">        It can happen that an edge is not attached to the node if it is the result</span>
-<span class="sd">        of an :class:`Operation` and, hence, it inherits edges from the operands.</span>
-<span class="sd">        In that case, the new copied edges will be attached to the resultant node,</span>
-<span class="sd">        replacing each previous `node1` or `node2` with it (according to the `node1`</span>
-<span class="sd">        attribute of each axis).</span>
-<span class="sd">        </span>
-<span class="sd">        Used for inplace operations like :func:`permute_` or :func`split_` and</span>
-<span class="sd">        to :meth:`Node.parameterize`.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        override: bool</span>
-<span class="sd">            Boolean indicating if the new, reattached edges should also replace</span>
-<span class="sd">            the corresponding edges in the node&#39;s neighbours (``True``). Otherwise,</span>
-<span class="sd">            the neighbours&#39; edges will be pointing to the original nodes from which</span>
-<span class="sd">            the current node inherits its edges (``False``).</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">node1</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_node1</span><span class="p">())):</span>
-            <span class="n">node</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="mi">1</span> <span class="o">-</span> <span class="n">node1</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">node</span> <span class="o">!=</span> <span class="bp">self</span><span class="p">:</span>
-                <span class="c1"># New edges are always a copy, so that the original</span>
-                <span class="c1"># nodes have different edges from the current node</span>
-                <span class="n">new_edge</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_edge</span>
-
-                <span class="n">new_edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="mi">1</span> <span class="o">-</span> <span class="n">node1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
-                <span class="n">new_edge</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="mi">1</span> <span class="o">-</span> <span class="n">node1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-
-                <span class="c1"># Case of trace edges (attached to the node in two axes)</span>
-                <span class="n">neighbour</span> <span class="o">=</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="n">node1</span><span class="p">]</span>
-                <span class="k">if</span> <span class="n">neighbour</span> <span class="o">==</span> <span class="n">node</span><span class="p">:</span>
-                    <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">other_edge</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">):</span>
-                        <span class="k">if</span> <span class="p">(</span><span class="n">other_edge</span> <span class="o">==</span> <span class="n">edge</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">j</span><span class="p">):</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_edge</span>
-                            <span class="n">new_edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="n">node1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
-                            <span class="n">new_edge</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">node1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
-
-                <span class="k">if</span> <span class="n">override</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">neighbour</span> <span class="o">!=</span> <span class="n">node</span><span class="p">):</span>
-                        <span class="n">neighbour</span><span class="o">.</span><span class="n">_add_edge</span><span class="p">(</span>
-                            <span class="n">new_edge</span><span class="p">,</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">node1</span><span class="p">],</span> <span class="ow">not</span> <span class="n">node1</span><span class="p">)</span>
-        
 <div class="viewcode-block" id="AbstractNode.get_edge"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.get_edge">[docs]</a>    <span class="k">def</span> <span class="nf">get_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Ax</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;AbstractEdge&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns :class:`AbstractEdge` given the :class:`Axis` (or its ``name``</span>
@@ -1085,6 +1040,51 @@ title="Fullscreen mode"
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">param_edge</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">:</span>
                     <span class="n">param_edge</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span></div>
+                    
+<div class="viewcode-block" id="AbstractNode.reattach_edges"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.reattach_edges">[docs]</a>    <span class="k">def</span> <span class="nf">reattach_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">override</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Substitutes current edges by copies of them that are attached to the node.</span>
+<span class="sd">        It can happen that an edge is not attached to the node if it is the result</span>
+<span class="sd">        of an :class:`Operation` and, hence, it inherits edges from the operands.</span>
+<span class="sd">        In that case, the new copied edges will be attached to the resultant node,</span>
+<span class="sd">        replacing each previous `node1` or `node2` with it (according to the</span>
+<span class="sd">        ``node1`` attribute of each axis).</span>
+<span class="sd">        </span>
+<span class="sd">        Used for inplace operations like :func:`permute_` or :func:`split_` and</span>
+<span class="sd">        to (de)parameterize nodes.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        override: bool</span>
+<span class="sd">            Boolean indicating if the new, reattached edges should also replace</span>
+<span class="sd">            the corresponding edges in the node&#39;s neighbours (``True``). Otherwise,</span>
+<span class="sd">            the neighbours&#39; edges will be pointing to the original nodes from which</span>
+<span class="sd">            the current node inherits its edges (``False``).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">node1</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_node1</span><span class="p">())):</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="mi">1</span> <span class="o">-</span> <span class="n">node1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">node</span> <span class="o">!=</span> <span class="bp">self</span><span class="p">:</span>
+                <span class="c1"># New edges are always a copy, so that the original</span>
+                <span class="c1"># nodes have different edges from the current node</span>
+                <span class="n">new_edge</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_edge</span>
+
+                <span class="n">new_edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="mi">1</span> <span class="o">-</span> <span class="n">node1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
+                <span class="n">new_edge</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="mi">1</span> <span class="o">-</span> <span class="n">node1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+                <span class="c1"># Case of trace edges (attached to the node in two axes)</span>
+                <span class="n">neighbour</span> <span class="o">=</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="n">node1</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">neighbour</span> <span class="o">==</span> <span class="n">node</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">other_edge</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">):</span>
+                        <span class="k">if</span> <span class="p">(</span><span class="n">other_edge</span> <span class="o">==</span> <span class="n">edge</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">j</span><span class="p">):</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_edge</span>
+                            <span class="n">new_edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="n">node1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
+                            <span class="n">new_edge</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">node1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+
+                <span class="k">if</span> <span class="n">override</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">neighbour</span> <span class="o">!=</span> <span class="n">node</span><span class="p">):</span>
+                        <span class="n">neighbour</span><span class="o">.</span><span class="n">_add_edge</span><span class="p">(</span>
+                            <span class="n">new_edge</span><span class="p">,</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">node1</span><span class="p">],</span> <span class="ow">not</span> <span class="n">node1</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="AbstractNode.disconnect"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.disconnect">[docs]</a>    <span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Ax</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1712,7 +1712,7 @@ title="Fullscreen mode"
                 <span class="n">axis</span><span class="o">.</span><span class="n">_node1</span> <span class="o">=</span> <span class="n">node1_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span> <span class="o">=</span> <span class="n">edges</span><span class="p">[:]</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_automemory</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_reattach_edges</span><span class="p">(</span><span class="n">override</span><span class="o">=</span><span class="n">override_edges</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">override</span><span class="o">=</span><span class="n">override_edges</span><span class="p">)</span>
 
         <span class="c1"># network</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_add_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">override</span><span class="o">=</span><span class="n">override_node</span><span class="p">)</span>
@@ -2656,6 +2656,11 @@ title="Fullscreen mode"
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Connects dangling edge to another dangling edge.</span>
 <span class="sd">        </span>
+<span class="sd">        It is necessary that both edges have the same dimension so that contractions</span>
+<span class="sd">        along that edge can be computed. Note that for ``ParamEdges`` the sizes</span>
+<span class="sd">        could be different. In this case the resultant param-edge will have the</span>
+<span class="sd">        minimum size between them.</span>
+<span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        other : Edge or ParamEdge</span>
@@ -3075,6 +3080,11 @@ title="Fullscreen mode"
 <span class="sd">        Connects dangling param-edge to another dangling edge or param-edge. The</span>
 <span class="sd">        result will always be a param-edge.</span>
 <span class="sd">        </span>
+<span class="sd">        It is necessary that both edges have the same dimension so that contractions</span>
+<span class="sd">        along that edge can be computed. Note that for ``ParamEdges`` the sizes</span>
+<span class="sd">        could be different. In this case the resultant param-edge will have the</span>
+<span class="sd">        minimum size between them.</span>
+<span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        other : Edge or ParamEdge</span>
@@ -3396,31 +3406,53 @@ title="Fullscreen mode"
 <span class="c1">###############################################################################</span>
 <div class="viewcode-block" id="connect"><a class="viewcode-back" href="../../node_operations.html#tensorkrowch.connect">[docs]</a><span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="n">edge1</span><span class="p">:</span> <span class="n">AbstractEdge</span><span class="p">,</span> <span class="n">edge2</span><span class="p">:</span> <span class="n">AbstractEdge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Connect two dangling, non-batch edges.</span>
+<span class="sd">    Connects two dangling edges. If both are :class:`Edges &lt;Edge&gt;`, the result</span>
+<span class="sd">    will be also an ``Edge``. Otherwise, the result will be a :class:`ParamEdge`.</span>
+<span class="sd">    </span>
+<span class="sd">    It is necessary that both edges have the same dimension so that contractions</span>
+<span class="sd">    along that edge can be computed. Note that for ``ParamEdges`` the sizes could</span>
+<span class="sd">    be different. In this case the resultant param-edge will have the minimum</span>
+<span class="sd">    size between them.</span>
+<span class="sd">    </span>
+<span class="sd">    This operation is the same as :meth:`Edge.connect` and :meth:`ParamEdge.connect`.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    edge1 : Edge or ParamEdge</span>
+<span class="sd">        The first edge that will be connected. Its node will become the ``node1``</span>
+<span class="sd">        of the resultant edge.</span>
+<span class="sd">    edge2 : Edge or ParamEdge</span>
+<span class="sd">        The second edge that will be connected. Its node will become the ``node2``</span>
+<span class="sd">        of the resultant edge.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Edge or ParamEdge</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># TODO: no puedo capar el conectar nodos no-leaf, pero no tiene el resultado esperado,</span>
-    <span class="c1">#  en realidad estás conectando los nodos originales (leaf)</span>
+    <span class="c1"># Case edge is already connected</span>
     <span class="k">if</span> <span class="n">edge1</span> <span class="o">==</span> <span class="n">edge2</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">edge1</span>
 
     <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="p">[</span><span class="n">edge1</span><span class="p">,</span> <span class="n">edge2</span><span class="p">]:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Edge </span><span class="si">{</span><span class="n">edge</span><span class="si">!s}</span><span class="s1"> is not a dangling edge. &#39;</span>
-                             <span class="sa">f</span><span class="s1">&#39;This edge points to nodes: </span><span class="si">{</span><span class="n">edge</span><span class="o">.</span><span class="n">node1</span><span class="si">!s}</span><span class="s1"> and </span><span class="si">{</span><span class="n">edge</span><span class="o">.</span><span class="n">node2</span><span class="si">!s}</span><span class="s1">&#39;</span><span class="p">)</span>
+                             <span class="sa">f</span><span class="s1">&#39;This edge points to nodes: </span><span class="si">{</span><span class="n">edge</span><span class="o">.</span><span class="n">node1</span><span class="si">!s}</span><span class="s1"> and &#39;</span>
+                             <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">edge</span><span class="o">.</span><span class="n">node2</span><span class="si">!s}</span><span class="s1">&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_batch</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Edge </span><span class="si">{</span><span class="n">edge</span><span class="si">!s}</span><span class="s1"> is a batch edge&#39;</span><span class="p">)</span>
-    <span class="c1"># if edge1 == edge2:</span>
-    <span class="c1">#     raise ValueError(f&#39;Cannot connect edge {edge1!s} to itself&#39;)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Edge </span><span class="si">{</span><span class="n">edge</span><span class="si">!s}</span><span class="s1"> is a batch edge. Batch edges &#39;</span>
+                             <span class="s1">&#39;cannot be connected&#39;</span><span class="p">)</span>
+    
     <span class="k">if</span> <span class="n">edge1</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">!=</span> <span class="n">edge2</span><span class="o">.</span><span class="n">dim</span><span class="p">():</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Cannot connect edges of unequal dimension. &#39;</span>
                          <span class="sa">f</span><span class="s1">&#39;Dimension of edge </span><span class="si">{</span><span class="n">edge1</span><span class="si">!s}</span><span class="s1">: </span><span class="si">{</span><span class="n">edge1</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span><span class="si">}</span><span class="s1">. &#39;</span>
                          <span class="sa">f</span><span class="s1">&#39;Dimension of edge </span><span class="si">{</span><span class="n">edge2</span><span class="si">!s}</span><span class="s1">: </span><span class="si">{</span><span class="n">edge2</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">edge1</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">!=</span> <span class="n">edge2</span><span class="o">.</span><span class="n">size</span><span class="p">():</span>
-        <span class="c1"># Keep the minimum size</span>
-        <span class="k">if</span> <span class="n">edge1</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">edge2</span><span class="o">.</span><span class="n">size</span><span class="p">():</span>
-            <span class="n">edge2</span><span class="o">.</span><span class="n">change_size</span><span class="p">(</span><span class="n">edge1</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
-        <span class="k">elif</span> <span class="n">edge1</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&gt;</span> <span class="n">edge2</span><span class="o">.</span><span class="n">size</span><span class="p">():</span>
-            <span class="n">edge1</span><span class="o">.</span><span class="n">change_size</span><span class="p">(</span><span class="n">edge2</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">edge1</span><span class="o">.</span><span class="n">_size</span> <span class="o">!=</span> <span class="n">edge2</span><span class="o">.</span><span class="n">_size</span><span class="p">:</span>
+        <span class="c1"># Keep the minimum size when connecting param-edges</span>
+        <span class="c1"># with the same dimension</span>
+        <span class="k">if</span> <span class="n">edge1</span><span class="o">.</span><span class="n">_size</span> <span class="o">&lt;</span> <span class="n">edge2</span><span class="o">.</span><span class="n">_size</span><span class="p">:</span>
+            <span class="n">edge2</span><span class="o">.</span><span class="n">change_size</span><span class="p">(</span><span class="n">edge1</span><span class="o">.</span><span class="n">_size</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">edge1</span><span class="o">.</span><span class="n">_size</span> <span class="o">&gt;</span> <span class="n">edge2</span><span class="o">.</span><span class="n">_size</span><span class="p">:</span>
+            <span class="n">edge1</span><span class="o">.</span><span class="n">change_size</span><span class="p">(</span><span class="n">edge2</span><span class="o">.</span><span class="n">_size</span><span class="p">)</span>
 
     <span class="n">node1</span><span class="p">,</span> <span class="n">axis1</span> <span class="o">=</span> <span class="n">edge1</span><span class="o">.</span><span class="n">node1</span><span class="p">,</span> <span class="n">edge1</span><span class="o">.</span><span class="n">axis1</span>
     <span class="n">node2</span><span class="p">,</span> <span class="n">axis2</span> <span class="o">=</span> <span class="n">edge2</span><span class="o">.</span><span class="n">node1</span><span class="p">,</span> <span class="n">edge2</span><span class="o">.</span><span class="n">axis1</span>
@@ -3435,20 +3467,21 @@ title="Fullscreen mode"
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edge1</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">)</span> <span class="o">==</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edge2</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edge1</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">):</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edge1</span><span class="p">,</span> <span class="n">ParamStackEdge</span><span class="p">):</span>
-                <span class="n">new_edge</span> <span class="o">=</span> <span class="n">ParamStackEdge</span><span class="p">(</span><span class="n">edges</span><span class="o">=</span><span class="n">edge1</span><span class="o">.</span><span class="n">edges</span><span class="p">,</span> <span class="n">node1_lists</span><span class="o">=</span><span class="n">edge1</span><span class="o">.</span><span class="n">node1_lists</span><span class="p">,</span>
+                <span class="n">new_edge</span> <span class="o">=</span> <span class="n">ParamStackEdge</span><span class="p">(</span><span class="n">edges</span><span class="o">=</span><span class="n">edge1</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span>
+                                          <span class="n">node1_lists</span><span class="o">=</span><span class="n">edge1</span><span class="o">.</span><span class="n">_node1_lists</span><span class="p">,</span>
                                           <span class="n">node1</span><span class="o">=</span><span class="n">node1</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="n">axis1</span><span class="p">,</span>
                                           <span class="n">node2</span><span class="o">=</span><span class="n">node2</span><span class="p">,</span> <span class="n">axis2</span><span class="o">=</span><span class="n">axis2</span><span class="p">)</span>
-                <span class="c1"># net._add_edge(new_edge)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">shift</span> <span class="o">=</span> <span class="n">edge1</span><span class="o">.</span><span class="n">shift</span>
-                <span class="n">slope</span> <span class="o">=</span> <span class="n">edge1</span><span class="o">.</span><span class="n">slope</span>
+                <span class="n">shift</span> <span class="o">=</span> <span class="n">edge1</span><span class="o">.</span><span class="n">_shift</span>
+                <span class="n">slope</span> <span class="o">=</span> <span class="n">edge1</span><span class="o">.</span><span class="n">_slope</span>
                 <span class="n">new_edge</span> <span class="o">=</span> <span class="n">ParamEdge</span><span class="p">(</span><span class="n">node1</span><span class="o">=</span><span class="n">node1</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="n">axis1</span><span class="p">,</span>
                                      <span class="n">shift</span><span class="o">=</span><span class="n">shift</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="n">slope</span><span class="p">,</span>
                                      <span class="n">node2</span><span class="o">=</span><span class="n">node2</span><span class="p">,</span> <span class="n">axis2</span><span class="o">=</span><span class="n">axis2</span><span class="p">)</span>
                 <span class="n">net</span><span class="o">.</span><span class="n">_add_edge</span><span class="p">(</span><span class="n">new_edge</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edge1</span><span class="p">,</span> <span class="n">StackEdge</span><span class="p">):</span>
-                <span class="n">new_edge</span> <span class="o">=</span> <span class="n">StackEdge</span><span class="p">(</span><span class="n">edges</span><span class="o">=</span><span class="n">edge1</span><span class="o">.</span><span class="n">edges</span><span class="p">,</span> <span class="n">node1_lists</span><span class="o">=</span><span class="n">edge1</span><span class="o">.</span><span class="n">node1_lists</span><span class="p">,</span>
+                <span class="n">new_edge</span> <span class="o">=</span> <span class="n">StackEdge</span><span class="p">(</span><span class="n">edges</span><span class="o">=</span><span class="n">edge1</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span>
+                                     <span class="n">node1_lists</span><span class="o">=</span><span class="n">edge1</span><span class="o">.</span><span class="n">_node1_lists</span><span class="p">,</span>
                                      <span class="n">node1</span><span class="o">=</span><span class="n">node1</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="n">axis1</span><span class="p">,</span>
                                      <span class="n">node2</span><span class="o">=</span><span class="n">node2</span><span class="p">,</span> <span class="n">axis2</span><span class="o">=</span><span class="n">axis2</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
@@ -3456,11 +3489,11 @@ title="Fullscreen mode"
                                 <span class="n">node2</span><span class="o">=</span><span class="n">node2</span><span class="p">,</span> <span class="n">axis2</span><span class="o">=</span><span class="n">axis2</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edge1</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">):</span>
-            <span class="n">shift</span> <span class="o">=</span> <span class="n">edge1</span><span class="o">.</span><span class="n">shift</span>
-            <span class="n">slope</span> <span class="o">=</span> <span class="n">edge1</span><span class="o">.</span><span class="n">slope</span>
+            <span class="n">shift</span> <span class="o">=</span> <span class="n">edge1</span><span class="o">.</span><span class="n">_shift</span>
+            <span class="n">slope</span> <span class="o">=</span> <span class="n">edge1</span><span class="o">.</span><span class="n">_slope</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">shift</span> <span class="o">=</span> <span class="n">edge2</span><span class="o">.</span><span class="n">shift</span>
-            <span class="n">slope</span> <span class="o">=</span> <span class="n">edge2</span><span class="o">.</span><span class="n">slope</span>
+            <span class="n">shift</span> <span class="o">=</span> <span class="n">edge2</span><span class="o">.</span><span class="n">_shift</span>
+            <span class="n">slope</span> <span class="o">=</span> <span class="n">edge2</span><span class="o">.</span><span class="n">_slope</span>
         <span class="n">new_edge</span> <span class="o">=</span> <span class="n">ParamEdge</span><span class="p">(</span><span class="n">node1</span><span class="o">=</span><span class="n">node1</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="n">axis1</span><span class="p">,</span>
                              <span class="n">shift</span><span class="o">=</span><span class="n">shift</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="n">slope</span><span class="p">,</span>
                              <span class="n">node2</span><span class="o">=</span><span class="n">node2</span><span class="p">,</span> <span class="n">axis2</span><span class="o">=</span><span class="n">axis2</span><span class="p">)</span>
@@ -3471,31 +3504,65 @@ title="Fullscreen mode"
     <span class="k">return</span> <span class="n">new_edge</span></div>
 
 
-<div class="viewcode-block" id="connect_stack"><a class="viewcode-back" href="../../node_operations.html#tensorkrowch.connect_stack">[docs]</a><span class="k">def</span> <span class="nf">connect_stack</span><span class="p">(</span><span class="n">edge1</span><span class="p">:</span> <span class="n">AbstractStackEdge</span><span class="p">,</span> <span class="n">edge2</span><span class="p">:</span> <span class="n">AbstractStackEdge</span><span class="p">):</span>
+<div class="viewcode-block" id="connect_stack"><a class="viewcode-back" href="../../node_operations.html#tensorkrowch.connect_stack">[docs]</a><span class="k">def</span> <span class="nf">connect_stack</span><span class="p">(</span><span class="n">edge1</span><span class="p">:</span> <span class="n">AbstractStackEdge</span><span class="p">,</span>
+                  <span class="n">edge2</span><span class="p">:</span> <span class="n">AbstractStackEdge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractStackEdge</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Connect stack edges only if their lists of edges are the same</span>
-<span class="sd">    (coming from already connected edges)</span>
+<span class="sd">    Same as :func:`connect` but it is verified that all stacked edges corresponding</span>
+<span class="sd">    to both ``(Param)StackEdges`` are the same. That is, this is a redundant</span>
+<span class="sd">    operation to re-connect a list of edges that should be already connected.</span>
+<span class="sd">    However, this is mandatory, since when stacking two sequences of nodes</span>
+<span class="sd">    independently it cannot be inferred that the resultant ``(Param)StackNodes``</span>
+<span class="sd">    had to be connected.</span>
+<span class="sd">    </span>
+<span class="sd">    This operation is the same as :meth:`StackEdge.connect` and</span>
+<span class="sd">    :meth:`ParamStackEdge.connect`.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    edge1 : StackEdge or ParamStackEdge</span>
+<span class="sd">        The first edge that will be connected. Its node will become the ``node1``</span>
+<span class="sd">        of the resultant edge.</span>
+<span class="sd">    edge2 : StackEdge or ParamStackEdge</span>
+<span class="sd">        The second edge that will be connected. Its node will become the ``node2``</span>
+<span class="sd">        of the resultant edge.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edge1</span><span class="p">,</span> <span class="n">AbstractStackEdge</span><span class="p">)</span> <span class="ow">or</span> \
             <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edge2</span><span class="p">,</span> <span class="n">AbstractStackEdge</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Both edges should be (Param)StackEdge</span><span class="se">\&#39;</span><span class="s1">s&#39;</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">edge1</span><span class="o">.</span><span class="n">_edges</span> <span class="o">!=</span> <span class="n">edge2</span><span class="o">.</span><span class="n">_edges</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot connect stack edges whose lists of&#39;</span>
-                         <span class="s1">&#39; edges are not the same. They will be the &#39;</span>
-                         <span class="s1">&#39;same when both lists contain edges connecting&#39;</span>
-                         <span class="s1">&#39; the nodes that formed the stack nodes.&#39;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot connect stack edges whose lists of edges are &#39;</span>
+                         <span class="s1">&#39;not the same. They will be the same when both lists &#39;</span>
+                         <span class="s1">&#39;contain edges connecting the nodes that formed the &#39;</span>
+                         <span class="s1">&#39;stack nodes.&#39;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">connect</span><span class="p">(</span><span class="n">edge1</span><span class="o">=</span><span class="n">edge1</span><span class="p">,</span> <span class="n">edge2</span><span class="o">=</span><span class="n">edge2</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="disconnect"><a class="viewcode-back" href="../../node_operations.html#tensorkrowch.disconnect">[docs]</a><span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="n">edge</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">],</span>
-                                                      <span class="n">Union</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">]]:</span>
+<div class="viewcode-block" id="disconnect"><a class="viewcode-back" href="../../node_operations.html#tensorkrowch.disconnect">[docs]</a><span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="n">edge</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="n">Edge</span><span class="p">],</span>
+                                                      <span class="n">Tuple</span><span class="p">[</span><span class="n">ParamEdge</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Disconnect an edge, returning a couple of dangling edges</span>
+<span class="sd">    Disconnects connected edge, that is, the connected edge is splitted into</span>
+<span class="sd">    two dangling edges, one for each node.</span>
+<span class="sd">    </span>
+<span class="sd">    This operation is the same as :meth:`Edge.disconnect` and</span>
+<span class="sd">    :meth:`ParamEdge.disconnect`.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    edge : Edge or ParamEdge</span>
+<span class="sd">        Edge that is going to be disconnected (splitted in two).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple[Edge, Edge] or tuple[ParamEdge, ParamEdge]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot disconnect a dangling edge&#39;</span><span class="p">)</span>
 
+    <span class="c1"># This is to avoid disconnecting an edge when we are trying to disconnect a</span>
+    <span class="c1"># copy of that edge, in which case `copy_edge` might connect `node1` and</span>
+    <span class="c1"># `node2`, but none of them &quot;sees&quot; `copy_edge`, since they have `edge`</span>
+    <span class="c1"># connecting them</span>
     <span class="n">nodes</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">axes</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">axis</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">edge</span><span class="o">.</span><span class="n">_axes</span><span class="p">,</span> <span class="n">edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">):</span>
@@ -3508,8 +3575,8 @@ title="Fullscreen mode"
     <span class="k">for</span> <span class="n">axis</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="n">nodes</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">Edge</span><span class="p">):</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">StackEdge</span><span class="p">):</span>
-                <span class="n">new_edge</span> <span class="o">=</span> <span class="n">StackEdge</span><span class="p">(</span><span class="n">edges</span><span class="o">=</span><span class="n">edge</span><span class="o">.</span><span class="n">edges</span><span class="p">,</span>
-                                     <span class="n">node1_lists</span><span class="o">=</span><span class="n">edge</span><span class="o">.</span><span class="n">node1_lists</span><span class="p">,</span>
+                <span class="n">new_edge</span> <span class="o">=</span> <span class="n">StackEdge</span><span class="p">(</span><span class="n">edges</span><span class="o">=</span><span class="n">edge</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span>
+                                     <span class="n">node1_lists</span><span class="o">=</span><span class="n">edge</span><span class="o">.</span><span class="n">_node1_lists</span><span class="p">,</span>
                                      <span class="n">node1</span><span class="o">=</span><span class="n">node</span><span class="p">,</span>
                                      <span class="n">axis1</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
                 <span class="n">new_edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_edge</span><span class="p">)</span>
@@ -3522,15 +3589,15 @@ title="Fullscreen mode"
                 <span class="n">net</span><span class="o">.</span><span class="n">_add_edge</span><span class="p">(</span><span class="n">new_edge</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">ParamStackEdge</span><span class="p">):</span>
-                <span class="n">new_edge</span> <span class="o">=</span> <span class="n">ParamStackEdge</span><span class="p">(</span><span class="n">edges</span><span class="o">=</span><span class="n">edge</span><span class="o">.</span><span class="n">edges</span><span class="p">,</span>
-                                          <span class="n">node1_lists</span><span class="o">=</span><span class="n">edge</span><span class="o">.</span><span class="n">node1_lists</span><span class="p">,</span>
+                <span class="n">new_edge</span> <span class="o">=</span> <span class="n">ParamStackEdge</span><span class="p">(</span><span class="n">edges</span><span class="o">=</span><span class="n">edge</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span>
+                                          <span class="n">node1_lists</span><span class="o">=</span><span class="n">edge</span><span class="o">.</span><span class="n">_node1_lists</span><span class="p">,</span>
                                           <span class="n">node1</span><span class="o">=</span><span class="n">node</span><span class="p">,</span>
                                           <span class="n">axis1</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
                 <span class="n">new_edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_edge</span><span class="p">)</span>
 
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">shift</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="n">shift</span>
-                <span class="n">slope</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="n">slope</span>
+                <span class="n">shift</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="n">_shift</span>
+                <span class="n">slope</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="n">_slope</span>
                 <span class="n">new_edge</span> <span class="o">=</span> <span class="n">ParamEdge</span><span class="p">(</span><span class="n">node1</span><span class="o">=</span><span class="n">node</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="n">axis</span><span class="p">,</span>
                                      <span class="n">shift</span><span class="o">=</span><span class="n">shift</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="n">slope</span><span class="p">)</span>
                 <span class="n">new_edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_edge</span><span class="p">)</span>
@@ -3552,24 +3619,57 @@ title="Fullscreen mode"
 <span class="c1">###############################################################################</span>
 <div class="viewcode-block" id="Successor"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Successor">[docs]</a><span class="k">class</span> <span class="nc">Successor</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Class for successors. Object that stores information about</span>
-<span class="sd">    the already computed operations in the network, in order to</span>
-<span class="sd">    compute them faster next time.</span>
+<span class="sd">    Class for successors. This is a sort of cache memory for :class:`operations</span>
+<span class="sd">    &lt;Operation&gt;` that have been already computed.</span>
+<span class="sd">    </span>
+<span class="sd">    For instance, when contracting two nodes, the result gives a new node that</span>
+<span class="sd">    stores the tensor resultant from contracting both nodes&#39;s tensors. However,</span>
+<span class="sd">    when training a :class:`TensorNetwork`, the tensors inside the nodes will</span>
+<span class="sd">    change every epoch, but there is actually no need to create a new resultant</span>
+<span class="sd">    node every time. Instead, it is more efficient to keep track of which node</span>
+<span class="sd">    arose as the result of an operation, and simply change its tensor.</span>
+<span class="sd">    </span>
+<span class="sd">    Hence, a ``Successor`` is instantiated providing the arguments of the operation</span>
+<span class="sd">    that gave rise to a resultant node, a reference to the resultant node itself,</span>
+<span class="sd">    and some hints that might help accelerating the computations the next time</span>
+<span class="sd">    the operation is performed.</span>
+<span class="sd">    </span>
+<span class="sd">    These three properties can be accessed via ``successor.kwargs``, ``successor.child``</span>
+<span class="sd">    and ``successor.hints``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    kwargs: keyword arguments used in the operation</span>
-<span class="sd">    child: node resultant from the operation</span>
-<span class="sd">    hints: hints created the first time the computation was</span>
-<span class="sd">        performed, so that next times we can avoid calculating</span>
-<span class="sd">        auxiliary information needed for the computation</span>
+<span class="sd">    kwargs : dict[str, any]</span>
+<span class="sd">        Dictionary with keyword arguments used to call an operation.</span>
+<span class="sd">    child : AbstractNode or list[AbstractNode]</span>
+<span class="sd">        The node or list of nodes that result from an operation.</span>
+<span class="sd">    hints : dict[str, any], optional</span>
+<span class="sd">        A dictionary of hints created the first time an operation is computed in</span>
+<span class="sd">        order to save some computation in the next calls of the operation.</span>
+<span class="sd">        </span>
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    When contracting two nodes, a ``Successor`` is created and added to the list</span>
+<span class="sd">    of successors of the first node (left operand).</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(3, 4), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; # Connect nodes</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; # Contract nodes</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA @ nodeB</span>
+<span class="sd">    &gt;&gt;&gt; result.name = &#39;my_result&#39;</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; print(result.name, nodeA.successors[&#39;contract_edges&#39;][0].child.name)</span>
+<span class="sd">    my_result my_result</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">kwargs</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Text</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
                  <span class="n">child</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">]],</span>
-                 <span class="n">contracting</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="n">hints</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+                 <span class="n">hints</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="n">Text</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span> <span class="o">=</span> <span class="n">kwargs</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">child</span> <span class="o">=</span> <span class="n">child</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">hints</span> <span class="o">=</span> <span class="n">hints</span></div>

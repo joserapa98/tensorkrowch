@@ -171,6 +171,7 @@ AbstractNode.permute = permute_node
 
 
 def permute_(node: AbstractNode, axes: Sequence[Ax]) -> Node:
+    """Permute in place"""
     axes_nums = []
     for axis in axes:
         axes_nums.append(node.get_axis_num(axis))
@@ -937,8 +938,8 @@ def split_(node: AbstractNode,
     """
     node1, node2 = split(node, node1_axes, node2_axes,
                          mode, side, rank, cum_percentage, cutoff)
-    node1._reattach_edges(True)
-    node2._reattach_edges(True)
+    node1.reattach_edges(True)
+    node2.reattach_edges(True)
     
     # Delete node (and its edges) from the TN
     net = node.network
@@ -1664,7 +1665,7 @@ def contract_(edge: AbstractEdge) -> Node:
     Contract only one edge
     """
     result = contract_edges([edge], edge.node1, edge.node2)
-    result._reattach_edges(True)
+    result.reattach_edges(True)
     
     # Delete nodes (and their edges) from the TN
     net = result.network
@@ -1735,7 +1736,7 @@ def contract_between_(node1: AbstractNode,
     between batch edges that share name in both nodes
     """
     result = contract_between(node1, node2, axes)
-    result._reattach_edges(True)
+    result.reattach_edges(True)
     
     # Delete nodes (and their edges) from the TN
     net = result.network

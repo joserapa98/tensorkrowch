@@ -707,6 +707,27 @@ is provided, returns None.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.AbstractNode.reattach_edges">
+<span class="sig-name descname"><span class="pre">reattach_edges</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">override</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#AbstractNode.reattach_edges"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.reattach_edges" title="Permalink to this definition">#</a></dt>
+<dd><p>Substitutes current edges by copies of them that are attached to the node.
+It can happen that an edge is not attached to the node if it is the result
+of an <a class="reference internal" href="node_operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operation</span></code></a> and, hence, it inherits edges from the operands.
+In that case, the new copied edges will be attached to the resultant node,
+replacing each previous <cite>node1</cite> or <cite>node2</cite> with it (according to the
+<code class="docutils literal notranslate"><span class="pre">node1</span></code> attribute of each axis).</p>
+<p>Used for inplace operations like <a class="reference internal" href="#tensorkrowch.AbstractNode.permute_" title="tensorkrowch.AbstractNode.permute_"><code class="xref py py-func docutils literal notranslate"><span class="pre">permute_()</span></code></a> or <a class="reference internal" href="#tensorkrowch.AbstractNode.split_" title="tensorkrowch.AbstractNode.split_"><code class="xref py py-func docutils literal notranslate"><span class="pre">split_()</span></code></a> and
+to (de)parameterize nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>override</strong> (<em>bool</em>) – Boolean indicating if the new, reattached edges should also replace
+the corresponding edges in the node’s neighbours (<code class="docutils literal notranslate"><span class="pre">True</span></code>). Otherwise,
+the neighbours’ edges will be pointing to the original nodes from which
+the current node inherits its edges (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.disconnect">
 <span class="sig-name descname"><span class="pre">disconnect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#AbstractNode.disconnect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.disconnect" title="Permalink to this definition">#</a></dt>
 <dd><p>Disconnects all edges of the node if they were connected to other nodes.
@@ -905,6 +926,12 @@ between batch edges that share name in both nodes</p>
 <dd class="field-odd"><p><strong>axes</strong> (<em>List</em><em>[</em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em>) – list of axes to permute</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.AbstractNode.permute_">
+<span class="sig-name descname"><span class="pre">permute_</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axes</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.AbstractNode.permute_" title="Permalink to this definition">#</a></dt>
+<dd><p>Permute in place</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1462,6 +1489,10 @@ nodes at the same axes.</p>
 <dt class="sig sig-object py" id="tensorkrowch.Edge.connect">
 <span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#Edge.connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Edge.connect" title="Permalink to this definition">#</a></dt>
 <dd><p>Connects dangling edge to another dangling edge.</p>
+<p>It is necessary that both edges have the same dimension so that contractions
+along that edge can be computed. Note that for <code class="docutils literal notranslate"><span class="pre">ParamEdges</span></code> the sizes
+could be different. In this case the resultant param-edge will have the
+minimum size between them.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>other</strong> (<a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a><em> or </em><a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><em>ParamEdge</em></a>) – The other edge to which current edge will be connected. If it is an
@@ -1709,6 +1740,10 @@ the same nodes at the same axes, with the same <code class="docutils literal not
 <span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#ParamEdge.connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamEdge.connect" title="Permalink to this definition">#</a></dt>
 <dd><p>Connects dangling param-edge to another dangling edge or param-edge. The
 result will always be a param-edge.</p>
+<p>It is necessary that both edges have the same dimension so that contractions
+along that edge can be computed. Note that for <code class="docutils literal notranslate"><span class="pre">ParamEdges</span></code> the sizes
+could be different. In this case the resultant param-edge will have the
+minimum size between them.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>other</strong> (<a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a><em> or </em><a class="reference internal" href="#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><em>ParamEdge</em></a>) – The other edge to which current edge will be connected. If it is an
@@ -1957,20 +1992,47 @@ resultant <code class="docutils literal notranslate"><span class="pre">ParamStac
 <h2>Successor<a class="headerlink" href="#successor" title="Permalink to this headline">#</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.Successor">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Successor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kwargs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">child</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contracting</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hints</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#Successor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Successor" title="Permalink to this definition">#</a></dt>
-<dd><p>Class for successors. Object that stores information about
-the already computed operations in the network, in order to
-compute them faster next time.</p>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Successor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kwargs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">child</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hints</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/network_components.html#Successor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Successor" title="Permalink to this definition">#</a></dt>
+<dd><p>Class for successors. This is a sort of cache memory for <a class="reference internal" href="node_operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">operations</span></code></a> that have been already computed.</p>
+<p>For instance, when contracting two nodes, the result gives a new node that
+stores the tensor resultant from contracting both nodes’s tensors. However,
+when training a <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>, the tensors inside the nodes will
+change every epoch, but there is actually no need to create a new resultant
+node every time. Instead, it is more efficient to keep track of which node
+arose as the result of an operation, and simply change its tensor.</p>
+<p>Hence, a <code class="docutils literal notranslate"><span class="pre">Successor</span></code> is instantiated providing the arguments of the operation
+that gave rise to a resultant node, a reference to the resultant node itself,
+and some hints that might help accelerating the computations the next time
+the operation is performed.</p>
+<p>These three properties can be accessed via <code class="docutils literal notranslate"><span class="pre">successor.kwargs</span></code>, <code class="docutils literal notranslate"><span class="pre">successor.child</span></code>
+and <code class="docutils literal notranslate"><span class="pre">successor.hints</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>kwargs</strong> (<em>keyword arguments used in the operation</em>) – </p></li>
-<li><p><strong>child</strong> (<em>node resultant from the operation</em>) – </p></li>
-<li><p><strong>hints</strong> (<em>hints created the first time the computation was</em>) – performed, so that next times we can avoid calculating
-auxiliary information needed for the computation</p></li>
+<li><p><strong>kwargs</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>any</em><em>]</em>) – Dictionary with keyword arguments used to call an operation.</p></li>
+<li><p><strong>child</strong> (<a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em> or </em><em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>]</em>) – The node or list of nodes that result from an operation.</p></li>
+<li><p><strong>hints</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>any</em><em>]</em><em>, </em><em>optional</em>) – A dictionary of hints created the first time an operation is computed in
+order to save some computation in the next calls of the operation.</p></li>
 </ul>
 </dd>
 </dl>
+<p class="rubric">Example</p>
+<p>When contracting two nodes, a <code class="docutils literal notranslate"><span class="pre">Successor</span></code> is created and added to the list
+of successors of the first node (left operand).</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodeB</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">))</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Connect nodes</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">nodeB</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Contract nodes</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">nodeA</span> <span class="o">@</span> <span class="n">nodeB</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;my_result&#39;</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">nodeA</span><span class="o">.</span><span class="n">successors</span><span class="p">[</span><span class="s1">&#39;contract_edges&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">child</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="go">my_result my_result</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>

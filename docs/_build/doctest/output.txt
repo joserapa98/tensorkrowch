@@ -1,0 +1,39 @@
+Results of doctest builder run on 2023-02-06 19:56:40
+=====================================================
+
+Document: usage
+---------------
+1 items passed all tests:
+   3 tests in default
+3 tests in 1 items.
+3 passed and 0 failed.
+Test passed.
+
+Document: network_components
+----------------------------
+**********************************************************************
+File "../tensorkrowch/network_components.py", line ?, in default
+Failed example:
+    print(result.name,
+          nodeA.successors['contract_edges'][0].child.name,
+          nodeB.successors['contract_edges'][0].child.name)
+Exception raised:
+    Traceback (most recent call last):
+      File "/home/jose/anaconda3/envs/pytorch/lib/python3.8/doctest.py", line 1336, in __run
+        exec(compile(example.source, filename, "single",
+      File "<doctest default[5]>", line 3, in <module>
+        nodeB.successors['contract_edges'][0].child.name)
+    KeyError: 'contract_edges'
+**********************************************************************
+1 items had failures:
+   1 of  90 in default
+90 tests in 1 items.
+89 passed and 1 failed.
+***Test Failed*** 1 failures.
+
+Doctest summary
+===============
+   93 tests
+    1 failure in tests
+    0 failures in setup code
+    0 failures in cleanup code

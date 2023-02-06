@@ -740,51 +740,6 @@ class AbstractNode(ABC):
         self._axes[axis_num]._node1 = node1
         self._edges[axis_num] = edge
         
-    def _reattach_edges(self, override: bool = False) -> None:
-        """
-        Substitutes current edges by copies of them that are attached to the node.
-        It can happen that an edge is not attached to the node if it is the result
-        of an :class:`Operation` and, hence, it inherits edges from the operands.
-        In that case, the new copied edges will be attached to the resultant node,
-        replacing each previous `node1` or `node2` with it (according to the `node1`
-        attribute of each axis).
-        
-        Used for inplace operations like :func:`permute_` or :func`split_` and
-        to :meth:`Node.parameterize`.
-
-        Parameters
-        ----------
-        override: bool
-            Boolean indicating if the new, reattached edges should also replace
-            the corresponding edges in the node's neighbours (``True``). Otherwise,
-            the neighbours' edges will be pointing to the original nodes from which
-            the current node inherits its edges (``False``).
-        """
-        for i, (edge, node1) in enumerate(zip(self._edges, self.is_node1())):
-            node = edge._nodes[1 - node1]
-            if node != self:
-                # New edges are always a copy, so that the original
-                # nodes have different edges from the current node
-                new_edge = edge.copy()
-                self._edges[i] = new_edge
-
-                new_edge._nodes[1 - node1] = self
-                new_edge._axes[1 - node1] = self._axes[i]
-
-                # Case of trace edges (attached to the node in two axes)
-                neighbour = new_edge._nodes[node1]
-                if neighbour == node:
-                    for j, other_edge in enumerate(self._edges):
-                        if (other_edge == edge) and (i != j):
-                            self._edges[j] = new_edge
-                            new_edge._nodes[node1] = self
-                            new_edge._axes[node1] = self._axes[j]
-
-                if override:
-                    if not new_edge.is_dangling() and (neighbour != node):
-                        neighbour._add_edge(
-                            new_edge, new_edge._axes[node1], not node1)
-        
     def get_edge(self, axis: Ax) -> 'AbstractEdge':
         """
         Returns :class:`AbstractEdge` given the :class:`Axis` (or its ``name``
@@ -871,6 +826,51 @@ class AbstractNode(ABC):
             else:
                 for param_edge in self._edges:
                     param_edge.parameterize(False)
+                    
+    def reattach_edges(self, override: bool = False) -> None:
+        """
+        Substitutes current edges by copies of them that are attached to the node.
+        It can happen that an edge is not attached to the node if it is the result
+        of an :class:`Operation` and, hence, it inherits edges from the operands.
+        In that case, the new copied edges will be attached to the resultant node,
+        replacing each previous `node1` or `node2` with it (according to the
+        ``node1`` attribute of each axis).
+        
+        Used for inplace operations like :func:`permute_` or :func:`split_` and
+        to (de)parameterize nodes.
+
+        Parameters
+        ----------
+        override: bool
+            Boolean indicating if the new, reattached edges should also replace
+            the corresponding edges in the node's neighbours (``True``). Otherwise,
+            the neighbours' edges will be pointing to the original nodes from which
+            the current node inherits its edges (``False``).
+        """
+        for i, (edge, node1) in enumerate(zip(self._edges, self.is_node1())):
+            node = edge._nodes[1 - node1]
+            if node != self:
+                # New edges are always a copy, so that the original
+                # nodes have different edges from the current node
+                new_edge = edge.copy()
+                self._edges[i] = new_edge
+
+                new_edge._nodes[1 - node1] = self
+                new_edge._axes[1 - node1] = self._axes[i]
+
+                # Case of trace edges (attached to the node in two axes)
+                neighbour = new_edge._nodes[node1]
+                if neighbour == node:
+                    for j, other_edge in enumerate(self._edges):
+                        if (other_edge == edge) and (i != j):
+                            self._edges[j] = new_edge
+                            new_edge._nodes[node1] = self
+                            new_edge._axes[node1] = self._axes[j]
+
+                if override:
+                    if not new_edge.is_dangling() and (neighbour != node):
+                        neighbour._add_edge(
+                            new_edge, new_edge._axes[node1], not node1)
 
     def disconnect(self, axis: Optional[Ax] = None) -> None:
         """
@@ -1498,7 +1498,7 @@ class Node(AbstractNode):
                 axis._node1 = node1_list[i]
             self._edges = edges[:]
             if self._leaf and not self._network._automemory:
-                self._reattach_edges(override=override_edges)
+                self.reattach_edges(override=override_edges)
 
         # network
         self._network._add_node(self, override=override_node)
@@ -2442,6 +2442,11 @@ class Edge(AbstractEdge):
         """
         Connects dangling edge to another dangling edge.
         
+        It is necessary that both edges have the same dimension so that contractions
+        along that edge can be computed. Note that for ``ParamEdges`` the sizes
+        could be different. In this case the resultant param-edge will have the
+        minimum size between them.
+        
         Parameters
         ----------
         other : Edge or ParamEdge
@@ -2861,6 +2866,11 @@ class ParamEdge(AbstractEdge, nn.Module):
         Connects dangling param-edge to another dangling edge or param-edge. The
         result will always be a param-edge.
         
+        It is necessary that both edges have the same dimension so that contractions
+        along that edge can be computed. Note that for ``ParamEdges`` the sizes
+        could be different. In this case the resultant param-edge will have the
+        minimum size between them.
+        
         Parameters
         ----------
         other : Edge or ParamEdge
@@ -3182,31 +3192,53 @@ class ParamStackEdge(AbstractStackEdge, ParamEdge):
 ###############################################################################
 def connect(edge1: AbstractEdge, edge2: AbstractEdge) -> Union[Edge, ParamEdge]:
     """
-    Connect two dangling, non-batch edges.
+    Connects two dangling edges. If both are :class:`Edges <Edge>`, the result
+    will be also an ``Edge``. Otherwise, the result will be a :class:`ParamEdge`.
+    
+    It is necessary that both edges have the same dimension so that contractions
+    along that edge can be computed. Note that for ``ParamEdges`` the sizes could
+    be different. In this case the resultant param-edge will have the minimum
+    size between them.
+    
+    This operation is the same as :meth:`Edge.connect` and :meth:`ParamEdge.connect`.
+    
+    Parameters
+    ----------
+    edge1 : Edge or ParamEdge
+        The first edge that will be connected. Its node will become the ``node1``
+        of the resultant edge.
+    edge2 : Edge or ParamEdge
+        The second edge that will be connected. Its node will become the ``node2``
+        of the resultant edge.
+
+    Returns
+    -------
+    Edge or ParamEdge
     """
-    # TODO: no puedo capar el conectar nodos no-leaf, pero no tiene el resultado esperado,
-    #  en realidad estás conectando los nodos originales (leaf)
+    # Case edge is already connected
     if edge1 == edge2:
         return edge1
 
     for edge in [edge1, edge2]:
         if not edge.is_dangling():
             raise ValueError(f'Edge {edge!s} is not a dangling edge. '
-                             f'This edge points to nodes: {edge.node1!s} and {edge.node2!s}')
+                             f'This edge points to nodes: {edge.node1!s} and '
+                             f'{edge.node2!s}')
         if edge.is_batch():
-            raise ValueError(f'Edge {edge!s} is a batch edge')
-    # if edge1 == edge2:
-    #     raise ValueError(f'Cannot connect edge {edge1!s} to itself')
+            raise ValueError(f'Edge {edge!s} is a batch edge. Batch edges '
+                             'cannot be connected')
+    
     if edge1.dim() != edge2.dim():
         raise ValueError(f'Cannot connect edges of unequal dimension. '
                          f'Dimension of edge {edge1!s}: {edge1.dim()}. '
                          f'Dimension of edge {edge2!s}: {edge2.dim()}')
-    if edge1.size() != edge2.size():
-        # Keep the minimum size
-        if edge1.size() < edge2.size():
-            edge2.change_size(edge1.size())
-        elif edge1.size() > edge2.size():
-            edge1.change_size(edge2.size())
+    if edge1._size != edge2._size:
+        # Keep the minimum size when connecting param-edges
+        # with the same dimension
+        if edge1._size < edge2._size:
+            edge2.change_size(edge1._size)
+        elif edge1._size > edge2._size:
+            edge1.change_size(edge2._size)
 
     node1, axis1 = edge1.node1, edge1.axis1
     node2, axis2 = edge2.node1, edge2.axis1
@@ -3221,20 +3253,21 @@ def connect(edge1: AbstractEdge, edge2: AbstractEdge) -> Union[Edge, ParamEdge]:
     if isinstance(edge1, ParamEdge) == isinstance(edge2, ParamEdge):
         if isinstance(edge1, ParamEdge):
             if isinstance(edge1, ParamStackEdge):
-                new_edge = ParamStackEdge(edges=edge1.edges, node1_lists=edge1.node1_lists,
+                new_edge = ParamStackEdge(edges=edge1._edges,
+                                          node1_lists=edge1._node1_lists,
                                           node1=node1, axis1=axis1,
                                           node2=node2, axis2=axis2)
-                # net._add_edge(new_edge)
             else:
-                shift = edge1.shift
-                slope = edge1.slope
+                shift = edge1._shift
+                slope = edge1._slope
                 new_edge = ParamEdge(node1=node1, axis1=axis1,
                                      shift=shift, slope=slope,
                                      node2=node2, axis2=axis2)
                 net._add_edge(new_edge)
         else:
             if isinstance(edge1, StackEdge):
-                new_edge = StackEdge(edges=edge1.edges, node1_lists=edge1.node1_lists,
+                new_edge = StackEdge(edges=edge1._edges,
+                                     node1_lists=edge1._node1_lists,
                                      node1=node1, axis1=axis1,
                                      node2=node2, axis2=axis2)
             else:
@@ -3242,11 +3275,11 @@ def connect(edge1: AbstractEdge, edge2: AbstractEdge) -> Union[Edge, ParamEdge]:
                                 node2=node2, axis2=axis2)
     else:
         if isinstance(edge1, ParamEdge):
-            shift = edge1.shift
-            slope = edge1.slope
+            shift = edge1._shift
+            slope = edge1._slope
         else:
-            shift = edge2.shift
-            slope = edge2.slope
+            shift = edge2._shift
+            slope = edge2._slope
         new_edge = ParamEdge(node1=node1, axis1=axis1,
                              shift=shift, slope=slope,
                              node2=node2, axis2=axis2)
@@ -3257,31 +3290,65 @@ def connect(edge1: AbstractEdge, edge2: AbstractEdge) -> Union[Edge, ParamEdge]:
     return new_edge
 
 
-def connect_stack(edge1: AbstractStackEdge, edge2: AbstractStackEdge):
+def connect_stack(edge1: AbstractStackEdge,
+                  edge2: AbstractStackEdge) -> AbstractStackEdge:
     """
-    Connect stack edges only if their lists of edges are the same
-    (coming from already connected edges)
+    Same as :func:`connect` but it is verified that all stacked edges corresponding
+    to both ``(Param)StackEdges`` are the same. That is, this is a redundant
+    operation to re-connect a list of edges that should be already connected.
+    However, this is mandatory, since when stacking two sequences of nodes
+    independently it cannot be inferred that the resultant ``(Param)StackNodes``
+    had to be connected.
+    
+    This operation is the same as :meth:`StackEdge.connect` and
+    :meth:`ParamStackEdge.connect`.
+    
+    Parameters
+    ----------
+    edge1 : StackEdge or ParamStackEdge
+        The first edge that will be connected. Its node will become the ``node1``
+        of the resultant edge.
+    edge2 : StackEdge or ParamStackEdge
+        The second edge that will be connected. Its node will become the ``node2``
+        of the resultant edge.
     """
     if not isinstance(edge1, AbstractStackEdge) or \
             not isinstance(edge2, AbstractStackEdge):
         raise TypeError('Both edges should be (Param)StackEdge\'s')
 
     if edge1._edges != edge2._edges:
-        raise ValueError('Cannot connect stack edges whose lists of'
-                         ' edges are not the same. They will be the '
-                         'same when both lists contain edges connecting'
-                         ' the nodes that formed the stack nodes.')
+        raise ValueError('Cannot connect stack edges whose lists of edges are '
+                         'not the same. They will be the same when both lists '
+                         'contain edges connecting the nodes that formed the '
+                         'stack nodes.')
     return connect(edge1=edge1, edge2=edge2)
 
 
-def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
-                                                      Union[Edge, ParamEdge]]:
+def disconnect(edge: Union[Edge, ParamEdge]) -> Union[Tuple[Edge, Edge],
+                                                      Tuple[ParamEdge, ParamEdge]]:
     """
-    Disconnect an edge, returning a couple of dangling edges
+    Disconnects connected edge, that is, the connected edge is splitted into
+    two dangling edges, one for each node.
+    
+    This operation is the same as :meth:`Edge.disconnect` and
+    :meth:`ParamEdge.disconnect`.
+    
+    Parameters
+    ----------
+    edge : Edge or ParamEdge
+        Edge that is going to be disconnected (splitted in two).
+
+    Returns
+    -------
+    tuple[Edge, Edge] or tuple[ParamEdge, ParamEdge]
     """
     if edge.is_dangling():
         raise ValueError('Cannot disconnect a dangling edge')
 
+    # This is to avoid disconnecting an edge when we are trying to disconnect a
+    # copy of that edge, in which case `copy_edge` might connect `node1` and
+    # `node2`, but none of them "sees" `copy_edge`, since they have `edge`
+    # connecting them
     nodes = []
     axes = []
     for axis, node in zip(edge._axes, edge._nodes):
@@ -3294,8 +3361,8 @@ def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
     for axis, node in zip(axes, nodes):
         if isinstance(edge, Edge):
             if isinstance(edge, StackEdge):
-                new_edge = StackEdge(edges=edge.edges,
-                                     node1_lists=edge.node1_lists,
+                new_edge = StackEdge(edges=edge._edges,
+                                     node1_lists=edge._node1_lists,
                                      node1=node,
                                      axis1=axis)
                 new_edges.append(new_edge)
@@ -3308,15 +3375,15 @@ def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
                 net._add_edge(new_edge)
         else:
             if isinstance(edge, ParamStackEdge):
-                new_edge = ParamStackEdge(edges=edge.edges,
-                                          node1_lists=edge.node1_lists,
+                new_edge = ParamStackEdge(edges=edge._edges,
+                                          node1_lists=edge._node1_lists,
                                           node1=node,
                                           axis1=axis)
                 new_edges.append(new_edge)
 
             else:
-                shift = edge.shift
-                slope = edge.slope
+                shift = edge._shift
+                slope = edge._slope
                 new_edge = ParamEdge(node1=node, axis1=axis,
                                      shift=shift, slope=slope)
                 new_edges.append(new_edge)
@@ -3338,24 +3405,57 @@ def disconnect(edge: Union[Edge, ParamEdge]) -> Tuple[Union[Edge, ParamEdge],
 ###############################################################################
 class Successor:
     """
-    Class for successors. Object that stores information about
-    the already computed operations in the network, in order to
-    compute them faster next time.
+    Class for successors. This is a sort of cache memory for :class:`operations
+    <Operation>` that have been already computed.
+    
+    For instance, when contracting two nodes, the result gives a new node that
+    stores the tensor resultant from contracting both nodes's tensors. However,
+    when training a :class:`TensorNetwork`, the tensors inside the nodes will
+    change every epoch, but there is actually no need to create a new resultant
+    node every time. Instead, it is more efficient to keep track of which node
+    arose as the result of an operation, and simply change its tensor.
+    
+    Hence, a ``Successor`` is instantiated providing the arguments of the operation
+    that gave rise to a resultant node, a reference to the resultant node itself,
+    and some hints that might help accelerating the computations the next time
+    the operation is performed.
+    
+    These three properties can be accessed via ``successor.kwargs``, ``successor.child``
+    and ``successor.hints``.
 
     Parameters
     ----------
-    kwargs: keyword arguments used in the operation
-    child: node resultant from the operation
-    hints: hints created the first time the computation was
-        performed, so that next times we can avoid calculating
-        auxiliary information needed for the computation
+    kwargs : dict[str, any]
+        Dictionary with keyword arguments used to call an operation.
+    child : AbstractNode or list[AbstractNode]
+        The node or list of nodes that result from an operation.
+    hints : dict[str, any], optional
+        A dictionary of hints created the first time an operation is computed in
+        order to save some computation in the next calls of the operation.
+        
+    Example
+    -------
+    When contracting two nodes, a ``Successor`` is created and added to the list
+    of successors of the first node (left operand).
+    
+    >>> nodeA = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
+    >>> nodeB = tk.randn(shape=(3, 4), axes_names=('left', 'right'))
+    ...
+    >>> # Connect nodes
+    >>> _ = nodeA['right'] ^ nodeB['left']
+    ...
+    >>> # Contract nodes
+    >>> result = nodeA @ nodeB
+    >>> result.name = 'my_result'
+    ...
+    >>> print(result.name, nodeA.successors['contract_edges'][0].child.name)
+    my_result my_result
     """
 
     def __init__(self,
                  kwargs: Dict[Text, Any],
                  child: Union[AbstractNode, List[AbstractNode]],
-                 contracting: Optional[bool] = None,
-                 hints: Optional[Any] = None) -> None:
+                 hints: Optional[Dict[Text, Any]] = None) -> None:
         self.kwargs = kwargs
         self.child = child
         self.hints = hints
@@ -3375,38 +3475,40 @@ class TensorNetwork(nn.Module):
     and perform site-wise contractions, even though network contraction
     methods are not implemented. Useful for experimentation.
     """
-    # TODO: explicar automemory en docs
+    # TODO: explicar automemory en docs, y distintos modos y defaults
+    # TODO: explicar disrtintos tipos de nodos en la TN
     
-    operations = dict()
+    operations = dict()  # References to the Operations defined for nodes
 
     def __init__(self, name: Optional[Text] = None):
         super().__init__()
+        
         if name is None:
             name = self.__class__.__name__.lower()
         self.name = name
 
-        # self._nodes = dict()
+        # Types of nodes of the TN
         self._leaf_nodes = dict()
         self._data_nodes = dict()
         self._virtual_nodes = dict()
         self._non_leaf_nodes = dict()
-
+        
+        # Repeated nodes to keep track of enumeration
         self._repeated_nodes_names = dict()
-
-        self._memory_nodes = dict()   # address -> memory
-        self._inverse_memory = dict()  # address -> nodes using that memory
-
-        self._data_nodes = dict()
-        # self._memory_data_nodes = None
-
+        
+        # Edges
         self._edges = []
 
-        # TODO: poder pasar esto como parametros
-        # Flag to indicate whether the TN has optimized memory to perform contraction
-        self._automemory = False
-        self._unbind_mode = True  # True if training, False if not training
-        self._tracing = False
+        # Memories
+        self._memory_nodes = dict()   # address -> memory
+        self._inverse_memory = dict()  # address -> nodes using that memory
+        
+        # TN modes
+        self._automemory = False  # Auto-management of memory mode (train -> True)
+        self._unbind_mode = True  # Unbind/index mode (train -> True)
+        self._tracing = False     # Tracing mode (True while calling .trace())
 
+        # Lis of operations used to contract the TN
         self._list_ops = []
 
     @property

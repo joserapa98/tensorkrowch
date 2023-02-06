@@ -1092,7 +1092,7 @@ class TestConnect:
         # practice. You should better make all the connections before starting
         # with operations
         node4[0] | node4[0]
-        node3._reattach_edges(override=True)
+        node3.reattach_edges(override=True)
         edge = node3[3]
         node3[3] ^ node4[0]
         assert node3[3] != edge
@@ -1210,7 +1210,7 @@ class TestConnect:
         assert node4['right'].is_attached_to(node3)
         
         # Reattach a copy of the edges
-        node4._reattach_edges()
+        node4.reattach_edges()
         
         assert node4['right'].is_attached_to(node4)
         assert node4['right'].is_attached_to(node3)
@@ -1221,7 +1221,7 @@ class TestConnect:
         assert node3['left'].is_attached_to(node3)
         
         # If we disconnect node4 from node3, node3 still has its edge,
-        # but node4 gets anew dangling edge
+        # but node4 gets a new dangling edge
         node4['right'].disconnect()
         assert node4['right'].is_dangling()
         assert node4['right'].is_attached_to(node4)
@@ -1255,7 +1255,7 @@ class TestConnect:
         assert node4['right'].is_attached_to(node3)
         
         # Reattach a copy of the edges
-        node4._reattach_edges(True)
+        node4.reattach_edges(True)
         
         assert node4['right'].is_attached_to(node4)
         assert node4['right'].is_attached_to(node3)

@@ -38,6 +38,30 @@ class TestPermute:
 
         assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
         
+    def test_permute_node_in_place(self):
+        node = tk.Node(shape=(2, 5, 2),
+                       axes_names=('left', 'input', 'right'),
+                       name='node',
+                       init_method='randn')
+        # Now ``permuted_node`` is replacing ``node`` in the network
+        permuted_node = node.permute_((0, 2, 1))
+
+        assert permuted_node['left']._nodes[permuted_node.is_node1('left')] == \
+            node['left']._nodes[node.is_node1('left')]
+        assert permuted_node['input']._nodes[permuted_node.is_node1('left')] == \
+            node['input']._nodes[node.is_node1('left')]
+        assert permuted_node['right']._nodes[permuted_node.is_node1('left')] == \
+            node['right']._nodes[node.is_node1('left')]
+
+        assert permuted_node[0]._nodes[permuted_node.is_node1('left')] == \
+            node[0]._nodes[node.is_node1('left')]
+        assert permuted_node[1]._nodes[permuted_node.is_node1('left')] == \
+            node[2]._nodes[node.is_node1('left')]
+        assert permuted_node[2]._nodes[permuted_node.is_node1('left')] == \
+            node[1]._nodes[node.is_node1('left')]
+
+        assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
+        
     def test_permute_paramnode(self):
         node = tk.ParamNode(shape=(2, 5, 2),
                             axes_names=('left', 'input', 'right'),
@@ -67,6 +91,31 @@ class TestPermute:
         assert not torch.equal(node.grad, torch.zeros(node.shape))
         node.network.zero_grad()
         assert torch.equal(node.grad, torch.zeros(node.shape))
+        
+    def test_permute_paramnode_in_place(self):
+        node = tk.ParamNode(shape=(2, 5, 2),
+                            axes_names=('left', 'input', 'right'),
+                            name='node',
+                            init_method='randn',
+                            param_edges=True)
+        # Now ``permuted_node`` is replacing ``node`` in the network
+        permuted_node = node.permute_((0, 2, 1))
+
+        assert permuted_node['left']._nodes[permuted_node.is_node1('left')] == \
+            node['left']._nodes[node.is_node1('left')]
+        assert permuted_node['input']._nodes[permuted_node.is_node1('left')] == \
+            node['input']._nodes[node.is_node1('left')]
+        assert permuted_node['right']._nodes[permuted_node.is_node1('left')] == \
+            node['right']._nodes[node.is_node1('left')]
+
+        assert permuted_node[0]._nodes[permuted_node.is_node1('left')] == \
+            node[0]._nodes[node.is_node1('left')]
+        assert permuted_node[1]._nodes[permuted_node.is_node1('left')] == \
+            node[2]._nodes[node.is_node1('left')]
+        assert permuted_node[2]._nodes[permuted_node.is_node1('left')] == \
+            node[1]._nodes[node.is_node1('left')]
+
+        assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
     
     
 class TestBasicOps:
@@ -6495,38 +6544,3 @@ class TestTNModels:
         # Forward
         for _ in range(5):
             result = model(image)
-            
-
-    # def test_useful_for_peps(self):
-    #     node1 = tk.ParamNode(shape=(3, 4),
-    #                         axes_names=('left', 'right'),
-    #                         init_method='randn')
-    #     node2 = tk.ParamNode(shape=(4, 5),
-    #                         axes_names=('left', 'right'),
-    #                         init_method='randn')
-    #     node1['right'] ^ node2['left']
-        
-    #     node3 = tk.Node(shape=(3, 4),
-    #                     axes_names=('left', 'right'),
-    #                     network=node1.network,
-    #                     leaf=False,
-    #                     edges=[node1['left'], node1['right']],
-    #                     node1_list=node1.is_node1())
-    #     node4 = tk.Node(shape=(4, 5),
-    #                     axes_names=('left', 'right'),
-    #                     network=node1.network,
-    #                     leaf=False,
-    #                     edges=[node2['left'], node2['right']],
-    #                     node1_list=node2.is_node1())
-    #     node3._unrestricted_set_tensor(torch.randn(3, 2), True)
-    #     node4._unrestricted_set_tensor(torch.randn(2, 5), True)
-    #     # NOTE: I can use this to make non-leaf tensors with smaller
-    #     # dimensions as the original nodes -> Very useful for PEPS
-        
-    #     assert node3.shape == (3, 2)
-    #     assert node3['left'].size() == 3
-    #     assert node3['right'].size() == 4
-        
-    #     assert node4.shape == (2, 5)
-    #     assert node4['left'].size() == 4
-    #     assert node4['right'].size() == 5

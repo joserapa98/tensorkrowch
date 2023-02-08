@@ -807,7 +807,7 @@ class MPSLayer(TensorNetwork):
             
             if not node['input'].is_dangling():
                 self.delete_node(node.neighbours('input'))
-        self.clear()
+        self.reset()
         
         self.output_node.get_axis('input').name = 'output'
             

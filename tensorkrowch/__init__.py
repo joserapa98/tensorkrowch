@@ -11,9 +11,10 @@ from tensorkrowch.node_operations import Operation
 from tensorkrowch.node_operations import (get_shared_edges, contract_edges,
                                           contract_between)
 
-from tensorkrowch.node_operations import (permute, tprod, mul, add, sub,
+from tensorkrowch.node_operations import (permute, permute_, tprod, mul, add, sub,
                                       einsum, stack, unbind, stacked_einsum,
-                                      stack_unequal_tensors, contract_edges, contract_between, split)
+                                      stack_unequal_tensors, contract_edges,
+                                      contract_between, contract_between_, split, split_)
 
 from tensorkrowch.initializers import zeros, ones, copy, rand, randn
 

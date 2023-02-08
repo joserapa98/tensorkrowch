@@ -15,12 +15,6 @@ import opt_einsum
 import dis
 
 
-# TODO: nuevos tests
-# TODO: shape y dim iguales o no? Veremos para pilas
-# TODO: si pasamos lista de edges al hijo, hacemos siempre reattach? Y en copy, permute?
-# TODO: no privado, pero solo desde stack (y en general operaciones) es como se optimiza
-#  y se lleva registro de hijos y demás
-
 
 class TestAxis:
     
@@ -2385,7 +2379,7 @@ class TestTensorNetwork:
         assert len(net.non_leaf_nodes) == 3
         assert len(net.edges) == 6
         
-        net.clear()
+        net.reset()
         assert len(net.nodes) == 4
         assert len(net.leaf_nodes) == 4
         assert len(net.non_leaf_nodes) == 0
@@ -2408,7 +2402,7 @@ class TestTensorNetwork:
             assert node._tensor_info['address'] is not None
         
         assert net.automemory == False
-        assert net.unbind_mode == True
+        assert net.unbind_mode == False
         
         stack = tk.stack(list(net.nodes.values()))
         # All nodes still have their own memory
@@ -2419,7 +2413,7 @@ class TestTensorNetwork:
             
         net.automemory = True
         assert net.automemory == True
-        assert net.unbind_mode == True
+        assert net.unbind_mode == False
         
         stack = tk.stack(list(net.nodes.values()))
         # Now leaf nodes have their emory stored in the stack
@@ -2445,21 +2439,6 @@ class TestTensorNetwork:
             assert node._tensor_info['address'] is not None
         
         assert net.automemory == False
-        assert net.unbind_mode == True
-        
-        stack1 = tk.stack(list(net.nodes.values()))
-        unbinded = tk.unbind(stack1)
-        stack2 = tk.stack(unbinded)
-        # All nodes still have their own memory
-        for node in net.leaf_nodes.values():
-            assert node._tensor_info['address'] is not None
-            assert node._tensor_info['node_ref'] is None
-        for node in net.non_leaf_nodes.values():
-            assert node._tensor_info['node_ref'] is None
-            assert node._tensor_info['address'] is not None
-            
-        net.unbind_mode = False
-        assert net.automemory == False
         assert net.unbind_mode == False
         
         stack1 = tk.stack(list(net.nodes.values()))
@@ -2475,37 +2454,18 @@ class TestTensorNetwork:
         for node in unbinded:
             assert node._tensor_info['address'] is None
         assert stack2._tensor_info['address'] is None
+            
+        net.unbind_mode = True
+        assert net.automemory == False
+        assert net.unbind_mode == True
         
-        
-        
-
-
-# def test_is_updated():
-#     # TODO: no lo uso
-#     node1 = tk.Node(shape=(2, 3),
-#                     axes_names=('left', 'right'),
-#                     name='node1',
-#                     param_edges=True,
-#                     init_method='ones')
-#     node2 = tk.Node(shape=(3, 4),
-#                     axes_names=('left', 'right'),
-#                     name='node2',
-#                     param_edges=True,
-#                     init_method='ones')
-#     new_edge = node1['right'] ^ node2['left']
-#     prev_matrix = new_edge.matrix
-#     optimizer = torch.optim.SGD(params=new_edge.parameters(), lr=0.1)
-
-#     node3 = node1 @ node2
-#     mean = node3.mean()
-#     mean.backward()
-#     optimizer.step()
-
-#     assert not new_edge.is_updated()  # TODO: a lo mejor no sirve pa na
-
-#     new_matrix = new_edge.matrix
-#     assert not torch.equal(prev_matrix, new_matrix)
-
-
-# TODO: Hacer ParamStackNode, al hacer stack, si todos los nodos son leaf y ParamNode
-# TODO: Hacer que la matriz de ParamStackEdge se construya apilando las matrices de los edges que contiene
+        stack1 = tk.stack(list(net.nodes.values()))
+        unbinded = tk.unbind(stack1)
+        stack2 = tk.stack(unbinded)
+        # All nodes still have their own memory
+        for node in net.leaf_nodes.values():
+            assert node._tensor_info['address'] is not None
+            assert node._tensor_info['node_ref'] is None
+        for node in net.non_leaf_nodes.values():
+            assert node._tensor_info['node_ref'] is None
+            assert node._tensor_info['address'] is not None

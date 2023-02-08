@@ -622,7 +622,7 @@ class MPS(TensorNetwork):
             
             if not node['input'].is_dangling():
                 self.delete_node(node.neighbours('input'))
-        self.clear()
+        self.reset()
             
         for node, data_node in zip(nodes, self._data_nodes.values()):
             node['input'] ^ data_node['feature']

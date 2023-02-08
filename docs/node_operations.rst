@@ -33,15 +33,21 @@ Tensor-like Operations
 
 .. autofunction:: permute
 
+.. autofunction:: permute_
+
 
 Node-like Operations
 --------------------
 
 .. autofunction:: split
 
+.. autofunction:: split_
+
 .. autofunction:: contract_edges
 
 .. autofunction:: contract_between
+
+.. autofunction:: contract_between_
 
 .. autofunction:: stack
 

@@ -2276,7 +2276,7 @@ def contract_edges(edges: List[AbstractEdge],
 
     Returns
     -------
-    new_node : Node
+    Node
     """
     return contract_edges_op(edges, node1, node2)
 
@@ -2297,7 +2297,7 @@ def contract_(edge: AbstractEdge) -> Node:
 
     Returns
     -------
-    new_node : Node
+    Node
     """
     result = contract_edges([edge], edge.node1, edge.node2)
     result.reattach_edges(True)
@@ -2342,65 +2342,75 @@ def get_shared_edges(node1: AbstractNode,
 
 
 def contract_between(node1: AbstractNode,
-                     node2: AbstractNode,
-                     axes: Optional[Sequence[Ax]] = None) -> Node:
+                     node2: AbstractNode) -> Node:
     """
-    Contracts all shared edges between two nodes.
-    
-    Following the **PyTorch** convention, names of functions ended with an
-    underscore indicate **in-place** operations.
+    Contracts all edges shared between two nodes. Batch contraction is
+    automatically performed when both nodes have batch edges with the same
+    names.
 
     Parameters
     ----------
-    edge : AbstractEdge
-        Edges that is to be contracted. Batch contraction is automatically
-        performed when both nodes have batch edges with the same names.
+    node1 : AbstractNode
+        First node of the contraction. Its non-contracted edges will appear
+        first in the list of inherited edges of the resultant node.
+    node2 : AbstractNode
+        Second node of the contraction. Its non-contracted edges will appear
+        last in the list of inherited edges of the resultant node.
 
     Returns
     -------
-    new_node : Node
-    
-    Contract all shared edges between two nodes, also performing batch contraction
-    between batch edges that share name in both nodes
+    Node
     """
-    # edges = get_shared_edges(node1, node2)
-    if axes is None:
-        edges = get_shared_edges(node1, node2)
-    else:
-        edges = [node1.get_edge(ax) for ax in axes]
+    edges = get_shared_edges(node1, node2)
     if not edges:
-        raise ValueError(f'No batch edges neither shared edges between '
+        raise ValueError(f'No batch edges or shared edges between '
                          f'nodes {node1!s} and {node2!s} found')
     return contract_edges(edges, node1, node2)
 
 
-# rq_node_ = copy_func(rq_)
-# rq_node_.__doc__ = \
-#     r"""
-#     Contracts an edge in-place via :func:`~AbstractEdge.contract_` and splits
-#     it in-place via :func:`~AbstractNode.split_` using ``mode = "qr"``. See
-#     :func:`split` for a more complete explanation.
-    
-#     Following the **PyTorch** convention, names of functions ended with an
-#     underscore indicate **in-place** operations.
-    
-#     Returns
-#     -------
-#     tuple[Node, Node]
-#     """
+contract_between_node = copy_func(contract_between)
+contract_between_node.__doc__ = \
+    """
+    Contracts all edges shared between two nodes. Batch contraction is
+    automatically performed when both nodes have batch edges with the same
+    names. It can also be performed using the operator ``@``.
 
-# AbstractEdge.rq_ = rq_node_
+    Parameters
+    ----------
+    node2 : AbstractNode
+        Second node of the contraction. Its non-contracted edges will appear
+        last in the list of inherited edges of the resultant node.
 
-AbstractNode.__matmul__ = contract_between
-AbstractNode.contract_between = contract_between
+    Returns
+    -------
+    Node
+    """
+
+AbstractNode.__matmul__ = contract_between_node
+AbstractNode.contract_between = contract_between_node
 
 
 def contract_between_(node1: AbstractNode,
                       node2: AbstractNode,
                       axes: Optional[Sequence[Ax]] = None) -> Node:
     """
-    Contract all shared edges between two nodes, also performing batch contraction
-    between batch edges that share name in both nodes
+    In-place version of :func:`contract_between`.
+    
+    Following the **PyTorch** convention, names of functions ended with an
+    underscore indicate **in-place** operations.
+
+    Parameters
+    ----------
+    node1 : AbstractNode
+        First node of the contraction. Its non-contracted edges will appear
+        first in the list of inherited edges of the resultant node.
+    node2 : AbstractNode
+        Second node of the contraction. Its non-contracted edges will appear
+        last in the list of inherited edges of the resultant node.
+
+    Returns
+    -------
+    Node
     """
     result = contract_between(node1, node2, axes)
     result.reattach_edges(True)
@@ -2414,6 +2424,7 @@ def contract_between_(node1: AbstractNode,
     for res_edge in result._edges:
         net._add_edge(res_edge)
     
+    # Transform non-leaf to leaf nodes
     net._change_node_type(result, 'leaf')
     
     node1._successors = dict()
@@ -2425,12 +2436,31 @@ def contract_between_(node1: AbstractNode,
     
     return result
 
-AbstractNode.contract_between_ = contract_between_
+contract_between_node_ = copy_func(contract_between_)
+contract_between_node_.__doc__ = \
+    """
+    In-place version of :func:`~AbstractNode.contract_between`.
+    
+    Following the **PyTorch** convention, names of functions ended with an
+    underscore indicate **in-place** operations.
+
+    Parameters
+    ----------
+    node2 : AbstractNode
+        Second node of the contraction. Its non-contracted edges will appear
+        last in the list of inherited edges of the resultant node.
+
+    Returns
+    -------
+    Node
+    """
+
+AbstractNode.contract_between_ = contract_between_node_
 
 
-###################   STACK   ##################
-def _check_first_stack(nodes: List[AbstractNode], name: Optional[Text] = None) -> Optional[Successor]:
-    kwargs = {'nodes': nodes}  # TODO: mejor si es set(nodes) por si acaso, o llevarlo controlado
+#####################################   STACK   ###############################
+def _check_first_stack(nodes: Sequence[AbstractNode]) -> Optional[Successor]:
+    kwargs = {'nodes': nodes}
     
     if not nodes:
         raise ValueError('`nodes` should be a non-empty sequence of nodes')
@@ -2442,25 +2472,16 @@ def _check_first_stack(nodes: List[AbstractNode], name: Optional[Text] = None) -
     return None
 
 
-# TODO: hacer optimizacion: si todos los nodos tienen memoria que hace referencia a un nodo
-#  (sus memorias estaban guardadas en la misma pila), entonces no hay que crear nueva stack,
-#  solo indexar en la previa
 def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
-    """
-    Stack nodes into a StackNode or ParamStackNode. The stack dimension will be the
-    first one in the resultant node.
-    """
-    # Check if all the nodes have the same type, and/or are leaf nodes
-    all_leaf = True       # Check if all the nodes are leaf
-    all_non_param = True  # Check if all the nodes are non-parametric
-    all_param = True      # Check if all the nodes are parametric
-    all_same_ref = True   # Check if all the nodes' memory is stored in the same reference node's memory
-    stack_node_ref = True # Chech if the shared reference node is a stack
-    node_ref = None       # In the case above, the reference node
-    stack_indices = []    # In the case above, stack indices of each node in the reference node's memory
-    use_slice = True
-    stack_indices_slice = [None, None, None]  # TODO: intentar convertir lista de indices a slice
-    # indices = []          # In the case above, indices of each node in the reference node's memory
+    all_leaf = True          # Check if all the nodes are leaf
+    all_non_param = True     # Check if all the nodes are non-parametric
+    all_param = True         # Check if all the nodes are parametric
+    all_same_ref = True      # Check if all the nodes' memories are stored in the
+                             # same reference node's memory
+    node_ref_is_stack = True # Chech if the shared reference node is a stack
+    stack_node_ref = None    # In the case above, the reference node
+    stack_indices = []       # In the case above, stack indices of each node in
+                             # the reference node's memory
     
     if not isinstance(nodes, (list, tuple)):
         raise TypeError('`nodes` should be a list or tuple of nodes')
@@ -2477,24 +2498,18 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
         
         if all_same_ref:
             if node._tensor_info['address'] is None:
-                # TODO: recursion en node_ref
-                # TODO: hacer stack_slice despues de haber leiod todos, por si vienen en otro orden
-                aux_node_ref = node
-                address = node._tensor_info['address']
-                while address is None:
-                    aux_node_ref = aux_node_ref._tensor_info['node_ref']
-                    address = aux_node_ref._tensor_info['address']
-                    
-                if node_ref is None:
-                    node_ref = aux_node_ref
+                node_ref = node._tensor_info['node_ref']
+                
+                if stack_node_ref is None:
+                    stack_node_ref = node_ref
                 else:
-                    if aux_node_ref != node_ref:
+                    if node_ref != stack_node_ref:
                         all_same_ref = False
                         continue
                         
-                if not isinstance(aux_node_ref, (StackNode, ParamStackNode)):
+                if not isinstance(node_ref, (StackNode, ParamStackNode)):
                     all_same_ref = False
-                    stack_node_ref = False
+                    node_ref_is_stack = False
                     continue
 
                 stack_indices.append(node._tensor_info['index'][0])
@@ -2502,49 +2517,51 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
             else:
                 all_same_ref = False
 
-    if all_param and stack_node_ref and net._automemory:
-        stack_node = ParamStackNode(nodes=nodes, name='virtual_stack', virtual=True)
+    if all_param and node_ref_is_stack and net._automemory:
+        stack_node = ParamStackNode(nodes=nodes,
+                                    name='virtual_stack',
+                                    virtual=True)
     else:
-        stack_node = StackNode(nodes=nodes, name='stack')
+        stack_node = StackNode(nodes=nodes,
+                               name='stack')
 
-    if all_same_ref: # NOTE: entra aqui en index mode, no entra en if ni else en unbind mode
-        # TODO: make distinction here between unbind or index mode -> solo se entra aqui en index mode
-        # This memory management can happen always, even not in contracting mode
-        
+    # Both conditions can only only be satisfied in index_mode
+    if all_same_ref:
+        # Memory of stack is just a reference to the stack_node_ref
         stack_indices = list2slice(stack_indices)
         
         del net._memory_nodes[stack_node._tensor_info['address']]
         stack_node._tensor_info['address'] = None
-        stack_node._tensor_info['node_ref'] = node_ref
+        stack_node._tensor_info['node_ref'] = stack_node_ref
         stack_node._tensor_info['full'] = False
         
         index = [stack_indices]
-        if node_ref.shape[1:] != stack_node.shape[1:]:
-            for i, (max_dim, dim) in enumerate(zip(node_ref.shape[1:], stack_node.shape[1:])):
+        if stack_node_ref.shape[1:] != stack_node.shape[1:]:
+            for i, (max_dim, dim) in enumerate(zip(stack_node_ref._shape[1:],
+                                                   stack_node._shape[1:])):
                 if stack_node._axes[i + 1].is_batch():
+                    # Admit any dimension in batch edges
                     index.append(slice(0, None))
                 else:
                     index.append(slice(max_dim - dim, max_dim))
         stack_node._tensor_info['index'] = index
 
     else:
-        # TODO: quitamos todos non-param por lo de la stack de data nodes, hay que
-        #  controlar eso -> ya esta, los data nodes no son leaf
         if all_leaf and (all_param or all_non_param) \
-            and stack_node_ref and net._automemory:
-        # if all_leaf and all_param and net._automemory:
-            # This memory management can only happen for leaf nodes,
-            # all having the same type, in contracting mode
+            and node_ref_is_stack and net._automemory:
+            # Stacked nodes' memories are replaced by a reference to a slice
+            # of the resultant stack_node
             for i, node in enumerate(nodes):
-                shape = node.shape
                 if node._tensor_info['address'] is not None:
                     del net._memory_nodes[node._tensor_info['address']]
                 node._tensor_info['address'] = None
                 node._tensor_info['node_ref'] = stack_node
                 node._tensor_info['full'] = False
                 index = [i]
-                for j, (max_dim, dim) in enumerate(zip(stack_node.shape[1:], shape)):
+                for j, (max_dim, dim) in enumerate(zip(stack_node._shape[1:],
+                                                    node._shape)):
                     if node._axes[j].is_batch():
+                        # Admit any dimension in batch edges
                         index.append(slice(0, None))
                     else:
                         index.append(slice(max_dim - dim, max_dim))
@@ -2553,64 +2570,67 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
                 if all_param:
                     delattr(net, 'param_' + node._name)
                     
+        # Record in inverse_memory while tracing
         for node in nodes:
             node._record_in_inverse_memory()
 
+    # Create successor
     successor = Successor(kwargs={'nodes': nodes},
-                                    child=stack_node,
-                                    hints={'all_leaf': all_leaf and (all_param or all_non_param) and stack_node_ref,
-                                           'all_same_ref': all_same_ref,
-                                           'automemory': net._automemory})
+                          child=stack_node,
+                          hints={'all_same_ref': all_same_ref,
+                                 'all_leaf': all_leaf and 
+                                    (all_param or all_non_param) and 
+                                    node_ref_is_stack,
+                                 'automemory': net._automemory})
+    
+    # Add successor to parent
     if 'stack' in nodes[0]._successors:
         nodes[0]._successors['stack'].append(successor)
     else:
         nodes[0]._successors['stack'] = [successor]
 
+    # Add operation to list of performed operations of TN
     net._list_ops.append((nodes[0], 'stack', len(nodes[0]._successors['stack']) - 1))
 
     return stack_node
 
 
 def _stack_next(successor: Successor,
-                nodes: List[AbstractNode],
-                name: Optional[Text] = None) -> StackNode:
+                nodes: Sequence[AbstractNode]) -> StackNode:
     child = successor.child
     if successor.hints['all_same_ref'] or \
         (successor.hints['all_leaf'] and successor.hints['automemory']):
         return child
 
-    stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])  # TODO:
+    stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])
     child._unrestricted_set_tensor(stack_tensor)
-
-    # TODO: no permitido ya cambiar automemory mode en mitad de ejecucion, asi que esto no pasa
-    # If contracting turns True, but stack operation had been already performed
-    net = nodes[0]._network
-    if successor.hints['all_leaf'] and net._automemory:
-        for i, node in enumerate(nodes):
-            shape = node.shape
-            if node._tensor_info['address'] is not None:
-                del net._memory_nodes[node._tensor_info['address']]
-            node._tensor_info['address'] = None
-            node._tensor_info['node_ref'] = child
-            node._tensor_info['full'] = False
-            index = [i]
-            for j, (max_dim, dim) in enumerate(zip(stack_tensor.shape[1:], shape)):
-                    if node._axes[j].is_batch():
-                        index.append(slice(0, None))
-                    else:
-                        index.append(slice(max_dim - dim, max_dim))
-            node._tensor_info['index'] = index
-
-        successor.hints['automemory'] = True
-        
-    else:
-        for node in nodes:
+            
+    # Record in inverse_memory while contracting
+    # (to delete memory if possible)
+    for node in nodes:
             node._record_in_inverse_memory()
 
     return child
 
 
-stack = Operation('stack', _check_first_stack, _stack_first, _stack_next)
+stack_op = Operation('stack', _check_first_stack, _stack_first, _stack_next)
+
+def stack(nodes: Sequence[AbstractNode]):
+    """
+    Creates a StackNode or ParamStackNode by stacking a collection of Nodes or
+    ParamNodes, respectively. Restrictions that are applied to the nodes in
+    order to be `stackable` are the same as in :class:`Stack`.
+    
+    The stack dimension will be the first one in the resultant node.
+    
+    Parameters
+    ----------
+    nodes : list[AbstractNode] or tuple[AbstractNode]
+        Sequence of nodes that are to be stacked. They must be of the same type,
+        have the same rank and axes names, be in the same tensor network, and
+        have edges with the same types.
+    """
+    return stack_op(nodes)
 
 
 ##################   UNBIND   ##################
@@ -2681,7 +2701,7 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
                 del new_node.network._memory_nodes[new_node._tensor_info['address']]
             new_node._tensor_info['address'] = None
             
-            new_node._tensor_info['node_ref'] = aux_node_ref
+            new_node._tensor_info['node_ref'] = aux_node_ref  # NOTE: bucle para guardar address
             new_node._tensor_info['full'] = False
             
             if aux_node_ref == node:

@@ -1,5 +1,5 @@
-Tensor Network Components
-=========================
+Components
+==========
 
 .. currentmodule:: tensorkrowch
 

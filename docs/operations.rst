@@ -1,17 +1,27 @@
-Node Operations
-===============
+Operations
+==========
 
 .. currentmodule:: tensorkrowch
 
 
-Connect/Disconnect Edges
-------------------------
+Edge Operations
+---------------
 
 .. autofunction:: connect
 
 .. autofunction:: connect_stack
 
 .. autofunction:: disconnect
+
+.. autofunction:: svd_
+
+.. autofunction:: svdr_
+
+.. autofunction:: qr_
+
+.. autofunction:: rq_
+
+.. autofunction:: contract_
 
 
 Operation Class
@@ -23,6 +33,10 @@ Operation Class
 Tensor-like Operations
 ----------------------
 
+.. autofunction:: permute
+
+.. autofunction:: permute_
+
 .. autofunction:: tprod
 
 .. autofunction:: mul
@@ -30,10 +44,6 @@ Tensor-like Operations
 .. autofunction:: add
 
 .. autofunction:: sub
-
-.. autofunction:: permute
-
-.. autofunction:: permute_
 
 
 Node-like Operations

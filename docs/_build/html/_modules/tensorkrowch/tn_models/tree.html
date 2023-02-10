@@ -107,17 +107,17 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../../network_components.html">
-     Tensor Network Components
+    <a class="reference internal" href="../../../components.html">
+     Components
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../../node_operations.html">
-     Node Operations
+    <a class="reference internal" href="../../../operations.html">
+     Operations
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../../tn_models.html">
+    <a class="reference internal" href="../../../models.html">
      Models
     </a>
    </li>
@@ -223,11 +223,11 @@ title="Fullscreen mode"
 <span class="kn">from</span> <span class="nn">torch.nn.functional</span> <span class="kn">import</span> <span class="n">pad</span>
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
 
-<span class="kn">from</span> <span class="nn">tensorkrowch.network_components</span> <span class="kn">import</span> <span class="p">(</span><span class="n">AbstractNode</span><span class="p">,</span> <span class="n">Node</span><span class="p">,</span> <span class="n">ParamNode</span><span class="p">,</span>
+<span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="p">(</span><span class="n">AbstractNode</span><span class="p">,</span> <span class="n">Node</span><span class="p">,</span> <span class="n">ParamNode</span><span class="p">,</span>
                                          <span class="n">AbstractEdge</span><span class="p">)</span>
-<span class="kn">from</span> <span class="nn">tensorkrowch.network_components</span> <span class="kn">import</span> <span class="n">TensorNetwork</span>
+<span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">TensorNetwork</span>
 
-<span class="kn">from</span> <span class="nn">tensorkrowch.node_operations</span> <span class="kn">import</span> <span class="n">einsum</span><span class="p">,</span> <span class="n">stacked_einsum</span>
+<span class="kn">from</span> <span class="nn">tensorkrowch.operations</span> <span class="kn">import</span> <span class="n">einsum</span><span class="p">,</span> <span class="n">stacked_einsum</span>
 
 <span class="kn">import</span> <span class="nn">tensorkrowch</span> <span class="k">as</span> <span class="nn">tk</span>
 
@@ -240,7 +240,7 @@ title="Fullscreen mode"
 <span class="n">PRINT_MODE</span> <span class="o">=</span> <span class="kc">False</span>
 
 
-<div class="viewcode-block" id="Tree"><a class="viewcode-back" href="../../../tn_models.html#tensorkrowch.Tree">[docs]</a><span class="k">class</span> <span class="nc">Tree</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
+<div class="viewcode-block" id="Tree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.Tree">[docs]</a><span class="k">class</span> <span class="nc">Tree</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Create an Tree module.</span>
 
@@ -508,7 +508,7 @@ title="Fullscreen mode"
         <span class="bp">self</span><span class="o">.</span><span class="n">param_bond</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="UTree"><a class="viewcode-back" href="../../../tn_models.html#tensorkrowch.UTree">[docs]</a><span class="k">class</span> <span class="nc">UTree</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
+<div class="viewcode-block" id="UTree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UTree">[docs]</a><span class="k">class</span> <span class="nc">UTree</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Create an UTree module.</span>
 
@@ -717,7 +717,7 @@ title="Fullscreen mode"
         <span class="k">return</span> <span class="n">result_lst</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
 
 
-<div class="viewcode-block" id="ConvTree"><a class="viewcode-back" href="../../../tn_models.html#tensorkrowch.ConvTree">[docs]</a><span class="k">class</span> <span class="nc">ConvTree</span><span class="p">(</span><span class="n">Tree</span><span class="p">):</span>
+<div class="viewcode-block" id="ConvTree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvTree">[docs]</a><span class="k">class</span> <span class="nc">ConvTree</span><span class="p">(</span><span class="n">Tree</span><span class="p">):</span>
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">sites_per_layer</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
@@ -823,7 +823,7 @@ title="Fullscreen mode"
         <span class="k">return</span> <span class="n">result</span></div>
     
 
-<div class="viewcode-block" id="ConvUTree"><a class="viewcode-back" href="../../../tn_models.html#tensorkrowch.ConvUTree">[docs]</a><span class="k">class</span> <span class="nc">ConvUTree</span><span class="p">(</span><span class="n">UTree</span><span class="p">):</span>
+<div class="viewcode-block" id="ConvUTree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvUTree">[docs]</a><span class="k">class</span> <span class="nc">ConvUTree</span><span class="p">(</span><span class="n">UTree</span><span class="p">):</span>
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">sites_per_layer</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>

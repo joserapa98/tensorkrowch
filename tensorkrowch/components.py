@@ -3869,7 +3869,7 @@ class TensorNetwork(nn.Module):
 
         Parameters
         ----------
-        node : Node or ParamNode
+        node : AbstractNode
             Node to be removed.
         move_names : bool
             Boolean indicating whether names' enumerations should be decreased

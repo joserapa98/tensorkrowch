@@ -9,11 +9,11 @@ import torch
 import torch.nn as nn
 from torch.nn.functional import pad
 
-from tensorkrowch.network_components import (AbstractNode, Node, ParamNode,
+from tensorkrowch.components import (AbstractNode, Node, ParamNode,
                                          AbstractEdge)
-from tensorkrowch.network_components import TensorNetwork
+from tensorkrowch.components import TensorNetwork
 
-from tensorkrowch.node_operations import einsum, stacked_einsum
+from tensorkrowch.operations import einsum, stacked_einsum
 
 import tensorkrowch as tk
 

@@ -25,4 +25,4 @@ You can use ``Node`` to create nodes of the network:
 .. autoclass:: tensorkrowch.Node
 
 
-.. autofunction:: tensorkrowch.node_operations._contract_edges_first
+.. autofunction:: tensorkrowch.operations._contract_edges_first

@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.network_components &#8212; TensorKrowch 00.00.01 documentation</title>
+    <title>tensorkrowch.components &#8212; TensorKrowch 00.00.01 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -107,17 +107,17 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../network_components.html">
-     Tensor Network Components
+    <a class="reference internal" href="../../components.html">
+     Components
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../node_operations.html">
-     Node Operations
+    <a class="reference internal" href="../../operations.html">
+     Operations
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../tn_models.html">
+    <a class="reference internal" href="../../models.html">
      Models
     </a>
    </li>
@@ -211,7 +211,7 @@ title="Fullscreen mode"
                 
               <div>
                 
-  <h1>Source code for tensorkrowch.network_components</h1><div class="highlight"><pre>
+  <h1>Source code for tensorkrowch.components</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">This script contains:</span>
 
@@ -260,7 +260,7 @@ title="Fullscreen mode"
 <span class="c1">###############################################################################</span>
 <span class="c1">#                                     AXIS                                    #</span>
 <span class="c1">###############################################################################</span>
-<div class="viewcode-block" id="Axis"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Axis">[docs]</a><span class="k">class</span> <span class="nc">Axis</span><span class="p">:</span>
+<div class="viewcode-block" id="Axis"><a class="viewcode-back" href="../../components.html#tensorkrowch.Axis">[docs]</a><span class="k">class</span> <span class="nc">Axis</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    The axes are the objects that stick edges to nodes. Every :class:`node &lt;AbstractNode&gt;`</span>
 <span class="sd">    has a list of :math:`N` axes, each corresponding to one edge; and every axis</span>
@@ -435,7 +435,7 @@ title="Fullscreen mode"
     <span class="c1"># -------</span>
     <span class="c1"># Methods</span>
     <span class="c1"># -------</span>
-<div class="viewcode-block" id="Axis.is_node1"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Axis.is_node1">[docs]</a>    <span class="k">def</span> <span class="nf">is_node1</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<div class="viewcode-block" id="Axis.is_node1"><a class="viewcode-back" href="../../components.html#tensorkrowch.Axis.is_node1">[docs]</a>    <span class="k">def</span> <span class="nf">is_node1</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns boolean indicating whether `node1` of the edge attached to this</span>
 <span class="sd">        axis is the node that contains the axis. Otherwise, the node is `node2`</span>
@@ -443,7 +443,7 @@ title="Fullscreen mode"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_node1</span></div>
 
-<div class="viewcode-block" id="Axis.is_batch"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Axis.is_batch">[docs]</a>    <span class="k">def</span> <span class="nf">is_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<div class="viewcode-block" id="Axis.is_batch"><a class="viewcode-back" href="../../components.html#tensorkrowch.Axis.is_batch">[docs]</a>    <span class="k">def</span> <span class="nf">is_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns boolean indicating whether the edge in this axis is used as a</span>
 <span class="sd">        batch edge.</span>
@@ -467,7 +467,7 @@ title="Fullscreen mode"
 <span class="n">Shape</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">Size</span><span class="p">]</span>
 
 
-<div class="viewcode-block" id="AbstractNode"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode">[docs]</a><span class="k">class</span> <span class="nc">AbstractNode</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+<div class="viewcode-block" id="AbstractNode"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode">[docs]</a><span class="k">class</span> <span class="nc">AbstractNode</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Abstract class for all types of nodes. Defines what a node is and most of its</span>
 <span class="sd">    properties and methods. Since it is an abstract class, cannot be instantiated.</span>
@@ -699,7 +699,7 @@ title="Fullscreen mode"
     <span class="c1"># -------</span>
     <span class="c1"># Methods</span>
     <span class="c1"># -------</span>
-<div class="viewcode-block" id="AbstractNode.is_leaf"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.is_leaf">[docs]</a>    <span class="k">def</span> <span class="nf">is_leaf</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.is_leaf"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.is_leaf">[docs]</a>    <span class="k">def</span> <span class="nf">is_leaf</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a boolean indicating if the node is a ``leaf`` node. These are</span>
 <span class="sd">        the nodes that form the :class:`TensorNetwork`. Usually, these will be</span>
@@ -707,14 +707,14 @@ title="Fullscreen mode"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf</span></div>
 
-<div class="viewcode-block" id="AbstractNode.is_data"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.is_data">[docs]</a>    <span class="k">def</span> <span class="nf">is_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.is_data"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.is_data">[docs]</a>    <span class="k">def</span> <span class="nf">is_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a boolean indicating if the node is a ``data`` node. These are</span>
 <span class="sd">        the nodes where input data tensors will be put.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span></div>
 
-<div class="viewcode-block" id="AbstractNode.is_virtual"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.is_virtual">[docs]</a>    <span class="k">def</span> <span class="nf">is_virtual</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.is_virtual"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.is_virtual">[docs]</a>    <span class="k">def</span> <span class="nf">is_virtual</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a boolean indicating if the node is a ``virtual`` node. These</span>
 <span class="sd">        are a sort of `hidden` nodes that can be used, for instance, to store</span>
@@ -724,14 +724,14 @@ title="Fullscreen mode"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_virtual</span></div>
 
-<div class="viewcode-block" id="AbstractNode.is_non_leaf"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.is_non_leaf">[docs]</a>    <span class="k">def</span> <span class="nf">is_non_leaf</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.is_non_leaf"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.is_non_leaf">[docs]</a>    <span class="k">def</span> <span class="nf">is_non_leaf</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a boolean indicating if the node is a ``non_leaf`` node. These</span>
 <span class="sd">        are the nodes that result from an operation on any type of nodes.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_leaf</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_virtual</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="AbstractNode.size"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.size">[docs]</a>    <span class="k">def</span> <span class="nf">size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Ax</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Size</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<div class="viewcode-block" id="AbstractNode.size"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.size">[docs]</a>    <span class="k">def</span> <span class="nf">size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Ax</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Size</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the size of the node&#39;s tensor. If ``axis`` is specified, returns</span>
 <span class="sd">        the size of that axis; otherwise returns the shape of the node (same as</span>
@@ -751,7 +751,7 @@ title="Fullscreen mode"
         <span class="n">axis_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shape</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]</span></div>
 
-<div class="viewcode-block" id="AbstractNode.dim"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.dim">[docs]</a>    <span class="k">def</span> <span class="nf">dim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Ax</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Size</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<div class="viewcode-block" id="AbstractNode.dim"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.dim">[docs]</a>    <span class="k">def</span> <span class="nf">dim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Ax</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Size</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the dimensions of the node&#39;s tensor. If ``axis`` is specified,</span>
 <span class="sd">        returns the dimension of that edge; otherwise returns the dimensions of</span>
@@ -773,7 +773,7 @@ title="Fullscreen mode"
         <span class="n">axis_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="AbstractNode.is_node1"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.is_node1">[docs]</a>    <span class="k">def</span> <span class="nf">is_node1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Ax</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">bool</span><span class="p">]]:</span>
+<div class="viewcode-block" id="AbstractNode.is_node1"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.is_node1">[docs]</a>    <span class="k">def</span> <span class="nf">is_node1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Ax</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">bool</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns :meth:`node &lt;Axis.is_node1&gt;` attribute of axes of the node. If</span>
 <span class="sd">        ``axis`` is specified, returns only the ``node`` of that axis; otherwise</span>
@@ -793,7 +793,7 @@ title="Fullscreen mode"
         <span class="n">axis_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]</span><span class="o">.</span><span class="n">_node1</span></div>
 
-<div class="viewcode-block" id="AbstractNode.neighbours"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.neighbours">[docs]</a>    <span class="k">def</span> <span class="nf">neighbours</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Ax</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="s1">&#39;AbstractNode&#39;</span><span class="p">],</span>
+<div class="viewcode-block" id="AbstractNode.neighbours"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.neighbours">[docs]</a>    <span class="k">def</span> <span class="nf">neighbours</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Ax</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="s1">&#39;AbstractNode&#39;</span><span class="p">],</span>
                                                              <span class="n">List</span><span class="p">[</span><span class="s1">&#39;AbstractNode&#39;</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the neighbours of the node, the nodes to which it is connected.</span>
@@ -908,12 +908,12 @@ title="Fullscreen mode"
                 <span class="bp">self</span><span class="o">.</span><span class="n">_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">aux_shape</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">pad</span><span class="p">)</span>
 
-<div class="viewcode-block" id="AbstractNode.get_axis"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.get_axis">[docs]</a>    <span class="k">def</span> <span class="nf">get_axis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Ax</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;AbstractEdge&#39;</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.get_axis"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.get_axis">[docs]</a>    <span class="k">def</span> <span class="nf">get_axis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Ax</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;AbstractEdge&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns :class:`Axis` given its ``name`` or ``num``.&quot;&quot;&quot;</span>
         <span class="n">axis_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]</span></div>
     
-<div class="viewcode-block" id="AbstractNode.get_axis_num"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.get_axis_num">[docs]</a>    <span class="k">def</span> <span class="nf">get_axis_num</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Ax</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.get_axis_num"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.get_axis_num">[docs]</a>    <span class="k">def</span> <span class="nf">get_axis_num</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Ax</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns axis&#39; ``num`` given the :class:`Axis` or its ``name``.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">axis</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -956,7 +956,7 @@ title="Fullscreen mode"
         <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]</span><span class="o">.</span><span class="n">_node1</span> <span class="o">=</span> <span class="n">node1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]</span> <span class="o">=</span> <span class="n">edge</span>
         
-<div class="viewcode-block" id="AbstractNode.get_edge"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.get_edge">[docs]</a>    <span class="k">def</span> <span class="nf">get_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Ax</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;AbstractEdge&#39;</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.get_edge"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.get_edge">[docs]</a>    <span class="k">def</span> <span class="nf">get_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Ax</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;AbstractEdge&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns :class:`AbstractEdge` given the :class:`Axis` (or its ``name``</span>
 <span class="sd">        or ``num``) where it is attached to the node.</span>
@@ -964,7 +964,7 @@ title="Fullscreen mode"
         <span class="n">axis_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]</span></div>
     
-<div class="viewcode-block" id="AbstractNode.in_which_axis"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.in_which_axis">[docs]</a>    <span class="k">def</span> <span class="nf">in_which_axis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge</span><span class="p">:</span> <span class="s1">&#39;AbstractEdge&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Axis</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.in_which_axis"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.in_which_axis">[docs]</a>    <span class="k">def</span> <span class="nf">in_which_axis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge</span><span class="p">:</span> <span class="s1">&#39;AbstractEdge&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Axis</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns :class:`Axis` given the :class:`AbstractEdge` that is attached</span>
 <span class="sd">        to the node through it.</span>
@@ -982,7 +982,7 @@ title="Fullscreen mode"
             <span class="c1"># Case of trace edges (attached to the node in two axes)</span>
             <span class="k">return</span> <span class="n">lst</span></div>
 
-<div class="viewcode-block" id="AbstractNode.param_edges"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.param_edges">[docs]</a>    <span class="k">def</span> <span class="nf">param_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="AbstractNode.param_edges"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.param_edges">[docs]</a>    <span class="k">def</span> <span class="nf">param_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                     <span class="n">set_param</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                     <span class="n">sizes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]:</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
@@ -1043,7 +1043,7 @@ title="Fullscreen mode"
                 <span class="k">for</span> <span class="n">param_edge</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">:</span>
                     <span class="n">param_edge</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span></div>
                     
-<div class="viewcode-block" id="AbstractNode.reattach_edges"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.reattach_edges">[docs]</a>    <span class="k">def</span> <span class="nf">reattach_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">override</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.reattach_edges"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.reattach_edges">[docs]</a>    <span class="k">def</span> <span class="nf">reattach_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">override</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Substitutes current edges by copies of them that are attached to the node.</span>
 <span class="sd">        It can happen that an edge is not attached to the node if it is the result</span>
@@ -1088,7 +1088,7 @@ title="Fullscreen mode"
                         <span class="n">neighbour</span><span class="o">.</span><span class="n">_add_edge</span><span class="p">(</span>
                             <span class="n">new_edge</span><span class="p">,</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">node1</span><span class="p">],</span> <span class="ow">not</span> <span class="n">node1</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="AbstractNode.disconnect"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.disconnect">[docs]</a>    <span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Ax</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.disconnect"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.disconnect">[docs]</a>    <span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Ax</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Disconnects all edges of the node if they were connected to other nodes.</span>
 <span class="sd">        If ``axis`` is sepcified, only the corresponding edge is disconnected.</span>
@@ -1146,7 +1146,7 @@ title="Fullscreen mode"
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`std` should be positive&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span> <span class="o">+</span> <span class="n">mean</span>
 
-<div class="viewcode-block" id="AbstractNode.make_tensor"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.make_tensor">[docs]</a>    <span class="k">def</span> <span class="nf">make_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="AbstractNode.make_tensor"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.make_tensor">[docs]</a>    <span class="k">def</span> <span class="nf">make_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                     <span class="n">shape</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Shape</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                     <span class="n">init_method</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;zeros&#39;</span><span class="p">,</span>
                     <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cpu&#39;</span><span class="p">),</span>
@@ -1308,7 +1308,7 @@ title="Fullscreen mode"
         <span class="bp">self</span><span class="o">.</span><span class="n">_save_in_network</span><span class="p">(</span><span class="n">correct_format_tensor</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_shape</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span>
 
-<div class="viewcode-block" id="AbstractNode.set_tensor"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.set_tensor">[docs]</a>    <span class="k">def</span> <span class="nf">set_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="AbstractNode.set_tensor"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.set_tensor">[docs]</a>    <span class="k">def</span> <span class="nf">set_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                    <span class="n">tensor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                    <span class="n">init_method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;zeros&#39;</span><span class="p">,</span>
                    <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1359,7 +1359,7 @@ title="Fullscreen mode"
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Node</span><span class="se">\&#39;</span><span class="s1">s tensor can only be changed if it is a leaf&#39;</span>
                              <span class="s1">&#39; tensor and the network is not in automemory mode&#39;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="AbstractNode.unset_tensor"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.unset_tensor">[docs]</a>    <span class="k">def</span> <span class="nf">unset_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.unset_tensor"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.unset_tensor">[docs]</a>    <span class="k">def</span> <span class="nf">unset_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Replaces node&#39;s tensor with None.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_automemory</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_save_in_network</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span></div>
@@ -1432,7 +1432,7 @@ title="Fullscreen mode"
                         <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">address</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
                     <span class="n">net</span><span class="o">.</span><span class="n">_inverse_memory</span><span class="p">[</span><span class="n">address</span><span class="p">][</span><span class="s1">&#39;re-accessed&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
 
-<div class="viewcode-block" id="AbstractNode.move_to_network"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.move_to_network">[docs]</a>    <span class="k">def</span> <span class="nf">move_to_network</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="AbstractNode.move_to_network"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.move_to_network">[docs]</a>    <span class="k">def</span> <span class="nf">move_to_network</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                         <span class="n">network</span><span class="p">:</span> <span class="s1">&#39;TensorNetwork&#39;</span><span class="p">,</span>
                         <span class="n">visited</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="s1">&#39;AbstractNode&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1475,7 +1475,7 @@ title="Fullscreen mode"
     <span class="c1"># -----------------</span>
     <span class="c1"># Tensor operations</span>
     <span class="c1"># -----------------</span>
-<div class="viewcode-block" id="AbstractNode.sum"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.sum">[docs]</a>    <span class="k">def</span> <span class="nf">sum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Ax</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.sum"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.sum">[docs]</a>    <span class="k">def</span> <span class="nf">sum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Ax</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the sum of all elements in the node&#39;s tensor. If an ``axis`` is</span>
 <span class="sd">        specified, the sum is over that axis. If ``axis`` is a sequence of axes,</span>
@@ -1501,7 +1501,7 @@ title="Fullscreen mode"
                 <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">ax</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">axis_num</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="AbstractNode.mean"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.mean">[docs]</a>    <span class="k">def</span> <span class="nf">mean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Ax</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.mean"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.mean">[docs]</a>    <span class="k">def</span> <span class="nf">mean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Ax</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the mean of all elements in the node&#39;s tensor. If an ``axis`` is</span>
 <span class="sd">        specified, the mean is over that axis. If ``axis`` is a sequence of axes,</span>
@@ -1527,7 +1527,7 @@ title="Fullscreen mode"
                 <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">ax</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">axis_num</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="AbstractNode.std"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.std">[docs]</a>    <span class="k">def</span> <span class="nf">std</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Ax</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.std"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.std">[docs]</a>    <span class="k">def</span> <span class="nf">std</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Ax</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the std of all elements in the node&#39;s tensor. If an ``axis`` is</span>
 <span class="sd">        specified, the std is over that axis. If ``axis`` is a sequence of axes,</span>
@@ -1553,7 +1553,7 @@ title="Fullscreen mode"
                 <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">ax</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">axis_num</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="AbstractNode.norm"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractNode.norm">[docs]</a>    <span class="k">def</span> <span class="nf">norm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.norm"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.norm">[docs]</a>    <span class="k">def</span> <span class="nf">norm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the norm of all elements in the node&#39;s tensor. If an ``axis`` is</span>
 <span class="sd">        specified, the norm is over that axis. If ``axis`` is a sequence of axes,</span>
@@ -1745,7 +1745,7 @@ title="Fullscreen mode"
             <span class="k">return</span> <span class="n">ParamEdge</span><span class="p">(</span><span class="n">node1</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">Edge</span><span class="p">(</span><span class="n">node1</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
 
-<div class="viewcode-block" id="Node.parameterize"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Node.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Node&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamNode&#39;</span><span class="p">]:</span>
+<div class="viewcode-block" id="Node.parameterize"><a class="viewcode-back" href="../../components.html#tensorkrowch.Node.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Node&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamNode&#39;</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Replaces the node with a parameterized version of it, that is, turns a</span>
 <span class="sd">        fixed :class:`Node` into a trainable :class:`ParamNode`.</span>
@@ -1780,7 +1780,7 @@ title="Fullscreen mode"
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="Node.copy"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Node.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Node&#39;</span><span class="p">:</span>
+<div class="viewcode-block" id="Node.copy"><a class="viewcode-back" href="../../components.html#tensorkrowch.Node.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Node&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a copy of the node. That is, returns a node whose tensor is a copy</span>
 <span class="sd">        of the original, whose edges are directly inherited (these are not copies,</span>
@@ -1802,7 +1802,7 @@ title="Fullscreen mode"
         <span class="k">return</span> <span class="n">new_node</span></div></div>
 
 
-<div class="viewcode-block" id="ParamNode"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamNode">[docs]</a><span class="k">class</span> <span class="nc">ParamNode</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+<div class="viewcode-block" id="ParamNode"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamNode">[docs]</a><span class="k">class</span> <span class="nc">ParamNode</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for trainable nodes. Should be subclassed by any class of nodes that</span>
 <span class="sd">    are intended to be trained (e.g. :class:`ParamStackNode`).</span>
@@ -1908,7 +1908,7 @@ title="Fullscreen mode"
             <span class="k">return</span> <span class="n">tensor</span>
         <span class="k">return</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
 
-<div class="viewcode-block" id="ParamNode.parameterize"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamNode.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Node&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamNode&#39;</span><span class="p">]:</span>
+<div class="viewcode-block" id="ParamNode.parameterize"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamNode.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Node&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamNode&#39;</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Replaces the param-node with a de-parameterized version of it, that is,</span>
 <span class="sd">        turns a :class:`ParamNode` into a non-trainable, fixed :class:`Node`.</span>
@@ -1943,7 +1943,7 @@ title="Fullscreen mode"
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="ParamNode.copy"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamNode.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ParamNode&#39;</span><span class="p">:</span>
+<div class="viewcode-block" id="ParamNode.copy"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamNode.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ParamNode&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a copy of the param-node. That is, returns a param-node whose</span>
 <span class="sd">        tensor is a copy of the original, whose edges are directly inherited</span>
@@ -1968,7 +1968,7 @@ title="Fullscreen mode"
 <span class="c1">###############################################################################</span>
 <span class="c1">#                                 STACK NODES                                 #</span>
 <span class="c1">###############################################################################</span>
-<div class="viewcode-block" id="StackNode"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.StackNode">[docs]</a><span class="k">class</span> <span class="nc">StackNode</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+<div class="viewcode-block" id="StackNode"><a class="viewcode-back" href="../../components.html#tensorkrowch.StackNode">[docs]</a><span class="k">class</span> <span class="nc">StackNode</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for stacked nodes. ``StackNodes`` are nodes that store the information</span>
 <span class="sd">    of a list of nodes that are stacked via :func:`stack`, although they can also</span>
@@ -2186,7 +2186,7 @@ title="Fullscreen mode"
                                   <span class="n">axis1</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="ParamStackNode"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamStackNode">[docs]</a><span class="k">class</span> <span class="nc">ParamStackNode</span><span class="p">(</span><span class="n">ParamNode</span><span class="p">):</span>
+<div class="viewcode-block" id="ParamStackNode"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamStackNode">[docs]</a><span class="k">class</span> <span class="nc">ParamStackNode</span><span class="p">(</span><span class="n">ParamNode</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for parametric stacked nodes. They are essentially the same as</span>
 <span class="sd">    :class:`StackNodes &lt;StackNode&gt;` but they are also :class:`ParamNodes &lt;ParamNode&gt;`.</span>
@@ -2346,7 +2346,7 @@ title="Fullscreen mode"
 <span class="c1">###############################################################################</span>
 <span class="c1">#                                    EDGES                                    #</span>
 <span class="c1">###############################################################################</span>
-<div class="viewcode-block" id="AbstractEdge"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractEdge">[docs]</a><span class="k">class</span> <span class="nc">AbstractEdge</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+<div class="viewcode-block" id="AbstractEdge"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractEdge">[docs]</a><span class="k">class</span> <span class="nc">AbstractEdge</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Abstract class for all types of edges. Defines what an edge is and some of its</span>
 <span class="sd">    properties and methods. Since it is an abstract class, cannot be instantiated.</span>
@@ -2506,19 +2506,19 @@ title="Fullscreen mode"
     <span class="c1"># -------</span>
     <span class="c1"># Methods</span>
     <span class="c1"># -------</span>
-<div class="viewcode-block" id="AbstractEdge.is_dangling"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractEdge.is_dangling">[docs]</a>    <span class="k">def</span> <span class="nf">is_dangling</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractEdge.is_dangling"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractEdge.is_dangling">[docs]</a>    <span class="k">def</span> <span class="nf">is_dangling</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boolean indicating whether the edge is a dangling edge.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">node2</span> <span class="ow">is</span> <span class="kc">None</span></div>
 
-<div class="viewcode-block" id="AbstractEdge.is_batch"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractEdge.is_batch">[docs]</a>    <span class="k">def</span> <span class="nf">is_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractEdge.is_batch"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractEdge.is_batch">[docs]</a>    <span class="k">def</span> <span class="nf">is_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boolean indicating whether the edge is a batch edge.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="o">.</span><span class="n">is_batch</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="AbstractEdge.is_attached_to"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractEdge.is_attached_to">[docs]</a>    <span class="k">def</span> <span class="nf">is_attached_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractEdge.is_attached_to"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractEdge.is_attached_to">[docs]</a>    <span class="k">def</span> <span class="nf">is_attached_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boolean indicating whether the edge is attached to ``node``.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node1</span> <span class="o">==</span> <span class="n">node</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node2</span> <span class="o">==</span> <span class="n">node</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="AbstractEdge.size"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.AbstractEdge.size">[docs]</a>    <span class="k">def</span> <span class="nf">size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractEdge.size"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractEdge.size">[docs]</a>    <span class="k">def</span> <span class="nf">size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns edge&#39;s size.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_size</span></div>
 
@@ -2544,7 +2544,7 @@ title="Fullscreen mode"
         <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">( </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1"> )&#39;</span></div>
 
 
-<div class="viewcode-block" id="Edge"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Edge">[docs]</a><span class="k">class</span> <span class="nc">Edge</span><span class="p">(</span><span class="n">AbstractEdge</span><span class="p">):</span>
+<div class="viewcode-block" id="Edge"><a class="viewcode-back" href="../../components.html#tensorkrowch.Edge">[docs]</a><span class="k">class</span> <span class="nc">Edge</span><span class="p">(</span><span class="n">AbstractEdge</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Base class for non-trainable edges. Should be subclassed by any new class</span>
 <span class="sd">    of non-trainable edges.</span>
@@ -2570,14 +2570,14 @@ title="Fullscreen mode"
     <span class="c1"># -------</span>
     <span class="c1"># Methods</span>
     <span class="c1"># -------</span>
-<div class="viewcode-block" id="Edge.dim"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Edge.dim">[docs]</a>    <span class="k">def</span> <span class="nf">dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<div class="viewcode-block" id="Edge.dim"><a class="viewcode-back" href="../../components.html#tensorkrowch.Edge.dim">[docs]</a>    <span class="k">def</span> <span class="nf">dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns dimension of tensor at the corresponding axis. For edges, this</span>
 <span class="sd">        coincides with the size of the tensor.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="Edge.change_size"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Edge.change_size">[docs]</a>    <span class="k">def</span> <span class="nf">change_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="Edge.change_size"><a class="viewcode-back" href="../../components.html#tensorkrowch.Edge.change_size">[docs]</a>    <span class="k">def</span> <span class="nf">change_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Changes size of the edge, thus changing the size of tensors of `node1`</span>
 <span class="sd">        and `node2` at the corresponding axes. If new size is smaller, the tensor</span>
@@ -2592,7 +2592,7 @@ title="Fullscreen mode"
             <span class="bp">self</span><span class="o">.</span><span class="n">node2</span><span class="o">.</span><span class="n">_change_axis_size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axis2</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">_change_axis_size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Edge.parameterize"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Edge.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="Edge.parameterize"><a class="viewcode-back" href="../../components.html#tensorkrowch.Edge.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                      <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
                      <span class="n">size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Edge&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -2637,7 +2637,7 @@ title="Fullscreen mode"
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="Edge.copy"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Edge.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Edge&#39;</span><span class="p">:</span>
+<div class="viewcode-block" id="Edge.copy"><a class="viewcode-back" href="../../components.html#tensorkrowch.Edge.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Edge&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a copy of the edge, that is, a new edge referencing the same</span>
 <span class="sd">        nodes at the same axes.</span>
@@ -2654,7 +2654,7 @@ title="Fullscreen mode"
     <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">:</span>
         <span class="k">pass</span>
 
-<div class="viewcode-block" id="Edge.connect"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Edge.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Edge&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Edge&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">]:</span>
+<div class="viewcode-block" id="Edge.connect"><a class="viewcode-back" href="../../components.html#tensorkrowch.Edge.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Edge&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Edge&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Connects dangling edge to another dangling edge.</span>
 <span class="sd">        </span>
@@ -2686,7 +2686,7 @@ title="Fullscreen mode"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Edge.disconnect"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Edge.disconnect">[docs]</a>    <span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="s1">&#39;Edge&#39;</span><span class="p">,</span> <span class="s1">&#39;Edge&#39;</span><span class="p">]:</span>
+<div class="viewcode-block" id="Edge.disconnect"><a class="viewcode-back" href="../../components.html#tensorkrowch.Edge.disconnect">[docs]</a>    <span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="s1">&#39;Edge&#39;</span><span class="p">,</span> <span class="s1">&#39;Edge&#39;</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Disconnects connected edge, that is, the connected edge is splitted into</span>
 <span class="sd">        two dangling edges, one for each node.</span>
@@ -2717,7 +2717,7 @@ title="Fullscreen mode"
 <span class="n">_DEFAULT_SLOPE</span> <span class="o">=</span> <span class="mf">1.</span>
 
 
-<div class="viewcode-block" id="ParamEdge"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge">[docs]</a><span class="k">class</span> <span class="nc">ParamEdge</span><span class="p">(</span><span class="n">AbstractEdge</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<div class="viewcode-block" id="ParamEdge"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamEdge">[docs]</a><span class="k">class</span> <span class="nc">ParamEdge</span><span class="p">(</span><span class="n">AbstractEdge</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Base class for trainable edges. Subclass of **Pytorch** ``nn.Module``.</span>
 <span class="sd">    </span>
@@ -2891,7 +2891,7 @@ title="Fullscreen mode"
     <span class="c1"># -------</span>
     <span class="c1"># Methods</span>
     <span class="c1"># -------</span>
-<div class="viewcode-block" id="ParamEdge.compute_parameters"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.compute_parameters">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="ParamEdge.compute_parameters"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamEdge.compute_parameters">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">compute_parameters</span><span class="p">(</span><span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Computes ``shift`` and ``slope`` parameters given a certain size and</span>
@@ -2910,7 +2910,7 @@ title="Fullscreen mode"
         <span class="n">slope</span> <span class="o">=</span> <span class="n">_DEFAULT_SLOPE</span>
         <span class="k">return</span> <span class="n">shift</span><span class="p">,</span> <span class="n">slope</span></div>
 
-<div class="viewcode-block" id="ParamEdge.set_parameters"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.set_parameters">[docs]</a>    <span class="k">def</span> <span class="nf">set_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="ParamEdge.set_parameters"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamEdge.set_parameters">[docs]</a>    <span class="k">def</span> <span class="nf">set_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                        <span class="n">shift</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">EdgeParameter</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                        <span class="n">slope</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">EdgeParameter</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -2948,11 +2948,11 @@ title="Fullscreen mode"
         
         <span class="bp">self</span><span class="o">.</span><span class="n">set_matrix</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="ParamEdge.sigmoid"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.sigmoid">[docs]</a>    <span class="k">def</span> <span class="nf">sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="ParamEdge.sigmoid"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamEdge.sigmoid">[docs]</a>    <span class="k">def</span> <span class="nf">sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Sigmoid function.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sigmoid</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ParamEdge.make_matrix"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.make_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">make_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="ParamEdge.make_matrix"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamEdge.make_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">make_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates the matrix based on ``shift`` and ``slope``. The matrix is a</span>
 <span class="sd">        diagonal square matrix with (almost) 0&#39;s and 1&#39;s on the diagonal.</span>
@@ -2964,7 +2964,7 @@ title="Fullscreen mode"
         <span class="n">matrix</span><span class="p">[(</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slope</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">matrix</span></div>
 
-<div class="viewcode-block" id="ParamEdge.set_matrix"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.set_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">set_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="ParamEdge.set_matrix"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamEdge.set_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">set_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates the matrix and sets it, also updating the dimension.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_matrix</span><span class="p">()</span>
         <span class="n">signs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_matrix</span><span class="o">.</span><span class="n">diagonal</span><span class="p">()</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span>
@@ -2978,7 +2978,7 @@ title="Fullscreen mode"
                 <span class="sa">f</span><span class="s1">&#39;Dimension of edge </span><span class="si">{</span><span class="bp">self</span><span class="si">!r}</span><span class="s1"> is not greater than zero&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dim</span> <span class="o">=</span> <span class="n">dim</span></div>
 
-<div class="viewcode-block" id="ParamEdge.dim"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.dim">[docs]</a>    <span class="k">def</span> <span class="nf">dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<div class="viewcode-block" id="ParamEdge.dim"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamEdge.dim">[docs]</a>    <span class="k">def</span> <span class="nf">dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Here, `dimension` is not the same as `size`. The ``dim`` and ``size`` in</span>
 <span class="sd">        a certain axis can be equal if the edge attached to that axis is not</span>
@@ -2997,13 +2997,13 @@ title="Fullscreen mode"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim</span></div>
 
-<div class="viewcode-block" id="ParamEdge.change_dim"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.change_dim">[docs]</a>    <span class="k">def</span> <span class="nf">change_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="ParamEdge.change_dim"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamEdge.change_dim">[docs]</a>    <span class="k">def</span> <span class="nf">change_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Changes dimension of param-edge, setting new ``shift`` and ``slope``.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">dim</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dim</span><span class="p">:</span>
             <span class="n">shift</span><span class="p">,</span> <span class="n">slope</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_parameters</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_size</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span><span class="n">shift</span><span class="p">,</span> <span class="n">slope</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ParamEdge.change_size"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.change_size">[docs]</a>    <span class="k">def</span> <span class="nf">change_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="ParamEdge.change_size"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamEdge.change_size">[docs]</a>    <span class="k">def</span> <span class="nf">change_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Changes size of the param-edge, thus changing the size of tensors of `node1`</span>
 <span class="sd">        and `node2` at the corresponding axes. If new size is smaller, the tensor</span>
@@ -3027,7 +3027,7 @@ title="Fullscreen mode"
             <span class="bp">self</span><span class="o">.</span><span class="n">node2</span><span class="o">.</span><span class="n">_change_axis_size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axis2</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">_change_axis_size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ParamEdge.parameterize"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="ParamEdge.parameterize"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamEdge.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                      <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Edge&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Replaces the param-edge with a de-parameterized version of it, that is,</span>
@@ -3059,7 +3059,7 @@ title="Fullscreen mode"
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="ParamEdge.copy"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">:</span>
+<div class="viewcode-block" id="ParamEdge.copy"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamEdge.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a copy of the param-edge, that is, a new param-edge referencing</span>
 <span class="sd">        the same nodes at the same axes, with the same ``shift`` and ``slope``.</span>
@@ -3077,7 +3077,7 @@ title="Fullscreen mode"
     <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">:</span>
         <span class="k">pass</span>
 
-<div class="viewcode-block" id="ParamEdge.connect"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Edge&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">:</span>
+<div class="viewcode-block" id="ParamEdge.connect"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamEdge.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Edge&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Connects dangling param-edge to another dangling edge or param-edge. The</span>
 <span class="sd">        result will always be a param-edge.</span>
@@ -3116,7 +3116,7 @@ title="Fullscreen mode"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ParamEdge.disconnect"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamEdge.disconnect">[docs]</a>    <span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="s1">&#39;ParamEdge&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">]:</span>
+<div class="viewcode-block" id="ParamEdge.disconnect"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamEdge.disconnect">[docs]</a>    <span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="s1">&#39;ParamEdge&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamEdge&#39;</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Disconnects connected param-edge, that is, the connected param-edge is</span>
 <span class="sd">        splitted into two dangling param-edges, one for each node.</span>
@@ -3166,7 +3166,7 @@ title="Fullscreen mode"
         <span class="k">pass</span>
 
 
-<div class="viewcode-block" id="StackEdge"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.StackEdge">[docs]</a><span class="k">class</span> <span class="nc">StackEdge</span><span class="p">(</span><span class="n">AbstractStackEdge</span><span class="p">,</span> <span class="n">Edge</span><span class="p">):</span>
+<div class="viewcode-block" id="StackEdge"><a class="viewcode-back" href="../../components.html#tensorkrowch.StackEdge">[docs]</a><span class="k">class</span> <span class="nc">StackEdge</span><span class="p">(</span><span class="n">AbstractStackEdge</span><span class="p">,</span> <span class="n">Edge</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Base class for stacks of non-trainable edges.</span>
 <span class="sd">    Used for stacked contractions</span>
@@ -3219,7 +3219,7 @@ title="Fullscreen mode"
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns list of ``node1_list``&#39;s corresponding to this axis.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_node1_lists</span>
     
-<div class="viewcode-block" id="StackEdge.connect"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.StackEdge.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s1">&#39;StackEdge&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;StackEdge&#39;</span><span class="p">:</span>
+<div class="viewcode-block" id="StackEdge.connect"><a class="viewcode-back" href="../../components.html#tensorkrowch.StackEdge.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s1">&#39;StackEdge&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;StackEdge&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Same as :meth:`~Edge.connect` but it is verified that all stacked edges</span>
 <span class="sd">        corresponding to both ``StackEdges`` are the same. That is, this is a</span>
@@ -3263,7 +3263,7 @@ title="Fullscreen mode"
         <span class="k">return</span> <span class="n">connect_stack</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span></div></div>
 
 
-<div class="viewcode-block" id="ParamStackEdge"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamStackEdge">[docs]</a><span class="k">class</span> <span class="nc">ParamStackEdge</span><span class="p">(</span><span class="n">AbstractStackEdge</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">):</span>
+<div class="viewcode-block" id="ParamStackEdge"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamStackEdge">[docs]</a><span class="k">class</span> <span class="nc">ParamStackEdge</span><span class="p">(</span><span class="n">AbstractStackEdge</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">):</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for stacks of trainable edges. Just as for :class:`StackEdge`, this</span>
 <span class="sd">    class is the stacked version of :class:`ParamEdge`, with the additional</span>
@@ -3358,7 +3358,7 @@ title="Fullscreen mode"
 
         <span class="k">return</span> <span class="n">stacked_mats</span>
     
-<div class="viewcode-block" id="ParamStackEdge.connect"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.ParamStackEdge.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s1">&#39;ParamStackEdge&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ParamStackEdge&#39;</span><span class="p">:</span>
+<div class="viewcode-block" id="ParamStackEdge.connect"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamStackEdge.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s1">&#39;ParamStackEdge&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ParamStackEdge&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Same as :meth:`~ParamEdge.connect` but it is verified that all stacked</span>
 <span class="sd">        edges corresponding to both ``ParamStackEdges`` are the same. That is,</span>
@@ -3406,7 +3406,7 @@ title="Fullscreen mode"
 <span class="c1">###############################################################################</span>
 <span class="c1">#                               EDGE OPERATIONS                               #</span>
 <span class="c1">###############################################################################</span>
-<div class="viewcode-block" id="connect"><a class="viewcode-back" href="../../node_operations.html#tensorkrowch.connect">[docs]</a><span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="n">edge1</span><span class="p">:</span> <span class="n">AbstractEdge</span><span class="p">,</span> <span class="n">edge2</span><span class="p">:</span> <span class="n">AbstractEdge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">]:</span>
+<div class="viewcode-block" id="connect"><a class="viewcode-back" href="../../operations.html#tensorkrowch.connect">[docs]</a><span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="n">edge1</span><span class="p">:</span> <span class="n">AbstractEdge</span><span class="p">,</span> <span class="n">edge2</span><span class="p">:</span> <span class="n">AbstractEdge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Connects two dangling edges. If both are :class:`Edges &lt;Edge&gt;`, the result</span>
 <span class="sd">    will be also an ``Edge``. Otherwise, the result will be a :class:`ParamEdge`.</span>
@@ -3506,7 +3506,7 @@ title="Fullscreen mode"
     <span class="k">return</span> <span class="n">new_edge</span></div>
 
 
-<div class="viewcode-block" id="connect_stack"><a class="viewcode-back" href="../../node_operations.html#tensorkrowch.connect_stack">[docs]</a><span class="k">def</span> <span class="nf">connect_stack</span><span class="p">(</span><span class="n">edge1</span><span class="p">:</span> <span class="n">AbstractStackEdge</span><span class="p">,</span>
+<div class="viewcode-block" id="connect_stack"><a class="viewcode-back" href="../../operations.html#tensorkrowch.connect_stack">[docs]</a><span class="k">def</span> <span class="nf">connect_stack</span><span class="p">(</span><span class="n">edge1</span><span class="p">:</span> <span class="n">AbstractStackEdge</span><span class="p">,</span>
                   <span class="n">edge2</span><span class="p">:</span> <span class="n">AbstractStackEdge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractStackEdge</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Same as :func:`connect` but it is verified that all stacked edges corresponding</span>
@@ -3540,7 +3540,7 @@ title="Fullscreen mode"
     <span class="k">return</span> <span class="n">connect</span><span class="p">(</span><span class="n">edge1</span><span class="o">=</span><span class="n">edge1</span><span class="p">,</span> <span class="n">edge2</span><span class="o">=</span><span class="n">edge2</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="disconnect"><a class="viewcode-back" href="../../node_operations.html#tensorkrowch.disconnect">[docs]</a><span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="n">edge</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="n">Edge</span><span class="p">],</span>
+<div class="viewcode-block" id="disconnect"><a class="viewcode-back" href="../../operations.html#tensorkrowch.disconnect">[docs]</a><span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="n">edge</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="n">Edge</span><span class="p">],</span>
                                                       <span class="n">Tuple</span><span class="p">[</span><span class="n">ParamEdge</span><span class="p">,</span> <span class="n">ParamEdge</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Disconnects connected edge, that is, the connected edge is splitted into</span>
@@ -3619,7 +3619,7 @@ title="Fullscreen mode"
 <span class="c1">###############################################################################</span>
 <span class="c1">#                                   SUCCESSOR                                 #</span>
 <span class="c1">###############################################################################</span>
-<div class="viewcode-block" id="Successor"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.Successor">[docs]</a><span class="k">class</span> <span class="nc">Successor</span><span class="p">:</span>
+<div class="viewcode-block" id="Successor"><a class="viewcode-back" href="../../components.html#tensorkrowch.Successor">[docs]</a><span class="k">class</span> <span class="nc">Successor</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for successors. This is a sort of cache memory for :class:`operations</span>
 <span class="sd">    &lt;Operation&gt;` that have been already computed.</span>
@@ -3680,7 +3680,7 @@ title="Fullscreen mode"
 <span class="c1">###############################################################################</span>
 <span class="c1">#                                TENSOR NETWORK                               #</span>
 <span class="c1">###############################################################################</span>
-<div class="viewcode-block" id="TensorNetwork"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.TensorNetwork">[docs]</a><span class="k">class</span> <span class="nc">TensorNetwork</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<div class="viewcode-block" id="TensorNetwork"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork">[docs]</a><span class="k">class</span> <span class="nc">TensorNetwork</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for arbitrary Tensor Networks. Subclass of **PyTorch** ``nn.Module``.</span>
 <span class="sd">    </span>
@@ -3774,7 +3774,7 @@ title="Fullscreen mode"
 <span class="sd">    </span>
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
-<span class="sd">    This is how one may define an MPS.</span>
+<span class="sd">    This is how one may define an **MPS**.</span>
 <span class="sd">    </span>
 <span class="sd">    ::</span>
 <span class="sd">    </span>
@@ -4083,7 +4083,7 @@ title="Fullscreen mode"
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        node : Node or ParamNode</span>
+<span class="sd">        node : AbstractNode</span>
 <span class="sd">            Node to be removed.</span>
 <span class="sd">        move_names : bool</span>
 <span class="sd">            Boolean indicating whether names&#39; enumerations should be decreased</span>
@@ -4111,7 +4111,7 @@ title="Fullscreen mode"
                     <span class="c1"># node is using the memory of another node</span>
                     <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span>
 
-<div class="viewcode-block" id="TensorNetwork.delete_node"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.TensorNetwork.delete_node">[docs]</a>    <span class="k">def</span> <span class="nf">delete_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">move_names</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="TensorNetwork.delete_node"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork.delete_node">[docs]</a>    <span class="k">def</span> <span class="nf">delete_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">move_names</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Disconnects node from all its neighbours and removes it from the network.</span>
 <span class="sd">        </span>
@@ -4396,11 +4396,11 @@ title="Fullscreen mode"
         <span class="k">del</span> <span class="n">prev_dict</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span>
         <span class="n">new_dict</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">node</span>
 
-<div class="viewcode-block" id="TensorNetwork.copy"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.TensorNetwork.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TensorNetwork&#39;</span><span class="p">:</span>
+<div class="viewcode-block" id="TensorNetwork.copy"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TensorNetwork&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Copies the tensor network (via ``copy.deepcopy``).&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="TensorNetwork.parameterize"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.TensorNetwork.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="TensorNetwork.parameterize"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                      <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
                      <span class="n">override</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TensorNetwork&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -4431,7 +4431,7 @@ title="Fullscreen mode"
 
         <span class="k">return</span> <span class="n">net</span></div>
     
-<div class="viewcode-block" id="TensorNetwork.trace"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.TensorNetwork.trace">[docs]</a>    <span class="k">def</span> <span class="nf">trace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">example</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="TensorNetwork.trace"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork.trace">[docs]</a>    <span class="k">def</span> <span class="nf">trace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">example</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Traces the tensor network contraction algorithm with two purposes:</span>
 <span class="sd">        </span>
@@ -4470,7 +4470,7 @@ title="Fullscreen mode"
             <span class="bp">self</span><span class="o">.</span><span class="n">_tracing</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="bp">self</span><span class="p">(</span><span class="n">example</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
             
-<div class="viewcode-block" id="TensorNetwork.reset"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.TensorNetwork.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="TensorNetwork.reset"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Resets the tensor network as it was before tracing, contracting or, in</span>
 <span class="sd">        general, performing any non-in-place :class:`Operation`. Hence, it deletes</span>
@@ -4538,7 +4538,7 @@ title="Fullscreen mode"
                     <span class="k">continue</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">delete_node</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="TensorNetwork.set_data_nodes"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.TensorNetwork.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="TensorNetwork.set_data_nodes"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                        <span class="n">input_edges</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractEdge</span><span class="p">]],</span>
                        <span class="n">num_batch_edges</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -4640,7 +4640,7 @@ title="Fullscreen mode"
                 <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;full&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span></div>
 
-<div class="viewcode-block" id="TensorNetwork.unset_data_nodes"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.TensorNetwork.unset_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">unset_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="TensorNetwork.unset_data_nodes"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork.unset_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">unset_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Deletes all ``data`` nodes (and ``virtual`` ancillary nodes in case it</span>
 <span class="sd">        is necessary).</span>
@@ -4680,7 +4680,7 @@ title="Fullscreen mode"
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot add data if no data nodes are set&#39;</span><span class="p">)</span>
 
-<div class="viewcode-block" id="TensorNetwork.contract"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.TensorNetwork.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
+<div class="viewcode-block" id="TensorNetwork.contract"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the whole tensor network returning a single ``Node``. This</span>
 <span class="sd">        method is not implemented and should be overriden in subclasses of</span>
@@ -4691,7 +4691,7 @@ title="Fullscreen mode"
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
             <span class="s1">&#39;Contraction methods not implemented for generic TensorNetwork class&#39;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="TensorNetwork.forward"><a class="viewcode-back" href="../../network_components.html#tensorkrowch.TensorNetwork.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="TensorNetwork.forward"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                 <span class="n">data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                 <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>

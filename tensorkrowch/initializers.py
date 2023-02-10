@@ -3,10 +3,10 @@ Alternative functions to initialize nodes
 """
 
 from typing import Optional, Text, Sequence
-from tensorkrowch.network_components import Shape
+from tensorkrowch.components import Shape
 
-from tensorkrowch.network_components import AbstractNode, Node, ParamNode
-from tensorkrowch.network_components import TensorNetwork
+from tensorkrowch.components import AbstractNode, Node, ParamNode
+from tensorkrowch.components import TensorNetwork
 
 
 def _initializer(init_method,

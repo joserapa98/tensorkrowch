@@ -2342,7 +2342,8 @@ def get_shared_edges(node1: AbstractNode,
 
 
 def contract_between(node1: AbstractNode,
-                     node2: AbstractNode) -> Node:
+                     node2: AbstractNode,
+                     axes: Optional[Sequence[Ax]] = None) -> Node:
     """
     Contracts all edges shared between two nodes. Batch contraction is
     automatically performed when both nodes have batch edges with the same
@@ -2361,7 +2362,11 @@ def contract_between(node1: AbstractNode,
     -------
     Node
     """
-    edges = get_shared_edges(node1, node2)
+    if axes is None:
+        edges = get_shared_edges(node1, node2)
+    else:
+        edges = [node1.get_edge(ax) for ax in axes]
+        
     if not edges:
         raise ValueError(f'No batch edges or shared edges between '
                          f'nodes {node1!s} and {node2!s} found')
@@ -2540,7 +2545,7 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
             for i, (max_dim, dim) in enumerate(zip(stack_node_ref._shape[1:],
                                                    stack_node._shape[1:])):
                 if stack_node._axes[i + 1].is_batch():
-                    # Admit any dimension in batch edges
+                    # Admit any size in batch edges
                     index.append(slice(0, None))
                 else:
                     index.append(slice(max_dim - dim, max_dim))
@@ -2561,7 +2566,7 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
                 for j, (max_dim, dim) in enumerate(zip(stack_node._shape[1:],
                                                     node._shape)):
                     if node._axes[j].is_batch():
-                        # Admit any dimension in batch edges
+                        # Admit any size in batch edges
                         index.append(slice(0, None))
                     else:
                         index.append(slice(max_dim - dim, max_dim))
@@ -2633,8 +2638,11 @@ def stack(nodes: Sequence[AbstractNode]):
     return stack_op(nodes)
 
 
-##################   UNBIND   ##################
-def _check_first_unbind(node: AbstractNode) -> Optional[Successor]:
+##################################   UNBIND   #################################
+AbstractStackNode = Union[StackNode, ParamStackNode]
+
+
+def _check_first_unbind(node: AbstractStackNode) -> Optional[Successor]:
     kwargs = {'node': node}
     if 'unbind' in node._successors:
         for succ in node._successors['unbind']:
@@ -2643,71 +2651,68 @@ def _check_first_unbind(node: AbstractNode) -> Optional[Successor]:
     return None
 
 
-# TODO: se puede optimizar, hace falta hacer el torch.unbind realmente?
-def _unbind_first(node: AbstractNode) -> List[Node]:
-    """
-    Unbind stacked node. It is assumed that the stacked dimension
-    is the first one.
-    """
+def _unbind_first(node: AbstractStackNode) -> List[Node]:
     if not isinstance(node, (StackNode, ParamStackNode)):
         raise TypeError('Cannot unbind node if it is not a (Param)StackNode')
     
     tensors = torch.unbind(node.tensor)
-    nodes = []
+    new_nodes = []
 
     # Invert structure of node.edges_lists
-    # is_stack_edge = list(map(lambda e: isinstance(e, nc.AbstractStackEdge), node.edges_lists[1:]))
     edges_lists = []
     node1_lists = []
     batch_idx = None
     for i, edge in enumerate(node._edges[1:]):
-        # if is_stack_edge[i]:
         if isinstance(edge, AbstractStackEdge):
             edges_lists.append(edge._edges)
             node1_lists.append(edge._node1_lists)
-            if edge._edges[0].is_batch() and 'batch' in edge._edges[0].axis1._name:
-                batch_idx = i  # TODO: caso batch edge que puede cambiar
+            if edge._edges[0].is_batch() and \
+                ('batch' in edge._edges[0].axis1._name):
+                # Save position of batch edge, whose dimension might change
+                # TODO: case more than one batch edge
+                batch_idx = i
         else:
-            # TODO: caso edges_lists que designan el indice de pila?? node1 siempre True? para que este caso?
             edges_lists.append([edge] * len(tensors))
             node1_lists.append([True] * len(tensors))
-    lst = list(zip(tensors, list(zip(*edges_lists)), list(zip(*node1_lists))))
+    lst = list(zip(tensors, list(zip(*edges_lists)),
+                   list(zip(*node1_lists))))
 
     net = node._network
     for i, (tensor, edges, node1_list) in enumerate(lst):
         new_node = Node(axes_names=node.axes_names[1:],
-                           name='unbind',
-                           network=net,
-                           leaf=False,
-                           tensor=tensor,
-                           edges=list(edges),
-                           node1_list=list(node1_list))
-        nodes.append(new_node)
+                        name='unbind',
+                        network=net,
+                        leaf=False,
+                        tensor=tensor,
+                        edges=list(edges),
+                        node1_list=list(node1_list))
+        new_nodes.append(new_node)
         
-    if not net.unbind_mode: # TODO: organizar mas simple
-        # TODO: originalmente borramos informacion y solo hacemos referencia a la pila
-        # This memory management can happen always, even not in contracting mode
-        # NOTE: index mode
-        aux_node_ref = node
-        address = node._tensor_info['address']
-        while address is None:
-            aux_node_ref = aux_node_ref._tensor_info['node_ref']
-            address = aux_node_ref._tensor_info['address']
+    if net._unbind_mode:
+        # Record in inverse_memory while tracing
+        node._record_in_inverse_memory()
+        
+    else:  # index_mode
+        if node._tensor_info['address'] is None:
+            node_ref = node._tensor_info['node_ref']
+        else:
+            node_ref = node
                 
-        for i, new_node in enumerate(nodes):
-            
-            shape = new_node.shape
+        for i, new_node in enumerate(new_nodes):
             if new_node._tensor_info['address'] is not None:
-                del new_node.network._memory_nodes[new_node._tensor_info['address']]
+                del new_node._network._memory_nodes[
+                    new_node._tensor_info['address']]
             new_node._tensor_info['address'] = None
             
-            new_node._tensor_info['node_ref'] = aux_node_ref  # NOTE: bucle para guardar address
+            new_node._tensor_info['node_ref'] = node_ref
             new_node._tensor_info['full'] = False
             
-            if aux_node_ref == node:
+            if node_ref == node:
                 index = [i]
-                for j, (max_dim, dim) in enumerate(zip(node.shape[1:], shape)):  # TODO: max_dim == dim siempre creo
+                for j, (max_dim, dim) in enumerate(zip(node._shape[1:],
+                                                       new_node._shape)):
                     if new_node._axes[j].is_batch():
+                        # Admit any size in batch edges
                         index.append(slice(0, None))
                     else:
                         index.append(slice(max_dim - dim, max_dim))
@@ -2719,41 +2724,51 @@ def _unbind_first(node: AbstractNode) -> List[Node]:
                 if isinstance(aux_slice, list):
                     index = [aux_slice[i]]
                 else:
-                    index = [range(aux_slice.start, aux_slice.stop, aux_slice.step)[i]]
+                    index = [range(aux_slice.start,
+                                   aux_slice.stop,
+                                   aux_slice.step)[i]]
                     
-                # If node is indexing from the original stack
                 if node_index[1:]:
-                    for j, (aux_slice, dim) in enumerate(zip(node_index[1:], shape)):
+                    # If node is indexing from the original stack
+                    for j, (aux_slice, dim) in enumerate(zip(node_index[1:],
+                                                             new_node._shape)):
                         if new_node._axes[j].is_batch():
+                            # Admit any size in batch edges
                             index.append(slice(0, None))
                         else:
                             index.append(slice(aux_slice.stop - dim, aux_slice.stop))
-                # If node has the same shape as the original stack
+                
                 else:
-                    for j, (max_dim, dim) in enumerate(zip(node.shape[1:], shape)):  # TODO: max_dim == dim siempre creo
+                    # If node has the same shape as the original stack
+                    for j, (max_dim, dim) in enumerate(zip(node.shape[1:],
+                                                           new_node._shape)):
                         if new_node._axes[j].is_batch():
+                            # Admit any size in batch edges
                             index.append(slice(0, None))
                         else:
                             index.append(slice(max_dim - dim, max_dim))
+                            
                 new_node._tensor_info['index'] = index
-        
-    else:
-        node._record_in_inverse_memory()
 
+    # Create successor
     successor = Successor(kwargs={'node': node},
-                             child=nodes,
-                             hints=batch_idx)
+                          child=new_nodes,
+                          hints=batch_idx)
+    
+    # Add successor to parent
     if 'unbind' in node._successors:
         node._successors['unbind'].append(successor)
     else:
         node._successors['unbind'] = [successor]
 
+    # Add operation to list of performed operations of TN
     net._list_ops.append((node, 'unbind', len(node._successors['unbind']) - 1))
 
-    return nodes[:]
+    # Returns copy
+    return new_nodes[:]
 
-
-def _unbind_next(successor: Successor, node: AbstractNode) -> List[Node]:
+# TODO: -----> HERE
+def _unbind_next(successor: Successor, node: AbstractStackNode) -> List[Node]:
     # torch.unbind gives a reference to the stacked tensor, it doesn't create a new tensor
     # Thus if we have already created the unbinded nodes with their reference to where their
     # memory is stored, the next times we don't have to compute anything
@@ -2792,7 +2807,17 @@ def _unbind_next(successor: Successor, node: AbstractNode) -> List[Node]:
         # NOTE: index mode
 
 
-unbind = Operation('unbind', _check_first_unbind, _unbind_first, _unbind_next)
+unbind_op = Operation('unbind',
+                      _check_first_unbind,
+                      _unbind_first,
+                      _unbind_next)
+
+def unbind(node: AbstractNode) -> List[Node]:
+    """
+    Unbind stacked node. It is assumed that the stacked dimension
+    is the first one.
+    """
+    return unbind_op(node)
 
 
 ##################   OTHERS   ##################

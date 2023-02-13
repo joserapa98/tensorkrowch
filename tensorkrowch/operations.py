@@ -1,42 +1,36 @@
 """
 This script contains:
 
-    Edge operations:
-        *connect
-        *connect_stack
-        *disconnect
-
-    Node operations:
-        Class for node operations:
-
-            *Operation:
-
-                (Basic operations)
-                +permute
-                +tprod
-                +mul
-                +add
-                +sub
-
-                (Contract)
-                +contract_edges
-            *contract
-            *get_shared_edges
-            *contract_between
-
-                (Stack)
-                +stack
-
-                (Unbind)
-                +unbind
-
-    Other operations:
+    Operation Class:
+        *Operation
+        
+    Tensor-like operations:
+        *permute
+        *permute_           (in-place)
+        *tprod
+        *mul
+        *add
+        *sub
+        
+    Node-like operations:
+        *split
+        *split_             (in-place)
+        *svd_               (in-place) (edge operation)
+        *svdr_              (in-place) (edge operation)
+        *qr_                (in-place) (edge operation)
+        *rq_                (in-place) (edge operation)
+        *contract_edges
+        *contract_          (in-place) (edge operation)
+        *get_shared_edges
+        *contract_between
+        *contract_between_  (in-place)
+        *stack
+        *unbind
         *einsum
         *stacked_einsum
 """
 
 from typing import Callable, List, Optional, Sequence, Text, Tuple, Union
-import time
 import types
 
 import torch
@@ -50,18 +44,16 @@ Ax = Union[int, Text, Axis]
 
 
 def copy_func(f):
-    '''
-    return a function with same code, globals, defaults, closure, and 
-    name (or provide a new name)
-    '''
+    """Returns a function with the same code, defaults, closure and name."""
     fn = types.FunctionType(f.__code__, f.__globals__, f.__name__,
-        f.__defaults__, f.__closure__)
-    # in case f was given attrs (note this dict is a shallow copy):
+                            f.__defaults__, f.__closure__)
+    
+    # In case f was given attrs (note this dict is a shallow copy)
     fn.__dict__.update(f.__dict__) 
     return fn
 
 ###############################################################################
-#                               NODE OPERATIONS                               #
+#                               OPERATION CLASS                               #
 ###############################################################################
 class Operation:
     """
@@ -2595,7 +2587,8 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
         nodes[0]._successors['stack'] = [successor]
 
     # Add operation to list of performed operations of TN
-    net._list_ops.append((nodes[0], 'stack', len(nodes[0]._successors['stack']) - 1))
+    net._list_ops.append((nodes[0], 'stack',
+                          len(nodes[0]._successors['stack']) - 1))
 
     return stack_node
 
@@ -2613,7 +2606,7 @@ def _stack_next(successor: Successor,
     # Record in inverse_memory while contracting
     # (to delete memory if possible)
     for node in nodes:
-            node._record_in_inverse_memory()
+        node._record_in_inverse_memory()
 
     return child
 
@@ -2736,7 +2729,8 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
                             # Admit any size in batch edges
                             index.append(slice(0, None))
                         else:
-                            index.append(slice(aux_slice.stop - dim, aux_slice.stop))
+                            index.append(slice(aux_slice.stop - dim,
+                                               aux_slice.stop))
                 
                 else:
                     # If node has the same shape as the original stack
@@ -2764,47 +2758,38 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
     # Add operation to list of performed operations of TN
     net._list_ops.append((node, 'unbind', len(node._successors['unbind']) - 1))
 
-    # Returns copy
+    # Returns copy in order not to modify the successor
+    # if the returned list gets modified by any means
     return new_nodes[:]
 
-# TODO: -----> HERE
-def _unbind_next(successor: Successor, node: AbstractStackNode) -> List[Node]:
-    # torch.unbind gives a reference to the stacked tensor, it doesn't create a new tensor
-    # Thus if we have already created the unbinded nodes with their reference to where their
-    # memory is stored, the next times we don't have to compute anything
 
+def _unbind_next(successor: Successor, node: AbstractStackNode) -> List[Node]:
     net = node._network
-    if net.unbind_mode:
-        # NOTE: unbind mode / mix index mode
+    if net._unbind_mode:
         tensors = torch.unbind(node.tensor)
         children = successor.child
         for tensor, child in zip(tensors, children):
             child._unrestricted_set_tensor(tensor)
             
+        # Record in inverse_memory while contracting
+        # (to delete memory if possible)
         node._record_in_inverse_memory()
         return children[:]
-        # NOTE: unbind mode / mix index mode
         
-    else:
-        # NOTE: index mode
-        # TODO: creo que esto del batch ya no me sirve de nada,
-        # puedo poner tensores con distintas dims en el nodo
+    else: # index_mode
         batch_idx = successor.hints
         children = successor.child
         
         if batch_idx is None:
-            # node._record_in_inverse_memory()
             return children[:]
         
-        new_dim = node.shape[batch_idx + 1]
-        child_dim = children[0].shape[batch_idx]
+        new_dim = node._shape[batch_idx + 1]
+        child_dim = children[0]._shape[batch_idx]
         
         if new_dim == child_dim:
-            # node._record_in_inverse_memory()
-            return children[:]  # TODO: añadimos [:] para no poder modificar la lista de hijos desde fuera
+            return children[:]
         
-        return successor.child[:]  # TODO: cambia el tamaño del batch
-        # NOTE: index mode
+        return successor.child[:]
 
 
 unbind_op = Operation('unbind',
@@ -2812,16 +2797,30 @@ unbind_op = Operation('unbind',
                       _unbind_first,
                       _unbind_next)
 
-def unbind(node: AbstractNode) -> List[Node]:
+def unbind(node: AbstractStackNode) -> List[Node]:
     """
-    Unbind stacked node. It is assumed that the stacked dimension
-    is the first one.
+    Unbinds a :class:`StackNode` or :class:`ParamStackNode`, where the first
+    dimension is assumed to be the stack dimension.
+    
+    If :meth:`~TensorNetwork.unbind_mode` is set to ``True``, each resultant
+    node will store its own tensor. Otherwise, they will have only a reference
+    to the corresponding slice of the ``(Param)StackNode``.
+    
+    Parameters
+    ----------
+    node : StackNode or ParamStackNode
+        Node that is to be unbinded.
+        
+    Returns
+    -------
+    list[Node]
     """
     return unbind_op(node)
 
 
-##################   OTHERS   ##################
-def _check_first_einsum(string: Text, *nodes: AbstractNode) -> Optional[Successor]:
+##################################   EINSUM   #################################
+def _check_first_einsum(string: Text,
+                        *nodes: AbstractNode) -> Optional[Successor]:
     kwargs = {'string': string,
               'nodes': nodes}
     
@@ -2836,29 +2835,18 @@ def _check_first_einsum(string: Text, *nodes: AbstractNode) -> Optional[Successo
 
 
 def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
-    """
-    Adapt opt_einsum contract function to make it suitable for nodes
-
-    Parameters
-    ----------
-    string: einsum-like string
-    nodes: nodes to be operated
-
-    Returns
-    -------
-    new_node: node resultant from the einsum operation
-    """
-    
     for i in range(len(nodes[:-1])):
-        if nodes[i].network != nodes[i + 1].network:
+        if nodes[i]._network != nodes[i + 1]._network:
             raise ValueError('All `nodes` must be in the same network')
     
     if '->' not in string:
         raise ValueError('Einsum `string` should have an arrow `->` separating '
                          'inputs and output strings')
+        
     input_strings = string.split('->')[0].split(',')
     if len(input_strings) != len(nodes):
-        raise ValueError('Number of einsum subscripts must be equal to the number of operands')
+        raise ValueError('Number of einsum subscripts must be equal to the '
+                         'number of operands')
     if len(string.split('->')) >= 2:
         output_string = string.split('->')[1]
     else:
@@ -2866,24 +2854,31 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
 
     # Check string and collect information from involved edges
     which_matrices = []
-    # matrices = []
     matrices_strings = []
-    output_dict = dict(zip(output_string, [0] * len(output_string)))
+    
     # Used for counting appearances of output subscripts in the input strings
+    output_dict = dict(zip(output_string, [0] * len(output_string)))
+    
     output_char_index = dict(zip(output_string, range(len(output_string))))
+    
+    # Used for counting how many times a contracted edge's
+    # subscript appears among input strings
     contracted_edges = dict()
-    # Used for counting how many times a contracted edge's subscript appears among input strings
+    
+    # Used for counting how many times a batch edge's
+    # subscript appears among input strings
     batch_edges = dict()
-    # Used for counting how many times a batch edge's subscript appears among input strings
+    
     axes_names = dict(zip(range(len(output_string)),
                           [None] * len(output_string)))
     edges = dict(zip(range(len(output_string)),
                      [None] * len(output_string)))
     node1_list = dict(zip(range(len(output_string)),
                           [None] * len(output_string)))
+    
     for i, input_string in enumerate(input_strings):
         if isinstance(nodes[i], (StackNode, ParamStackNode)):
-            stack_char = input_string[0]  # TODO: nodes can have ParamStackEdge if they are result of operation with stacks
+            stack_char = input_string[0]
         for j, char in enumerate(input_string):
             if char not in output_dict:
                 edge = nodes[i][j]
@@ -2891,17 +2886,21 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
                     contracted_edges[char] = [edge]
                 else:
                     if len(contracted_edges[char]) >= 2:
-                        raise ValueError(f'Subscript {char} appearing more than once in the '
-                                         f'input should be a batch index, but it does not '
-                                         f'appear among the output subscripts')
+                        raise ValueError(f'Subscript {char} appearing more than'
+                                         ' once in the input should be a batch '
+                                         'index, but it does not appear among '
+                                         'the output subscripts')
                     if edge != contracted_edges[char][0]:
                         if isinstance(edge, AbstractStackEdge) and \
-                                isinstance(contracted_edges[char][0], AbstractStackEdge):
+                                isinstance(contracted_edges[char][0],
+                                           AbstractStackEdge):
                             edge = edge ^ contracted_edges[char][0]
                         else:
-                            raise ValueError(f'Subscript {char} appears in two nodes that do not '
-                                             f'share a connected edge at the specified axis')
+                            raise ValueError(f'Subscript {char} appears in two '
+                                             'nodes that do not share a connected'
+                                             ' edge at the specified axis')
                     contracted_edges[char].append(edge)
+                    
                 if isinstance(edge, ParamStackEdge):
                     if edge not in which_matrices:
                         matrices_strings.append(stack_char + (2 * char))
@@ -2911,16 +2910,15 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
                     if edge not in which_matrices:
                         matrices_strings.append(2 * char)
                         which_matrices.append(edge)
-                        
             else:
                 edge = nodes[i][j]
                 if output_dict[char] == 0:
                     if edge.is_batch():
                         batch_edges[char] = 0
                     k = output_char_index[char]
-                    axes_names[k] = nodes[i].axes[j].name
+                    axes_names[k] = nodes[i]._axes[j]._name
                     edges[k] = edge
-                    node1_list[k] = nodes[i].axes[j].is_node1()
+                    node1_list[k] = nodes[i]._axes[j].is_node1()
                 output_dict[char] += 1
                 if (char in batch_edges) and edge.is_batch():
                     batch_edges[char] += 1
@@ -2932,8 +2930,8 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
         if output_dict[char] > 1:
             if char in batch_edges:
                 if batch_edges[char] < output_dict[char]:
-                    raise ValueError(f'Subscript {char} used as batch, but some '
-                                     f'of those edges are not batch edges')
+                    raise ValueError(f'Subscript {char} used as batch, but some'
+                                     ' of those edges are not batch edges')
             else:
                 raise ValueError(f'Subscript {char} used as batch, but none '
                                  f'of those edges is a batch edge')
@@ -2961,94 +2959,151 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
             all_stack &= False
             all_non_stack &= True
             
-    if all_stack and all_non_stack:
+    if not (all_stack or all_non_stack):
         raise TypeError('Cannot operate (Param)StackNode\'s with '
                         'other (non-stack) nodes')
         
     if all_stack:
         new_node = StackNode(axes_names=list(axes_names.values()),
                              name='einsum',
-                             network=nodes[0].network,
+                             network=nodes[0]._network,
                              tensor=new_tensor,
                              edges=list(edges.values()),
                              node1_list=list(node1_list.values()))
     else:
-        # TODO: We assume all nodes belong to the same network
         new_node = Node(axes_names=list(axes_names.values()),
                         name='einsum',
-                        network=nodes[0].network,
+                        network=nodes[0]._network,
                         leaf=False,
                         param_edges=False,
                         tensor=new_tensor,
                         edges=list(edges.values()),
                         node1_list=list(node1_list.values()))
     
+    # Create successor
     successor = Successor(kwargs = {'string': string,
                                     'nodes': nodes},
                           child=new_node,
                           hints={'einsum_string': einsum_string,
                                  'which_matrices': which_matrices,
                                  'path': path})
+    
+    # Add successor to parent
     if 'einsum' in nodes[0]._successors:
         nodes[0]._successors['einsum'].append(successor)
     else:
         nodes[0]._successors['einsum'] = [successor]
 
-    net = nodes[0].network
-    net._list_ops.append((nodes[0], 'einsum', len(nodes[0]._successors['einsum']) - 1))
+    # Add operation to list of performed operations of TN
+    net = nodes[0]._network
+    net._list_ops.append((nodes[0], 'einsum',
+                          len(nodes[0]._successors['einsum']) - 1))
+    
+    # Record in inverse_memory while tracing
+    for node in nodes:
+        node._record_in_inverse_memory()
     
     return new_node
 
 
-# TODO: pensar esto un poco mejor, ahorrar c'odigo y c'alculos
-def _einsum_next(successor: Successor, string: Text, *nodes: AbstractNode) -> Node:
-    """
-    Adapt opt_einsum contract function to make it suitable for nodes
-
-    Parameters
-    ----------
-    string: einsum-like string
-    nodes: nodes to be operated
-
-    Returns
-    -------
-    new_node: node resultant from the einsum operation
-    """
+def _einsum_next(successor: Successor,
+                 string: Text,
+                 *nodes: AbstractNode) -> Node:
     hints = successor.hints
     
     tensors = [node.tensor for node in nodes]
     matrices = [edge.matrix for edge in hints['which_matrices']]
-    new_tensor = opt_einsum.contract(hints['einsum_string'], *(tensors + matrices),
+    new_tensor = opt_einsum.contract(hints['einsum_string'],
+                                     *(tensors + matrices),
                                      optimize=hints['path'])
     
     child = successor.child
     child._unrestricted_set_tensor(new_tensor)
+    
+    # Record in inverse_memory while contracting
+    # (to delete memory if possible)
+    for node in nodes:
+        node._record_in_inverse_memory()
+        
     return child
 
 
-einsum = Operation('einsum', _check_first_einsum, _einsum_first, _einsum_next)
+einsum_op = Operation('einsum',
+                      _check_first_einsum,
+                      _einsum_first,
+                      _einsum_next)
 
-
-def stacked_einsum(string: Text, *nodes_lists: List[AbstractNode]) -> List[Node]:
+def einsum(string: Text, *nodes: AbstractNode) -> Node:
     """
-    Adapt einsum operation to enable stack contractions. Lists of input nodes
-    are stacked and a special character is added before each input/output string
+    Performs einsum contraction based on `opt_einsum
+    <https://optimized-einsum.readthedocs.io/en/stable/autosummary/opt_einsum.contract.html>`_.
+    This operation facilitates contracting several nodes at once, specifying
+    directly the order of appearance of the resultant edges. Without this
+    operation, several contractions and permutations would be needed.
+    
+    Since it adapts a tensor operation for nodes, certain nodes' properties are
+    first checked. Thus, it verifies that all edges are correctly connected and
+    all nodes are in the same network. It also performs batch contraction
+    whenever corresponding edges are batch edges.
 
     Parameters
     ----------
-    string: einsum-like string built as if only the set formed by the first node
-            of each list in `nodes_lists` were involved in the operation
-    nodes_lists: lists of nodes involved in the operation. Each element of
-                 each list will be operated with the corresponding elements
-                 from the other lists. The nodes in each list will be first
-                 stacked to perform the einsum operation
+    string : str
+        Einsum-like string indicating how the contraction should be performed.
+        It consists of a comma-separated list of inputs and an output separated
+        by an arrow. For instance, the contraction
+        
+        .. math::
+
+            T_{j,l} = \sum_{i,k,m}{A_{i,j,k}B_{k,l,m}C_{i,m}}
+            
+        can be expressed as::
+        
+            string = 'ijk,klm,im->jl'
+    nodes : AbstractNode...
+        Nodes that are involved in the contraction. Should appear in the same
+        order as it is specified in the ``string``. They should either be all
+        ``(Param)StackNode``'s or none of them be a ``(Param)StackNode``.
 
     Returns
     -------
-    unbind(result): list of nodes resultant from operating the stack nodes and
-                    unbind the result
+    Node
     """
-    start = time.time()
+    return einsum_op(string, *nodes)
+
+
+##############################   STACKED EINSUM   #############################
+def stacked_einsum(string: Text,
+                   *nodes_lists: List[AbstractNode]) -> List[Node]:
+    """
+    Applies the same :func:`einsum` operation (same ``string``) to a sequence
+    of groups of nodes (all groups having the same amount of nodes, with the
+    same properties, etc.). That is, it stacks these groups of nodes into a
+    siongle collection of nodes that is then contracte via ``einsum``, and
+    :func:`unbinded <unbind>` afterwards.
+
+    Parameters
+    ----------
+    string : str
+        Einsum-like string indicating how the contraction should be performed.
+        It consists of a comma-separated list of inputs and an output separated
+        by an arrow. For instance, the contraction
+        
+        .. math::
+
+            T_{j,l} = \sum_{i,k,m}{A_{i,j,k}B_{k,l,m}C_{i,m}}
+            
+        can be expressed as::
+        
+            string = 'ijk,klm,im->jl'
+    nodes : List[Node or ParamNode]...
+        Nodes that are involved in the contraction. Should appear in the same
+        order as it is specified in the ``string``.
+
+    Returns
+    -------
+    list[Node]
+    """
     stacks_list = []
     for nodes_list in nodes_lists:
         stacks_list.append(stack(nodes_list))
@@ -3063,29 +3118,12 @@ def stacked_einsum(string: Text, *nodes_lists: List[AbstractNode]) -> List[Node]
             if input_char == stack_char:
                 i += 1
                 stack_char = opt_einsum.get_symbol(i)
+                
     input_strings = list(map(lambda s: stack_char + s, input_strings))
     input_string = ','.join(input_strings)
     output_string = stack_char + output_string
     string = input_string + '->' + output_string
-
-    start = time.time()
-    # TODO: no adaptado a'un, creamos nodos nuevos cada vez, y a su vez con unbind
+    
     result = einsum(string, *stacks_list)
-    unbinded_result = unbind(result)  # <-- Lo más lento
+    unbinded_result = unbind(result)
     return unbinded_result
-
-
-###########################################
-#    Save operations in TensorNetwork     #
-###########################################
-
-# TensorNetwork.operations = {'permute': permute,
-#                             'tprod': tprod,
-#                             'mul': mul,
-#                             'add': add,
-#                             'sub': sub,
-#                             'split': split,
-#                             'contract_edges': contract_edges,
-#                             'stack': stack,
-#                             'unbind': unbind}
-# TODO: add einsum, stacked_einsum

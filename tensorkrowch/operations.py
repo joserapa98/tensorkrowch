@@ -2,32 +2,32 @@
 This script contains:
 
     Operation Class:
-        *Operation
+        * Operation
         
     Tensor-like operations:
-        *permute
-        *permute_           (in-place)
-        *tprod
-        *mul
-        *add
-        *sub
+        * permute
+        * permute_           (in-place)
+        * tprod
+        * mul
+        * add
+        * sub
         
     Node-like operations:
-        *split
-        *split_             (in-place)
-        *svd_               (in-place) (edge operation)
-        *svdr_              (in-place) (edge operation)
-        *qr_                (in-place) (edge operation)
-        *rq_                (in-place) (edge operation)
-        *contract_edges
-        *contract_          (in-place) (edge operation)
-        *get_shared_edges
-        *contract_between
-        *contract_between_  (in-place)
-        *stack
-        *unbind
-        *einsum
-        *stacked_einsum
+        * split
+        * split_             (in-place)
+        * svd_               (in-place) (edge operation)
+        * svdr_              (in-place) (edge operation)
+        * qr_                (in-place) (edge operation)
+        * rq_                (in-place) (edge operation)
+        * contract_edges
+        * contract_          (in-place) (edge operation)
+        * get_shared_edges
+        * contract_between
+        * contract_between_  (in-place)
+        * stack
+        * unbind
+        * einsum
+        * stacked_einsum
 """
 
 from typing import Callable, List, Optional, Sequence, Text, Tuple, Union
@@ -2617,7 +2617,7 @@ def stack(nodes: Sequence[AbstractNode]):
     """
     Creates a StackNode or ParamStackNode by stacking a collection of Nodes or
     ParamNodes, respectively. Restrictions that are applied to the nodes in
-    order to be `stackable` are the same as in :class:`Stack`.
+    order to be `stackable` are the same as in :class:`StackNode`.
     
     The stack dimension will be the first one in the resultant node.
     
@@ -2632,9 +2632,6 @@ def stack(nodes: Sequence[AbstractNode]):
 
 
 ##################################   UNBIND   #################################
-AbstractStackNode = Union[StackNode, ParamStackNode]
-
-
 def _check_first_unbind(node: AbstractStackNode) -> Optional[Successor]:
     kwargs = {'node': node}
     if 'unbind' in node._successors:

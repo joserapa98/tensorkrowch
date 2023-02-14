@@ -18,8 +18,8 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'TensorKrowch'
-copyright = '2023, José R. Pareja Monturiol'
-author = 'José R. Pareja Monturiol'
+copyright = '2023, José Ramón Pareja Monturiol'
+author = 'José Ramón Pareja Monturiol'
 
 # The full version, including alpha/beta/rc tags
 release = '00.00.01'
@@ -36,6 +36,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
     'sphinx.ext.githubpages',
+    'sphinx.ext.mathjax',
     'sphinx_copybutton',
     'nbsphinx',
 ]
@@ -100,3 +101,4 @@ html_theme_options = {
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 html_logo = 'figures/tensorkrowch_logo_light.png'
+html_favicon = 'figures/tensorkrowch_favicon_light.png'

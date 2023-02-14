@@ -2,29 +2,29 @@
 This script contains:
 
     Classes for Nodes and Edges:
-        *Axis
-        *AbstractNode:
-            +Node
-            +ParamNode
-            +StackNode
-            +ParamStackNode
-        *AbstractEdge:
-            +Edge
-            +ParamEdge
-        *AbstractStackEdge:
-            +StackEdge
-            +ParamStackEdge
+        * Axis
+        * AbstractNode:
+            + Node
+            + ParamNode
+            + StackNode
+            + ParamStackNode
+        * AbstractEdge:
+            + Edge
+            + ParamEdge
+        * AbstractStackEdge:
+            + StackEdge
+            + ParamStackEdge
             
     Edge operations:
-        *connect
-        *connect_stack
-        *disconnect
+        * connect
+        * connect_stack
+        * disconnect
     
     Class for successors:        
-        *Successor
+        * Successor
 
     Class for Tensor Networks:
-        *TensorNetwork
+        * TensorNetwork
 """
 
 from abc import abstractmethod, ABC
@@ -1404,19 +1404,19 @@ class Node(AbstractNode):
     network : TensorNetwork, optional
         Tensor network where the node should belong. If None, a new tensor network,
         will be created to contain the node.
-    leaf : bool, optional
+    leaf : bool
         Boolean indicating if the node is a ``leaf`` node. If a node is neither
         ``leaf`` nor ``data`` nor ``virtual``, it is ``non-leaf``.
-    data : bool, optional
+    data : bool
         Boolean indicating if the node is a ``data`` node.
-    virtual : bool, optional
+    virtual : bool
         Boolean indicating if the node is a ``virtual`` node.
-    override_node : bool, optional
+    override_node : bool
         Boolean indicating whether the node should override (``True``) another
         node in the network that has the same name (e.g. if a node is parameterized,
         it would be required that a new :class:`ParamNode` replaces the non-parameterized
         node in the network).
-    param_edges : bool, optional
+    param_edges : bool
         Boolean indicating whether all node's edges should be :class:`ParamEdges
         <ParamEdge>` (``True``) or not (``False``).
     tensor : torch.Tensor, optional
@@ -1426,7 +1426,7 @@ class Node(AbstractNode):
         List of edges that are to be attached to the node. This can be used in
         case the node inherits the edges from other node(s), like in :class:`Operations
         <Operation>`.
-    override_edges : bool, optional
+    override_edges : bool
         Boolean indicating whether the provided ``edges`` should be overriden
         (``True``) when reattached (e.g. if a node is parameterized, it would
         be required that the new :class:`ParamNode`'s edges are indeed connected

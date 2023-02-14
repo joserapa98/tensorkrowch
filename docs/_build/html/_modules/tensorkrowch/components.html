@@ -34,6 +34,7 @@
     <script src="../../_static/copybutton.js"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../../_static/tensorkrowch_favicon_light.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -109,6 +110,16 @@
    <li class="toctree-l2">
     <a class="reference internal" href="../../components.html">
      Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../embeddings.html">
+     Embeddings
     </a>
    </li>
    <li class="toctree-l2">
@@ -216,29 +227,29 @@ title="Fullscreen mode"
 <span class="sd">This script contains:</span>
 
 <span class="sd">    Classes for Nodes and Edges:</span>
-<span class="sd">        *Axis</span>
-<span class="sd">        *AbstractNode:</span>
-<span class="sd">            +Node</span>
-<span class="sd">            +ParamNode</span>
-<span class="sd">            +StackNode</span>
-<span class="sd">            +ParamStackNode</span>
-<span class="sd">        *AbstractEdge:</span>
-<span class="sd">            +Edge</span>
-<span class="sd">            +ParamEdge</span>
-<span class="sd">        *AbstractStackEdge:</span>
-<span class="sd">            +StackEdge</span>
-<span class="sd">            +ParamStackEdge</span>
+<span class="sd">        * Axis</span>
+<span class="sd">        * AbstractNode:</span>
+<span class="sd">            + Node</span>
+<span class="sd">            + ParamNode</span>
+<span class="sd">            + StackNode</span>
+<span class="sd">            + ParamStackNode</span>
+<span class="sd">        * AbstractEdge:</span>
+<span class="sd">            + Edge</span>
+<span class="sd">            + ParamEdge</span>
+<span class="sd">        * AbstractStackEdge:</span>
+<span class="sd">            + StackEdge</span>
+<span class="sd">            + ParamStackEdge</span>
 <span class="sd">            </span>
 <span class="sd">    Edge operations:</span>
-<span class="sd">        *connect</span>
-<span class="sd">        *connect_stack</span>
-<span class="sd">        *disconnect</span>
+<span class="sd">        * connect</span>
+<span class="sd">        * connect_stack</span>
+<span class="sd">        * disconnect</span>
 <span class="sd">    </span>
 <span class="sd">    Class for successors:        </span>
-<span class="sd">        *Successor</span>
+<span class="sd">        * Successor</span>
 
 <span class="sd">    Class for Tensor Networks:</span>
-<span class="sd">        *TensorNetwork</span>
+<span class="sd">        * TensorNetwork</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">abstractmethod</span><span class="p">,</span> <span class="n">ABC</span>
@@ -1618,19 +1629,19 @@ title="Fullscreen mode"
 <span class="sd">    network : TensorNetwork, optional</span>
 <span class="sd">        Tensor network where the node should belong. If None, a new tensor network,</span>
 <span class="sd">        will be created to contain the node.</span>
-<span class="sd">    leaf : bool, optional</span>
+<span class="sd">    leaf : bool</span>
 <span class="sd">        Boolean indicating if the node is a ``leaf`` node. If a node is neither</span>
 <span class="sd">        ``leaf`` nor ``data`` nor ``virtual``, it is ``non-leaf``.</span>
-<span class="sd">    data : bool, optional</span>
+<span class="sd">    data : bool</span>
 <span class="sd">        Boolean indicating if the node is a ``data`` node.</span>
-<span class="sd">    virtual : bool, optional</span>
+<span class="sd">    virtual : bool</span>
 <span class="sd">        Boolean indicating if the node is a ``virtual`` node.</span>
-<span class="sd">    override_node : bool, optional</span>
+<span class="sd">    override_node : bool</span>
 <span class="sd">        Boolean indicating whether the node should override (``True``) another</span>
 <span class="sd">        node in the network that has the same name (e.g. if a node is parameterized,</span>
 <span class="sd">        it would be required that a new :class:`ParamNode` replaces the non-parameterized</span>
 <span class="sd">        node in the network).</span>
-<span class="sd">    param_edges : bool, optional</span>
+<span class="sd">    param_edges : bool</span>
 <span class="sd">        Boolean indicating whether all node&#39;s edges should be :class:`ParamEdges</span>
 <span class="sd">        &lt;ParamEdge&gt;` (``True``) or not (``False``).</span>
 <span class="sd">    tensor : torch.Tensor, optional</span>
@@ -1640,7 +1651,7 @@ title="Fullscreen mode"
 <span class="sd">        List of edges that are to be attached to the node. This can be used in</span>
 <span class="sd">        case the node inherits the edges from other node(s), like in :class:`Operations</span>
 <span class="sd">        &lt;Operation&gt;`.</span>
-<span class="sd">    override_edges : bool, optional</span>
+<span class="sd">    override_edges : bool</span>
 <span class="sd">        Boolean indicating whether the provided ``edges`` should be overriden</span>
 <span class="sd">        (``True``) when reattached (e.g. if a node is parameterized, it would</span>
 <span class="sd">        be required that the new :class:`ParamNode`&#39;s edges are indeed connected</span>
@@ -4793,9 +4804,9 @@ title="Fullscreen mode"
     <div class="footer-content row">
         <footer class="col footer"><p>
   
-    By José R. Pareja Monturiol<br/>
+    By José Ramón Pareja Monturiol<br/>
   
-      &copy; Copyright 2023, José R. Pareja Monturiol.<br/>
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
 </p>
         </footer>
     </div>

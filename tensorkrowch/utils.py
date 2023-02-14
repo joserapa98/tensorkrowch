@@ -1,6 +1,7 @@
 """
 This script contains:
 
+    * print_list
     * tab_string
     * check_name_style
     * erase_enum
@@ -9,7 +10,9 @@ This script contains:
     * is_permutation
     * inverse_permutation
     * fact
-    * comb_num
+    * binomial_coeffs
+    * stack_unequal_tensors
+    * list2slice
 """
 
 from typing import List, Sequence, Text, Union
@@ -20,14 +23,21 @@ import torch.nn as nn
 def print_list(lst: List) -> Text:
     return '[' + '\n '.join(f'{item}' for item in lst) + ']'
     
+
 def tab_string(string: Text, num_tabs: int = 1) -> Text:
     """
-    Introduce '\t' a certain amount of times before each line.
+    Introduces '\t' a certain amount of times before each line.
 
     Parameters
     ----------
-    string: text to be displaced
-    num_tabs: number of '\t' introduced
+    string : str
+        Text to be displaced.
+    num_tabs : int
+        Number of '\t' introduced.
+        
+    Returns
+    -------
+    str
     """
     string_lst = string.split('\n')
     string_lst = list(map(lambda x: num_tabs * '\t' + x, string_lst))
@@ -37,7 +47,8 @@ def tab_string(string: Text, num_tabs: int = 1) -> Text:
 
 def check_name_style(name: Text, type: Text = 'axis') -> bool:
     """
-    Names can only contain letters, numbers and underscores.
+    Axis' names can only contain letters, numbers and underscores. Nodes' names
+    cannot contain blank spaces.
     """
     for char in name:
         if type == 'axis':
@@ -53,8 +64,8 @@ def check_name_style(name: Text, type: Text = 'axis') -> bool:
 
 def erase_enum(name: Text) -> Text:
     """
-    Given a name, returns the same name without any
-    enumeration suffix with format `_{digit}`.
+    Given a name, returns the same name without any enumeration suffix with
+    format ``_{digit}``.
     """
     name_list = name.split('_')
     i = len(name_list) - 1
@@ -97,30 +108,31 @@ def enum_repeated_names(names_list: List[Text]) -> List[Text]:
 
 def permute_list(lst: List, dims: Sequence[int]) -> List:
     """
-    Permute elements of list based on a permutation of indices.
+    Permutes elements of list based on a permutation of indices. It is not
+    required that ``lst`` and ``dims`` have the same length; in such case the
+    returned list will only have as many elements as indices specified in
+    ``dims``, in the corresponding order.
 
     Parameters
     ----------
-    lst: list to be permuted
-    dims: list of dimensions (indices) in the new order
+    lst : list
+        List to be permuted.
+    dims : list[int]
+        List of dimensions (indices) in the new order.
     """
-    # if len(dims) != len(lst):
-    #     raise ValueError('Number of `dims` must match number of elements in `lst`')
-    # NOTE: no hace falta que tengan el mismo tamaño, si lst tiene mas elementos,
-    # solo se cogen los que aparecen en dims en ese orden
     new_lst = []
     for i in dims:
         if i >= len(lst):
-            raise IndexError(f'Index out of bounds. `dims` given to permute `lst`'
-                             'according to contains index {i}, which exceeds length '
-                             'of `lst`')
+            raise IndexError(f'Index out of bounds. `dims` given to permute '
+                             f'`lst` according to contains index {i}, which '
+                             'exceeds length of `lst`')
         new_lst.append(lst[i])
     return new_lst
 
 
 def is_permutation(lst: List, permuted_lst: List) -> bool:
     """
-    Decide whether `permuted_lst` is a permutation of the elements of `lst`
+    Indicates if ``permuted_lst`` is a permutation of the elements of ``lst``.
     """
     if len(lst) != len(permuted_lst):
         return False
@@ -134,15 +146,17 @@ def is_permutation(lst: List, permuted_lst: List) -> bool:
 
 def inverse_permutation(dims: Sequence[int]):
     """
-    Given a permutation of indices (to permute the elements of a list, tensor, etc.),
-    returns the inverse permutation of indices needed to recover the original object
-    (in the original order).
+    Given a permutation of indices (to permute the elements of a list, tensor,
+    etc.), returns the inverse permutation of indices needed to recover the
+    original object (in the original order).
 
     Parameters
     ----------
-    dims: permutation of indices. It can be complete if all numbers in range(len(dims))
-        appear in dims (e.g. (2, 0, 1) -> (1, 2, 0)), or incomplete if after permutation
-        some elements were removed (e.g. (3, 0, 2) -> (1, 2, 0), removed element in position 1).
+    dims: list[int]
+        Permutation of indices. It can be complete if all numbers in
+        range(len(dims)) appear (e.g. (2, 0, 1) -> (1, 2, 0)), or incomplete
+        if after permutation some elements were removed (e.g. (3, 0, 2) ->
+        (1, 2, 0), removed element in position 1).
     """
     if dims:
         inverse_dims = [-1] * (max(dims) + 1)
@@ -153,6 +167,7 @@ def inverse_permutation(dims: Sequence[int]):
 
 
 def fact(n: int) -> int:
+    """Returns factorial of ``n``."""
     if n < 0:
         raise ValueError('Argument should be greater than zero')
     if n == 0:
@@ -160,12 +175,30 @@ def fact(n: int) -> int:
     return n * (fact(n - 1))
 
 
-def comb_num(n: int, k: int) -> int:
+def binomial_coeffs(n: int, k: int) -> int:
+    """Returns binomiaal coefficients (choose ``k`` elements in ``n``)."""
     return fact(n) // (fact(k) * fact(n - k))
 
 
-def stack_unequal_tensors(lst_tensors: List[torch.Tensor]) -> torch.Tensor:  # TODO: mover a utils, e importar desde aqui y network_components
-    lst_tensors = lst_tensors[:]  # TODO: protect original list
+def stack_unequal_tensors(lst_tensors: List[torch.Tensor]) -> torch.Tensor:
+    """
+    Stacks a list of tensors. These tensors need not have equal sizes in each
+    dimension, but they must have the same rank.
+    
+    The smallest tensors are extended with zeros to match the shape of the
+    biggest ones.
+
+    Parameters
+    ----------
+    lst_tensors : list[torch.Tensor]
+        List of tensors to be stacked
+
+    Returns
+    -------
+    torch.Tensor
+    """
+    # To protect the original list
+    lst_tensors = lst_tensors[:]
     if lst_tensors:
         same_dims = True
         max_shape = list(lst_tensors[0].shape)
@@ -189,11 +222,9 @@ def stack_unequal_tensors(lst_tensors: List[torch.Tensor]) -> torch.Tensor:  # T
     
 def list2slice(lst: List) -> Union[List, slice]:
     """
-    Given a list (of indices) returns, if possible, an
-    object slice containing the same indices
+    Given a list (of indices) returns, if possible, an object ``slice``
+    containing the same indices.
     """
-    
-    # lst.sort()
     aux_slice = [None, None, None]
     use_slice = False
     
@@ -207,7 +238,6 @@ def list2slice(lst: List) -> Union[List, slice]:
             elif aux_slice[2] == None:
                 aux_slice[1] = el
                 aux_slice[2] = aux_slice[1] - aux_slice[0]
-                # TODO: cuidado con ir al revés, step < 0
             else:
                 if (el - aux_slice[1]) == aux_slice[2]:
                     aux_slice[1] = el

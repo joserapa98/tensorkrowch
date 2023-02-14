@@ -37,10 +37,11 @@
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="shortcut icon" href="_static/tensorkrowch_favicon_light.png"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Models" href="models.html" />
-    <link rel="prev" title="Components" href="components.html" />
+    <link rel="prev" title="Embeddings" href="embeddings.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -114,6 +115,16 @@
    <li class="toctree-l2">
     <a class="reference internal" href="components.html">
      Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="embeddings.html">
+     Embeddings
     </a>
    </li>
    <li class="toctree-l2 current active">
@@ -503,7 +514,19 @@ underscore indicate <strong>in-place</strong> operations.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.contract_">
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">contract_</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edge</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#contract_"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.contract_" title="Permalink to this definition">#</a></dt>
-<dd><p>Contract only one edge</p>
+<dd><p>Contracts in-place the nodes that are connected through the edge. See
+<code class="xref py py-func docutils literal notranslate"><span class="pre">contract()</span></code> for a more complete explanation.</p>
+<p>Following the <strong>PyTorch</strong> convention, names of functions ended with an
+underscore indicate <strong>in-place</strong> operations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractEdge" title="tensorkrowch.AbstractEdge"><em>AbstractEdge</em></a>) – Edges that is to be contracted. Batch contraction is automatically
+performed when both nodes have batch edges with the same names.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>
@@ -755,25 +778,22 @@ cum\_percentage\]</div>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.contract_edges">
-<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">contract_edges</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.contract_edges" title="Permalink to this definition">#</a></dt>
-<dd><p>Class for node operations. A node operation is made up of two functions,
-the one that is executed the first time the operation is called (with the
-same arguments) and the one that is executed in every other call. Both
-functions are usually similar, though the former computes extra things
-regarding the creation of the resultant nodes and some auxilliary operations
-whose result will be the same in every call (e.g. when contracting two nodes,
-maybe a permutation of the tensors should be first performed; how this
-permutation is carried out is always the same, though the tensors themselves
-are different).</p>
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">contract_edges</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edges</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#contract_edges"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.contract_edges" title="Permalink to this definition">#</a></dt>
+<dd><p>Contracts all selected edges between two nodes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>name</strong> (<em>str</em>) – Name of the operation. It cannot coincide with another operation’s name.
-Operation names can be checked via <code class="docutils literal notranslate"><span class="pre">net.operations</span></code>.</p></li>
-<li><p><strong>check_first</strong> (<em>callable</em>) – Function that checks if the operation has been called at least one time.</p></li>
-<li><p><strong>func1</strong> (<em>callable</em>) – Function that is called the first time the operation is performed.</p></li>
-<li><p><strong>func2</strong> (<em>callable</em>) – Function that is called the next times the operation is performed.</p></li>
+<li><p><strong>edges</strong> (<em>list</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.AbstractEdge" title="tensorkrowch.AbstractEdge"><em>AbstractEdge</em></a><em>]</em>) – List of edges that are to be contracted. They must be edges shared
+between <code class="docutils literal notranslate"><span class="pre">node1</span></code> and <code class="docutils literal notranslate"><span class="pre">node2</span></code>. Batch contraction is automatically
+performed when both nodes have batch edges with the same names.</p></li>
+<li><p><strong>node1</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a>) – First node of the contraction. Its non-contracted edges will appear
+first in the list of inherited edges of the resultant node.</p></li>
+<li><p><strong>node2</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a>) – Second node of the contraction. Its non-contracted edges will appear
+last in the list of inherited edges of the resultant node.</p></li>
 </ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -781,88 +801,110 @@ Operation names can be checked via <code class="docutils literal notranslate"><s
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.contract_between">
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">contract_between</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#contract_between"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.contract_between" title="Permalink to this definition">#</a></dt>
-<dd><p>Contract all shared edges between two nodes, also performing batch contraction
-between batch edges that share name in both nodes</p>
+<dd><p>Contracts all edges shared between two nodes. Batch contraction is
+automatically performed when both nodes have batch edges with the same
+names.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>node1</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a>) – First node of the contraction. Its non-contracted edges will appear
+first in the list of inherited edges of the resultant node.</p></li>
+<li><p><strong>node2</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a>) – Second node of the contraction. Its non-contracted edges will appear
+last in the list of inherited edges of the resultant node.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.contract_between_">
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">contract_between_</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#contract_between_"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.contract_between_" title="Permalink to this definition">#</a></dt>
-<dd><p>Contract all shared edges between two nodes, also performing batch contraction
-between batch edges that share name in both nodes</p>
+<dd><p>In-place version of <a class="reference internal" href="#tensorkrowch.contract_between" title="tensorkrowch.contract_between"><code class="xref py py-func docutils literal notranslate"><span class="pre">contract_between()</span></code></a>.</p>
+<p>Following the <strong>PyTorch</strong> convention, names of functions ended with an
+underscore indicate <strong>in-place</strong> operations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>node1</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a>) – First node of the contraction. Its non-contracted edges will appear
+first in the list of inherited edges of the resultant node.</p></li>
+<li><p><strong>node2</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a>) – Second node of the contraction. Its non-contracted edges will appear
+last in the list of inherited edges of the resultant node.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.stack">
-<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">stack</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.stack" title="Permalink to this definition">#</a></dt>
-<dd><p>Class for node operations. A node operation is made up of two functions,
-the one that is executed the first time the operation is called (with the
-same arguments) and the one that is executed in every other call. Both
-functions are usually similar, though the former computes extra things
-regarding the creation of the resultant nodes and some auxilliary operations
-whose result will be the same in every call (e.g. when contracting two nodes,
-maybe a permutation of the tensors should be first performed; how this
-permutation is carried out is always the same, though the tensors themselves
-are different).</p>
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">stack</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nodes</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#stack"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.stack" title="Permalink to this definition">#</a></dt>
+<dd><p>Creates a StackNode or ParamStackNode by stacking a collection of Nodes or
+ParamNodes, respectively. Restrictions that are applied to the nodes in
+order to be <cite>stackable</cite> are the same as in <a class="reference internal" href="components.html#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">StackNode</span></code></a>.</p>
+<p>The stack dimension will be the first one in the resultant node.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>name</strong> (<em>str</em>) – Name of the operation. It cannot coincide with another operation’s name.
-Operation names can be checked via <code class="docutils literal notranslate"><span class="pre">net.operations</span></code>.</p></li>
-<li><p><strong>check_first</strong> (<em>callable</em>) – Function that checks if the operation has been called at least one time.</p></li>
-<li><p><strong>func1</strong> (<em>callable</em>) – Function that is called the first time the operation is performed.</p></li>
-<li><p><strong>func2</strong> (<em>callable</em>) – Function that is called the next times the operation is performed.</p></li>
-</ul>
+<dd class="field-odd"><p><strong>nodes</strong> (<em>list</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>] or </em><em>tuple</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>]</em>) – Sequence of nodes that are to be stacked. They must be of the same type,
+have the same rank and axes names, be in the same tensor network, and
+have edges with the same types.</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.unbind">
-<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">unbind</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.unbind" title="Permalink to this definition">#</a></dt>
-<dd><p>Class for node operations. A node operation is made up of two functions,
-the one that is executed the first time the operation is called (with the
-same arguments) and the one that is executed in every other call. Both
-functions are usually similar, though the former computes extra things
-regarding the creation of the resultant nodes and some auxilliary operations
-whose result will be the same in every call (e.g. when contracting two nodes,
-maybe a permutation of the tensors should be first performed; how this
-permutation is carried out is always the same, though the tensors themselves
-are different).</p>
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">unbind</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#unbind"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.unbind" title="Permalink to this definition">#</a></dt>
+<dd><p>Unbinds a <a class="reference internal" href="components.html#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">StackNode</span></code></a> or <a class="reference internal" href="components.html#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a>, where the first
+dimension is assumed to be the stack dimension.</p>
+<p>If <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.unbind_mode" title="tensorkrowch.TensorNetwork.unbind_mode"><code class="xref py py-meth docutils literal notranslate"><span class="pre">unbind_mode()</span></code></a> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, each resultant
+node will store its own tensor. Otherwise, they will have only a reference
+to the corresponding slice of the <code class="docutils literal notranslate"><span class="pre">(Param)StackNode</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>name</strong> (<em>str</em>) – Name of the operation. It cannot coincide with another operation’s name.
-Operation names can be checked via <code class="docutils literal notranslate"><span class="pre">net.operations</span></code>.</p></li>
-<li><p><strong>check_first</strong> (<em>callable</em>) – Function that checks if the operation has been called at least one time.</p></li>
-<li><p><strong>func1</strong> (<em>callable</em>) – Function that is called the first time the operation is performed.</p></li>
-<li><p><strong>func2</strong> (<em>callable</em>) – Function that is called the next times the operation is performed.</p></li>
-</ul>
+<dd class="field-odd"><p><strong>node</strong> (<a class="reference internal" href="components.html#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><em>StackNode</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><em>ParamStackNode</em></a>) – Node that is to be unbinded.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>list[<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.einsum">
-<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">einsum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.einsum" title="Permalink to this definition">#</a></dt>
-<dd><p>Class for node operations. A node operation is made up of two functions,
-the one that is executed the first time the operation is called (with the
-same arguments) and the one that is executed in every other call. Both
-functions are usually similar, though the former computes extra things
-regarding the creation of the resultant nodes and some auxilliary operations
-whose result will be the same in every call (e.g. when contracting two nodes,
-maybe a permutation of the tensors should be first performed; how this
-permutation is carried out is always the same, though the tensors themselves
-are different).</p>
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">einsum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">string</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">nodes</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#einsum"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.einsum" title="Permalink to this definition">#</a></dt>
+<dd><p>Performs einsum contraction based on <a class="reference external" href="https://optimized-einsum.readthedocs.io/en/stable/autosummary/opt_einsum.contract.html">opt_einsum</a>.
+This operation facilitates contracting several nodes at once, specifying
+directly the order of appearance of the resultant edges. Without this
+operation, several contractions and permutations would be needed.</p>
+<p>Since it adapts a tensor operation for nodes, certain nodes’ properties are
+first checked. Thus, it verifies that all edges are correctly connected and
+all nodes are in the same network. It also performs batch contraction
+whenever corresponding edges are batch edges.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>name</strong> (<em>str</em>) – Name of the operation. It cannot coincide with another operation’s name.
-Operation names can be checked via <code class="docutils literal notranslate"><span class="pre">net.operations</span></code>.</p></li>
-<li><p><strong>check_first</strong> (<em>callable</em>) – Function that checks if the operation has been called at least one time.</p></li>
-<li><p><strong>func1</strong> (<em>callable</em>) – Function that is called the first time the operation is performed.</p></li>
-<li><p><strong>func2</strong> (<em>callable</em>) – Function that is called the next times the operation is performed.</p></li>
+<li><p><strong>string</strong> (<em>str</em>) – <p>Einsum-like string indicating how the contraction should be performed.
+It consists of a comma-separated list of inputs and an output separated
+by an arrow. For instance, the contraction</p>
+<div class="math notranslate nohighlight">
+\[T_{j,l} = \sum_{i,k,m}{A_{i,j,k}B_{k,l,m}C_{i,m}}\]</div>
+<p>can be expressed as:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">string</span> <span class="o">=</span> <span class="s1">&#39;ijk,klm,im-&gt;jl&#39;</span>
+</pre></div>
+</div>
+</p></li>
+<li><p><strong>nodes</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>...</em>) – Nodes that are involved in the contraction. Should appear in the same
+order as it is specified in the <code class="docutils literal notranslate"><span class="pre">string</span></code>. They should either be all
+<code class="docutils literal notranslate"><span class="pre">(Param)StackNode</span></code>’s or none of them be a <code class="docutils literal notranslate"><span class="pre">(Param)StackNode</span></code>.</p></li>
 </ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -870,22 +912,30 @@ Operation names can be checked via <code class="docutils literal notranslate"><s
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.stacked_einsum">
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">stacked_einsum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">string</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">nodes_lists</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#stacked_einsum"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.stacked_einsum" title="Permalink to this definition">#</a></dt>
-<dd><p>Adapt einsum operation to enable stack contractions. Lists of input nodes
-are stacked and a special character is added before each input/output string</p>
+<dd><p>Applies the same <a class="reference internal" href="#tensorkrowch.einsum" title="tensorkrowch.einsum"><code class="xref py py-func docutils literal notranslate"><span class="pre">einsum()</span></code></a> operation (same <code class="docutils literal notranslate"><span class="pre">string</span></code>) to a sequence
+of groups of nodes (all groups having the same amount of nodes, with the
+same properties, etc.). That is, it stacks these groups of nodes into a
+siongle collection of nodes that is then contracte via <code class="docutils literal notranslate"><span class="pre">einsum</span></code>, and
+<a class="reference internal" href="#tensorkrowch.unbind" title="tensorkrowch.unbind"><code class="xref py py-func docutils literal notranslate"><span class="pre">unbinded</span></code></a> afterwards.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>string</strong> (<em>einsum-like string built as if only the set formed by the first node</em>) – of each list in <cite>nodes_lists</cite> were involved in the operation</p></li>
-<li><p><strong>nodes_lists</strong> (<em>lists of nodes involved in the operation. Each element of</em>) – each list will be operated with the corresponding elements
-from the other lists. The nodes in each list will be first
-stacked to perform the einsum operation</p></li>
+<li><p><strong>string</strong> (<em>str</em>) – <p>Einsum-like string indicating how the contraction should be performed.
+It consists of a comma-separated list of inputs and an output separated
+by an arrow. For instance, the contraction</p>
+<div class="math notranslate nohighlight">
+\[T_{j,l} = \sum_{i,k,m}{A_{i,j,k}B_{k,l,m}C_{i,m}}\]</div>
+<p>can be expressed as:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">string</span> <span class="o">=</span> <span class="s1">&#39;ijk,klm,im-&gt;jl&#39;</span>
+</pre></div>
+</div>
+</p></li>
+<li><p><strong>nodes</strong> (<em>List</em><em>[</em><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>]</em><em>...</em>) – Nodes that are involved in the contraction. Should appear in the same
+order as it is specified in the <code class="docutils literal notranslate"><span class="pre">string</span></code>.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p><strong>unbind(result)</strong> – unbind the result</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>list of nodes resultant from operating the stack nodes and</p>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>list[<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -901,11 +951,11 @@ stacked to perform the einsum operation</p></li>
                 
     <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-    <a class='left-prev' id="prev-link" href="components.html" title="previous page">
+    <a class='left-prev' id="prev-link" href="embeddings.html" title="previous page">
         <i class="fas fa-angle-left"></i>
         <div class="prev-next-info">
             <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">Components</p>
+            <p class="prev-next-title">Embeddings</p>
         </div>
     </a>
     <a class='right-next' id="next-link" href="models.html" title="next page">
@@ -922,9 +972,9 @@ stacked to perform the einsum operation</p></li>
     <div class="footer-content row">
         <footer class="col footer"><p>
   
-    By José R. Pareja Monturiol<br/>
+    By José Ramón Pareja Monturiol<br/>
   
-      &copy; Copyright 2023, José R. Pareja Monturiol.<br/>
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
 </p>
         </footer>
     </div>

@@ -5,30 +5,73 @@ Embedding methods
 from math import pi, sqrt
 import torch
 
-from tensorkrowch.utils import comb_num
+from tensorkrowch.utils import binomial_coeffs
 
 
-# TODO: no muy seguro de esto
 def unit(data: torch.Tensor, dim: int) -> torch.Tensor:
-    """
+    r"""
+    Embedds the data tensor using the local feature map defined in the original
+    `paper <https://arxiv.org/abs/1605.05775>`_ by E. Miles Stoudenmire and David
+    J. Schwab.
+    
     Parameters
     ----------
-    data: input tensor with shape n_features x batch x 1 -> n_features x batch x dim
-    dim: embedding dimension
+    data : torch.Tensor
+        Data tensor with shape
+        
+        .. math::
+        
+            n_{features} \times batch\_size \times feature\_size
+            
+        where :math:`feature\_size = 1`.
+    dim : int
+        New feature size.
+            
+    Returns
+    -------
+    torch.Tensor
+        New data tensor with shape
+        
+        .. math::
+        
+            n_{features} \times batch\_size \times dim
     """
-    # shape = list(data.shape)
-    # shape[-1] = dim
-    # embedded_data = torch.empty(shape)
     lst_tensors = []
     for i in range(1, dim + 1):
-        aux = sqrt(comb_num(dim - 1, i - 1)) * \
+        aux = sqrt(binomial_coeffs(dim - 1, i - 1)) * \
                 (pi / 2 * data).cos().pow(dim - i) * \
                 (pi / 2 * data).sin().pow(i - 1)
         lst_tensors.append(aux)
-        # embedded_data[..., i - 1] = aux
-    return torch.stack(lst_tensors, dim=-1) # embedded_data
+    return torch.stack(lst_tensors, dim=-1)
 
 
-# TODO: esto creo que no lo uso
-def ones(data: torch.Tensor) -> torch.Tensor:
+def add_ones(data: torch.Tensor) -> torch.Tensor:
+    r"""
+    Embedds the data tensor adding 1's as the first component of each vector.
+    
+    .. math::
+
+        \hat{x}_i = \begin{bmatrix}
+                        1 \\
+                        x_i
+                    \end{bmatrix}
+    
+    Parameters
+    ----------
+    data : torch.Tensor
+        Data tensor with shape
+        
+        .. math::
+        
+            n_{features} \times batch\_size \times feature\_size
+            
+    Returns
+    -------
+    torch.Tensor
+        New data tensor with shape
+        
+        .. math::
+        
+            n_{features} \times batch\_size \times (feature\_size + 1)
+    """
     return torch.stack([torch.ones_like(data), data], dim=-1)

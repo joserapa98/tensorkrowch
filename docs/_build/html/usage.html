@@ -35,6 +35,7 @@
     <script src="_static/copybutton.js"></script>
     <script src="_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="_static/tensorkrowch_favicon_light.png"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="API Reference" href="api.html" />
@@ -112,6 +113,16 @@
    <li class="toctree-l2">
     <a class="reference internal" href="components.html">
      Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="embeddings.html">
+     Embeddings
     </a>
    </li>
    <li class="toctree-l2">
@@ -334,20 +345,20 @@ be all distinct.</p></li>
 it belongs. It cannot contain blank spaces.</p></li>
 <li><p><strong>network</strong> (<a class="reference internal" href="components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><em>TensorNetwork</em></a><em>, </em><em>optional</em>) – Tensor network where the node should belong. If None, a new tensor network,
 will be created to contain the node.</p></li>
-<li><p><strong>leaf</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">leaf</span></code> node. If a node is neither
+<li><p><strong>leaf</strong> (<em>bool</em>) – Boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">leaf</span></code> node. If a node is neither
 <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nor <code class="docutils literal notranslate"><span class="pre">data</span></code> nor <code class="docutils literal notranslate"><span class="pre">virtual</span></code>, it is <code class="docutils literal notranslate"><span class="pre">non-leaf</span></code>.</p></li>
-<li><p><strong>data</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">data</span></code> node.</p></li>
-<li><p><strong>virtual</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">virtual</span></code> node.</p></li>
-<li><p><strong>override_node</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether the node should override (<code class="docutils literal notranslate"><span class="pre">True</span></code>) another
+<li><p><strong>data</strong> (<em>bool</em>) – Boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">data</span></code> node.</p></li>
+<li><p><strong>virtual</strong> (<em>bool</em>) – Boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">virtual</span></code> node.</p></li>
+<li><p><strong>override_node</strong> (<em>bool</em>) – Boolean indicating whether the node should override (<code class="docutils literal notranslate"><span class="pre">True</span></code>) another
 node in the network that has the same name (e.g. if a node is parameterized,
 it would be required that a new <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> replaces the non-parameterized
 node in the network).</p></li>
-<li><p><strong>param_edges</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether all node’s edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdges</span></code></a> (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or not (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+<li><p><strong>param_edges</strong> (<em>bool</em>) – Boolean indicating whether all node’s edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdges</span></code></a> (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or not (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
 <li><p><strong>tensor</strong> (<em>torch.Tensor</em><em>, </em><em>optional</em>) – Tensor that is to be stored in the node. If None, <code class="docutils literal notranslate"><span class="pre">shape</span></code> and <code class="docutils literal notranslate"><span class="pre">init_method</span></code>
 will be required.</p></li>
 <li><p><strong>edges</strong> (<em>list</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.AbstractEdge" title="tensorkrowch.AbstractEdge"><em>AbstractEdge</em></a><em>]</em><em>, </em><em>optional</em>) – List of edges that are to be attached to the node. This can be used in
 case the node inherits the edges from other node(s), like in <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operations</span></code></a>.</p></li>
-<li><p><strong>override_edges</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether the provided <code class="docutils literal notranslate"><span class="pre">edges</span></code> should be overriden
+<li><p><strong>override_edges</strong> (<em>bool</em>) – Boolean indicating whether the provided <code class="docutils literal notranslate"><span class="pre">edges</span></code> should be overriden
 (<code class="docutils literal notranslate"><span class="pre">True</span></code>) when reattached (e.g. if a node is parameterized, it would
 be required that the new <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a>’s edges are indeed connected
 to it, instead of to the original non-parameterized node).</p></li>
@@ -365,24 +376,7 @@ should also be provided.</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.operations._contract_edges_first">
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.operations.</span></span><span class="sig-name descname"><span class="pre">_contract_edges_first</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edges</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#_contract_edges_first"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.operations._contract_edges_first" title="Permalink to this definition">#</a></dt>
-<dd><p>Contract edges between two nodes for the first time.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>edges</strong> (<em>list of edges that are to be contracted. They must be edges</em>) – shared between <cite>node1</cite> and <cite>node2</cite>. Batch contraction is automatically
-computed if each node has one batch edge that share the same name</p></li>
-<li><p><strong>node1</strong> (<em>first node of the contraction</em>) – </p></li>
-<li><p><strong>node2</strong> (<em>second node of the contraction</em>) – </p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p><strong>new_node</strong></p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>Node resultant from the contraction</p>
-</dd>
-</dl>
-</dd></dl>
+<dd></dd></dl>
 
 </section>
 </section>
@@ -416,9 +410,9 @@ computed if each node has one batch edge that share the same name</p></li>
     <div class="footer-content row">
         <footer class="col footer"><p>
   
-    By José R. Pareja Monturiol<br/>
+    By José Ramón Pareja Monturiol<br/>
   
-      &copy; Copyright 2023, José R. Pareja Monturiol.<br/>
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
 </p>
         </footer>
     </div>

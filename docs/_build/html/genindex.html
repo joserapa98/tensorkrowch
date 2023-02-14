@@ -34,6 +34,7 @@
     <script src="_static/copybutton.js"></script>
     <script src="_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="_static/tensorkrowch_favicon_light.png"/>
     <link rel="index" title="Index" href="#" />
     <link rel="search" title="Search" href="search.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -109,6 +110,16 @@
    <li class="toctree-l2">
     <a class="reference internal" href="components.html">
      Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="embeddings.html">
+     Embeddings
     </a>
    </li>
    <li class="toctree-l2">
@@ -234,6 +245,7 @@ title="Fullscreen mode"
  | <a href="#T"><strong>T</strong></a>
  | <a href="#U"><strong>U</strong></a>
  | <a href="#V"><strong>V</strong></a>
+ | <a href="#Z"><strong>Z</strong></a>
  
 </div>
 <h2 id="_">_</h2>
@@ -253,16 +265,18 @@ title="Fullscreen mode"
 </li>
       <li><a href="operations.html#tensorkrowch.add">add() (in module tensorkrowch)</a>
 </li>
+      <li><a href="embeddings.html#tensorkrowch.add_ones">add_ones() (in module tensorkrowch)</a>
+</li>
       <li><a href="components.html#tensorkrowch.TensorNetwork.automemory">automemory (tensorkrowch.TensorNetwork property)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.AbstractEdge.axes">axes (tensorkrowch.AbstractEdge property)</a>
 
       <ul>
         <li><a href="components.html#tensorkrowch.AbstractNode.axes">(tensorkrowch.AbstractNode property)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.AbstractNode.axes_names">axes_names (tensorkrowch.AbstractNode property)</a>
 </li>
       <li><a href="components.html#tensorkrowch.Axis">Axis (class in tensorkrowch)</a>
@@ -341,9 +355,11 @@ title="Fullscreen mode"
 </li>
       <li><a href="models.html#tensorkrowch.ConvUTree">ConvUTree (class in tensorkrowch)</a>
 </li>
-      <li><a href="components.html#tensorkrowch.Edge.copy">copy() (tensorkrowch.Edge method)</a>
+      <li><a href="initializers.html#tensorkrowch.copy">copy() (in module tensorkrowch)</a>
 
       <ul>
+        <li><a href="components.html#tensorkrowch.Edge.copy">(tensorkrowch.Edge method)</a>
+</li>
         <li><a href="components.html#tensorkrowch.ParamEdge.copy">(tensorkrowch.ParamEdge method)</a>
 </li>
         <li><a href="components.html#tensorkrowch.ParamNode.copy">(tensorkrowch.ParamNode method)</a>
@@ -571,6 +587,10 @@ title="Fullscreen mode"
 <h2 id="O">O</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="initializers.html#tensorkrowch.ones">ones() (in module tensorkrowch)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="operations.html#tensorkrowch.Operation">Operation (class in tensorkrowch)</a>
 </li>
   </ul></td>
@@ -633,12 +653,16 @@ title="Fullscreen mode"
 <h2 id="R">R</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="components.html#tensorkrowch.AbstractNode.rank">rank (tensorkrowch.AbstractNode property)</a>
+      <li><a href="initializers.html#tensorkrowch.rand">rand() (in module tensorkrowch)</a>
 </li>
-      <li><a href="components.html#tensorkrowch.AbstractNode.reattach_edges">reattach_edges() (tensorkrowch.AbstractNode method)</a>
+      <li><a href="initializers.html#tensorkrowch.randn">randn() (in module tensorkrowch)</a>
+</li>
+      <li><a href="components.html#tensorkrowch.AbstractNode.rank">rank (tensorkrowch.AbstractNode property)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="components.html#tensorkrowch.AbstractNode.reattach_edges">reattach_edges() (tensorkrowch.AbstractNode method)</a>
+</li>
       <li><a href="components.html#tensorkrowch.TensorNetwork.reset">reset() (tensorkrowch.TensorNetwork method)</a>
 </li>
       <li><a href="operations.html#tensorkrowch.rq_">rq_() (in module tensorkrowch)</a>
@@ -753,6 +777,8 @@ title="Fullscreen mode"
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="embeddings.html#tensorkrowch.unit">unit() (in module tensorkrowch)</a>
+</li>
       <li><a href="components.html#tensorkrowch.TensorNetwork.unset_data_nodes">unset_data_nodes() (tensorkrowch.TensorNetwork method)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.unset_tensor">unset_tensor() (tensorkrowch.AbstractNode method)</a>
@@ -768,6 +794,14 @@ title="Fullscreen mode"
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.TensorNetwork.virtual_nodes">virtual_nodes (tensorkrowch.TensorNetwork property)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Z">Z</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="initializers.html#tensorkrowch.zeros">zeros() (in module tensorkrowch)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -788,9 +822,9 @@ title="Fullscreen mode"
     <div class="footer-content row">
         <footer class="col footer"><p>
   
-    By José R. Pareja Monturiol<br/>
+    By José Ramón Pareja Monturiol<br/>
   
-      &copy; Copyright 2023, José R. Pareja Monturiol.<br/>
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
 </p>
         </footer>
     </div>

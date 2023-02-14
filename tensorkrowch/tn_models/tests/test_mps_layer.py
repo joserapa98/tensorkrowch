@@ -734,12 +734,13 @@ class TestUMPSLayer:
 class TestConvMPSLayer:
     
     def test_all_algorithms(self):
+        # TODO: change embedding by tk.add_ones
         def embedding(data: torch.Tensor) -> torch.Tensor:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
             
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.add_ones(torch.randn(1, 5, 5), dim=1)
+        data = tk.add_ones(torch.randn(100, 5, 5), dim=1)
         
         for boundary in ['obc', 'pbc']:
             for param_bond in [True, False]:

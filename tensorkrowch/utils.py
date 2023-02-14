@@ -176,7 +176,7 @@ def fact(n: int) -> int:
 
 
 def binomial_coeffs(n: int, k: int) -> int:
-    """Returns binomiaal coefficients (choose ``k`` elements in ``n``)."""
+    """Returns binomiaal coefficients (``n`` choose ``k``)."""
     return fact(n) // (fact(k) * fact(n - k))
 
 

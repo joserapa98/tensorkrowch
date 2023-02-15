@@ -78,7 +78,8 @@ copybutton_prompt_text = '>>> |$ '
 html_theme = 'sphinx_book_theme'
 html_theme_options = {
     'logo_only': True,
-    'repository_url': 'https://github.com/joserapa98/tensorkrowch'
+    'repository_url': 'https://github.com/joserapa98/tensorkrowch',
+    'use_repository_button': True
 }
 
 # html_theme = 'furo'

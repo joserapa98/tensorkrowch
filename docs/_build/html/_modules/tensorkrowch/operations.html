@@ -93,16 +93,33 @@
 </p>
 <ul class="nav bd-sidenav">
  <li class="toctree-l1">
-  <a class="reference internal" href="../../usage.html">
-   Usage
+  <a class="reference internal" href="../../installation.html">
+   Installation
   </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../tutorials/basics.html">
+     Basics
+    </a>
+   </li>
+  </ul>
  </li>
  <li class="toctree-l1 has-children">
   <a class="reference internal" href="../../api.html">
    API Reference
   </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
-  <label for="toctree-checkbox-1">
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
    <i class="fas fa-chevron-down">
    </i>
   </label>
@@ -2062,7 +2079,7 @@ title="Fullscreen mode"
     <span class="k">return</span> <span class="kc">None</span>
 
 
-<div class="viewcode-block" id="_contract_edges_first"><a class="viewcode-back" href="../../usage.html#tensorkrowch._contract_edges_first">[docs]</a><span class="k">def</span> <span class="nf">_contract_edges_first</span><span class="p">(</span><span class="n">edges</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractEdge</span><span class="p">],</span>
+<span class="k">def</span> <span class="nf">_contract_edges_first</span><span class="p">(</span><span class="n">edges</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractEdge</span><span class="p">],</span>
                           <span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
                           <span class="n">node2</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
     <span class="n">shared_edges</span> <span class="o">=</span> <span class="n">get_shared_edges</span><span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span>
@@ -2322,7 +2339,7 @@ title="Fullscreen mode"
     <span class="c1"># Add operation to list of performed operations of TN</span>
     <span class="n">net</span><span class="o">.</span><span class="n">_list_ops</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">node1</span><span class="p">,</span> <span class="s1">&#39;contract_edges&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">_successors</span><span class="p">[</span><span class="s1">&#39;contract_edges&#39;</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
 
-    <span class="k">return</span> <span class="n">new_node</span></div>
+    <span class="k">return</span> <span class="n">new_node</span>
 
 
 <span class="k">def</span> <span class="nf">_contract_edges_next</span><span class="p">(</span><span class="n">successor</span><span class="p">:</span> <span class="n">Successor</span><span class="p">,</span>

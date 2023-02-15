@@ -98,16 +98,33 @@
 </p>
 <ul class="current nav bd-sidenav">
  <li class="toctree-l1">
-  <a class="reference internal" href="usage.html">
-   Usage
+  <a class="reference internal" href="installation.html">
+   Installation
   </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/basics.html">
+     Basics
+    </a>
+   </li>
+  </ul>
  </li>
  <li class="toctree-l1 current active has-children">
   <a class="reference internal" href="api.html">
    API Reference
   </a>
-  <input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
-  <label for="toctree-checkbox-1">
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
    <i class="fas fa-chevron-down">
    </i>
   </label>
@@ -278,7 +295,7 @@ title="Print to PDF"
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.zeros">
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">zeros</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/initializers.html#zeros"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.zeros" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> filled with zeros.</p>
+<dd><p>Returns <code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code> or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> filled with zeros.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -291,12 +308,12 @@ where it belongs. It cannot contain blank spaces.</p></li>
 <li><p><strong>network</strong> (<a class="reference internal" href="components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><em>TensorNetwork</em></a><em>, </em><em>optional</em>) – Tensor network where the node should belong. If None, a new tensor
 network, will be created to contain the node.</p></li>
 <li><p><strong>param_node</strong> (<em>bool</em>) – Boolean indicating whether the node should be a <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a>
-(<code class="docutils literal notranslate"><span class="pre">True</span></code>) or a <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+(<code class="docutils literal notranslate"><span class="pre">True</span></code>) or a <code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code> (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
 <li><p><strong>param_edges</strong> (<em>bool</em>) – Boolean indicating whether all node’s edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdges</span></code></a> (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or not (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a> or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a></p>
+<dd class="field-even"><p>Node or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -304,7 +321,7 @@ network, will be created to contain the node.</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.ones">
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ones</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/initializers.html#ones"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ones" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> filled with ones.</p>
+<dd><p>Returns <code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code> or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> filled with ones.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -317,12 +334,12 @@ where it belongs. It cannot contain blank spaces.</p></li>
 <li><p><strong>network</strong> (<a class="reference internal" href="components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><em>TensorNetwork</em></a><em>, </em><em>optional</em>) – Tensor network where the node should belong. If None, a new tensor
 network, will be created to contain the node.</p></li>
 <li><p><strong>param_node</strong> (<em>bool</em>) – Boolean indicating whether the node should be a <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a>
-(<code class="docutils literal notranslate"><span class="pre">True</span></code>) or a <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+(<code class="docutils literal notranslate"><span class="pre">True</span></code>) or a <code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code> (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
 <li><p><strong>param_edges</strong> (<em>bool</em>) – Boolean indicating whether all node’s edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdges</span></code></a> (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or not (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a> or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a></p>
+<dd class="field-even"><p>Node or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -330,7 +347,7 @@ network, will be created to contain the node.</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.copy">
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/initializers.html#copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.copy" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> with a copy tensor, that is,
+<dd><p>Returns <code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code> or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> with a copy tensor, that is,
 a tensor filled with zeros except in the diagonal (elements
 <span class="math notranslate nohighlight">\(T_{i_1 \ldots i_n}\)</span> with <span class="math notranslate nohighlight">\(i_1 = \ldots = i_n\)</span>), which is
 filled with ones.</p>
@@ -346,12 +363,12 @@ where it belongs. It cannot contain blank spaces.</p></li>
 <li><p><strong>network</strong> (<a class="reference internal" href="components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><em>TensorNetwork</em></a><em>, </em><em>optional</em>) – Tensor network where the node should belong. If None, a new tensor
 network, will be created to contain the node.</p></li>
 <li><p><strong>param_node</strong> (<em>bool</em>) – Boolean indicating whether the node should be a <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a>
-(<code class="docutils literal notranslate"><span class="pre">True</span></code>) or a <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+(<code class="docutils literal notranslate"><span class="pre">True</span></code>) or a <code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code> (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
 <li><p><strong>param_edges</strong> (<em>bool</em>) – Boolean indicating whether all node’s edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdges</span></code></a> (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or not (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a> or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a></p>
+<dd class="field-even"><p>Node or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -359,7 +376,7 @@ network, will be created to contain the node.</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.rand">
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">rand</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">low</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/initializers.html#rand"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.rand" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> filled with elements drawn from
+<dd><p>Returns <code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code> or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> filled with elements drawn from
 a uniform distribution <span class="math notranslate nohighlight">\(U(low, high)\)</span>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -373,14 +390,14 @@ where it belongs. It cannot contain blank spaces.</p></li>
 <li><p><strong>network</strong> (<a class="reference internal" href="components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><em>TensorNetwork</em></a><em>, </em><em>optional</em>) – Tensor network where the node should belong. If None, a new tensor
 network, will be created to contain the node.</p></li>
 <li><p><strong>param_node</strong> (<em>bool</em>) – Boolean indicating whether the node should be a <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a>
-(<code class="docutils literal notranslate"><span class="pre">True</span></code>) or a <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+(<code class="docutils literal notranslate"><span class="pre">True</span></code>) or a <code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code> (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
 <li><p><strong>param_edges</strong> (<em>bool</em>) – Boolean indicating whether all node’s edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdges</span></code></a> (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or not (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
 <li><p><strong>low</strong> (<em>float</em>) – Lower limit of the uniform distribution.</p></li>
 <li><p><strong>high</strong> (<em>float</em>) – Upper limit of the uniform distribution.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a> or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a></p>
+<dd class="field-even"><p>Node or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -388,7 +405,7 @@ network, will be created to contain the node.</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.randn">
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">randn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">std</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/initializers.html#randn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.randn" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> filled with elements drawn from
+<dd><p>Returns <code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code> or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> filled with elements drawn from
 a normal distribution <span class="math notranslate nohighlight">\(N(mean, std)\)</span>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -402,14 +419,14 @@ where it belongs. It cannot contain blank spaces.</p></li>
 <li><p><strong>network</strong> (<a class="reference internal" href="components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><em>TensorNetwork</em></a><em>, </em><em>optional</em>) – Tensor network where the node should belong. If None, a new tensor
 network, will be created to contain the node.</p></li>
 <li><p><strong>param_node</strong> (<em>bool</em>) – Boolean indicating whether the node should be a <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a>
-(<code class="docutils literal notranslate"><span class="pre">True</span></code>) or a <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+(<code class="docutils literal notranslate"><span class="pre">True</span></code>) or a <code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code> (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
 <li><p><strong>param_edges</strong> (<em>bool</em>) – Boolean indicating whether all node’s edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdges</span></code></a> (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or not (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
 <li><p><strong>mean</strong> (<em>float</em>) – Mean of the normal distribution.</p></li>
 <li><p><strong>std</strong> (<em>float</em>) – Standard deviation of the normal distribution.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a> or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a></p>
+<dd class="field-even"><p>Node or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a></p>
 </dd>
 </dl>
 </dd></dl>

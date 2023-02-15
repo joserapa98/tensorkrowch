@@ -98,16 +98,33 @@
 </p>
 <ul class="current nav bd-sidenav">
  <li class="toctree-l1">
-  <a class="reference internal" href="usage.html">
-   Usage
+  <a class="reference internal" href="installation.html">
+   Installation
   </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/basics.html">
+     Basics
+    </a>
+   </li>
+  </ul>
  </li>
  <li class="toctree-l1 current active has-children">
   <a class="reference internal" href="api.html">
    API Reference
   </a>
-  <input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
-  <label for="toctree-checkbox-1">
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
    <i class="fas fa-chevron-down">
    </i>
   </label>
@@ -437,7 +454,7 @@ cum\_percentage\]</div>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p>tuple[<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
+<dd class="field-even"><p>tuple[Node, Node]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -470,7 +487,7 @@ cum\_percentage\]</div>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p>tuple[<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
+<dd class="field-even"><p>tuple[Node, Node]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -488,7 +505,7 @@ underscore indicate <strong>in-place</strong> operations.</p>
 <dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractEdge" title="tensorkrowch.AbstractEdge"><em>AbstractEdge</em></a>) – Edge whose nodes are to be contracted and splitted.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p>tuple[<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
+<dd class="field-even"><p>tuple[Node, Node]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -506,7 +523,7 @@ underscore indicate <strong>in-place</strong> operations.</p>
 <dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractEdge" title="tensorkrowch.AbstractEdge"><em>AbstractEdge</em></a>) – Edge whose nodes are to be contracted and splitted.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p>tuple[<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
+<dd class="field-even"><p>tuple[Node, Node]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -524,7 +541,7 @@ underscore indicate <strong>in-place</strong> operations.</p>
 performed when both nodes have batch edges with the same names.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
+<dd class="field-even"><p>Node</p>
 </dd>
 </dl>
 </dd></dl>
@@ -569,7 +586,7 @@ shape.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>node</strong> (<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – Node whose tensor is to be permuted.</p></li>
+<li><p><strong>node</strong> (<em>Node</em><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – Node whose tensor is to be permuted.</p></li>
 <li><p><strong>axes</strong> (<em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="components.html#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em>) – List of axes in the permuted order.</p></li>
 </ul>
 </dd>
@@ -587,7 +604,7 @@ underscore indicate <strong>in-place</strong> operations.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>node</strong> (<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – Node whose tensor is to be permuted.</p></li>
+<li><p><strong>node</strong> (<em>Node</em><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – Node whose tensor is to be permuted.</p></li>
 <li><p><strong>axes</strong> (<em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="components.html#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em>) – List of axes in the permuted order.</p></li>
 </ul>
 </dd>
@@ -602,14 +619,14 @@ operator <code class="docutils literal notranslate"><span class="pre">%</span></
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>node1</strong> (<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – First node to be multiplied. Its edges will appear first in the
+<li><p><strong>node1</strong> (<em>Node</em><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – First node to be multiplied. Its edges will appear first in the
 resultant node.</p></li>
-<li><p><strong>node2</strong> (<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – Second node to be multiplied. Its edges will appear second in the
+<li><p><strong>node2</strong> (<em>Node</em><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – Second node to be multiplied. Its edges will appear second in the
 resultant node.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
+<dd class="field-even"><p>Node</p>
 </dd>
 </dl>
 </dd></dl>
@@ -622,12 +639,12 @@ operator <code class="docutils literal notranslate"><span class="pre">*</span></
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>node1</strong> (<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – First node to be multiplied. Its edges will appear in the resultant node.</p></li>
-<li><p><strong>node2</strong> (<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – Second node to be multiplied.</p></li>
+<li><p><strong>node1</strong> (<em>Node</em><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – First node to be multiplied. Its edges will appear in the resultant node.</p></li>
+<li><p><strong>node2</strong> (<em>Node</em><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – Second node to be multiplied.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
+<dd class="field-even"><p>Node</p>
 </dd>
 </dl>
 </dd></dl>
@@ -640,12 +657,12 @@ operator <code class="docutils literal notranslate"><span class="pre">+</span></
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>node1</strong> (<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – First node to be added. Its edges will appear in the resultant node.</p></li>
-<li><p><strong>node2</strong> (<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – Second node to be added.</p></li>
+<li><p><strong>node1</strong> (<em>Node</em><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – First node to be added. Its edges will appear in the resultant node.</p></li>
+<li><p><strong>node2</strong> (<em>Node</em><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – Second node to be added.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
+<dd class="field-even"><p>Node</p>
 </dd>
 </dl>
 </dd></dl>
@@ -658,12 +675,12 @@ the operator <code class="docutils literal notranslate"><span class="pre">-</spa
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>node1</strong> (<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – First node, minuend . Its edges will appear in the resultant node.</p></li>
-<li><p><strong>node2</strong> (<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – Second node, subtrahend.</p></li>
+<li><p><strong>node1</strong> (<em>Node</em><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – First node, minuend . Its edges will appear in the resultant node.</p></li>
+<li><p><strong>node2</strong> (<em>Node</em><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – Second node, subtrahend.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
+<dd class="field-even"><p>Node</p>
 </dd>
 </dl>
 </dd></dl>
@@ -735,7 +752,7 @@ cum\_percentage\]</div>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p>tuple[<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
+<dd class="field-even"><p>tuple[Node, Node]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -771,7 +788,7 @@ cum\_percentage\]</div>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p>tuple[<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
+<dd class="field-even"><p>tuple[Node, Node]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -793,7 +810,7 @@ last in the list of inherited edges of the resultant node.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
+<dd class="field-even"><p>Node</p>
 </dd>
 </dl>
 </dd></dl>
@@ -814,7 +831,7 @@ last in the list of inherited edges of the resultant node.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
+<dd class="field-even"><p>Node</p>
 </dd>
 </dl>
 </dd></dl>
@@ -835,7 +852,7 @@ last in the list of inherited edges of the resultant node.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
+<dd class="field-even"><p>Node</p>
 </dd>
 </dl>
 </dd></dl>
@@ -869,7 +886,7 @@ to the corresponding slice of the <code class="docutils literal notranslate"><sp
 <dd class="field-odd"><p><strong>node</strong> (<a class="reference internal" href="components.html#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><em>StackNode</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><em>ParamStackNode</em></a>) – Node that is to be unbinded.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p>list[<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
+<dd class="field-even"><p>list[Node]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -904,7 +921,7 @@ order as it is specified in the <code class="docutils literal notranslate"><span
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
+<dd class="field-even"><p>Node</p>
 </dd>
 </dl>
 </dd></dl>
@@ -930,12 +947,12 @@ by an arrow. For instance, the contraction</p>
 </pre></div>
 </div>
 </p></li>
-<li><p><strong>nodes</strong> (<em>List</em><em>[</em><a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>]</em><em>...</em>) – Nodes that are involved in the contraction. Should appear in the same
+<li><p><strong>nodes</strong> (<em>List</em><em>[</em><em>Node</em><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>]</em><em>...</em>) – Nodes that are involved in the contraction. Should appear in the same
 order as it is specified in the <code class="docutils literal notranslate"><span class="pre">string</span></code>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p>list[<a class="reference internal" href="usage.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
+<dd class="field-even"><p>list[Node]</p>
 </dd>
 </dl>
 </dd></dl>

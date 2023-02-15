@@ -16,6 +16,11 @@ The purpose of **TensorKrowch** is that of being an *easy-to-use*, *efficient*,
 User Guide
 ----------
 
+.. toctree::
+   :maxdepth: 1
+
+   installation
+   tutorials/basics
 
 Examples
 --------

@@ -98,16 +98,33 @@
 </p>
 <ul class="current nav bd-sidenav">
  <li class="toctree-l1">
-  <a class="reference internal" href="usage.html">
-   Usage
+  <a class="reference internal" href="installation.html">
+   Installation
   </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/basics.html">
+     Basics
+    </a>
+   </li>
+  </ul>
  </li>
  <li class="toctree-l1 current active has-children">
   <a class="reference internal" href="api.html">
    API Reference
   </a>
-  <input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
-  <label for="toctree-checkbox-1">
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
    <i class="fas fa-chevron-down">
    </i>
   </label>
@@ -277,7 +294,7 @@ title="Print to PDF"
 <h1>Embeddings<a class="headerlink" href="#embeddings" title="Permalink to this headline">#</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.unit">
-<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">unit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/embeddings.html#unit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.unit" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">unit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/embeddings.html#unit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.unit" title="Permalink to this definition">#</a></dt>
 <dd><p>Embedds the data tensor using the local feature map defined in the original
 <a class="reference external" href="https://arxiv.org/abs/1605.05775">paper</a> by E. Miles Stoudenmire and David
 J. Schwab.</p>
@@ -289,13 +306,13 @@ J. Schwab.</p>
 \[n_{features} \times batch\_size \times feature\_size\]</div>
 <p>where <span class="math notranslate nohighlight">\(feature\_size = 1\)</span>.</p>
 </p></li>
-<li><p><strong>dim</strong> (<em>int</em>) – New feature size.</p></li>
+<li><p><strong>size</strong> (<em>int</em>) – New feature size.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p><p>New data tensor with shape</p>
 <div class="math notranslate nohighlight">
-\[n_{features} \times batch\_size \times dim\]</div>
+\[n_{features} \times batch\_size \times size\]</div>
 </p>
 </dd>
 <dt class="field-odd">Return type</dt>
@@ -306,7 +323,7 @@ J. Schwab.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.add_ones">
-<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">add_ones</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/embeddings.html#add_ones"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.add_ones" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">add_ones</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/embeddings.html#add_ones"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.add_ones" title="Permalink to this definition">#</a></dt>
 <dd><p>Embedds the data tensor adding 1’s as the first component of each vector.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\hat{x}_i = \begin{bmatrix}
@@ -315,15 +332,19 @@ J. Schwab.</p>
             \end{bmatrix}\end{split}\]</div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>data</strong> (<em>torch.Tensor</em>) – <p>Data tensor with shape</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>torch.Tensor</em>) – <p>Data tensor with shape</p>
 <div class="math notranslate nohighlight">
-\[n_{features} \times batch\_size \times feature\_size\]</div>
-</p>
+\[n_{features} \times batch\_size\]</div>
+</p></li>
+<li><p><strong>dim</strong> (<em>int</em>) – New dimension (axis) to insert. Should be between 0 and the rank of
+<code class="docutils literal notranslate"><span class="pre">data</span></code>.</p></li>
+</ul>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p><p>New data tensor with shape</p>
 <div class="math notranslate nohighlight">
-\[n_{features} \times batch\_size \times (feature\_size + 1)\]</div>
+\[n_{features} \times batch\_size \times 2\]</div>
 </p>
 </dd>
 <dt class="field-odd">Return type</dt>

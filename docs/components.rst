@@ -19,7 +19,6 @@ Nodes
 
 .. autoclass:: Node
     :members:
-    :noindex:
 
 .. autoclass:: ParamNode
     :members:

@@ -12,7 +12,7 @@ from typing import (List, Optional, Sequence,
 import torch
 import torch.nn as nn
 
-from tensorkrowch.components import Node, ParamNode
+from tensorkrowch.components import AbstractNode, Node, ParamNode
 from tensorkrowch.components import TensorNetwork
 import tensorkrowch.operations as op
 
@@ -47,8 +47,9 @@ class MPSLayer(TensorNetwork):
         for input nodes.
     d_bond : int, list[int] or tuple[int]
         Bond dimension(s). If given as a sequence, its length should be equal
-        to ``n_sites``. The i-th bond dimension is always the dimension of the
-        right edge of the i-th node (including output node).
+        to ``n_sites`` (if ``boundary = "pbc"``) or ``n_sites - 1`` (if
+        ``boundary = "obc"``). The i-th bond dimension is always the dimension
+        of the right edge of the i-th node (including output node).
     l_position : int, optional
         Position of the output node (label). Should be between 0 and
         ``n_sites - 1``. If ``None``, the output node will be located at the
@@ -63,13 +64,6 @@ class MPSLayer(TensorNetwork):
         (where the batch edge is used for the data batched) but it could also
         be ``num_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
-    inline_input : bool
-        Boolean indicating whether input data nodes should be contracted inline
-        (one contraction at a time) or in a single stacked contraction.
-    inline_mats : bool
-        Boolean indicating whether the sequence of matrices (resultant after
-        contracting the input data nodes) should be contracted inline or as a
-        sequence of pairwise stacked contrations.
         
     Examples
     --------
@@ -105,9 +99,7 @@ class MPSLayer(TensorNetwork):
                  l_position: Optional[int] = None,
                  boundary: Text = 'obc',
                  param_bond: bool = False,
-                 num_batches: int = 1,
-                 inline_input: bool = False,
-                 inline_mats: bool = False) -> None:
+                 num_batches: int = 1) -> None:
 
         super().__init__(name='mps')
 
@@ -183,10 +175,6 @@ class MPSLayer(TensorNetwork):
         self.initialize()
         
         self._num_batches = num_batches
-        
-        # Contraction algorithm
-        self.inline_input = inline_input
-        self.inline_mats = inline_mats
 
     @property
     def l_position(self) -> int:
@@ -214,7 +202,7 @@ class MPSLayer(TensorNetwork):
         return self._d_bond
     
     @property
-    def n_labels(self) -> List[int]:
+    def n_labels(self) -> int:
         """
         Returns number of labels in the output node. Same as ``phys_dim``
         for input nodes.
@@ -480,8 +468,9 @@ class MPSLayer(TensorNetwork):
                                         self.left_env + self.right_env))
 
     def _input_contraction(self,
-                           inline_input=False) -> Tuple[Optional[List[Node]],
-                                                        Optional[List[Node]]]:
+                           inline_input: bool = False) -> Tuple[
+                               Optional[List[Node]],
+                               Optional[List[Node]]]:
         """Contracts input data nodes with MPS nodes."""
         if inline_input:
             left_result = []
@@ -596,8 +585,27 @@ class MPSLayer(TensorNetwork):
 
         return self._contract_envs_inline(left_aux_nodes, right_aux_nodes)
 
-    def contract(self, inline_input=False, inline_mats=False) -> Node:
-        """Contracts the whole MPS."""
+    def contract(self,
+                 inline_input: bool = False,
+                 inline_mats: bool = False) -> Node:
+        """
+        Contracts the whole MPS.
+        
+        Parameters
+        ----------
+        inline_input : bool
+            Boolean indicating whether input data nodes should be contracted
+            inline (one contraction at a time) or in a single stacked
+            contraction.
+        inline_mats : bool
+            Boolean indicating whether the sequence of matrices (resultant
+            after contracting the input data nodes) should be contracted inline
+            or as a sequence of pairwise stacked contrations.
+
+        Returns
+        -------
+        Node
+        """
         left_env, right_env = self._input_contraction(inline_input)
         
         if inline_mats:
@@ -742,14 +750,17 @@ class MPSLayer(TensorNetwork):
         
         self.automemory = prev_automemory
     
-    def _project_to_d_bond(self, nodes, d_bond, side='right'):
+    def _project_to_d_bond(self,
+                           nodes: List[AbstractNode],
+                           d_bond: int,
+                           side: Text = 'right'):
         """Projects all nodes into a space of dimension ``d_bond``."""
         device = nodes[0].tensor.device
         
         if side == 'left':
             nodes.reverse()
         elif side != 'right':
-            raise ValueError('`side` can only be \'left\' or \'right\'')
+            raise ValueError('`side` can only be "left" or "right"')
         
         for node in nodes:
             if not node['input'].is_dangling():
@@ -819,7 +830,10 @@ class MPSLayer(TensorNetwork):
             
         return result  # d_bond x left/right
     
-    def _aux_canonicalize_univocal(self, nodes, idx, left_nodeL):
+    def _aux_canonicalize_univocal(self,
+                                   nodes: List[AbstractNode],
+                                   idx: int,
+                                   left_nodeL: AbstractNode):
         """Returns canonicalize version of the tensor at site ``idx``."""
         L = nodes[idx]  # left x input x right
         left_nodeC = None
@@ -950,13 +964,6 @@ class UMPSLayer(TensorNetwork):
         (where the batch edge is used for the data batched) but it could also
         be ``num_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
-    inline_input : bool
-        Boolean indicating whether input data nodes should be contracted inline
-        (one contraction at a time) or in a single stacked contraction.
-    inline_mats : bool
-        Boolean indicating whether the sequence of matrices (resultant after
-        contracting the input data nodes) should be contracted inline or as a
-        sequence of pairwise stacked contrations.
     """
 
     def __init__(self,
@@ -966,9 +973,7 @@ class UMPSLayer(TensorNetwork):
                  d_bond: int,
                  l_position: Optional[int] = None,
                  param_bond: bool = False,
-                 num_batches: int = 1,
-                 inline_input: bool = False,
-                 inline_mats: bool = False) -> None:
+                 num_batches: int = 1) -> None:
 
         super().__init__(name='mps')
 
@@ -1009,10 +1014,6 @@ class UMPSLayer(TensorNetwork):
         self.initialize()
         
         self._num_batches = num_batches
-        
-        # Contraction algorithm
-        self.inline_input = inline_input
-        self.inline_mats = inline_mats
 
     @property
     def l_position(self) -> int:
@@ -1025,17 +1026,17 @@ class UMPSLayer(TensorNetwork):
         return self._n_sites
 
     @property
-    def d_phys(self) -> List[int]:
+    def d_phys(self) -> int:
         """Returns physical dimension."""
         return self._d_phys
 
     @property
-    def d_bond(self) -> List[int]:
+    def d_bond(self) -> int:
         """Returns bond dimension."""
         return self._d_bond
     
     @property
-    def n_labels(self) -> List[int]:
+    def n_labels(self) -> int:
         """
         Returns number of labels in the output node. Same as ``phys_dim``
         for input nodes.
@@ -1200,8 +1201,9 @@ class UMPSLayer(TensorNetwork):
                                         self.left_env + self.right_env))
 
     def _input_contraction(self,
-                           inline_input=False) -> Tuple[Optional[List[Node]],
-                                                        Optional[List[Node]]]:
+                           inline_input: bool = False) -> Tuple[
+                               Optional[List[Node]],
+                               Optional[List[Node]]]:
         """Contracts input data nodes with MPS nodes."""
         if inline_input:
             left_result = []
@@ -1308,8 +1310,27 @@ class UMPSLayer(TensorNetwork):
 
         return self._contract_envs_inline(left_aux_nodes, right_aux_nodes)
 
-    def contract(self, inline_input=False, inline_mats=False) -> Node:
-        """Contracts the whole MPS."""
+    def contract(self,
+                 inline_input: bool = False,
+                 inline_mats: bool = False) -> Node:
+        """
+        Contracts the whole MPS.
+        
+        Parameters
+        ----------
+        inline_input : bool
+            Boolean indicating whether input data nodes should be contracted
+            inline (one contraction at a time) or in a single stacked
+            contraction.
+        inline_mats : bool
+            Boolean indicating whether the sequence of matrices (resultant
+            after contracting the input data nodes) should be contracted inline
+            or as a sequence of pairwise stacked contrations.
+
+        Returns
+        -------
+        Node
+        """
         left_env, right_env = self._input_contraction(inline_input)
         
         if inline_mats:
@@ -1348,9 +1369,10 @@ class ConvMPSLayer(MPSLayer):
         Output channels. Same as ``n_labels`` in :class:`MPSLayer`.
     d_bond : int, list[int] or tuple[int]
         Bond dimension(s). If given as a sequence, its length should be equal
-        to :math:`kernel\_size_0 \cdot kernel\_size_1 + 1`. The i-th bond dimension
-        is always the dimension of the right edge of the i-th node (including
-        output node).
+        to :math:`kernel\_size_0 \cdot kernel\_size_1 + 1`
+        (if ``boundary = "pbc"``) or :math:`kernel\_size_0 \cdot kernel\_size_1`
+        (if ``boundary = "obc"``). The i-th bond dimension is always the dimension
+        of the right edge of the i-th node (including output node).
     kernel_size : int, list[int] or tuple[int]
         Kernel size used in `nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
@@ -1378,18 +1400,6 @@ class ConvMPSLayer(MPSLayer):
         be used.
     param_bond : bool
         Boolean indicating whether bond edges should be :class:`ParamEdge`.
-    num_batches : int
-        Number of batch edges of input data nodes. Usually ``num_batches = 1``
-        (where the batch edge is used for the data batched) but it could also
-        be ``num_batches = 2`` (one edge for data batched, other edge for image
-        patches in convolutional layers).
-    inline_input : bool
-        Boolean indicating whether input data nodes should be contracted inline
-        (one contraction at a time) or in a single stacked contraction.
-    inline_mats : bool
-        Boolean indicating whether the sequence of matrices (resultant after
-        contracting the input data nodes) should be contracted inline or as a
-        sequence of pairwise stacked contrations.
         
     Examples
     --------
@@ -1413,9 +1423,7 @@ class ConvMPSLayer(MPSLayer):
                  dilation: int = 1,
                  l_position: Optional[int] = None,
                  boundary: Text = 'obc',
-                 param_bond: bool = False,
-                 inline_input: bool = False,
-                 inline_mats: bool = False):
+                 param_bond: bool = False):
         
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -1450,9 +1458,7 @@ class ConvMPSLayer(MPSLayer):
                          l_position=l_position,
                          boundary=boundary,
                          param_bond=param_bond,
-                         num_batches=2,
-                         inline_input=inline_input,
-                         inline_mats=inline_mats)
+                         num_batches=2)
         
         self.unfold = nn.Unfold(kernel_size=kernel_size,
                                 stride=stride,
@@ -1515,6 +1521,11 @@ class ConvMPSLayer(MPSLayer):
             after the other. When ``"snake"``, its row is put in the opposite
             orientation as the previous row (like a snake running through the
             image).
+        args :
+            Arguments that might be used in :meth:`~MPSLayer.contract`.
+        kwargs :
+            Keyword arguments that might be used in :meth:`~MPSLayer.contract`,
+            like ``inline_input`` or ``inline_mats``.
         """
         # Input image shape: batch_size x in_channels x height x width
         
@@ -1606,18 +1617,6 @@ class ConvUMPSLayer(UMPSLayer):
         will be located at the middle of the MPS.
     param_bond : bool
         Boolean indicating whether bond edges should be :class:`ParamEdge`.
-    num_batches : int
-        Number of batch edges of input data nodes. Usually ``num_batches = 1``
-        (where the batch edge is used for the data batched) but it could also
-        be ``num_batches = 2`` (one edge for data batched, other edge for image
-        patches in convolutional layers).
-    inline_input : bool
-        Boolean indicating whether input data nodes should be contracted inline
-        (one contraction at a time) or in a single stacked contraction.
-    inline_mats : bool
-        Boolean indicating whether the sequence of matrices (resultant after
-        contracting the input data nodes) should be contracted inline or as a
-        sequence of pairwise stacked contrations.
     """
     
     def __init__(self,
@@ -1629,9 +1628,7 @@ class ConvUMPSLayer(UMPSLayer):
                  padding: int = 0,
                  dilation: int = 1,
                  l_position: Optional[int] = None,
-                 param_bond: bool = False,
-                 inline_input: bool = False,
-                 inline_mats: bool = False):
+                 param_bond: bool = False):
         
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -1665,9 +1662,7 @@ class ConvUMPSLayer(UMPSLayer):
                          d_bond=d_bond,
                          l_position=l_position,
                          param_bond=param_bond,
-                         num_batches=2,
-                         inline_input=inline_input,
-                         inline_mats=inline_mats)
+                         num_batches=2)
         
         self.unfold = nn.Unfold(kernel_size=kernel_size,
                                 stride=stride,
@@ -1730,6 +1725,11 @@ class ConvUMPSLayer(UMPSLayer):
             after the other. When ``"snake"``, its row is put in the opposite
             orientation as the previous row (like a snake running through the
             image).
+        args :
+            Arguments that might be used in :meth:`~UMPSLayer.contract`.
+        kwargs :
+            Keyword arguments that might be used in :meth:`~UMPSLayer.contract`,
+            like ``inline_input`` or ``inline_mats``.
         """
         # Input image shape: batch_size x in_channels x height x width
         
@@ -1757,7 +1757,7 @@ class ConvUMPSLayer(UMPSLayer):
             patches = new_patches
             
         elif mode != 'flat':
-            raise ValueError('`mode` can only be \'flat\' or \'snake\'')
+            raise ValueError('`mode` can only be "flat" or "snake"')
         
         result = super().forward(patches, *args, **kwargs)
         # batch_size x nb_windows x out_channels

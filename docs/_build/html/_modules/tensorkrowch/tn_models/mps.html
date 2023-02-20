@@ -215,6 +215,19 @@ title="Fullscreen mode"
   </span>
 
 </button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
 
     </div>
 </div>
@@ -241,52 +254,80 @@ title="Fullscreen mode"
                 
   <h1>Source code for tensorkrowch.tn_models.mps</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">MPSLayer + UMPSLayer classes</span>
+<span class="sd">This script contains:</span>
+<span class="sd">    *MPS</span>
+<span class="sd">    *UMPS</span>
+<span class="sd">    *ConvMPS</span>
+<span class="sd">    *ConvUMPS</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span><span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span>
-                    <span class="n">Text</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span><span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span>
+                    <span class="n">Text</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">)</span>
 
 <span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">from</span> <span class="nn">torch.nn.functional</span> <span class="kn">import</span> <span class="n">pad</span>
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
 
-<span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="p">(</span><span class="n">AbstractNode</span><span class="p">,</span> <span class="n">Node</span><span class="p">,</span> <span class="n">ParamNode</span><span class="p">,</span>
-                                         <span class="n">AbstractEdge</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">Node</span><span class="p">,</span> <span class="n">ParamNode</span>
 <span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">TensorNetwork</span>
-
-<span class="kn">from</span> <span class="nn">tensorkrowch.operations</span> <span class="kn">import</span> <span class="n">einsum</span><span class="p">,</span> <span class="n">stacked_einsum</span>
-
-<span class="kn">import</span> <span class="nn">tensorkrowch</span> <span class="k">as</span> <span class="nn">tk</span>
-
-<span class="kn">import</span> <span class="nn">opt_einsum</span>
-<span class="kn">import</span> <span class="nn">math</span>
-
-<span class="kn">import</span> <span class="nn">time</span>
-<span class="kn">from</span> <span class="nn">torchviz</span> <span class="kn">import</span> <span class="n">make_dot</span>
-
-<span class="n">PRINT_MODE</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="kn">import</span> <span class="nn">tensorkrowch.operations</span> <span class="k">as</span> <span class="nn">op</span>
 
 
 <div class="viewcode-block" id="MPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.MPS">[docs]</a><span class="k">class</span> <span class="nc">MPS</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Create an MPS module.</span>
+<span class="sd">    Class for Matrix Product States, where all nodes are input nodes, that is,</span>
+<span class="sd">    they are all connected to ``data`` nodes that will store the input data</span>
+<span class="sd">    tensor(s). When contracting the MPS with new input data, the result will</span>
+<span class="sd">    be a just a number.</span>
+<span class="sd">    </span>
+<span class="sd">    If the physical dimensions of all the input nodes are equal, the input data</span>
+<span class="sd">    tensor can be passed as a single tensor. Otherwise, it would have to be</span>
+<span class="sd">    passed as a list of tensors with different sizes.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    n_sites: number of sites, including the input and output_node sites</span>
-<span class="sd">    d_phys: physic dimension</span>
-<span class="sd">    d_bond: bond dimension. If given as a sequence, the i-th bond</span>
-<span class="sd">        dimension is always the dimension of the right edge of th i-th node</span>
-<span class="sd">    boundary: string indicating whether we are using periodic or open</span>
-<span class="sd">        boundary conditions</span>
-<span class="sd">    param_bond: boolean indicating whether bond edges should be parametric</span>
-<span class="sd">    num_batches: number of batch edges of input data</span>
-<span class="sd">    inline_input: boolean indicating whether input should be contracted</span>
-<span class="sd">        inline or in a single stacked contraction</span>
-<span class="sd">    inline_mats: boolean indicating whether sequence of matrices</span>
-<span class="sd">        should be contracted inline or as a sequence of pairwise stacked</span>
-<span class="sd">        contrations</span>
+<span class="sd">    n_sites : int</span>
+<span class="sd">        Number of sites.</span>
+<span class="sd">    d_phys : int, list[int] or tuple[int]</span>
+<span class="sd">        Physical dimension(s). If given as a sequence, its length should be</span>
+<span class="sd">        equal to ``n_sites``.</span>
+<span class="sd">    d_bond : int, list[int] or tuple[int]</span>
+<span class="sd">        Bond dimension(s). If given as a sequence, its length should be equal</span>
+<span class="sd">        to ``n_sites`` (if ``boundary = &quot;pbc&quot;``) or ``n_sites - 1`` (if</span>
+<span class="sd">        ``boundary = &quot;obc&quot;``). The i-th bond dimension is always the dimension</span>
+<span class="sd">        of the right edge of the i-th node.</span>
+<span class="sd">    boundary : {&#39;obc&#39;, &#39;pbc&#39;}</span>
+<span class="sd">        String indicating whether periodic or open boundary conditions should</span>
+<span class="sd">        be used.</span>
+<span class="sd">    param_bond : bool</span>
+<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
+<span class="sd">    num_batches : int</span>
+<span class="sd">        Number of batch edges of input data nodes. Usually ``num_batches = 1``</span>
+<span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
+<span class="sd">        be ``num_batches = 2`` (one edge for data batched, other edge for image</span>
+<span class="sd">        patches in convolutional layers).</span>
+<span class="sd">        </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    ``MPS`` with same physical dimensions:</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; mps = tk.MPS(n_sites=5,</span>
+<span class="sd">    ...              d_phys=2,</span>
+<span class="sd">    ...              d_bond=5)</span>
+<span class="sd">    &gt;&gt;&gt; data = torch.ones(5, 20, 2) # n_features x batch_size x feature_size</span>
+<span class="sd">    &gt;&gt;&gt; result = mps(data)</span>
+<span class="sd">    &gt;&gt;&gt; print(result.shape)</span>
+<span class="sd">    torch.Size([20])</span>
+<span class="sd">    </span>
+<span class="sd">    ``MPS`` with different physical dimensions:</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; mps = tk.MPS(n_sites=5,</span>
+<span class="sd">    ...              d_phys=list(range(2, 7)),</span>
+<span class="sd">    ...              d_bond=5)</span>
+<span class="sd">    &gt;&gt;&gt; data = [torch.ones(20, i)</span>
+<span class="sd">    ...         for i in range(2, 7)] # n_features * [batch_size x feature_size]</span>
+<span class="sd">    &gt;&gt;&gt; result = mps(data)</span>
+<span class="sd">    &gt;&gt;&gt; print(result.shape)</span>
+<span class="sd">    torch.Size([20])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -295,9 +336,7 @@ title="Fullscreen mode"
                  <span class="n">d_bond</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
                  <span class="n">boundary</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span><span class="p">,</span>
                  <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                 <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-                 <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                 <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+                 <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;mps&#39;</span><span class="p">)</span>
 
@@ -324,20 +363,21 @@ title="Fullscreen mode"
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_d_phys</span> <span class="o">=</span> <span class="p">[</span><span class="n">d_phys</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_sites</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_phys` should be `int` type or a list/tuple of ints&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_phys` should be `int` type or a list/tuple &#39;</span>
+                            <span class="s1">&#39;of ints&#39;</span><span class="p">)</span>
 
         <span class="c1"># d_bond</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d_bond</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
             <span class="k">if</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">d_bond</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_sites</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;If `d_bond` is given as a sequence of int, &#39;</span>
-                                     <span class="s1">&#39;and `boundary` is &quot;obc&quot;, its length should be&#39;</span>
-                                     <span class="s1">&#39; equal to `n_sites` - 1&#39;</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;If `d_bond` is given as a sequence of int,&#39;</span>
+                                     <span class="s1">&#39; and `boundary` is &quot;obc&quot;, its length &#39;</span>
+                                     <span class="s1">&#39;should be equal to `n_sites` - 1&#39;</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">:</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">d_bond</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_sites</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;If `d_bond` is given as a sequence of int, &#39;</span>
-                                     <span class="s1">&#39;and `boundary` is &quot;pbc&quot;, its length should be&#39;</span>
-                                     <span class="s1">&#39; equal to `n_sites`&#39;</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;If `d_bond` is given as a sequence of int,&#39;</span>
+                                     <span class="s1">&#39; and `boundary` is &quot;pbc&quot;, its length &#39;</span>
+                                     <span class="s1">&#39;should be equal to `n_sites`&#39;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">d_bond</span><span class="p">)</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d_bond</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
@@ -345,7 +385,8 @@ title="Fullscreen mode"
             <span class="k">elif</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span> <span class="o">=</span> <span class="p">[</span><span class="n">d_bond</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_sites</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_bond` should be `int` type or a list/tuple of ints&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_bond` should be `int` type or a list/tuple &#39;</span>
+                            <span class="s1">&#39;of ints&#39;</span><span class="p">)</span>
 
         <span class="c1"># param_bond</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span> <span class="o">=</span> <span class="n">param_bond</span>
@@ -355,39 +396,37 @@ title="Fullscreen mode"
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_batches</span> <span class="o">=</span> <span class="n">num_batches</span>
-        
-        <span class="c1"># Contraction algorithm</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">inline_input</span> <span class="o">=</span> <span class="n">inline_input</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">inline_mats</span> <span class="o">=</span> <span class="n">inline_mats</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">l_position</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_l_position</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_sites</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of nodes.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_sites</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">boundary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boundary condition (&quot;obc&quot; or &quot;pbc&quot;).&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">d_phys</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns physical dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_phys</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span>
 
 <div class="viewcode-block" id="MPS.param_bond"><a class="viewcode-back" href="../../../models.html#tensorkrowch.MPS.param_bond">[docs]</a>    <span class="k">def</span> <span class="nf">param_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_param</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return param_bond attribute or change it if set_param is provided.</span>
+<span class="sd">        Returns ``param_bond`` attribute or changes it if ``set_param`` is</span>
+<span class="sd">        provided.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        set_param: boolean indicating whether edges have to be parameterized</span>
-<span class="sd">                   (True) or de-parameterized (False)</span>
+<span class="sd">        set_param : bool, optional</span>
+<span class="sd">            Boolean indicating whether edges have to be parameterized (``True``)</span>
+<span class="sd">            or de-parameterized (``False``).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">set_param</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span>
@@ -400,8 +439,10 @@ title="Fullscreen mode"
             <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span> <span class="o">=</span> <span class="n">set_param</span></div>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">leaf_nodes</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create MPS nodes if the MPS already has nodes&#39;</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the MPS.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create MPS nodes if the MPS already has &#39;</span>
+                             <span class="s1">&#39;nodes&#39;</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span> <span class="o">=</span> <span class="kc">None</span>
@@ -456,16 +497,18 @@ title="Fullscreen mode"
                 <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_sites</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">periodic_edge</span>
 
-    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="MPS.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.MPS.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
         <span class="c1"># Left node</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-                <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">std</span>  <span class="c1"># NOTE: Add randn to eye?</span>
+                <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">std</span>
                 <span class="n">aux</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
                 <span class="n">tensor</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">aux</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
                 <span class="n">tensor</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">aux</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">tensor</span>
         
@@ -473,22 +516,27 @@ title="Fullscreen mode"
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-                <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">std</span>  <span class="c1"># NOTE: Add randn to eye?</span>
+                <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">std</span>
                 <span class="n">aux</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
                 <span class="n">tensor</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">aux</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
                 <span class="n">tensor</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">aux</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">tensor</span>
         
         <span class="c1"># Mats env</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">:</span>
             <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
-            <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>  <span class="c1"># NOTE: Add randn to eye?</span>
+            <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
             <span class="n">tensor</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">aux</span>
-            <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">tensor</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">tensor</span></div>
 
 <div class="viewcode-block" id="MPS.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.MPS.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates data nodes and connects each of them to the physical edge of</span>
+<span class="sd">        an input node.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">input_edges</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">input_edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
@@ -503,8 +551,11 @@ title="Fullscreen mode"
             <span class="bp">self</span><span class="o">.</span><span class="n">mats_env_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">node</span><span class="p">:</span> <span class="n">node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">),</span>
                                           <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">))</span></div>
 
-    <span class="k">def</span> <span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]],</span>
-                                                                     <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]]:</span>
+    <span class="k">def</span> <span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                           <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
+                               <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]],</span>
+                               <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts input data nodes with MPS nodes.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">inline_input</span><span class="p">:</span>
             <span class="n">mats_result</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">:</span>
@@ -513,35 +564,27 @@ title="Fullscreen mode"
 
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">:</span>
-                <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-                <span class="n">stack</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">)</span>
-                <span class="n">stack_data</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mats_env_data</span><span class="p">)</span>
+                <span class="n">stack</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">)</span>
+                <span class="n">stack_data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mats_env_data</span><span class="p">)</span>
+                
                 <span class="n">stack</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack_data</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+                
                 <span class="n">result</span> <span class="o">=</span> <span class="n">stack</span> <span class="o">@</span> <span class="n">stack_data</span>
-                <span class="n">mats_result</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t</span><span class="s1">Result:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
+                <span class="n">mats_result</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
                 <span class="k">return</span> <span class="n">mats_result</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">return</span> <span class="p">[]</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">_inline_contraction</span><span class="p">(</span><span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Contract a sequence of MPS tensors that have</span>
-<span class="sd">        parameterized bond dimensions.</span>
-<span class="sd">        </span>
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        nodes: list of nodes (cannot be empty)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts sequence of MPS nodes (matrices) inline.&quot;&quot;&quot;</span>
         <span class="n">result_node</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
-            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
             <span class="n">result_node</span> <span class="o">@=</span> <span class="n">node</span>
-            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t\t</span><span class="s1">Matrix contraction:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">result_node</span>
         
     <span class="k">def</span> <span class="nf">_contract_envs_inline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts the left and right environments inline.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
             <span class="n">left_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">)</span>
             <span class="n">right_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">)</span>
@@ -555,47 +598,30 @@ title="Fullscreen mode"
 
     <span class="k">def</span> <span class="nf">_aux_pairwise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                                                         <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts a sequence of MPS nodes (matrices) pairwise.&quot;&quot;&quot;</span>
         <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
         <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">nodes</span>
         <span class="k">if</span> <span class="n">length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">start_total</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-
             <span class="n">half_length</span> <span class="o">=</span> <span class="n">length</span> <span class="o">//</span> <span class="mi">2</span>
             <span class="n">nice_length</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">half_length</span>
-
-            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            
             <span class="n">even_nodes</span> <span class="o">=</span> <span class="n">aux_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">nice_length</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span>
             <span class="n">odd_nodes</span> <span class="o">=</span> <span class="n">aux_nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">nice_length</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span>
             <span class="n">leftover</span> <span class="o">=</span> <span class="n">aux_nodes</span><span class="p">[</span><span class="n">nice_length</span><span class="p">:]</span>
-            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t\t</span><span class="s1">Select nodes:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
-
-            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-            <span class="n">stack1</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">even_nodes</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t\t</span><span class="s1">Stack even nodes:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
-            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-            <span class="n">stack2</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">odd_nodes</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t\t</span><span class="s1">Stack odd nodes:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
-            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            
+            <span class="n">stack1</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">even_nodes</span><span class="p">)</span>
+            <span class="n">stack2</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">odd_nodes</span><span class="p">)</span>
+            
             <span class="n">stack1</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack2</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t\t</span><span class="s1">Connect stacks:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
-            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            
             <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">stack1</span> <span class="o">@</span> <span class="n">stack2</span>
-            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t\t</span><span class="s1">Contract stacks:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
-            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-            <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">aux_nodes</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t\t</span><span class="s1">Unbind stacks:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
-
-            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t</span><span class="s1">Pairwise contraction:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_total</span><span class="p">)</span>
+            <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">aux_nodes</span><span class="p">)</span>
 
             <span class="k">return</span> <span class="n">aux_nodes</span><span class="p">,</span> <span class="n">leftover</span>
         <span class="k">return</span> <span class="n">nodes</span><span class="p">,</span> <span class="p">[]</span>
 
     <span class="k">def</span> <span class="nf">_pairwise_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mats_nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Contract a sequence of MPS tensors that do not have</span>
-<span class="sd">        parameterized bond dimensions, making the operation</span>
-<span class="sd">        more efficient (from jemisjoki/TorchMPS)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts the left and right environments pairwise.&quot;&quot;&quot;</span>
         <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mats_nodes</span><span class="p">)</span>
         <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">mats_nodes</span>
         <span class="k">if</span> <span class="n">length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
@@ -611,18 +637,33 @@ title="Fullscreen mode"
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contract_envs_inline</span><span class="p">(</span><span class="n">aux_nodes</span><span class="p">)</span>
 
-<div class="viewcode-block" id="MPS.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.MPS.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">inline_mats</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-        <span class="n">mats_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span><span class="n">inline_input</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">Input:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
+<div class="viewcode-block" id="MPS.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.MPS.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contracts the whole MPS.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        inline_input : bool</span>
+<span class="sd">            Boolean indicating whether input data nodes should be contracted</span>
+<span class="sd">            inline (one contraction at a time) or in a single stacked</span>
+<span class="sd">            contraction.</span>
+<span class="sd">        inline_mats : bool</span>
+<span class="sd">            Boolean indicating whether the sequence of matrices (resultant</span>
+<span class="sd">            after contracting the input data nodes) should be contracted inline</span>
+<span class="sd">            or as a sequence of pairwise stacked contrations.</span>
 
-        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Node</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mats_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span><span class="n">inline_input</span><span class="p">)</span>
+        
         <span class="k">if</span> <span class="n">inline_mats</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contract_envs_inline</span><span class="p">(</span><span class="n">mats_env</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pairwise_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="p">)</span>
-                    
-        <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">Matrices contraction:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
         
         <span class="k">return</span> <span class="n">result</span></div>
     
@@ -632,15 +673,33 @@ title="Fullscreen mode"
                      <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Turns the MPS into canonical form</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Turns MPS into canonical form via local SVD/QR decompositions.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        oc: orthogonality center position</span>
-<span class="sd">        mode: can be either &#39;svd&#39;, &#39;svdr&#39; or &#39;qr&#39;</span>
+<span class="sd">        oc : int</span>
+<span class="sd">            Position of the orthogonality center. It should be between 0 and </span>
+<span class="sd">            ``n_sites -1``.</span>
+<span class="sd">        mode : {&quot;svd&quot;, &quot;svdr&quot;, &quot;qr&quot;}</span>
+<span class="sd">            Indicates which decomposition should be used to split a node after</span>
+<span class="sd">            contracting it. See more at :func:`svd_`, :func:`svdr_`, :func:`qr_`.</span>
+<span class="sd">            If mode is &quot;qr&quot;, operation :func:`qr_` will be performed on nodes at</span>
+<span class="sd">            the left of the output node, whilst operation :func:`rq_` will be</span>
+<span class="sd">            used for nodes at the right.</span>
+<span class="sd">        rank : int, optional</span>
+<span class="sd">            Number of singular values to keep.</span>
+<span class="sd">        cum_percentage : float, optional</span>
+<span class="sd">            Proportion that should be satisfied between the sum of all singular</span>
+<span class="sd">            values kept and the total sum of all singular values.</span>
+<span class="sd">            </span>
+<span class="sd">            .. math::</span>
+<span class="sd">            </span>
+<span class="sd">                \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge</span>
+<span class="sd">                cum\_percentage</span>
+<span class="sd">        cutoff : float, optional</span>
+<span class="sd">            Quantity that lower bounds singular values in order to be kept.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        
         <span class="n">prev_automemory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_automemory</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="kc">False</span>
         
@@ -656,19 +715,21 @@ title="Fullscreen mode"
         
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">oc</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svd&#39;</span><span class="p">:</span>
-                <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svd_</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
-                                                          <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
-                                                          <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
-                                                          <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
+                <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svd_</span><span class="p">(</span>
+                    <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
+                    <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
+                    <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svdr&#39;</span><span class="p">:</span>
-                <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svdr_</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
-                                                           <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
-                                                           <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
-                                                           <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
+                <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svdr_</span><span class="p">(</span>
+                    <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
+                    <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
+                    <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;qr&#39;</span><span class="p">:</span>
                 <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">qr_</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`mode` can only be </span><span class="se">\&#39;</span><span class="s1">svd</span><span class="se">\&#39;</span><span class="s1">, </span><span class="se">\&#39;</span><span class="s1">svdr</span><span class="se">\&#39;</span><span class="s1"> or </span><span class="se">\&#39;</span><span class="s1">qr</span><span class="se">\&#39;</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`mode` can only be &quot;svd&quot;, &quot;svdr&quot; or &quot;qr&quot;&#39;</span><span class="p">)</span>
             
             <span class="n">result1</span> <span class="o">=</span> <span class="n">result1</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
             <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">result1</span>
@@ -676,19 +737,21 @@ title="Fullscreen mode"
             
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">oc</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svd&#39;</span><span class="p">:</span>
-                <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svd_</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
-                                                         <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
-                                                         <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
-                                                         <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
+                <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svd_</span><span class="p">(</span>
+                    <span class="n">side</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
+                    <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
+                    <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svdr&#39;</span><span class="p">:</span>
-                <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svdr_</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
-                                                          <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
-                                                          <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
-                                                          <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
+                <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svdr_</span><span class="p">(</span>
+                    <span class="n">side</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
+                    <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
+                    <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;qr&#39;</span><span class="p">:</span>
                 <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">rq_</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`mode` can only be </span><span class="se">\&#39;</span><span class="s1">svd</span><span class="se">\&#39;</span><span class="s1">, </span><span class="se">\&#39;</span><span class="s1">svdr</span><span class="se">\&#39;</span><span class="s1"> or </span><span class="se">\&#39;</span><span class="s1">qr</span><span class="se">\&#39;</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`mode` can only be &quot;svd&quot;, &quot;svdr&quot; or &quot;qr&quot;&#39;</span><span class="p">)</span>
             
             <span class="n">result2</span> <span class="o">=</span> <span class="n">result2</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
             <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">result2</span>
@@ -713,7 +776,11 @@ title="Fullscreen mode"
         
         <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="n">prev_automemory</span></div>
         
-    <span class="k">def</span> <span class="nf">_project_to_d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_project_to_d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                           <span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
+                           <span class="n">d_bond</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                           <span class="n">side</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Projects all nodes into a space of dimension ``d_bond``.&quot;&quot;&quot;</span>
         <span class="n">device</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">device</span>
         
         <span class="k">if</span> <span class="n">side</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
@@ -737,8 +804,9 @@ title="Fullscreen mode"
                                      <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;proj_mat_node_</span><span class="si">{</span><span class="n">side</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
                                      <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
                 
-                <span class="n">proj_mat_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">d_phys_lst</span><span class="p">)</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span><span class="o">.</span><span class="n">int</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span>
-                                                 <span class="n">d_bond</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">d_phys_lst</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                <span class="n">proj_mat_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span>
+                    <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">d_phys_lst</span><span class="p">)</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span><span class="o">.</span><span class="n">int</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span>
+                    <span class="n">d_bond</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">d_phys_lst</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
                     <span class="n">nodes</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">proj_mat_node</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
                     
@@ -756,8 +824,9 @@ title="Fullscreen mode"
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;proj_mat_node_</span><span class="si">{</span><span class="n">side</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
             
-            <span class="n">proj_mat_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">d_phys_lst</span><span class="p">)</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span><span class="o">.</span><span class="n">int</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span>
-                                             <span class="n">d_bond</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">d_phys_lst</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">proj_mat_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span>
+                <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">d_phys_lst</span><span class="p">)</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span><span class="o">.</span><span class="n">int</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span>
+                <span class="n">d_bond</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">d_phys_lst</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
                 <span class="n">nodes</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">proj_mat_node</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
                 
@@ -787,12 +856,17 @@ title="Fullscreen mode"
             
         <span class="k">return</span> <span class="n">result</span>  <span class="c1"># d_bond x left/right</span>
     
-    <span class="k">def</span> <span class="nf">_aux_canonicalize_univocal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">left_nodeL</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_aux_canonicalize_univocal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                                   <span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
+                                   <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                                   <span class="n">left_nodeL</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns canonicalize version of the tensor at site ``idx``.&quot;&quot;&quot;</span>
         <span class="n">L</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>  <span class="c1"># left x input x right</span>
         <span class="n">left_nodeC</span> <span class="o">=</span> <span class="kc">None</span>
         
         <span class="k">if</span> <span class="n">idx</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">L</span> <span class="o">=</span> <span class="n">left_nodeL</span> <span class="o">@</span> <span class="n">L</span>  <span class="c1"># d_bond[-1] x input  x right  /  d_bond[-1] x input</span>
+            <span class="c1"># d_bond[-1] x input  x right  /  d_bond[-1] x input</span>
+            <span class="n">L</span> <span class="o">=</span> <span class="n">left_nodeL</span> <span class="o">@</span> <span class="n">L</span>
         
         <span class="n">L</span> <span class="o">=</span> <span class="n">L</span><span class="o">.</span><span class="n">tensor</span>
         
@@ -813,11 +887,11 @@ title="Fullscreen mode"
                 <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">d_bond</span>
             
             <span class="n">left_nodeC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_project_to_d_bond</span><span class="p">(</span><span class="n">nodes</span><span class="o">=</span><span class="n">nodes</span><span class="p">[:</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span>
-                                                <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
-                                                <span class="n">side</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>  <span class="c1"># d_bond x right</span>
+                                                 <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
+                                                 <span class="n">side</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>  <span class="c1"># d_bond x right</span>
             <span class="n">right_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_project_to_d_bond</span><span class="p">(</span><span class="n">nodes</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:],</span>
-                                                <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
-                                                <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>  <span class="c1"># d_bond x left</span>
+                                                 <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
+                                                 <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>  <span class="c1"># d_bond x left</span>
             
             <span class="n">C</span> <span class="o">=</span> <span class="n">left_nodeC</span> <span class="o">@</span> <span class="n">right_node</span>  <span class="c1"># d_bond x d_bond</span>
             <span class="n">C</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">tensor</span><span class="p">)</span>
@@ -827,13 +901,18 @@ title="Fullscreen mode"
                 <span class="n">L</span> <span class="o">@=</span> <span class="n">C</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">shape_L</span> <span class="o">=</span> <span class="n">L</span><span class="o">.</span><span class="n">shape</span>
-                <span class="n">L</span> <span class="o">=</span> <span class="p">(</span><span class="n">L</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">L</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">@</span> <span class="n">right_node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">t</span><span class="p">())</span>  <span class="c1"># (d_bond[-1] * input) x d_bond</span>
+                <span class="c1"># (d_bond[-1] * input) x d_bond</span>
+                <span class="n">L</span> <span class="o">=</span> <span class="p">(</span><span class="n">L</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">L</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">@</span> <span class="n">right_node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">t</span><span class="p">())</span>
                 <span class="n">L</span> <span class="o">@=</span> <span class="n">C</span>
                 <span class="n">L</span> <span class="o">=</span> <span class="n">L</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">shape_L</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">right_node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
             
         <span class="k">return</span> <span class="n">L</span><span class="p">,</span> <span class="n">left_nodeC</span>
         
-    <span class="k">def</span> <span class="nf">canonicalize_univocal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="MPS.canonicalize_univocal"><a class="viewcode-back" href="../../../models.html#tensorkrowch.MPS.canonicalize_univocal">[docs]</a>    <span class="k">def</span> <span class="nf">canonicalize_univocal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Turns MPS into the univocal canonical form defined `here</span>
+<span class="sd">        &lt;https://arxiv.org/abs/2202.12319&gt;`_.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">!=</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`canonicalize_univocal` can only be used if &#39;</span>
                              <span class="s1">&#39;boundary is `obc`&#39;</span><span class="p">)</span>
@@ -847,14 +926,13 @@ title="Fullscreen mode"
                 <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
         
         <span class="n">new_tensors</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="c1"># new_tensors.append(torch.eye(self._d_phys[0], self._d_bond[0]))</span>
         <span class="n">left_nodeC</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_sites</span><span class="p">):</span>
-            <span class="n">tensor</span><span class="p">,</span> <span class="n">left_nodeC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_aux_canonicalize_univocal</span><span class="p">(</span><span class="n">nodes</span><span class="o">=</span><span class="n">nodes</span><span class="p">,</span>
-                                                                   <span class="n">idx</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
-                                                                   <span class="n">left_nodeL</span><span class="o">=</span><span class="n">left_nodeC</span><span class="p">)</span>
+            <span class="n">tensor</span><span class="p">,</span> <span class="n">left_nodeC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_aux_canonicalize_univocal</span><span class="p">(</span>
+                <span class="n">nodes</span><span class="o">=</span><span class="n">nodes</span><span class="p">,</span>
+                <span class="n">idx</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
+                <span class="n">left_nodeL</span><span class="o">=</span><span class="n">left_nodeC</span><span class="p">)</span>
             <span class="n">new_tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
-        <span class="c1"># new_tensors.append(torch.eye(self._d_bond[-1], self._d_phys[-1]))</span>
         
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">tensor</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="n">new_tensors</span><span class="p">)):</span>
             <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_sites</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
@@ -869,26 +947,32 @@ title="Fullscreen mode"
         <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">data_node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
             <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">data_node</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
             
-        <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="n">prev_automemory</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="n">prev_automemory</span></div></div>
 
 
 <div class="viewcode-block" id="UMPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UMPS">[docs]</a><span class="k">class</span> <span class="nc">UMPS</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Create an MPS module.</span>
+<span class="sd">    Class for Uniform (translationally invariant) Matrix Product States where</span>
+<span class="sd">    all nodes are input nodes. It is the uniform version of :class:`MPS`, that</span>
+<span class="sd">    is, all nodes share the same tensor. Thus this class cannot have different</span>
+<span class="sd">    physical or bond dimensions for each site, and boundary conditions are</span>
+<span class="sd">    always periodic.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    n_sites: number of sites, including the input and output_node sites</span>
-<span class="sd">    d_phys: physic dimension</span>
-<span class="sd">    d_bond: bond dimension. If given as a sequence, the i-th bond</span>
-<span class="sd">        dimension is always the dimension of the right edge of th i-th node</span>
-<span class="sd">    param_bond: boolean indicating whether bond edges should be parametric</span>
-<span class="sd">    num_batches: number of batch edges of input data</span>
-<span class="sd">    inline_input: boolean indicating whether input should be contracted</span>
-<span class="sd">        inline or in a single stacked contraction</span>
-<span class="sd">    inline_mats: boolean indicating whether sequence of matrices</span>
-<span class="sd">        should be contracted inline or as a sequence of pairwise stacked</span>
-<span class="sd">        contrations</span>
+<span class="sd">    n_sites : int</span>
+<span class="sd">        Number of sites.</span>
+<span class="sd">    d_phys : int</span>
+<span class="sd">        Physical dimension.</span>
+<span class="sd">    d_bond : int</span>
+<span class="sd">        Bond dimension.</span>
+<span class="sd">    param_bond : bool</span>
+<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
+<span class="sd">    num_batches : int</span>
+<span class="sd">        Number of batch edges of input data nodes. Usually ``num_batches = 1``</span>
+<span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
+<span class="sd">        be ``num_batches = 2`` (one edge for data batched, other edge for image</span>
+<span class="sd">        patches in convolutional layers).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -896,9 +980,7 @@ title="Fullscreen mode"
                  <span class="n">d_phys</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                  <span class="n">d_bond</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                  <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                 <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-                 <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                 <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+                 <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;mps&#39;</span><span class="p">)</span>
 
@@ -928,39 +1010,32 @@ title="Fullscreen mode"
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_batches</span> <span class="o">=</span> <span class="n">num_batches</span>
-        
-        <span class="c1"># Contraction algorithm</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">inline_input</span> <span class="o">=</span> <span class="n">inline_input</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">inline_mats</span> <span class="o">=</span> <span class="n">inline_mats</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">l_position</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_l_position</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_sites</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of nodes.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_sites</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">boundary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">d_phys</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">d_phys</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns physical dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_phys</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span>
 
 <div class="viewcode-block" id="UMPS.param_bond"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UMPS.param_bond">[docs]</a>    <span class="k">def</span> <span class="nf">param_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_param</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return param_bond attribute or change it if set_param is provided.</span>
+<span class="sd">        Returns ``param_bond`` attribute or changes it if ``set_param`` is</span>
+<span class="sd">        provided.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        set_param: boolean indicating whether edges have to be parameterized</span>
-<span class="sd">                   (True) or de-parameterized (False)</span>
+<span class="sd">        set_param : bool, optional</span>
+<span class="sd">            Boolean indicating whether edges have to be parameterized (``True``)</span>
+<span class="sd">            or de-parameterized (``False``).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">set_param</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span>
@@ -973,8 +1048,10 @@ title="Fullscreen mode"
             <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span> <span class="o">=</span> <span class="n">set_param</span></div>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">leaf_nodes</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create MPS nodes if the MPS already has nodes&#39;</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the MPS.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create MPS nodes if the MPS already has &#39;</span>
+                             <span class="s1">&#39;nodes&#39;</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span> <span class="o">=</span> <span class="kc">None</span>
@@ -1006,7 +1083,8 @@ title="Fullscreen mode"
         <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">uniform_memory</span><span class="o">.</span><span class="n">_edges</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_remove_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="UMPS.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UMPS.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes output and uniform nodes.&quot;&quot;&quot;</span>
         <span class="c1"># Virtual node</span>
         <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
         <span class="n">random_eye</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="n">std</span>
@@ -1021,9 +1099,13 @@ title="Fullscreen mode"
             <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span>
             <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;full&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;stack_idx&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></div>
 
 <div class="viewcode-block" id="UMPS.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UMPS.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates data nodes and connects each of them to the physical edge of</span>
+<span class="sd">        an input node.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">input_edges</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">input_edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
@@ -1038,8 +1120,11 @@ title="Fullscreen mode"
             <span class="bp">self</span><span class="o">.</span><span class="n">mats_env_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">node</span><span class="p">:</span> <span class="n">node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">),</span>
                                           <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">))</span></div>
 
-    <span class="k">def</span> <span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline_input</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]],</span>
-                                                             <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]]:</span>
+    <span class="k">def</span> <span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                           <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
+                               <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]],</span>
+                               <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts input data nodes with MPS nodes.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">inline_input</span><span class="p">:</span>
             <span class="n">mats_result</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">:</span>
@@ -1047,38 +1132,28 @@ title="Fullscreen mode"
             <span class="k">return</span> <span class="n">mats_result</span>
 
         <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># start = time.time()</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">:</span>
-                <span class="c1"># print(&#39;\t\tFind data:&#39;, time.time() - start)</span>
-                <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-                <span class="n">stack</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">)</span>
-                <span class="n">stack_data</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mats_env_data</span><span class="p">)</span>
+                <span class="n">stack</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">)</span>
+                <span class="n">stack_data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mats_env_data</span><span class="p">)</span>
+                
                 <span class="n">stack</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack_data</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+                
                 <span class="n">result</span> <span class="o">=</span> <span class="n">stack</span> <span class="o">@</span> <span class="n">stack_data</span>
-                <span class="n">mats_result</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t</span><span class="s1">Result:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
+                <span class="n">mats_result</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
                 <span class="k">return</span> <span class="n">mats_result</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">return</span> <span class="p">[]</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">_inline_contraction</span><span class="p">(</span><span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Contract a sequence of MPS tensors that have</span>
-<span class="sd">        parameterized bond dimensions.</span>
-<span class="sd">        </span>
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        nodes: list of nodes (cannot be empty)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts sequence of MPS nodes (matrices) inline.&quot;&quot;&quot;</span>
         <span class="n">result_node</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
-            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
             <span class="n">result_node</span> <span class="o">@=</span> <span class="n">node</span>
-            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t\t</span><span class="s1">Matrix contraction:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">result_node</span>
         
     <span class="k">def</span> <span class="nf">_contract_envs_inline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts the left and right environments inline.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mats_env</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">contract_lst</span> <span class="o">=</span> <span class="n">mats_env</span>
         <span class="k">else</span><span class="p">:</span>
@@ -1088,47 +1163,30 @@ title="Fullscreen mode"
 
     <span class="k">def</span> <span class="nf">_aux_pairwise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                                                         <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts a sequence of MPS nodes (matrices) pairwise.&quot;&quot;&quot;</span>
         <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
         <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">nodes</span>
         <span class="k">if</span> <span class="n">length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">start_total</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-
             <span class="n">half_length</span> <span class="o">=</span> <span class="n">length</span> <span class="o">//</span> <span class="mi">2</span>
             <span class="n">nice_length</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">half_length</span>
 
-            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
             <span class="n">even_nodes</span> <span class="o">=</span> <span class="n">aux_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">nice_length</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span>
             <span class="n">odd_nodes</span> <span class="o">=</span> <span class="n">aux_nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">nice_length</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span>
             <span class="n">leftover</span> <span class="o">=</span> <span class="n">aux_nodes</span><span class="p">[</span><span class="n">nice_length</span><span class="p">:]</span>
-            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t\t</span><span class="s1">Select nodes:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
 
-            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-            <span class="n">stack1</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">even_nodes</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t\t</span><span class="s1">Stack even nodes:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
-            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-            <span class="n">stack2</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">odd_nodes</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t\t</span><span class="s1">Stack odd nodes:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
-            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="n">stack1</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">even_nodes</span><span class="p">)</span>
+            <span class="n">stack2</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">odd_nodes</span><span class="p">)</span>
+            
             <span class="n">stack1</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack2</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t\t</span><span class="s1">Connect stacks:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
-            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            
             <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">stack1</span> <span class="o">@</span> <span class="n">stack2</span>
-            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t\t</span><span class="s1">Contract stacks:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
-            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-            <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">aux_nodes</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t\t</span><span class="s1">Unbind stacks:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
-
-            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t\t</span><span class="s1">Pairwise contraction:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_total</span><span class="p">)</span>
+            <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">aux_nodes</span><span class="p">)</span>
 
             <span class="k">return</span> <span class="n">aux_nodes</span><span class="p">,</span> <span class="n">leftover</span>
         <span class="k">return</span> <span class="n">nodes</span><span class="p">,</span> <span class="p">[]</span>
 
     <span class="k">def</span> <span class="nf">_pairwise_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mats_nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Contract a sequence of MPS tensors that do not have</span>
-<span class="sd">        parameterized bond dimensions, making the operation</span>
-<span class="sd">        more efficient (from jemisjoki/TorchMPS)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts the left and right environments pairwise.&quot;&quot;&quot;</span>
         <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mats_nodes</span><span class="p">)</span>
         <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">mats_nodes</span>
         <span class="k">if</span> <span class="n">length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
@@ -1144,23 +1202,90 @@ title="Fullscreen mode"
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contract_envs_inline</span><span class="p">(</span><span class="n">aux_nodes</span><span class="p">)</span>
 
-<div class="viewcode-block" id="UMPS.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UMPS.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">inline_mats</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-        <span class="n">mats_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span><span class="n">inline_input</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">Input:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
+<div class="viewcode-block" id="UMPS.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UMPS.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contracts the whole MPS.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        inline_input : bool</span>
+<span class="sd">            Boolean indicating whether input data nodes should be contracted</span>
+<span class="sd">            inline (one contraction at a time) or in a single stacked</span>
+<span class="sd">            contraction.</span>
+<span class="sd">        inline_mats : bool</span>
+<span class="sd">            Boolean indicating whether the sequence of matrices (resultant</span>
+<span class="sd">            after contracting the input data nodes) should be contracted inline</span>
+<span class="sd">            or as a sequence of pairwise stacked contrations.</span>
 
-        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Node</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mats_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span><span class="n">inline_input</span><span class="p">)</span>
+        
         <span class="k">if</span> <span class="n">inline_mats</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contract_envs_inline</span><span class="p">(</span><span class="n">mats_env</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pairwise_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="p">)</span>
-                    
-        <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">Matrices contraction:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
         
         <span class="k">return</span> <span class="n">result</span></div></div>
 
 
 <div class="viewcode-block" id="ConvMPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvMPS">[docs]</a><span class="k">class</span> <span class="nc">ConvMPS</span><span class="p">(</span><span class="n">MPS</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class for Matrix Product States, where all nodes are input nodes, and where</span>
+<span class="sd">    the input data is a batch of images. It is the convolutional version of</span>
+<span class="sd">    :class:`MPS`.</span>
+<span class="sd">    </span>
+<span class="sd">    Input data as well as initialization parameters are described in `nn.Conv2d</span>
+<span class="sd">    &lt;https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html&gt;`_.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    in_channels : int</span>
+<span class="sd">        Input channels. Same as ``d_phys`` in :class:`MPS`.</span>
+<span class="sd">    d_bond : int, list[int] or tuple[int]</span>
+<span class="sd">        Bond dimension(s). If given as a sequence, its length should be equal</span>
+<span class="sd">        to :math:`kernel\_size_0 \cdot kernel\_size_1` (if ``boundary = &quot;pbc&quot;``)</span>
+<span class="sd">        or :math:`kernel\_size_0 \cdot kernel\_size_1 - 1` (if</span>
+<span class="sd">        ``boundary = &quot;obc&quot;``). The i-th bond dimension is always the dimension</span>
+<span class="sd">        of the right edge of the i-th node.</span>
+<span class="sd">    kernel_size : int, list[int] or tuple[int]</span>
+<span class="sd">        Kernel size used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        If given as an ``int``, the actual kernel size will be</span>
+<span class="sd">        ``(kernel_size, kernel_size)``.</span>
+<span class="sd">    stride : int</span>
+<span class="sd">        Stride used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">    padding : int</span>
+<span class="sd">        Padding used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        If given as an ``int``, the actual kernel size will be</span>
+<span class="sd">        ``(kernel_size, kernel_size)``.</span>
+<span class="sd">    dilation : int</span>
+<span class="sd">        Dilation used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        If given as an ``int``, the actual kernel size will be</span>
+<span class="sd">        ``(kernel_size, kernel_size)``.</span>
+<span class="sd">    boundary : {&#39;obc&#39;, &#39;pbc&#39;}</span>
+<span class="sd">        String indicating whether periodic or open boundary conditions should</span>
+<span class="sd">        be used.</span>
+<span class="sd">    param_bond : bool</span>
+<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
+<span class="sd">        </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; conv_mps = tk.ConvMPS(in_channels=2,</span>
+<span class="sd">    ...                       d_bond=5,</span>
+<span class="sd">    ...                       kernel_size=2)</span>
+<span class="sd">    &gt;&gt;&gt; data = torch.ones(20, 2, 2, 2) # batch_size x in_channels x height x width</span>
+<span class="sd">    &gt;&gt;&gt; result = conv_mps(data)</span>
+<span class="sd">    &gt;&gt;&gt; print(result.shape)</span>
+<span class="sd">    torch.Size([20, 1, 1])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">in_channels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -1170,9 +1295,7 @@ title="Fullscreen mode"
                  <span class="n">padding</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
                  <span class="n">dilation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                  <span class="n">boundary</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span><span class="p">,</span>
-                 <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                 <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                 <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+                 <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
         
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">kernel_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">)</span>
@@ -1205,9 +1328,7 @@ title="Fullscreen mode"
                          <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
                          <span class="n">boundary</span><span class="o">=</span><span class="n">boundary</span><span class="p">,</span>
                          <span class="n">param_bond</span><span class="o">=</span><span class="n">param_bond</span><span class="p">,</span>
-                         <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-                         <span class="n">inline_input</span><span class="o">=</span><span class="n">inline_input</span><span class="p">,</span>
-                         <span class="n">inline_mats</span><span class="o">=</span><span class="n">inline_mats</span><span class="p">)</span>
+                         <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">unfold</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Unfold</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span>
                                 <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span>
@@ -1216,31 +1337,65 @@ title="Fullscreen mode"
         
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``in_channels``. Same as ``d_phys`` in :class:`MPS`.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">kernel_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns ``kernel_size``. Number of nodes is given by</span>
+<span class="sd">        :math:`kernel\_size_0 \cdot kernel\_size_1`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">stride</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns stride used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stride</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">padding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns padding used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_padding</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dilation</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns dilation used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>
     
 <div class="viewcode-block" id="ConvMPS.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvMPS.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;flat&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Overrides ``nn.Module``&#39;s forward to compute a convolution on the input</span>
+<span class="sd">        image.</span>
+<span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        image: input image with shape batch_size x in_channels x height x width</span>
-<span class="sd">        mode: can be either &#39;flat&#39; or &#39;snake&#39;, indicates the ordering of</span>
-<span class="sd">            the pixels in the MPS</span>
+<span class="sd">        image : torch.Tensor</span>
+<span class="sd">            Input batch of images with shape</span>
+<span class="sd">            </span>
+<span class="sd">            .. math::</span>
+<span class="sd">            </span>
+<span class="sd">                batch\_size \times in\_channels \times height \times width</span>
+<span class="sd">        mode : {&quot;flat&quot;, &quot;snake&quot;}</span>
+<span class="sd">            Indicates the order in which MPS should take the pixels in the image.</span>
+<span class="sd">            When ``&quot;flat&quot;``, the image is flattened putting one row of the image</span>
+<span class="sd">            after the other. When ``&quot;snake&quot;``, its row is put in the opposite</span>
+<span class="sd">            orientation as the previous row (like a snake running through the</span>
+<span class="sd">            image).</span>
+<span class="sd">        args :</span>
+<span class="sd">            Arguments that might be used in :meth:`~MPS.contract`.</span>
+<span class="sd">        kwargs :</span>
+<span class="sd">            Keyword arguments that might be used in :meth:`~MPS.contract`,</span>
+<span class="sd">            like ``inline_input`` or ``inline_mats``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Input image shape: batch_size x in_channels x height x width</span>
         
@@ -1260,14 +1415,15 @@ title="Fullscreen mode"
                     <span class="n">aux</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[(</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
                                   <span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">aux</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[(</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
-                                  <span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="n">aux</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[</span>
+                        <span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                        <span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
                 <span class="n">new_patches</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">new_patches</span><span class="p">,</span> <span class="n">aux</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
                 
             <span class="n">patches</span> <span class="o">=</span> <span class="n">new_patches</span>
             
         <span class="k">elif</span> <span class="n">mode</span> <span class="o">!=</span> <span class="s1">&#39;flat&#39;</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`mode` can only be </span><span class="se">\&#39;</span><span class="s1">flat</span><span class="se">\&#39;</span><span class="s1"> or </span><span class="se">\&#39;</span><span class="s1">snake</span><span class="se">\&#39;</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`mode` can only be &quot;flat&quot; or &quot;snake&quot;&#39;</span><span class="p">)</span>
         
         <span class="n">result</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">patches</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="c1"># batch_size x nb_windows</span>
@@ -1287,6 +1443,42 @@ title="Fullscreen mode"
     
     
 <div class="viewcode-block" id="ConvUMPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvUMPS">[docs]</a><span class="k">class</span> <span class="nc">ConvUMPS</span><span class="p">(</span><span class="n">UMPS</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class for Uniform Matrix Product States, where all nodes are input nodes,</span>
+<span class="sd">    and where the input data is a batch of images. It is the convolutional</span>
+<span class="sd">    version of :class:`UMPS`. This class cannot have different bond dimensions</span>
+<span class="sd">    for each site and boundary conditions are always periodic.</span>
+<span class="sd">    </span>
+<span class="sd">    Input data as well as initialization parameters are described in `nn.Conv2d</span>
+<span class="sd">    &lt;https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html&gt;`_.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    in_channels : int</span>
+<span class="sd">        Input channels. Same as ``d_phys`` in :class:`UMPS`.</span>
+<span class="sd">    d_bond : int</span>
+<span class="sd">        Bond dimension.</span>
+<span class="sd">    kernel_size : int, list[int] or tuple[int]</span>
+<span class="sd">        Kernel size used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        If given as an ``int``, the actual kernel size will be</span>
+<span class="sd">        ``(kernel_size, kernel_size)``.</span>
+<span class="sd">    stride : int</span>
+<span class="sd">        Stride used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">    padding : int</span>
+<span class="sd">        Padding used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        If given as an ``int``, the actual kernel size will be</span>
+<span class="sd">        ``(kernel_size, kernel_size)``.</span>
+<span class="sd">    dilation : int</span>
+<span class="sd">        Dilation used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        If given as an ``int``, the actual kernel size will be</span>
+<span class="sd">        ``(kernel_size, kernel_size)``.</span>
+<span class="sd">    param_bond : bool</span>
+<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                     <span class="n">in_channels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -1295,9 +1487,7 @@ title="Fullscreen mode"
                     <span class="n">stride</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                     <span class="n">padding</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
                     <span class="n">dilation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-                    <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                    <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                    <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+                    <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
         
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">kernel_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">)</span>
@@ -1329,9 +1519,7 @@ title="Fullscreen mode"
                          <span class="n">d_phys</span><span class="o">=</span><span class="n">in_channels</span><span class="p">,</span>
                          <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
                          <span class="n">param_bond</span><span class="o">=</span><span class="n">param_bond</span><span class="p">,</span>
-                         <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-                         <span class="n">inline_input</span><span class="o">=</span><span class="n">inline_input</span><span class="p">,</span>
-                         <span class="n">inline_mats</span><span class="o">=</span><span class="n">inline_mats</span><span class="p">)</span>
+                         <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">unfold</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Unfold</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span>
                                 <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span>
@@ -1340,31 +1528,65 @@ title="Fullscreen mode"
         
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``in_channels``. Same as ``d_phys`` in :class:`UMPS`.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">kernel_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns ``kernel_size``. Number of nodes is given by</span>
+<span class="sd">        :math:`kernel\_size_0 \cdot kernel\_size_1`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">stride</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns stride used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stride</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">padding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns padding used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_padding</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dilation</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns dilation used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>
     
 <div class="viewcode-block" id="ConvUMPS.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvUMPS.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;flat&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Overrides ``nn.Module``&#39;s forward to compute a convolution on the input</span>
+<span class="sd">        image.</span>
+<span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        image: input image with shape batch_size x in_channels x height x width</span>
-<span class="sd">        mode: can be either &#39;flat&#39; or &#39;snake&#39;, indicates the ordering of</span>
-<span class="sd">            the pixels in the MPS</span>
+<span class="sd">        image : torch.Tensor</span>
+<span class="sd">            Input batch of images with shape</span>
+<span class="sd">            </span>
+<span class="sd">            .. math::</span>
+<span class="sd">            </span>
+<span class="sd">                batch\_size \times in\_channels \times height \times width</span>
+<span class="sd">        mode : {&quot;flat&quot;, &quot;snake&quot;}</span>
+<span class="sd">            Indicates the order in which MPS should take the pixels in the image.</span>
+<span class="sd">            When ``&quot;flat&quot;``, the image is flattened putting one row of the image</span>
+<span class="sd">            after the other. When ``&quot;snake&quot;``, its row is put in the opposite</span>
+<span class="sd">            orientation as the previous row (like a snake running through the</span>
+<span class="sd">            image).</span>
+<span class="sd">        args :</span>
+<span class="sd">            Arguments that might be used in :meth:`~UMPS.contract`.</span>
+<span class="sd">        kwargs :</span>
+<span class="sd">            Keyword arguments that might be used in :meth:`~UMPS.contract`,</span>
+<span class="sd">            like ``inline_input`` or ``inline_mats``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Input image shape: batch_size x in_channels x height x width</span>
         
@@ -1384,14 +1606,15 @@ title="Fullscreen mode"
                     <span class="n">aux</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[(</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
                                   <span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">aux</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[(</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
-                                  <span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="n">aux</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[</span>
+                        <span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                        <span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
                 <span class="n">new_patches</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">new_patches</span><span class="p">,</span> <span class="n">aux</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
                 
             <span class="n">patches</span> <span class="o">=</span> <span class="n">new_patches</span>
             
         <span class="k">elif</span> <span class="n">mode</span> <span class="o">!=</span> <span class="s1">&#39;flat&#39;</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`mode` can only be </span><span class="se">\&#39;</span><span class="s1">flat</span><span class="se">\&#39;</span><span class="s1"> or </span><span class="se">\&#39;</span><span class="s1">snake</span><span class="se">\&#39;</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`mode` can only be &quot;flat&quot; or &quot;snake&quot;&#39;</span><span class="p">)</span>
         
         <span class="n">result</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">patches</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="c1"># batch_size x nb_windows</span>

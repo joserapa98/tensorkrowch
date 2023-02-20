@@ -215,6 +215,19 @@ title="Fullscreen mode"
   </span>
 
 </button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
 
     </div>
 </div>
@@ -254,7 +267,7 @@ title="Fullscreen mode"
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
 
-<span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">Node</span><span class="p">,</span> <span class="n">ParamNode</span>
+<span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">Node</span><span class="p">,</span> <span class="n">ParamNode</span>
 <span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">TensorNetwork</span>
 <span class="kn">import</span> <span class="nn">tensorkrowch.operations</span> <span class="k">as</span> <span class="nn">op</span>
 
@@ -289,8 +302,9 @@ title="Fullscreen mode"
 <span class="sd">        for input nodes.</span>
 <span class="sd">    d_bond : int, list[int] or tuple[int]</span>
 <span class="sd">        Bond dimension(s). If given as a sequence, its length should be equal</span>
-<span class="sd">        to ``n_sites``. The i-th bond dimension is always the dimension of the</span>
-<span class="sd">        right edge of the i-th node (including output node).</span>
+<span class="sd">        to ``n_sites`` (if ``boundary = &quot;pbc&quot;``) or ``n_sites - 1`` (if</span>
+<span class="sd">        ``boundary = &quot;obc&quot;``). The i-th bond dimension is always the dimension</span>
+<span class="sd">        of the right edge of the i-th node (including output node).</span>
 <span class="sd">    l_position : int, optional</span>
 <span class="sd">        Position of the output node (label). Should be between 0 and</span>
 <span class="sd">        ``n_sites - 1``. If ``None``, the output node will be located at the</span>
@@ -305,13 +319,6 @@ title="Fullscreen mode"
 <span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
 <span class="sd">        be ``num_batches = 2`` (one edge for data batched, other edge for image</span>
 <span class="sd">        patches in convolutional layers).</span>
-<span class="sd">    inline_input : bool</span>
-<span class="sd">        Boolean indicating whether input data nodes should be contracted inline</span>
-<span class="sd">        (one contraction at a time) or in a single stacked contraction.</span>
-<span class="sd">    inline_mats : bool</span>
-<span class="sd">        Boolean indicating whether the sequence of matrices (resultant after</span>
-<span class="sd">        contracting the input data nodes) should be contracted inline or as a</span>
-<span class="sd">        sequence of pairwise stacked contrations.</span>
 <span class="sd">        </span>
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
@@ -347,9 +354,7 @@ title="Fullscreen mode"
                  <span class="n">l_position</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">boundary</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span><span class="p">,</span>
                  <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                 <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-                 <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                 <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+                 <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;mps&#39;</span><span class="p">)</span>
 
@@ -425,10 +430,6 @@ title="Fullscreen mode"
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_batches</span> <span class="o">=</span> <span class="n">num_batches</span>
-        
-        <span class="c1"># Contraction algorithm</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">inline_input</span> <span class="o">=</span> <span class="n">inline_input</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">inline_mats</span> <span class="o">=</span> <span class="n">inline_mats</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">l_position</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
@@ -456,7 +457,7 @@ title="Fullscreen mode"
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span>
     
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">n_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">n_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns number of labels in the output node. Same as ``phys_dim``</span>
 <span class="sd">        for input nodes.</span>
@@ -722,8 +723,9 @@ title="Fullscreen mode"
                                         <span class="bp">self</span><span class="o">.</span><span class="n">left_env</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_env</span><span class="p">))</span></div>
 
     <span class="k">def</span> <span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                           <span class="n">inline_input</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]],</span>
-                                                        <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]]:</span>
+                           <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
+                               <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]],</span>
+                               <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts input data nodes with MPS nodes.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">inline_input</span><span class="p">:</span>
             <span class="n">left_result</span> <span class="o">=</span> <span class="p">[]</span>
@@ -838,8 +840,27 @@ title="Fullscreen mode"
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contract_envs_inline</span><span class="p">(</span><span class="n">left_aux_nodes</span><span class="p">,</span> <span class="n">right_aux_nodes</span><span class="p">)</span>
 
-<div class="viewcode-block" id="MPSLayer.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.MPSLayer.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">inline_mats</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts the whole MPS.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="MPSLayer.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.MPSLayer.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contracts the whole MPS.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        inline_input : bool</span>
+<span class="sd">            Boolean indicating whether input data nodes should be contracted</span>
+<span class="sd">            inline (one contraction at a time) or in a single stacked</span>
+<span class="sd">            contraction.</span>
+<span class="sd">        inline_mats : bool</span>
+<span class="sd">            Boolean indicating whether the sequence of matrices (resultant</span>
+<span class="sd">            after contracting the input data nodes) should be contracted inline</span>
+<span class="sd">            or as a sequence of pairwise stacked contrations.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Node</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">left_env</span><span class="p">,</span> <span class="n">right_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span><span class="n">inline_input</span><span class="p">)</span>
         
         <span class="k">if</span> <span class="n">inline_mats</span><span class="p">:</span>
@@ -984,14 +1005,17 @@ title="Fullscreen mode"
         
         <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="n">prev_automemory</span></div>
     
-    <span class="k">def</span> <span class="nf">_project_to_d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_project_to_d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                           <span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
+                           <span class="n">d_bond</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                           <span class="n">side</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Projects all nodes into a space of dimension ``d_bond``.&quot;&quot;&quot;</span>
         <span class="n">device</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">device</span>
         
         <span class="k">if</span> <span class="n">side</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
             <span class="n">nodes</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
         <span class="k">elif</span> <span class="n">side</span> <span class="o">!=</span> <span class="s1">&#39;right&#39;</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`side` can only be </span><span class="se">\&#39;</span><span class="s1">left</span><span class="se">\&#39;</span><span class="s1"> or </span><span class="se">\&#39;</span><span class="s1">right</span><span class="se">\&#39;</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`side` can only be &quot;left&quot; or &quot;right&quot;&#39;</span><span class="p">)</span>
         
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
@@ -1061,7 +1085,10 @@ title="Fullscreen mode"
             
         <span class="k">return</span> <span class="n">result</span>  <span class="c1"># d_bond x left/right</span>
     
-    <span class="k">def</span> <span class="nf">_aux_canonicalize_univocal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">left_nodeL</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_aux_canonicalize_univocal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                                   <span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
+                                   <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                                   <span class="n">left_nodeL</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns canonicalize version of the tensor at site ``idx``.&quot;&quot;&quot;</span>
         <span class="n">L</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>  <span class="c1"># left x input x right</span>
         <span class="n">left_nodeC</span> <span class="o">=</span> <span class="kc">None</span>
@@ -1192,13 +1219,6 @@ title="Fullscreen mode"
 <span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
 <span class="sd">        be ``num_batches = 2`` (one edge for data batched, other edge for image</span>
 <span class="sd">        patches in convolutional layers).</span>
-<span class="sd">    inline_input : bool</span>
-<span class="sd">        Boolean indicating whether input data nodes should be contracted inline</span>
-<span class="sd">        (one contraction at a time) or in a single stacked contraction.</span>
-<span class="sd">    inline_mats : bool</span>
-<span class="sd">        Boolean indicating whether the sequence of matrices (resultant after</span>
-<span class="sd">        contracting the input data nodes) should be contracted inline or as a</span>
-<span class="sd">        sequence of pairwise stacked contrations.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -1208,9 +1228,7 @@ title="Fullscreen mode"
                  <span class="n">d_bond</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                  <span class="n">l_position</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                 <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-                 <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                 <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+                 <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;mps&#39;</span><span class="p">)</span>
 
@@ -1251,10 +1269,6 @@ title="Fullscreen mode"
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_batches</span> <span class="o">=</span> <span class="n">num_batches</span>
-        
-        <span class="c1"># Contraction algorithm</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">inline_input</span> <span class="o">=</span> <span class="n">inline_input</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">inline_mats</span> <span class="o">=</span> <span class="n">inline_mats</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">l_position</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
@@ -1267,17 +1281,17 @@ title="Fullscreen mode"
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_sites</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">d_phys</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">d_phys</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns physical dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_phys</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span>
     
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">n_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">n_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns number of labels in the output node. Same as ``phys_dim``</span>
 <span class="sd">        for input nodes.</span>
@@ -1442,8 +1456,9 @@ title="Fullscreen mode"
                                         <span class="bp">self</span><span class="o">.</span><span class="n">left_env</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_env</span><span class="p">))</span></div>
 
     <span class="k">def</span> <span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                           <span class="n">inline_input</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]],</span>
-                                                        <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]]:</span>
+                           <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
+                               <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]],</span>
+                               <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts input data nodes with MPS nodes.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">inline_input</span><span class="p">:</span>
             <span class="n">left_result</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1550,8 +1565,27 @@ title="Fullscreen mode"
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contract_envs_inline</span><span class="p">(</span><span class="n">left_aux_nodes</span><span class="p">,</span> <span class="n">right_aux_nodes</span><span class="p">)</span>
 
-<div class="viewcode-block" id="UMPSLayer.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UMPSLayer.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline_input</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">inline_mats</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts the whole MPS.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="UMPSLayer.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UMPSLayer.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contracts the whole MPS.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        inline_input : bool</span>
+<span class="sd">            Boolean indicating whether input data nodes should be contracted</span>
+<span class="sd">            inline (one contraction at a time) or in a single stacked</span>
+<span class="sd">            contraction.</span>
+<span class="sd">        inline_mats : bool</span>
+<span class="sd">            Boolean indicating whether the sequence of matrices (resultant</span>
+<span class="sd">            after contracting the input data nodes) should be contracted inline</span>
+<span class="sd">            or as a sequence of pairwise stacked contrations.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Node</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">left_env</span><span class="p">,</span> <span class="n">right_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span><span class="n">inline_input</span><span class="p">)</span>
         
         <span class="k">if</span> <span class="n">inline_mats</span><span class="p">:</span>
@@ -1590,9 +1624,10 @@ title="Fullscreen mode"
 <span class="sd">        Output channels. Same as ``n_labels`` in :class:`MPSLayer`.</span>
 <span class="sd">    d_bond : int, list[int] or tuple[int]</span>
 <span class="sd">        Bond dimension(s). If given as a sequence, its length should be equal</span>
-<span class="sd">        to :math:`kernel\_size_0 \cdot kernel\_size_1 + 1`. The i-th bond dimension</span>
-<span class="sd">        is always the dimension of the right edge of the i-th node (including</span>
-<span class="sd">        output node).</span>
+<span class="sd">        to :math:`kernel\_size_0 \cdot kernel\_size_1 + 1`</span>
+<span class="sd">        (if ``boundary = &quot;pbc&quot;``) or :math:`kernel\_size_0 \cdot kernel\_size_1`</span>
+<span class="sd">        (if ``boundary = &quot;obc&quot;``). The i-th bond dimension is always the dimension</span>
+<span class="sd">        of the right edge of the i-th node (including output node).</span>
 <span class="sd">    kernel_size : int, list[int] or tuple[int]</span>
 <span class="sd">        Kernel size used in `nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
@@ -1620,18 +1655,6 @@ title="Fullscreen mode"
 <span class="sd">        be used.</span>
 <span class="sd">    param_bond : bool</span>
 <span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
-<span class="sd">    num_batches : int</span>
-<span class="sd">        Number of batch edges of input data nodes. Usually ``num_batches = 1``</span>
-<span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
-<span class="sd">        be ``num_batches = 2`` (one edge for data batched, other edge for image</span>
-<span class="sd">        patches in convolutional layers).</span>
-<span class="sd">    inline_input : bool</span>
-<span class="sd">        Boolean indicating whether input data nodes should be contracted inline</span>
-<span class="sd">        (one contraction at a time) or in a single stacked contraction.</span>
-<span class="sd">    inline_mats : bool</span>
-<span class="sd">        Boolean indicating whether the sequence of matrices (resultant after</span>
-<span class="sd">        contracting the input data nodes) should be contracted inline or as a</span>
-<span class="sd">        sequence of pairwise stacked contrations.</span>
 <span class="sd">        </span>
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
@@ -1655,9 +1678,7 @@ title="Fullscreen mode"
                  <span class="n">dilation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                  <span class="n">l_position</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">boundary</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span><span class="p">,</span>
-                 <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                 <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                 <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+                 <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
         
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">kernel_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">)</span>
@@ -1692,9 +1713,7 @@ title="Fullscreen mode"
                          <span class="n">l_position</span><span class="o">=</span><span class="n">l_position</span><span class="p">,</span>
                          <span class="n">boundary</span><span class="o">=</span><span class="n">boundary</span><span class="p">,</span>
                          <span class="n">param_bond</span><span class="o">=</span><span class="n">param_bond</span><span class="p">,</span>
-                         <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-                         <span class="n">inline_input</span><span class="o">=</span><span class="n">inline_input</span><span class="p">,</span>
-                         <span class="n">inline_mats</span><span class="o">=</span><span class="n">inline_mats</span><span class="p">)</span>
+                         <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">unfold</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Unfold</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span>
                                 <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span>
@@ -1757,6 +1776,11 @@ title="Fullscreen mode"
 <span class="sd">            after the other. When ``&quot;snake&quot;``, its row is put in the opposite</span>
 <span class="sd">            orientation as the previous row (like a snake running through the</span>
 <span class="sd">            image).</span>
+<span class="sd">        args :</span>
+<span class="sd">            Arguments that might be used in :meth:`~MPSLayer.contract`.</span>
+<span class="sd">        kwargs :</span>
+<span class="sd">            Keyword arguments that might be used in :meth:`~MPSLayer.contract`,</span>
+<span class="sd">            like ``inline_input`` or ``inline_mats``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Input image shape: batch_size x in_channels x height x width</span>
         
@@ -1848,18 +1872,6 @@ title="Fullscreen mode"
 <span class="sd">        will be located at the middle of the MPS.</span>
 <span class="sd">    param_bond : bool</span>
 <span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
-<span class="sd">    num_batches : int</span>
-<span class="sd">        Number of batch edges of input data nodes. Usually ``num_batches = 1``</span>
-<span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
-<span class="sd">        be ``num_batches = 2`` (one edge for data batched, other edge for image</span>
-<span class="sd">        patches in convolutional layers).</span>
-<span class="sd">    inline_input : bool</span>
-<span class="sd">        Boolean indicating whether input data nodes should be contracted inline</span>
-<span class="sd">        (one contraction at a time) or in a single stacked contraction.</span>
-<span class="sd">    inline_mats : bool</span>
-<span class="sd">        Boolean indicating whether the sequence of matrices (resultant after</span>
-<span class="sd">        contracting the input data nodes) should be contracted inline or as a</span>
-<span class="sd">        sequence of pairwise stacked contrations.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -1871,9 +1883,7 @@ title="Fullscreen mode"
                  <span class="n">padding</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
                  <span class="n">dilation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                  <span class="n">l_position</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                 <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                 <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+                 <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
         
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">kernel_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">)</span>
@@ -1907,9 +1917,7 @@ title="Fullscreen mode"
                          <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
                          <span class="n">l_position</span><span class="o">=</span><span class="n">l_position</span><span class="p">,</span>
                          <span class="n">param_bond</span><span class="o">=</span><span class="n">param_bond</span><span class="p">,</span>
-                         <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-                         <span class="n">inline_input</span><span class="o">=</span><span class="n">inline_input</span><span class="p">,</span>
-                         <span class="n">inline_mats</span><span class="o">=</span><span class="n">inline_mats</span><span class="p">)</span>
+                         <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">unfold</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Unfold</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span>
                                 <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span>
@@ -1972,6 +1980,11 @@ title="Fullscreen mode"
 <span class="sd">            after the other. When ``&quot;snake&quot;``, its row is put in the opposite</span>
 <span class="sd">            orientation as the previous row (like a snake running through the</span>
 <span class="sd">            image).</span>
+<span class="sd">        args :</span>
+<span class="sd">            Arguments that might be used in :meth:`~UMPSLayer.contract`.</span>
+<span class="sd">        kwargs :</span>
+<span class="sd">            Keyword arguments that might be used in :meth:`~UMPSLayer.contract`,</span>
+<span class="sd">            like ``inline_input`` or ``inline_mats``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Input image shape: batch_size x in_channels x height x width</span>
         
@@ -1999,7 +2012,7 @@ title="Fullscreen mode"
             <span class="n">patches</span> <span class="o">=</span> <span class="n">new_patches</span>
             
         <span class="k">elif</span> <span class="n">mode</span> <span class="o">!=</span> <span class="s1">&#39;flat&#39;</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`mode` can only be </span><span class="se">\&#39;</span><span class="s1">flat</span><span class="se">\&#39;</span><span class="s1"> or </span><span class="se">\&#39;</span><span class="s1">snake</span><span class="se">\&#39;</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`mode` can only be &quot;flat&quot; or &quot;snake&quot;&#39;</span><span class="p">)</span>
         
         <span class="n">result</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">patches</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="c1"># batch_size x nb_windows x out_channels</span>

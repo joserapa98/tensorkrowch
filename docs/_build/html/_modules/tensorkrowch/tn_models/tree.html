@@ -215,6 +215,19 @@ title="Fullscreen mode"
   </span>
 
 </button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
 
     </div>
 </div>
@@ -241,48 +254,57 @@ title="Fullscreen mode"
                 
   <h1>Source code for tensorkrowch.tn_models.tree</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">MPSLayer + UMPSLayer classes</span>
+<span class="sd">This script contains:</span>
+<span class="sd">    *MPS</span>
+<span class="sd">    *UMPS</span>
+<span class="sd">    *ConvMPS</span>
+<span class="sd">    *ConvUMPS</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span><span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span>
-                    <span class="n">Text</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span><span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span>
+                    <span class="n">Text</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">)</span>
 
 <span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">from</span> <span class="nn">torch.nn.functional</span> <span class="kn">import</span> <span class="n">pad</span>
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
 
-<span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="p">(</span><span class="n">AbstractNode</span><span class="p">,</span> <span class="n">Node</span><span class="p">,</span> <span class="n">ParamNode</span><span class="p">,</span>
-                                         <span class="n">AbstractEdge</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">Node</span><span class="p">,</span> <span class="n">ParamNode</span>
 <span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">TensorNetwork</span>
-
-<span class="kn">from</span> <span class="nn">tensorkrowch.operations</span> <span class="kn">import</span> <span class="n">einsum</span><span class="p">,</span> <span class="n">stacked_einsum</span>
-
-<span class="kn">import</span> <span class="nn">tensorkrowch</span> <span class="k">as</span> <span class="nn">tk</span>
-
-<span class="kn">import</span> <span class="nn">opt_einsum</span>
-<span class="kn">import</span> <span class="nn">math</span>
-
-<span class="kn">import</span> <span class="nn">time</span>
-<span class="kn">from</span> <span class="nn">torchviz</span> <span class="kn">import</span> <span class="n">make_dot</span>
-
-<span class="n">PRINT_MODE</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="kn">import</span> <span class="nn">tensorkrowch.operations</span> <span class="k">as</span> <span class="nn">op</span>
 
 
 <div class="viewcode-block" id="Tree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.Tree">[docs]</a><span class="k">class</span> <span class="nc">Tree</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Create an Tree module.</span>
+<span class="sd">    Class for Tree States. These states form a tree structure where the ``data``</span>
+<span class="sd">    nodes are in the base. All nodes have a sequence of input edges and an</span>
+<span class="sd">    output edge. Thus the contraction of the Tree returns a vector.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    sites_per_layer: number of sites in each layer of the tree</span>
-<span class="sd">    d_bond: bond dimensions of nodes in each layer. In each layer, all</span>
-<span class="sd">        nodes have the same shape, formed by various input edges and a</span>
-<span class="sd">        single output edge. d_bond should be a sequence of sequences,</span>
-<span class="sd">        one for each layer. Each sequence is formed by the bond dimensions</span>
-<span class="sd">        of the input edges and the bond dimension of the output (last</span>
-<span class="sd">        element in the sequence)</span>
-<span class="sd">    param_bond: boolean indicating whether bond edges should be parametric</span>
-<span class="sd">    num_batches: number of batch edges of input data</span>
+<span class="sd">    sites_per_layer : list[int] or tuple[int]</span>
+<span class="sd">        Number of sites in each layer of the tree. All nodes in the same layer</span>
+<span class="sd">        have the same shape. Number of nodes in each layer times the number of</span>
+<span class="sd">        input edges these have should match the number ot output edges in the</span>
+<span class="sd">        previous layer.</span>
+<span class="sd">    d_bond : list[list[int]] or tuple[tuple[int]]</span>
+<span class="sd">        Bond dimensions of nodes in each layer. Each sequence corresponds to the</span>
+<span class="sd">        shape of the nodes in each layer (some input edges and an output edge in</span>
+<span class="sd">        the last position).</span>
+<span class="sd">    param_bond : bool</span>
+<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
+<span class="sd">    num_batches : int</span>
+<span class="sd">        Number of batch edges of input data nodes. Usually ``num_batches = 1``</span>
+<span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
+<span class="sd">        be ``num_batches = 2`` (one edge for data batched, other edge for image</span>
+<span class="sd">        patches in convolutional layers).</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; tree = tk.Tree(sites_per_layer=[4, 2, 1],</span>
+<span class="sd">    ...                d_bond=[[3, 3, 4], [4, 4, 2], [2, 2, 2]])</span>
+<span class="sd">    &gt;&gt;&gt; data = torch.ones(8, 20, 3) # n_features x batch_size x feature_size</span>
+<span class="sd">    &gt;&gt;&gt; result = tree(data)</span>
+<span class="sd">    &gt;&gt;&gt; print(result.shape)</span>
+<span class="sd">    torch.Size([20, 2])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -300,7 +322,8 @@ title="Fullscreen mode"
                                  <span class="s1">&#39;one node is required&#39;</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">sites_per_layer</span><span class="p">:</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">el</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`sites_per_layer` should be a sequence of ints&#39;</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`sites_per_layer` should be a sequence of &#39;</span>
+                                    <span class="s1">&#39;ints&#39;</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">el</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Elements of `sites_per_layer` should be &#39;</span>
                                      <span class="s1">&#39;ints greater than 0&#39;</span><span class="p">)</span>
@@ -330,7 +353,8 @@ title="Fullscreen mode"
                                     <span class="s1">&#39;sequences of ints&#39;</span><span class="p">)</span>
                 <span class="n">aux_d_bond</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">lst</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_bond` should be a sequence of sequences of ints&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_bond` should be a sequence of sequences of &#39;</span>
+                            <span class="s1">&#39;ints&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span> <span class="o">=</span> <span class="n">aux_d_bond</span>
         
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sites_per_layer</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">d_bond</span><span class="p">):</span>
@@ -347,21 +371,29 @@ title="Fullscreen mode"
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_batches</span> <span class="o">=</span> <span class="n">num_batches</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">sites_per_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">sites_per_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of sites in each layer of the tree.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sites_per_layer</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns bond dimensions of nodes in each layer. Each sequence</span>
+<span class="sd">        corresponds to the shape of the nodes in each layer (some input edges</span>
+<span class="sd">        and an output edge in the last position).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span>
 
 <div class="viewcode-block" id="Tree.param_bond"><a class="viewcode-back" href="../../../models.html#tensorkrowch.Tree.param_bond">[docs]</a>    <span class="k">def</span> <span class="nf">param_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_param</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return param_bond attribute or change it if set_param is provided.</span>
+<span class="sd">        Returns ``param_bond`` attribute or changes it if ``set_param`` is</span>
+<span class="sd">        provided.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        set_param: boolean indicating whether edges have to be parameterized</span>
-<span class="sd">                   (True) or de-parameterized (False)</span>
+<span class="sd">        set_param : bool, optional</span>
+<span class="sd">            Boolean indicating whether edges have to be parameterized (``True``)</span>
+<span class="sd">            or de-parameterized (``False``).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">set_param</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span>
@@ -373,8 +405,10 @@ title="Fullscreen mode"
             <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span> <span class="o">=</span> <span class="n">set_param</span></div>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">leaf_nodes</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create Tree nodes if the Tree already has nodes&#39;</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the Tree.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create Tree nodes if the Tree already has&#39;</span>
+                             <span class="s1">&#39; nodes&#39;</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">layers</span> <span class="o">=</span> <span class="p">[]</span>
         
@@ -382,7 +416,8 @@ title="Fullscreen mode"
             <span class="n">layer_lst</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_sites</span><span class="p">):</span>
                 <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span><span class="p">[</span><span class="n">i</span><span class="p">],),</span>
-                                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="p">([</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)),</span>
+                                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="p">([</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+                                     <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)),</span>
                                              <span class="s1">&#39;output&#39;</span><span class="p">),</span>
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;tree_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">,</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
@@ -407,14 +442,19 @@ title="Fullscreen mode"
             
             <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer_lst</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="Tree.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.Tree.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">layer</span><span class="p">:</span>
-                <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
+                <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">_shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
                 <span class="n">tensor</span><span class="p">[(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="n">node</span><span class="o">.</span><span class="n">rank</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
-                <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">tensor</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">tensor</span></div>
 
 <div class="viewcode-block" id="Tree.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.Tree.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates data nodes and connects each of them to the physical edge of</span>
+<span class="sd">        an input node.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">input_edges</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
             <span class="n">input_edges</span> <span class="o">+=</span> <span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -427,6 +467,7 @@ title="Fullscreen mode"
                            <span class="n">layer2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                            <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]],</span>
                                                   <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts two consecutive layers of the tree.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">inline</span><span class="p">:</span>
             <span class="n">result_lst</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
@@ -440,14 +481,14 @@ title="Fullscreen mode"
 
         <span class="k">else</span><span class="p">:</span>
             <span class="n">n_input</span> <span class="o">=</span> <span class="n">layer2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">rank</span> <span class="o">-</span> <span class="mi">1</span>
-            <span class="n">stack2</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">layer2</span><span class="p">)</span>
+            <span class="n">stack2</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">layer2</span><span class="p">)</span>
             
             <span class="n">layer1_stacks</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_input</span><span class="p">):</span>
                 <span class="n">stack_lst</span> <span class="o">=</span> <span class="p">[]</span>
                 <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">layer1</span><span class="p">),</span> <span class="n">n_input</span><span class="p">):</span>
                     <span class="n">stack_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer1</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
-                <span class="n">layer1_stacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">stack_lst</span><span class="p">))</span>
+                <span class="n">layer1_stacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">stack_lst</span><span class="p">))</span>
                 
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_input</span><span class="p">):</span>
                 <span class="n">stack2</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">^</span> <span class="n">layer1_stacks</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -456,15 +497,30 @@ title="Fullscreen mode"
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_input</span><span class="p">):</span>
                 <span class="n">result</span> <span class="o">=</span> <span class="n">layer1_stacks</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">@</span> <span class="n">result</span>
                 
-            <span class="n">result_lst</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+            <span class="n">result_lst</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">result_lst</span>
 
-<div class="viewcode-block" id="Tree.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.Tree.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<div class="viewcode-block" id="Tree.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.Tree.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contracts the whole Tree Tensor Network.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        inline : bool</span>
+<span class="sd">            Boolean indicating whether consecutive layers should be contracted</span>
+<span class="sd">            inline or in parallel (using a single stacked contraction).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Node</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">layers</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">())]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
             <span class="n">layer1</span> <span class="o">=</span> <span class="n">layers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
             <span class="n">layer2</span> <span class="o">=</span> <span class="n">layers</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
-            <span class="n">result_lst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span><span class="n">layer1</span><span class="p">,</span> <span class="n">layer2</span><span class="p">,</span> <span class="n">inline</span><span class="o">=</span><span class="n">inline</span><span class="p">)</span>
+            <span class="n">result_lst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span><span class="n">layer1</span><span class="p">,</span>
+                                                 <span class="n">layer2</span><span class="p">,</span>
+                                                 <span class="n">inline</span><span class="o">=</span><span class="n">inline</span><span class="p">)</span>
             <span class="n">layers</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_lst</span>
 
         <span class="k">return</span> <span class="n">result_lst</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
@@ -476,21 +532,27 @@ title="Fullscreen mode"
                             <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                             <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                             <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Turns each layer into canonical form, moving singular values matrices</span>
+<span class="sd">        or non-isometries to the upper layer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">new_layer1</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">new_layer2</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">layer2</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">rank</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svd&#39;</span><span class="p">:</span>
-                    <span class="n">result1</span><span class="p">,</span> <span class="n">node</span> <span class="o">=</span> <span class="n">layer1</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;output&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svd_</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
-                                                             <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
-                                                             <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
-                                                             <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
+                    <span class="n">result1</span><span class="p">,</span> <span class="n">node</span> <span class="o">=</span> <span class="n">layer1</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;output&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svd_</span><span class="p">(</span>
+                        <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
+                        <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+                        <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
+                        <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
                 <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svdr&#39;</span><span class="p">:</span>
-                    <span class="n">result1</span><span class="p">,</span> <span class="n">node</span> <span class="o">=</span> <span class="n">layer1</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;output&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svdr_</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
-                                                              <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
-                                                              <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
-                                                              <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
+                    <span class="n">result1</span><span class="p">,</span> <span class="n">node</span> <span class="o">=</span> <span class="n">layer1</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;output&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svdr_</span><span class="p">(</span>
+                        <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
+                        <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+                        <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
+                        <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
                 <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;qr&#39;</span><span class="p">:</span>
                     <span class="n">result1</span><span class="p">,</span> <span class="n">node</span> <span class="o">=</span> <span class="n">layer1</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;output&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">qr_</span><span class="p">()</span>
                 <span class="k">else</span><span class="p">:</span>
@@ -508,12 +570,30 @@ title="Fullscreen mode"
                      <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Turns the MPS into canonical form</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Turns Tree into canonical form via local SVD/QR decompositions, moving</span>
+<span class="sd">        singular values matrices or non-isometries to the upper layers.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        mode: can be either &#39;svd&#39;, &#39;svdr&#39; or &#39;qr&#39;</span>
+<span class="sd">        mode : {&quot;svd&quot;, &quot;svdr&quot;, &quot;qr&quot;}</span>
+<span class="sd">            Indicates which decomposition should be used to split a node after</span>
+<span class="sd">            contracting it. See more at :func:`svd_`, :func:`svdr_`, :func:`qr_`.</span>
+<span class="sd">            If mode is &quot;qr&quot;, operation :func:`qr_` will be performed on nodes at</span>
+<span class="sd">            the left of the output node, whilst operation :func:`rq_` will be</span>
+<span class="sd">            used for nodes at the right.</span>
+<span class="sd">        rank : int, optional</span>
+<span class="sd">            Number of singular values to keep.</span>
+<span class="sd">        cum_percentage : float, optional</span>
+<span class="sd">            Proportion that should be satisfied between the sum of all singular</span>
+<span class="sd">            values kept and the total sum of all singular values.</span>
+<span class="sd">            </span>
+<span class="sd">            .. math::</span>
+<span class="sd">            </span>
+<span class="sd">                \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge</span>
+<span class="sd">                cum\_percentage</span>
+<span class="sd">        cutoff : float, optional</span>
+<span class="sd">            Quantity that lower bounds singular values in order to be kept.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             
@@ -523,11 +603,12 @@ title="Fullscreen mode"
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
                 <span class="n">layer1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
                 <span class="n">layer2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
-                <span class="n">layer1</span><span class="p">,</span> <span class="n">layer2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_canonicalize_layer</span><span class="p">(</span><span class="n">layer1</span><span class="p">,</span> <span class="n">layer2</span><span class="p">,</span>
-                                                          <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
-                                                          <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
-                                                          <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
-                                                          <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
+                <span class="n">layer1</span><span class="p">,</span> <span class="n">layer2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_canonicalize_layer</span><span class="p">(</span>
+                    <span class="n">layer1</span><span class="p">,</span> <span class="n">layer2</span><span class="p">,</span>
+                    <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+                    <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
+                    <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer1</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer2</span>
                 
@@ -538,19 +619,28 @@ title="Fullscreen mode"
 
 <div class="viewcode-block" id="UTree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UTree">[docs]</a><span class="k">class</span> <span class="nc">UTree</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Create an UTree module.</span>
+<span class="sd">    Class for Uniform Tree States where all nodes have the same shape. It is</span>
+<span class="sd">    the uniform version of :class:`Tree`, that is, all nodes share the same</span>
+<span class="sd">    tensor.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    sites_per_layer: number of sites in each layer of the tree</span>
-<span class="sd">    d_bond: bond dimensions of nodes in each layer. In each layer, all</span>
-<span class="sd">        nodes have the same shape, formed by various input edges and a</span>
-<span class="sd">        single output edge. d_bond should be a sequence of sequences,</span>
-<span class="sd">        one for each layer. Each sequence is formed by the bond dimensions</span>
-<span class="sd">        of the input edges and the bond dimension of the output (last</span>
-<span class="sd">        element in the sequence)</span>
-<span class="sd">    param_bond: boolean indicating whether bond edges should be parametric</span>
-<span class="sd">    num_batches: number of batch edges of input data</span>
+<span class="sd">    sites_per_layer : list[int] or tuple[int]</span>
+<span class="sd">        Number of sites in each layer of the tree. All nodes have the same</span>
+<span class="sd">        shape. Number of nodes in each layer times the number of input edges</span>
+<span class="sd">        these have should match the number ot output edges in the previous</span>
+<span class="sd">        layer.</span>
+<span class="sd">    d_bond : list[int] or tuple[int]</span>
+<span class="sd">        Bond dimensions of nodes in each layer. Since all nodes have the same</span>
+<span class="sd">        shape, it is enough to pass a single sequence of dimensions (some input</span>
+<span class="sd">        edges and an output edge in the last position).</span>
+<span class="sd">    param_bond : bool</span>
+<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
+<span class="sd">    num_batches : int</span>
+<span class="sd">        Number of batch edges of input data nodes. Usually ``num_batches = 1``</span>
+<span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
+<span class="sd">        be ``num_batches = 2`` (one edge for data batched, other edge for image</span>
+<span class="sd">        patches in convolutional layers).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -568,7 +658,8 @@ title="Fullscreen mode"
                                  <span class="s1">&#39;one node is required&#39;</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">sites_per_layer</span><span class="p">:</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">el</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`sites_per_layer` should be a sequence of ints&#39;</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`sites_per_layer` should be a sequence of&#39;</span>
+                                    <span class="s1">&#39; ints&#39;</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">el</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Elements of `sites_per_layer` should be &#39;</span>
                                      <span class="s1">&#39;ints greater than 0&#39;</span><span class="p">)</span>
@@ -602,21 +693,28 @@ title="Fullscreen mode"
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_batches</span> <span class="o">=</span> <span class="n">num_batches</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">sites_per_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">sites_per_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of sites in each layer of the tree.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sites_per_layer</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
+    <span class="k">def</span> <span class="nf">d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimensions of nodes in each layer. Since all nodes have</span>
+<span class="sd">        the same shape, it is a single sequence of dimensions (some input edges</span>
+<span class="sd">        and an output edge in the last position).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span>
 
 <div class="viewcode-block" id="UTree.param_bond"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UTree.param_bond">[docs]</a>    <span class="k">def</span> <span class="nf">param_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_param</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return param_bond attribute or change it if set_param is provided.</span>
+<span class="sd">        Returns ``param_bond`` attribute or changes it if ``set_param`` is</span>
+<span class="sd">        provided.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        set_param: boolean indicating whether edges have to be parameterized</span>
-<span class="sd">                   (True) or de-parameterized (False)</span>
+<span class="sd">        set_param : bool, optional</span>
+<span class="sd">            Boolean indicating whether edges have to be parameterized (``True``)</span>
+<span class="sd">            or de-parameterized (``False``).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">set_param</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span>
@@ -628,8 +726,10 @@ title="Fullscreen mode"
             <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span> <span class="o">=</span> <span class="n">set_param</span></div>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">leaf_nodes</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create Tree nodes if the Tree already has nodes&#39;</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the Tree.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create Tree nodes if the Tree already has&#39;</span>
+                             <span class="s1">&#39; nodes&#39;</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">layers</span> <span class="o">=</span> <span class="p">[]</span>
         
@@ -664,7 +764,8 @@ title="Fullscreen mode"
             
         <span class="c1"># Virtual node</span>
         <span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span><span class="p">,),</span>
-                                          <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="p">([</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)),</span>
+                                          <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="p">([</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+                                              <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)),</span>
                                                       <span class="s1">&#39;output&#39;</span><span class="p">),</span>
                                           <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_uniform&#39;</span><span class="p">,</span>
                                           <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
@@ -674,9 +775,10 @@ title="Fullscreen mode"
         <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">uniform_memory</span><span class="o">.</span><span class="n">_edges</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_remove_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="UTree.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UTree.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
         <span class="c1"># Virtual node</span>
-        <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
+        <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">_shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
         <span class="n">tensor</span><span class="p">[(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">)]</span> <span class="o">=</span> <span class="mf">1.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">_unrestricted_set_tensor</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
         
@@ -687,9 +789,13 @@ title="Fullscreen mode"
                 <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;full&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;stack_idx&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-                <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></div>
 
 <div class="viewcode-block" id="UTree.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UTree.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates data nodes and connects each of them to the physical edge of</span>
+<span class="sd">        an input node.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">input_edges</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
             <span class="n">input_edges</span> <span class="o">+=</span> <span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -702,6 +808,7 @@ title="Fullscreen mode"
                            <span class="n">layer2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                            <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]],</span>
                                                   <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts two consecutive layers of the tree.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">inline</span><span class="p">:</span>
             <span class="n">result_lst</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
@@ -715,14 +822,14 @@ title="Fullscreen mode"
 
         <span class="k">else</span><span class="p">:</span>
             <span class="n">n_input</span> <span class="o">=</span> <span class="n">layer2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">rank</span> <span class="o">-</span> <span class="mi">1</span>
-            <span class="n">stack2</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">layer2</span><span class="p">)</span>
+            <span class="n">stack2</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">layer2</span><span class="p">)</span>
             
             <span class="n">layer1_stacks</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_input</span><span class="p">):</span>
                 <span class="n">stack_lst</span> <span class="o">=</span> <span class="p">[]</span>
                 <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">layer1</span><span class="p">),</span> <span class="n">n_input</span><span class="p">):</span>
                     <span class="n">stack_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer1</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
-                <span class="n">layer1_stacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">stack_lst</span><span class="p">))</span>
+                <span class="n">layer1_stacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">stack_lst</span><span class="p">))</span>
                 
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_input</span><span class="p">):</span>
                 <span class="n">stack2</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">^</span> <span class="n">layer1_stacks</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -731,21 +838,85 @@ title="Fullscreen mode"
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_input</span><span class="p">):</span>
                 <span class="n">result</span> <span class="o">=</span> <span class="n">layer1_stacks</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">@</span> <span class="n">result</span>
                 
-            <span class="n">result_lst</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+            <span class="n">result_lst</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">result_lst</span>
 
 <div class="viewcode-block" id="UTree.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UTree.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contracts the whole Tree Tensor Network.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        inline : bool</span>
+<span class="sd">            Boolean indicating whether consecutive layers should be contracted</span>
+<span class="sd">            inline or in parallel (using a single stacked contraction).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Node</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">layers</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">())]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
             <span class="n">layer1</span> <span class="o">=</span> <span class="n">layers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
             <span class="n">layer2</span> <span class="o">=</span> <span class="n">layers</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
-            <span class="n">result_lst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span><span class="n">layer1</span><span class="p">,</span> <span class="n">layer2</span><span class="p">,</span> <span class="n">inline</span><span class="o">=</span><span class="n">inline</span><span class="p">)</span>
+            <span class="n">result_lst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span><span class="n">layer1</span><span class="p">,</span>
+                                                 <span class="n">layer2</span><span class="p">,</span>
+                                                 <span class="n">inline</span><span class="o">=</span><span class="n">inline</span><span class="p">)</span>
             <span class="n">layers</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_lst</span>
 
         <span class="k">return</span> <span class="n">result_lst</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div></div>
 
 
 <div class="viewcode-block" id="ConvTree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvTree">[docs]</a><span class="k">class</span> <span class="nc">ConvTree</span><span class="p">(</span><span class="n">Tree</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class for Tree States where the input data is a batch of images. It is the</span>
+<span class="sd">    convolutional version of :class:`Tree`.</span>
+<span class="sd">    </span>
+<span class="sd">    Input data as well as initialization parameters are described in `nn.Conv2d</span>
+<span class="sd">    &lt;https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html&gt;`_.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sites_per_layer : list[int] or tuple[int]</span>
+<span class="sd">        Number of sites in each layer of the tree. All nodes in the same layer</span>
+<span class="sd">        have the same shape. Number of nodes in each layer times the number of</span>
+<span class="sd">        input edges these have should match the number ot output edges in the</span>
+<span class="sd">        previous layer.</span>
+<span class="sd">    d_bond : list[list[int]] or tuple[tuple[int]]</span>
+<span class="sd">        Bond dimensions of nodes in each layer. Each sequence corresponds to the</span>
+<span class="sd">        shape of the nodes in each layer (some input edges and an output edge in</span>
+<span class="sd">        the last position).</span>
+<span class="sd">    kernel_size : int, list[int] or tuple[int]</span>
+<span class="sd">        Kernel size used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        If given as an ``int``, the actual kernel size will be</span>
+<span class="sd">        ``(kernel_size, kernel_size)``.</span>
+<span class="sd">    stride : int</span>
+<span class="sd">        Stride used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">    padding : int</span>
+<span class="sd">        Padding used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        If given as an ``int``, the actual kernel size will be</span>
+<span class="sd">        ``(kernel_size, kernel_size)``.</span>
+<span class="sd">    dilation : int</span>
+<span class="sd">        Dilation used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        If given as an ``int``, the actual kernel size will be</span>
+<span class="sd">        ``(kernel_size, kernel_size)``.</span>
+<span class="sd">    param_bond : bool</span>
+<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
+<span class="sd">        </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; conv_tree = tk.ConvTree(sites_per_layer=[2, 1],</span>
+<span class="sd">    ...                         d_bond=[[2, 2, 3], [3, 3, 5]],</span>
+<span class="sd">    ...                         kernel_size=2)</span>
+<span class="sd">    &gt;&gt;&gt; data = torch.ones(20, 2, 2, 2) # batch_size x in_channels x height x width</span>
+<span class="sd">    &gt;&gt;&gt; result = conv_tree(data)</span>
+<span class="sd">    &gt;&gt;&gt; print(result.shape)</span>
+<span class="sd">    torch.Size([20, 5, 1, 1])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">sites_per_layer</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
@@ -794,31 +965,60 @@ title="Fullscreen mode"
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns ``in_channels``. Same as the first elements in ``d_bond``</span>
+<span class="sd">        from :class:`Tree`, corresponding to dimensions of the input.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">kernel_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns ``kernel_size``, corresponding to number of ``data`` nodes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">stride</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns stride used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stride</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">padding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns padding used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_padding</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dilation</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns dilation used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>
     
 <div class="viewcode-block" id="ConvTree.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvTree.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Overrides ``nn.Module``&#39;s forward to compute a convolution on the input</span>
+<span class="sd">        image.</span>
+<span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        image: input image with shape batch_size x in_channels x height x width</span>
-<span class="sd">        mode: can be either &#39;flat&#39; or &#39;snake&#39;, indicates the ordering of</span>
-<span class="sd">            the pixels in the MPS</span>
+<span class="sd">        image : torch.Tensor</span>
+<span class="sd">            Input batch of images with shape</span>
+<span class="sd">            </span>
+<span class="sd">            .. math::</span>
+<span class="sd">            </span>
+<span class="sd">                batch\_size \times in\_channels \times height \times width</span>
+<span class="sd">        Arguments that might be used in :meth:`~Tree.contract`.</span>
+<span class="sd">        kwargs :</span>
+<span class="sd">            Keyword arguments that might be used in :meth:`~Tree.contract`,</span>
+<span class="sd">            like ``inline``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Input image shape: batch_size x in_channels x height x width</span>
         
@@ -852,6 +1052,45 @@ title="Fullscreen mode"
     
 
 <div class="viewcode-block" id="ConvUTree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvUTree">[docs]</a><span class="k">class</span> <span class="nc">ConvUTree</span><span class="p">(</span><span class="n">UTree</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class for Uniform Tree States where the input data is a batch of images. It</span>
+<span class="sd">    is the convolutional version of :class:`UTree`.</span>
+<span class="sd">    </span>
+<span class="sd">    Input data as well as initialization parameters are described in `nn.Conv2d</span>
+<span class="sd">    &lt;https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html&gt;`_.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sites_per_layer : list[int] or tuple[int]</span>
+<span class="sd">        Number of sites in each layer of the tree. All nodes have the same</span>
+<span class="sd">        shape. Number of nodes in each layer times the number of input edges</span>
+<span class="sd">        these have should match the number ot output edges in the previous</span>
+<span class="sd">        layer.</span>
+<span class="sd">    d_bond : list[int] or tuple[int]</span>
+<span class="sd">        Bond dimensions of nodes in each layer. Since all nodes have the same</span>
+<span class="sd">        shape, it is enough to pass a single sequence of dimensions (some input</span>
+<span class="sd">        edges and an output edge in the last position).</span>
+<span class="sd">    kernel_size : int, list[int] or tuple[int]</span>
+<span class="sd">        Kernel size used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        If given as an ``int``, the actual kernel size will be</span>
+<span class="sd">        ``(kernel_size, kernel_size)``.</span>
+<span class="sd">    stride : int</span>
+<span class="sd">        Stride used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">    padding : int</span>
+<span class="sd">        Padding used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        If given as an ``int``, the actual kernel size will be</span>
+<span class="sd">        ``(kernel_size, kernel_size)``.</span>
+<span class="sd">    dilation : int</span>
+<span class="sd">        Dilation used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        If given as an ``int``, the actual kernel size will be</span>
+<span class="sd">        ``(kernel_size, kernel_size)``.</span>
+<span class="sd">    param_bond : bool</span>
+<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">sites_per_layer</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
@@ -900,31 +1139,60 @@ title="Fullscreen mode"
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns ``in_channels``. Same as the first elements in ``d_bond``</span>
+<span class="sd">        from :class:`UTree`, corresponding to dimensions of the input.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">kernel_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns ``kernel_size``, corresponding to number of ``data`` nodes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">stride</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns stride used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stride</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">padding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns padding used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_padding</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dilation</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns dilation used in `nn.Unfold</span>
+<span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>
     
 <div class="viewcode-block" id="ConvUTree.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvUTree.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Overrides ``nn.Module``&#39;s forward to compute a convolution on the input</span>
+<span class="sd">        image.</span>
+<span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        image: input image with shape batch_size x in_channels x height x width</span>
-<span class="sd">        mode: can be either &#39;flat&#39; or &#39;snake&#39;, indicates the ordering of</span>
-<span class="sd">            the pixels in the MPS</span>
+<span class="sd">        image : torch.Tensor</span>
+<span class="sd">            Input batch of images with shape</span>
+<span class="sd">            </span>
+<span class="sd">            .. math::</span>
+<span class="sd">            </span>
+<span class="sd">                batch\_size \times in\_channels \times height \times width</span>
+<span class="sd">        Arguments that might be used in :meth:`~UTree.contract`.</span>
+<span class="sd">        kwargs :</span>
+<span class="sd">            Keyword arguments that might be used in :meth:`~UTree.contract`,</span>
+<span class="sd">            like ``inline``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Input image shape: batch_size x in_channels x height x width</span>
         

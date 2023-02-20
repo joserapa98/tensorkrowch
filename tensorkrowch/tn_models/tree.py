@@ -1,9 +1,9 @@
 """
 This script contains:
-    *MPS
-    *UMPS
-    *ConvMPS
-    *ConvUMPS
+    *Tree
+    *UTree
+    *ConvTree
+    *ConvUTree
 """
 
 from typing import (List, Optional, Sequence,
@@ -760,7 +760,8 @@ class ConvTree(Tree):
             .. math::
             
                 batch\_size \times in\_channels \times height \times width
-        Arguments that might be used in :meth:`~Tree.contract`.
+        args :
+            Arguments that might be used in :meth:`~Tree.contract`.
         kwargs :
             Keyword arguments that might be used in :meth:`~Tree.contract`,
             like ``inline``.
@@ -934,7 +935,8 @@ class ConvUTree(UTree):
             .. math::
             
                 batch\_size \times in\_channels \times height \times width
-        Arguments that might be used in :meth:`~UTree.contract`.
+        args :
+            Arguments that might be used in :meth:`~UTree.contract`.
         kwargs :
             Keyword arguments that might be used in :meth:`~UTree.contract`,
             like ``inline``.

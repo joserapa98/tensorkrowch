@@ -245,7 +245,7 @@ class Tree(TensorNetwork):
             result_lst = op.unbind(result)
             return result_lst
 
-    def contract(self, inline: bool = True) -> Node:
+    def contract(self, inline: bool = False) -> Node:
         """
         Contracts the whole Tree Tensor Network.
 
@@ -586,7 +586,7 @@ class UTree(TensorNetwork):
             result_lst = op.unbind(result)
             return result_lst
 
-    def contract(self, inline=True) -> Node:
+    def contract(self, inline: bool = False) -> Node:
         """
         Contracts the whole Tree Tensor Network.
 

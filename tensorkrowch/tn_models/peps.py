@@ -629,7 +629,7 @@ class PEPS(TensorNetwork):
                           line1: List[Node],
                           line2: List[Node],
                           from_side: Text = 'up',
-                          inline: bool = True) -> List[Node]:
+                          inline: bool = False) -> List[Node]:
         """Contracts two consecutive lines (rows or columns) of the PEPS."""
         result_list = []
         
@@ -741,7 +741,7 @@ class PEPS(TensorNetwork):
     def contract(self,
                  from_side: Text = 'up',
                  max_bond: int = 32,
-                 inline: bool = True):
+                 inline: bool = False):
         """
         Contracts the whole PEPS.
         
@@ -1045,7 +1045,7 @@ class UPEPS(TensorNetwork):
     def _contract_2_lines(self,
                           line1: List[Node],
                           line2: List[Node],
-                          inline: bool = True) -> List[Node]:
+                          inline: bool = False) -> List[Node]:
         """Contracts two consecutive lines (rows or columns) of the PEPS."""
         result_list = []
         
@@ -1121,7 +1121,7 @@ class UPEPS(TensorNetwork):
     def contract(self,
                  from_side: Text = 'up',
                  max_bond: int = 32,
-                 inline: bool = True):
+                 inline: bool = False):
         """
         Contracts the whole PEPS.
         

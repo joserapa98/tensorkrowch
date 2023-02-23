@@ -243,7 +243,7 @@ def permute_(node: AbstractNode, axes: Sequence[Ax]) -> Node:
                         network=node._network,
                         param_edges=node.param_edges(),
                         override_edges=True,
-                        tensor=node.tensor.permute(axes_nums),
+                        tensor=node.tensor.permute(axes_nums).detach(),
                         edges=permute_list(node._edges, axes_nums),
                         node1_list=permute_list(node.is_node1(), axes_nums))
         
@@ -1289,6 +1289,8 @@ def split_(node: AbstractNode,
                          mode, side, rank, cum_percentage, cutoff)
     node1.reattach_edges(True)
     node2.reattach_edges(True)
+    node1._unrestricted_set_tensor(node1.tensor.detach())
+    node2._unrestricted_set_tensor(node2.tensor.detach())
     
     # Delete node (and its edges) from the TN
     net = node._network
@@ -2293,6 +2295,7 @@ def contract_(edge: AbstractEdge) -> Node:
     """
     result = contract_edges([edge], edge.node1, edge.node2)
     result.reattach_edges(True)
+    result._unrestricted_set_tensor(result.tensor.detach())
     
     # Delete nodes (and their edges) from the TN
     net = result.network
@@ -2411,6 +2414,7 @@ def contract_between_(node1: AbstractNode,
     """
     result = contract_between(node1, node2, axes)
     result.reattach_edges(True)
+    result._unrestricted_set_tensor(result.tensor.detach())
     
     # Delete nodes (and their edges) from the TN
     net = result.network

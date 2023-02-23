@@ -112,6 +112,41 @@
      Basics
     </a>
    </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../tutorials/training_mps_mnist.html">
+     Training MPS - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../tutorials/training_mps_fashion_mnist.html">
+     Training MPS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../tutorials/training_snake_sbs_fashion_mnist.html">
+     Training SnakeSBS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../tutorials/training_cnn_snake_sbs_fashion_mnist.html">
+     Training CNN-SnakeSBS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../tutorials/training_convmps_fashion_mnist.html">
+     Training ConvMPS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../tutorials/training_mps_dmrg_mnist.html">
+     Training MPS with DMRG - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../tutorials/training_mps_mnist_binarized.html">
+     Training MPS - MNIST Binarized
+    </a>
+   </li>
   </ul>
  </li>
  <li class="toctree-l1 has-children">
@@ -498,7 +533,7 @@ title="Source repository"
                         <span class="n">network</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_network</span><span class="p">,</span>
                         <span class="n">param_edges</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">param_edges</span><span class="p">(),</span>
                         <span class="n">override_edges</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-                        <span class="n">tensor</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="n">axes_nums</span><span class="p">),</span>
+                        <span class="n">tensor</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="n">axes_nums</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span>
                         <span class="n">edges</span><span class="o">=</span><span class="n">permute_list</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span> <span class="n">axes_nums</span><span class="p">),</span>
                         <span class="n">node1_list</span><span class="o">=</span><span class="n">permute_list</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">is_node1</span><span class="p">(),</span> <span class="n">axes_nums</span><span class="p">))</span>
         
@@ -1544,6 +1579,8 @@ title="Source repository"
                          <span class="n">mode</span><span class="p">,</span> <span class="n">side</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">cum_percentage</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">)</span>
     <span class="n">node1</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">node2</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">node1</span><span class="o">.</span><span class="n">_unrestricted_set_tensor</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span>
+    <span class="n">node2</span><span class="o">.</span><span class="n">_unrestricted_set_tensor</span><span class="p">(</span><span class="n">node2</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span>
     
     <span class="c1"># Delete node (and its edges) from the TN</span>
     <span class="n">net</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_network</span>
@@ -2548,6 +2585,7 @@ title="Source repository"
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">contract_edges</span><span class="p">([</span><span class="n">edge</span><span class="p">],</span> <span class="n">edge</span><span class="o">.</span><span class="n">node1</span><span class="p">,</span> <span class="n">edge</span><span class="o">.</span><span class="n">node2</span><span class="p">)</span>
     <span class="n">result</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">result</span><span class="o">.</span><span class="n">_unrestricted_set_tensor</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span>
     
     <span class="c1"># Delete nodes (and their edges) from the TN</span>
     <span class="n">net</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">network</span>
@@ -2666,6 +2704,7 @@ title="Source repository"
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">contract_between</span><span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">,</span> <span class="n">axes</span><span class="p">)</span>
     <span class="n">result</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">result</span><span class="o">.</span><span class="n">_unrestricted_set_tensor</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span>
     
     <span class="c1"># Delete nodes (and their edges) from the TN</span>
     <span class="n">net</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">network</span>

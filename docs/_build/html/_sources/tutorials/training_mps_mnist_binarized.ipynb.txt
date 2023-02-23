@@ -1,0 +1,475 @@
+{
+ "cells": [
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Training MPS - MNIST Binarized"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import time\n",
+    "import math\n",
+    "from functools import partial\n",
+    "\n",
+    "import torch\n",
+    "import torch.nn as nn\n",
+    "from torchvision import transforms, datasets\n",
+    "\n",
+    "import tensorkrowch as tk"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Miscellaneous initialization\n",
+    "torch.manual_seed(0)\n",
+    "\n",
+    "# Training parameters\n",
+    "num_train = 60000\n",
+    "num_test = 10000\n",
+    "batch_size = 500\n",
+    "image_size = (28, 28)\n",
+    "num_epochs = 10\n",
+    "num_epochs_canonical = 3\n",
+    "learn_rate = 1e-4\n",
+    "l2_reg = 0.0\n",
+    "d_phys = 2\n",
+    "d_bond = 10"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')\n",
+    "\n",
+    "mps = tk.MPSLayer(n_sites=image_size[0] * image_size[1] + 1,\n",
+    "                  d_phys=d_phys,\n",
+    "                  n_labels=10,\n",
+    "                  d_bond=d_bond)\n",
+    "mps = mps.to(device)\n",
+    "\n",
+    "for node in mps.leaf_nodes.values():\n",
+    "    node.tensor = math.sqrt(2) * node.tensor"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Before starting training, set memory modes to True, and trace\n",
+    "mps.automemory = True\n",
+    "mps.unbind_mode = True\n",
+    "mps.trace(torch.zeros(image_size[0] * image_size[1], 1, d_phys).to(device))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Set our loss function and optimizer\n",
+    "loss_fun = torch.nn.CrossEntropyLoss()\n",
+    "optimizer = torch.optim.Adam(mps.parameters(),\n",
+    "                             lr=learn_rate,\n",
+    "                             weight_decay=l2_reg)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def embedding(image: torch.Tensor) -> torch.Tensor:\n",
+    "    return (1 / math.sqrt(2)) * torch.stack(\n",
+    "        [torch.ones_like(image), image], dim=1)\n",
+    "\n",
+    "transform = transforms.Compose([transforms.Resize(image_size),\n",
+    "                                transforms.ToTensor(),\n",
+    "                                transforms.Normalize((0.1307,), (0.3081,)),\n",
+    "                                transforms.Lambda(lambda x: 2 * (x > 0).float() - 1),\n",
+    "                                transforms.Lambda(embedding)])\n",
+    "\n",
+    "train_set = datasets.MNIST('./data', download=True, transform=transform)\n",
+    "test_set = datasets.MNIST('./data', download=True, transform=transform,\n",
+    "                          train=False)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Training on 60000 MNIST images \n",
+      "(testing on 10000) for 10 epochs\n",
+      "Using Adam w/ learning rate = 1.0e-04\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Put MNIST data into dataloaders\n",
+    "samplers = {\n",
+    "    \"train\": torch.utils.data.SubsetRandomSampler(range(num_train)),\n",
+    "    \"test\": torch.utils.data.SubsetRandomSampler(range(num_test)),\n",
+    "}\n",
+    "loaders = {\n",
+    "    name: torch.utils.data.DataLoader(\n",
+    "        dataset, batch_size=batch_size, sampler=samplers[name], drop_last=True\n",
+    "    )\n",
+    "    for (name, dataset) in [(\"train\", train_set), (\"test\", test_set)]\n",
+    "}\n",
+    "num_batches = {\n",
+    "    name: total_num // batch_size\n",
+    "    for (name, total_num) in [(\"train\", num_train), (\"test\", num_test)]\n",
+    "}\n",
+    "\n",
+    "print(\n",
+    "    f\"Training on {num_train} MNIST images \\n\"\n",
+    "    f\"(testing on {num_test}) for {num_epochs} epochs\"\n",
+    ")\n",
+    "print(f\"Using Adam w/ learning rate = {learn_rate:.1e}\")\n",
+    "if l2_reg > 0:\n",
+    "    print(f\" * L2 regularization = {l2_reg:.2e}\")\n",
+    "print()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "* Epoch 1: Train. Loss: 0.9907, Train. Acc.: 0.6497, Test Acc.: 0.8962\n",
+      "* Epoch 2: Train. Loss: 0.2633, Train. Acc.: 0.9185, Test Acc.: 0.9445\n",
+      "* Epoch 3: Train. Loss: 0.1751, Train. Acc.: 0.9461, Test Acc.: 0.9565\n",
+      "* Epoch 4: Train. Loss: 0.1304, Train. Acc.: 0.9605, Test Acc.: 0.9631\n",
+      "* Epoch 5: Train. Loss: 0.1096, Train. Acc.: 0.9658, Test Acc.: 0.9699\n",
+      "* Epoch 6: Train. Loss: 0.0926, Train. Acc.: 0.9718, Test Acc.: 0.9695\n",
+      "* Epoch 7: Train. Loss: 0.0809, Train. Acc.: 0.9744, Test Acc.: 0.9723\n",
+      "* Epoch 8: Train. Loss: 0.0723, Train. Acc.: 0.9778, Test Acc.: 0.9747\n",
+      "* Epoch 9: Train. Loss: 0.0638, Train. Acc.: 0.9792, Test Acc.: 0.9740\n",
+      "* Epoch 10: Train. Loss: 0.0591, Train. Acc.: 0.9812, Test Acc.: 0.9760\n"
+     ]
+    }
+   ],
+   "source": [
+    "for epoch_num in range(1, num_epochs + 1):\n",
+    "    running_train_loss = 0.0\n",
+    "    running_train_acc = 0.0\n",
+    "    \n",
+    "    for inputs, labels in loaders[\"train\"]:\n",
+    "        inputs = inputs.view(\n",
+    "            [batch_size, d_phys, image_size[0] * image_size[1]]).permute(2, 0, 1)\n",
+    "        labels = labels.data\n",
+    "        inputs, labels = inputs.to(device), labels.to(device)\n",
+    "\n",
+    "        scores = mps(inputs)\n",
+    "        _, preds = torch.max(scores, 1)\n",
+    "\n",
+    "        # Compute the loss and accuracy, add them to the running totals\n",
+    "        loss = loss_fun(scores, labels)\n",
+    "\n",
+    "        with torch.no_grad():\n",
+    "            accuracy = torch.sum(preds == labels).item() / batch_size\n",
+    "            running_train_loss += loss\n",
+    "            running_train_acc += accuracy\n",
+    "\n",
+    "        # Backpropagate and update parameters\n",
+    "        optimizer.zero_grad()\n",
+    "        loss.backward()\n",
+    "        optimizer.step()\n",
+    "    \n",
+    "    with torch.no_grad():\n",
+    "        running_test_acc = 0.0\n",
+    "\n",
+    "        for inputs, labels in loaders[\"test\"]:\n",
+    "            inputs = inputs.view([\n",
+    "                batch_size, d_phys, image_size[0] * image_size[1]]).permute(2, 0, 1)\n",
+    "            labels = labels.data\n",
+    "            inputs, labels = inputs.to(device), labels.to(device)\n",
+    "\n",
+    "            # Call our MPS to get logit scores and predictions\n",
+    "            scores = mps(inputs)\n",
+    "            _, preds = torch.max(scores, 1)\n",
+    "            running_test_acc += torch.sum(preds == labels).item() / batch_size\n",
+    "    \n",
+    "    print(f'* Epoch {epoch_num}: '\n",
+    "          f'Train. Loss: {running_train_loss / num_batches[\"train\"]:.4f}, '\n",
+    "          f'Train. Acc.: {running_train_acc / num_batches[\"train\"]:.4f}, '\n",
+    "          f'Test Acc.: {running_test_acc / num_batches[\"test\"]:.4f}')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Nº params:     157440\n",
+      "Memory module: 0.6006 MB\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Original number of parametrs\n",
+    "n_params = 0\n",
+    "memory = 0\n",
+    "for p in mps.parameters():\n",
+    "    n_params += p.nelement()\n",
+    "    memory += p.nelement() * p.element_size()  # Bytes\n",
+    "print(f'Nº params:     {n_params}')\n",
+    "print(f'Memory module: {memory / 1024**2:.4f} MB')  # MegaBytes"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# torch.save(mps.state_dict(), 'mps.pt')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 57,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "mps_lst = []\n",
+    "for _ in range(2):\n",
+    "    mps1 = tk.MPSLayer(n_sites=image_size[0] * image_size[1] + 1,\n",
+    "                       d_phys=d_phys,\n",
+    "                       n_labels=10,\n",
+    "                       d_bond=d_bond)\n",
+    "    mps1 = mps1.to(device)\n",
+    "\n",
+    "    for node in mps1.leaf_nodes.values():\n",
+    "        node.tensor = math.sqrt(2) * node.tensor\n",
+    "        \n",
+    "    # Before starting training, set memory modes to True, and trace\n",
+    "    mps1.automemory = True\n",
+    "    mps1.unbind_mode = True\n",
+    "    mps1.trace(torch.zeros(image_size[0] * image_size[1], 1, d_phys).to(device))\n",
+    "\n",
+    "    mps1.load_state_dict(torch.load('mps.pt'))\n",
+    "\n",
+    "    mps1.reset()\n",
+    "    mps1.automemory = False\n",
+    "    mps1.unbind_mode = False\n",
+    "    mps1.unset_data_nodes()\n",
+    "    \n",
+    "    mps_lst.append(mps1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 58,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "generated_class = 0\n",
+    "\n",
+    "v_class_tensor = torch.zeros(10).to(device)\n",
+    "v_class_tensor[generated_class] = 1.\n",
+    "\n",
+    "v1_class = tk.Node(axes_names=('class',),\n",
+    "                   tensor=v_class_tensor)\n",
+    "v2_class = tk.Node(axes_names=('class',),\n",
+    "                   tensor=v_class_tensor)\n",
+    "\n",
+    "pixel_tensor = torch.tensor([1 / math.sqrt(2),\n",
+    "                             -1 / math.sqrt(2)]).to(device)\n",
+    "v1 = tk.Node(axes_names=('feature',),\n",
+    "             tensor=pixel_tensor)\n",
+    "v2 = tk.Node(axes_names=('feature',),\n",
+    "             tensor=pixel_tensor)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 60,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "nodes_mps_lst = [([mps_lst[i].left_node] + \\\n",
+    "                   mps_lst[i].left_env + \\\n",
+    "                  [mps_lst[i].output_node] + \\\n",
+    "                   mps_lst[i].right_env + \\\n",
+    "                  [mps_lst[i].right_node]) for i in range(2)]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 61,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "for node1, node2 in zip(nodes_mps_lst[0], nodes_mps_lst[1]):\n",
+    "    if 'output' in node1.name:\n",
+    "        node1['output'] ^ v1_class['class']\n",
+    "        node2['output'] ^ v2_class['class']\n",
+    "    else:\n",
+    "        node1['input'] ^ node2['input']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 67,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Compute norm (contracting)\n",
+    "left_result_lst = []\n",
+    "right_result_lst = []\n",
+    "\n",
+    "# left node\n",
+    "left_result_lst.append(nodes_mps_lst[0][0] @ nodes_mps_lst[1][0])\n",
+    "\n",
+    "# left env\n",
+    "stack1 = tk.stack(nodes_mps_lst[0][1:(len(mps_lst[0].left_env) + 1)])\n",
+    "stack2 = tk.stack(nodes_mps_lst[1][1:(len(mps_lst[1].left_env) + 1)])\n",
+    "stack1['input'] ^ stack2['input']\n",
+    "stack_result = stack1 @ stack2\n",
+    "left_result_lst += tk.unbind(stack_result)\n",
+    "\n",
+    "# output node\n",
+    "output1 = mps_lst[0].output_node @ mps_lst[0].output_node.neighbours('output')\n",
+    "output2 = mps_lst[1].output_node @ mps_lst[1].output_node.neighbours('output')\n",
+    "left_result_lst[-1] @= output1\n",
+    "left_result_lst[-1] @= output2\n",
+    "\n",
+    "# right env\n",
+    "stack1 = tk.stack(nodes_mps_lst[0][(len(mps_lst[0].left_env) + 2):-1])\n",
+    "stack2 = tk.stack(nodes_mps_lst[1][(len(mps_lst[1].left_env) + 2):-1])\n",
+    "stack1['input'] ^ stack2['input']\n",
+    "stack_result = stack1 @ stack2\n",
+    "right_result_lst += tk.unbind(stack_result)\n",
+    "\n",
+    "# right node\n",
+    "right_result_lst.append(nodes_mps_lst[0][-1] @ nodes_mps_lst[1][-1])\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 79,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Contract matrices\n",
+    "result = left_result_lst[0]\n",
+    "for node in left_result_lst[1:]:\n",
+    "    result @= node"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 80,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "for node in right_result_lst[:-1]:\n",
+    "    result @= node\n",
+    "    \n",
+    "# norm = result.tensor"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 84,
+   "metadata": {},
+   "outputs": [
+    {
+     "ename": "ValueError",
+     "evalue": "`axes_names` length should match `shape` length",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mValueError\u001b[0m                                Traceback (most recent call last)",
+      "Cell \u001b[0;32mIn[84], line 1\u001b[0m\n\u001b[0;32m----> 1\u001b[0m result \u001b[39m@\u001b[39;49m right_result_lst[\u001b[39m-\u001b[39;49m\u001b[39m1\u001b[39;49m]\n",
+      "File \u001b[0;32m~/VSCodeProjects/tensorkrowch/tensorkrowch/operations.py:2368\u001b[0m, in \u001b[0;36mcontract_between\u001b[0;34m(node1, node2, axes)\u001b[0m\n\u001b[1;32m   2365\u001b[0m \u001b[39mif\u001b[39;00m \u001b[39mnot\u001b[39;00m edges:\n\u001b[1;32m   2366\u001b[0m     \u001b[39mraise\u001b[39;00m \u001b[39mValueError\u001b[39;00m(\u001b[39mf\u001b[39m\u001b[39m'\u001b[39m\u001b[39mNo batch edges or shared edges between \u001b[39m\u001b[39m'\u001b[39m\n\u001b[1;32m   2367\u001b[0m                      \u001b[39mf\u001b[39m\u001b[39m'\u001b[39m\u001b[39mnodes \u001b[39m\u001b[39m{\u001b[39;00mnode1\u001b[39m!s}\u001b[39;00m\u001b[39m and \u001b[39m\u001b[39m{\u001b[39;00mnode2\u001b[39m!s}\u001b[39;00m\u001b[39m found\u001b[39m\u001b[39m'\u001b[39m)\n\u001b[0;32m-> 2368\u001b[0m \u001b[39mreturn\u001b[39;00m contract_edges(edges, node1, node2)\n",
+      "File \u001b[0;32m~/VSCodeProjects/tensorkrowch/tensorkrowch/operations.py:2275\u001b[0m, in \u001b[0;36mcontract_edges\u001b[0;34m(edges, node1, node2)\u001b[0m\n\u001b[1;32m   2252\u001b[0m \u001b[39mdef\u001b[39;00m \u001b[39mcontract_edges\u001b[39m(edges: List[AbstractEdge],\n\u001b[1;32m   2253\u001b[0m                    node1: AbstractNode,\n\u001b[1;32m   2254\u001b[0m                    node2: AbstractNode) \u001b[39m-\u001b[39m\u001b[39m>\u001b[39m Node:\n\u001b[1;32m   2255\u001b[0m \u001b[39m    \u001b[39m\u001b[39m\"\"\"\u001b[39;00m\n\u001b[1;32m   2256\u001b[0m \u001b[39m    Contracts all selected edges between two nodes.\u001b[39;00m\n\u001b[1;32m   2257\u001b[0m \n\u001b[0;32m   (...)\u001b[0m\n\u001b[1;32m   2273\u001b[0m \u001b[39m    Node\u001b[39;00m\n\u001b[1;32m   2274\u001b[0m \u001b[39m    \"\"\"\u001b[39;00m\n\u001b[0;32m-> 2275\u001b[0m     \u001b[39mreturn\u001b[39;00m contract_edges_op(edges, node1, node2)\n",
+      "File \u001b[0;32m~/VSCodeProjects/tensorkrowch/tensorkrowch/operations.py:97\u001b[0m, in \u001b[0;36mOperation.__call__\u001b[0;34m(self, *args, **kwargs)\u001b[0m\n\u001b[1;32m     94\u001b[0m successor \u001b[39m=\u001b[39m \u001b[39mself\u001b[39m\u001b[39m.\u001b[39mcheck_first(\u001b[39m*\u001b[39margs, \u001b[39m*\u001b[39m\u001b[39m*\u001b[39mkwargs)\n\u001b[1;32m     96\u001b[0m \u001b[39mif\u001b[39;00m successor \u001b[39mis\u001b[39;00m \u001b[39mNone\u001b[39;00m:\n\u001b[0;32m---> 97\u001b[0m     \u001b[39mreturn\u001b[39;00m \u001b[39mself\u001b[39;49m\u001b[39m.\u001b[39;49mfunc1(\u001b[39m*\u001b[39;49margs, \u001b[39m*\u001b[39;49m\u001b[39m*\u001b[39;49mkwargs)\n\u001b[1;32m     98\u001b[0m \u001b[39melse\u001b[39;00m:\n\u001b[1;32m     99\u001b[0m     args \u001b[39m=\u001b[39m [successor] \u001b[39m+\u001b[39m \u001b[39mlist\u001b[39m(args)\n",
+      "File \u001b[0;32m~/VSCodeProjects/tensorkrowch/tensorkrowch/operations.py:2076\u001b[0m, in \u001b[0;36m_contract_edges_first\u001b[0;34m(edges, node1, node2)\u001b[0m\n\u001b[1;32m   2073\u001b[0m     \u001b[39mraise\u001b[39;00m \u001b[39mTypeError\u001b[39;00m(\u001b[39m'\u001b[39m\u001b[39mCan only contract (Param)StackNode with other \u001b[39m\u001b[39m'\u001b[39m\n\u001b[1;32m   2074\u001b[0m                     \u001b[39m'\u001b[39m\u001b[39m(Param)StackNode\u001b[39m\u001b[39m'\u001b[39m)\n\u001b[1;32m   2075\u001b[0m \u001b[39melse\u001b[39;00m:\n\u001b[0;32m-> 2076\u001b[0m     new_node \u001b[39m=\u001b[39m Node(axes_names\u001b[39m=\u001b[39;49mnew_axes_names,\n\u001b[1;32m   2077\u001b[0m                     name\u001b[39m=\u001b[39;49m\u001b[39m'\u001b[39;49m\u001b[39mcontract_edges\u001b[39;49m\u001b[39m'\u001b[39;49m,\n\u001b[1;32m   2078\u001b[0m                     network\u001b[39m=\u001b[39;49mnode1\u001b[39m.\u001b[39;49m_network,\n\u001b[1;32m   2079\u001b[0m                     leaf\u001b[39m=\u001b[39;49m\u001b[39mFalse\u001b[39;49;00m,\n\u001b[1;32m   2080\u001b[0m                     param_edges\u001b[39m=\u001b[39;49m\u001b[39mFalse\u001b[39;49;00m,\n\u001b[1;32m   2081\u001b[0m                     tensor\u001b[39m=\u001b[39;49mresult,\n\u001b[1;32m   2082\u001b[0m                     edges\u001b[39m=\u001b[39;49mnew_edges,\n\u001b[1;32m   2083\u001b[0m                     node1_list\u001b[39m=\u001b[39;49mnew_node1_list)\n\u001b[1;32m   2085\u001b[0m \u001b[39m# Create successor\u001b[39;00m\n\u001b[1;32m   2086\u001b[0m net \u001b[39m=\u001b[39m node1\u001b[39m.\u001b[39m_network\n",
+      "File \u001b[0;32m~/VSCodeProjects/tensorkrowch/tensorkrowch/components.py:1477\u001b[0m, in \u001b[0;36mNode.__init__\u001b[0;34m(self, shape, axes_names, name, network, leaf, data, virtual, override_node, param_edges, tensor, edges, override_edges, node1_list, init_method, device, **kwargs)\u001b[0m\n\u001b[1;32m   1469\u001b[0m     \u001b[39msuper\u001b[39m()\u001b[39m.\u001b[39m\u001b[39m__init__\u001b[39m(shape\u001b[39m=\u001b[39mshape,\n\u001b[1;32m   1470\u001b[0m                      axes_names\u001b[39m=\u001b[39maxes_names,\n\u001b[1;32m   1471\u001b[0m                      name\u001b[39m=\u001b[39mname,\n\u001b[0;32m   (...)\u001b[0m\n\u001b[1;32m   1474\u001b[0m                      data\u001b[39m=\u001b[39mdata,\n\u001b[1;32m   1475\u001b[0m                      virtual\u001b[39m=\u001b[39mvirtual)\n\u001b[1;32m   1476\u001b[0m \u001b[39melse\u001b[39;00m:\n\u001b[0;32m-> 1477\u001b[0m     \u001b[39msuper\u001b[39;49m()\u001b[39m.\u001b[39;49m\u001b[39m__init__\u001b[39;49m(shape\u001b[39m=\u001b[39;49mtensor\u001b[39m.\u001b[39;49mshape,\n\u001b[1;32m   1478\u001b[0m                      axes_names\u001b[39m=\u001b[39;49maxes_names,\n\u001b[1;32m   1479\u001b[0m                      name\u001b[39m=\u001b[39;49mname,\n\u001b[1;32m   1480\u001b[0m                      network\u001b[39m=\u001b[39;49mnetwork,\n\u001b[1;32m   1481\u001b[0m                      leaf\u001b[39m=\u001b[39;49mleaf,\n\u001b[1;32m   1482\u001b[0m                      data\u001b[39m=\u001b[39;49mdata,\n\u001b[1;32m   1483\u001b[0m                      virtual\u001b[39m=\u001b[39;49mvirtual)\n\u001b[1;32m   1485\u001b[0m \u001b[39m# edges\u001b[39;00m\n\u001b[1;32m   1486\u001b[0m \u001b[39mif\u001b[39;00m edges \u001b[39mis\u001b[39;00m \u001b[39mNone\u001b[39;00m:\n",
+      "File \u001b[0;32m~/VSCodeProjects/tensorkrowch/tensorkrowch/components.py:315\u001b[0m, in \u001b[0;36mAbstractNode.__init__\u001b[0;34m(self, shape, axes_names, name, network, leaf, data, virtual)\u001b[0m\n\u001b[1;32m    312\u001b[0m     \u001b[39mraise\u001b[39;00m \u001b[39mTypeError\u001b[39;00m(\n\u001b[1;32m    313\u001b[0m         \u001b[39m'\u001b[39m\u001b[39m`axes_names` should be tuple[str, ...] or list[str, ...] type\u001b[39m\u001b[39m'\u001b[39m)\n\u001b[1;32m    314\u001b[0m \u001b[39mif\u001b[39;00m \u001b[39mlen\u001b[39m(axes_names) \u001b[39m!=\u001b[39m \u001b[39mlen\u001b[39m(shape):\n\u001b[0;32m--> 315\u001b[0m     \u001b[39mraise\u001b[39;00m \u001b[39mValueError\u001b[39;00m(\n\u001b[1;32m    316\u001b[0m         \u001b[39m'\u001b[39m\u001b[39m`axes_names` length should match `shape` length\u001b[39m\u001b[39m'\u001b[39m)\n\u001b[1;32m    317\u001b[0m \u001b[39melse\u001b[39;00m:\n\u001b[1;32m    318\u001b[0m     axes_names \u001b[39m=\u001b[39m enum_repeated_names(axes_names)\n",
+      "\u001b[0;31mValueError\u001b[0m: `axes_names` length should match `shape` length"
+     ]
+    }
+   ],
+   "source": [
+    "result @ right_result_lst[-1]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "for node1, node2 in zip(nodes_mps_lst[0], nodes_mps_lst[1]):\n",
+    "    node1['input'] | node2['input']\n",
+    "    node1['input'] ^ v1['feature']\n",
+    "    node2['input'] ^ v2['feature']\n",
+    "    \n",
+    "    # Contract everything\n",
+    "    "
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "pytorch",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.8.15"
+  },
+  "orig_nbformat": 4,
+  "vscode": {
+   "interpreter": {
+    "hash": "98819ef66e0fd8e26166ef23b2736d781c80dc7aa950207c762e497c21afbd1c"
+   }
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

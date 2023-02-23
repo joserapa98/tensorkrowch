@@ -112,6 +112,41 @@
      Basics
     </a>
    </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/training_mps_mnist.html">
+     Training MPS - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/training_mps_fashion_mnist.html">
+     Training MPS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/training_snake_sbs_fashion_mnist.html">
+     Training SnakeSBS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/training_cnn_snake_sbs_fashion_mnist.html">
+     Training CNN-SnakeSBS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/training_convmps_fashion_mnist.html">
+     Training ConvMPS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/training_mps_dmrg_mnist.html">
+     Training MPS with DMRG - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/training_mps_mnist_binarized.html">
+     Training MPS - MNIST Binarized
+    </a>
+   </li>
   </ul>
  </li>
  <li class="toctree-l1 has-children">
@@ -500,7 +535,7 @@ title="Source repository"
             <span class="n">result_lst</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">result_lst</span>
 
-<div class="viewcode-block" id="Tree.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.Tree.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<div class="viewcode-block" id="Tree.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.Tree.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the whole Tree Tensor Network.</span>
 
@@ -841,7 +876,7 @@ title="Source repository"
             <span class="n">result_lst</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">result_lst</span>
 
-<div class="viewcode-block" id="UTree.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UTree.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<div class="viewcode-block" id="UTree.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UTree.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the whole Tree Tensor Network.</span>
 

@@ -40,7 +40,7 @@
     <link rel="shortcut icon" href="../_static/tensorkrowch_favicon_light.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="API Reference" href="../api.html" />
+    <link rel="next" title="Training MPS - MNIST" href="training_mps_mnist.html" />
     <link rel="prev" title="Tutorials" href="../tutorials.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
@@ -115,6 +115,41 @@
    <li class="toctree-l2 current active">
     <a class="current reference internal" href="#">
      Basics
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="training_mps_mnist.html">
+     Training MPS - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="training_mps_fashion_mnist.html">
+     Training MPS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="training_snake_sbs_fashion_mnist.html">
+     Training SnakeSBS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="training_cnn_snake_sbs_fashion_mnist.html">
+     Training CNN-SnakeSBS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="training_convmps_fashion_mnist.html">
+     Training ConvMPS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="training_mps_dmrg_mnist.html">
+     Training MPS with DMRG - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="training_mps_mnist_binarized.html">
+     Training MPS - MNIST Binarized
     </a>
    </li>
   </ul>
@@ -564,7 +599,7 @@ div.rendered_html tbody tr:hover {
 <h1>Basics<a class="headerlink" href="#Basics" title="Permalink to this headline">#</a></h1>
 <p>The main components of <strong>TensorKrowch</strong> are <code class="docutils literal notranslate"><span class="pre">Nodes</span></code>, <code class="docutils literal notranslate"><span class="pre">Edges</span></code> and <code class="docutils literal notranslate"><span class="pre">TensorNetworks</span></code>. The latter are the kind of objects that are going to be trained. They are made up of a bunch of <code class="docutils literal notranslate"><span class="pre">Nodes</span></code> connected by <code class="docutils literal notranslate"><span class="pre">Edges</span></code>, forming a graph. Hence, all <code class="docutils literal notranslate"><span class="pre">Nodes</span></code> must be members of some <code class="docutils literal notranslate"><span class="pre">TensorNetwork</span></code>.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">tensorkrowch</span> <span class="k">as</span> <span class="nn">tk</span>
@@ -600,7 +635,7 @@ torch.Size([5, 5])
 <p>This way of manipulating <code class="docutils literal notranslate"><span class="pre">TensorNetworks</span></code> is just right for experimenting and playing around, but things can get real just with a few more lines of code. The workflow in <strong>TensorKrowch</strong> is similar to that of <strong>PyTorch</strong> when one wants to define a new <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code>. To do this, the layers are defined in the <code class="docutils literal notranslate"><span class="pre">__init__</span></code> method, while the way in which these layers are combined to compute the output is described overriding the <code class="docutils literal notranslate"><span class="pre">forward</span></code> method.</p>
 <p>In <strong>TensorKrowch</strong>, the network itself should also be defined in the <code class="docutils literal notranslate"><span class="pre">__init__</span></code> method of subclasses of <code class="docutils literal notranslate"><span class="pre">TensorNetwork</span></code>. But instead of overriding <code class="docutils literal notranslate"><span class="pre">forward</span></code>, here the method <code class="docutils literal notranslate"><span class="pre">contract</span></code> should be overriden to specify how the whole network should be contracted into a signle tensor. Also, optionally, the method <code class="docutils literal notranslate"><span class="pre">set_data_nodes</span></code> can be overriden. This method creates the nodes that will store the input data tensors.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Let&#39;s rewrite the code above in a fancier way</span>
@@ -646,7 +681,7 @@ torch.Size([5, 5])
 </div>
 <p>Now that we have defined the network as a subclass of <code class="docutils literal notranslate"><span class="pre">TensorNetwork</span></code>, feeding it with input data is as easy as:</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
@@ -657,11 +692,6 @@ torch.Size([5, 5])
 <span class="n">result</span> <span class="o">=</span> <span class="n">net</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
 <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>  <span class="c1"># batch_size</span>
-
-<span class="c1"># ``node1`` and ``node2`` have gradients, they can be &quot;learned&quot;</span>
-<span class="n">result</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
-<span class="k">assert</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="n">net</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">grad</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">net</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
-<span class="k">assert</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="n">net</span><span class="o">.</span><span class="n">node2</span><span class="o">.</span><span class="n">grad</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">net</span><span class="o">.</span><span class="n">node2</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -673,9 +703,20 @@ torch.Size([5, 5])
 torch.Size([100])
 </pre></div></div>
 </div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># ``node1`` and ``node2`` have gradients, they can be &quot;learned&quot;</span>
+<span class="n">result</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+<span class="k">assert</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="n">net</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">grad</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">net</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+<span class="k">assert</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="n">net</span><span class="o">.</span><span class="n">node2</span><span class="o">.</span><span class="n">grad</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">net</span><span class="o">.</span><span class="n">node2</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
 <p>Let’s move on to a more complex and recognizible model: Matrix Product States.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MPS</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">):</span>
@@ -760,7 +801,7 @@ torch.Size([100])
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[37]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">time</span>
@@ -799,16 +840,16 @@ torch.Size([100])
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Time: 0.0185
-Time: 0.0143
-Time: 0.0120
-Time: 0.0115
-Time: 0.0109
+Time: 0.0105
+Time: 0.0100
+Time: 0.0094
+Time: 0.0095
+Time: 0.0093
 </pre></div></div>
 </div>
 <p>Of course, there is also a pre-defined way of instantiating <code class="docutils literal notranslate"><span class="pre">MPS</span></code>:</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[39]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># MPSLayer has output node, MPS doesn&#39;t</span>
@@ -841,16 +882,28 @@ Time: 0.0109
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Time: 0.0040
-Time: 0.0045
-Time: 0.0039
-Time: 0.0039
-Time: 0.0042
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">TypeError</span>                                 Traceback (most recent call last)
+Cell <span class="ansi-green-fg">In[7], line 2</span>
+<span class="ansi-green-intense-fg ansi-bold">      1</span> # MPSLayer has output node, MPS doesn&#39;t
+<span class="ansi-green-fg">----&gt; 2</span> mps = tk.MPSLayer(n_sites=10 * 10 + 1, # Number of sites
+<span class="ansi-green-intense-fg ansi-bold">      3</span>                   d_phys=2,            # Physical dimension
+<span class="ansi-green-intense-fg ansi-bold">      4</span>                   n_labels=10,         # Output physical dimension (num. labels)
+<span class="ansi-green-intense-fg ansi-bold">      5</span>                   d_bond=10,           # Bond dimension
+<span class="ansi-green-intense-fg ansi-bold">      6</span>                   boundary=&#39;pbc&#39;,      # Periodic boundary conditions
+<span class="ansi-green-intense-fg ansi-bold">      7</span>                   param_bond=False,    # Trainable edges
+<span class="ansi-green-intense-fg ansi-bold">      8</span>                   num_batches=1,       # Number of batch edges in data nodes
+<span class="ansi-green-intense-fg ansi-bold">      9</span>                   inline_input=False,  # Contract input data nodes inline or in parallel
+<span class="ansi-green-intense-fg ansi-bold">     10</span>                   inline_mats=False)   # Contract final matrices inline or pairwise
+<span class="ansi-green-intense-fg ansi-bold">     12</span> mps = mps.to(device)
+<span class="ansi-green-intense-fg ansi-bold">     13</span> mps.automemory = True
+
+<span class="ansi-red-fg">TypeError</span>: __init__() got an unexpected keyword argument &#39;inline_input&#39;
 </pre></div></div>
 </div>
 <p>Besides, since the class <code class="docutils literal notranslate"><span class="pre">TensorNetwork</span></code> is a subclass of <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code>, one can make a network a sub-module of a larger model.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[43]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
@@ -874,7 +927,7 @@ Time: 0.0042
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[46]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>  <span class="c1"># n_features x batch_size x feature_size</span>
@@ -912,10 +965,10 @@ torch.Size([100, 1])
             <p class="prev-next-title">Tutorials</p>
         </div>
     </a>
-    <a class='right-next' id="next-link" href="../api.html" title="next page">
+    <a class='right-next' id="next-link" href="training_mps_mnist.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">API Reference</p>
+        <p class="prev-next-title">Training MPS - MNIST</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>

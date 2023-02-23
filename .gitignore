@@ -4,6 +4,7 @@ __pycache__
 .ipynb_checkpoints
 
 /training_scripts
-/foo
+/data
 
 *.ipynb
+*.pt

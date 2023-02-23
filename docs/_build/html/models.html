@@ -116,6 +116,41 @@
      Basics
     </a>
    </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/training_mps_mnist.html">
+     Training MPS - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/training_mps_fashion_mnist.html">
+     Training MPS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/training_snake_sbs_fashion_mnist.html">
+     Training SnakeSBS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/training_cnn_snake_sbs_fashion_mnist.html">
+     Training CNN-SnakeSBS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/training_convmps_fashion_mnist.html">
+     Training ConvMPS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/training_mps_dmrg_mnist.html">
+     Training MPS with DMRG - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/training_mps_mnist_binarized.html">
+     Training MPS - MNIST Binarized
+    </a>
+   </li>
   </ul>
  </li>
  <li class="toctree-l1 current active has-children">
@@ -1384,7 +1419,7 @@ an input node.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.Tree.contract">
-<span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inline</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/tree.html#Tree.contract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Tree.contract" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inline</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/tree.html#Tree.contract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Tree.contract" title="Permalink to this definition">#</a></dt>
 <dd><p>Contracts the whole Tree Tensor Network.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1491,7 +1526,7 @@ an input node.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.UTree.contract">
-<span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inline</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/tree.html#UTree.contract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.UTree.contract" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inline</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/tree.html#UTree.contract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.UTree.contract" title="Permalink to this definition">#</a></dt>
 <dd><p>Contracts the whole Tree Tensor Network.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1789,7 +1824,7 @@ an input node.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.PEPS.contract">
-<span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">from_side</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'up'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">32</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inline</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/peps.html#PEPS.contract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.PEPS.contract" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">from_side</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'up'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">32</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inline</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/peps.html#PEPS.contract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.PEPS.contract" title="Permalink to this definition">#</a></dt>
 <dd><p>Contracts the whole PEPS.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1887,7 +1922,7 @@ an input node.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.UPEPS.contract">
-<span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">from_side</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'up'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">32</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inline</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/peps.html#UPEPS.contract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.UPEPS.contract" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">from_side</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'up'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">32</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inline</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/peps.html#UPEPS.contract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.UPEPS.contract" title="Permalink to this definition">#</a></dt>
 <dd><p>Contracts the whole PEPS.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>

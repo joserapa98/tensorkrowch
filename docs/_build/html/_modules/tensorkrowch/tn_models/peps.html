@@ -112,6 +112,41 @@
      Basics
     </a>
    </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/training_mps_mnist.html">
+     Training MPS - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/training_mps_fashion_mnist.html">
+     Training MPS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/training_snake_sbs_fashion_mnist.html">
+     Training SnakeSBS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/training_cnn_snake_sbs_fashion_mnist.html">
+     Training CNN-SnakeSBS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/training_convmps_fashion_mnist.html">
+     Training ConvMPS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/training_mps_dmrg_mnist.html">
+     Training MPS with DMRG - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/training_mps_mnist_binarized.html">
+     Training MPS - MNIST Binarized
+    </a>
+   </li>
   </ul>
  </li>
  <li class="toctree-l1 has-children">
@@ -884,7 +919,7 @@ title="Source repository"
                           <span class="n">line1</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                           <span class="n">line2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                           <span class="n">from_side</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span><span class="p">,</span>
-                          <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]:</span>
+                          <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts two consecutive lines (rows or columns) of the PEPS.&quot;&quot;&quot;</span>
         <span class="n">result_list</span> <span class="o">=</span> <span class="p">[]</span>
         
@@ -996,7 +1031,7 @@ title="Source repository"
 <div class="viewcode-block" id="PEPS.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.PEPS.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">from_side</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span><span class="p">,</span>
                  <span class="n">max_bond</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
-                 <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+                 <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the whole PEPS.</span>
 <span class="sd">        </span>
@@ -1300,7 +1335,7 @@ title="Source repository"
     <span class="k">def</span> <span class="nf">_contract_2_lines</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                           <span class="n">line1</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                           <span class="n">line2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
-                          <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]:</span>
+                          <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts two consecutive lines (rows or columns) of the PEPS.&quot;&quot;&quot;</span>
         <span class="n">result_list</span> <span class="o">=</span> <span class="p">[]</span>
         
@@ -1376,7 +1411,7 @@ title="Source repository"
 <div class="viewcode-block" id="UPEPS.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UPEPS.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">from_side</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span><span class="p">,</span>
                  <span class="n">max_bond</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
-                 <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+                 <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the whole PEPS.</span>
 <span class="sd">        </span>

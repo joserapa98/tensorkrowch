@@ -117,6 +117,41 @@
      Basics
     </a>
    </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/training_mps_mnist.html">
+     Training MPS - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/training_mps_fashion_mnist.html">
+     Training MPS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/training_snake_sbs_fashion_mnist.html">
+     Training SnakeSBS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/training_cnn_snake_sbs_fashion_mnist.html">
+     Training CNN-SnakeSBS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/training_convmps_fashion_mnist.html">
+     Training ConvMPS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/training_mps_dmrg_mnist.html">
+     Training MPS with DMRG - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tutorials/training_mps_mnist_binarized.html">
+     Training MPS - MNIST Binarized
+    </a>
+   </li>
   </ul>
  </li>
  <li class="toctree-l1 current active has-children">
@@ -387,11 +422,11 @@ title="Print to PDF"
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.Axis">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Axis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#Axis"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Axis" title="Permalink to this definition">#</a></dt>
-<dd><p>The axes are the objects that stick edges to nodes. Every <a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">node</span></code></a>
-has a list of <span class="math notranslate nohighlight">\(N\)</span> axes, each corresponding to one edge; and every axis
-stores information that helps accessing that edge, such as its <a class="reference internal" href="#tensorkrowch.Axis.name" title="tensorkrowch.Axis.name"><code class="xref py py-attr docutils literal notranslate"><span class="pre">name</span></code></a>
-and <a class="reference internal" href="#tensorkrowch.Axis.num" title="tensorkrowch.Axis.num"><code class="xref py py-attr docutils literal notranslate"><span class="pre">num</span></code></a> (index). Also, the axis keeps track of the <a class="reference internal" href="#tensorkrowch.Axis.is_batch" title="tensorkrowch.Axis.is_batch"><code class="xref py py-meth docutils literal notranslate"><span class="pre">batch</span></code></a>
-and <a class="reference internal" href="#tensorkrowch.Axis.is_node1" title="tensorkrowch.Axis.is_node1"><code class="xref py py-meth docutils literal notranslate"><span class="pre">node1</span></code></a> attributes:</p>
+<dd><p>The axes are the objects that stick edges to nodes. Every <a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">node</span></code></a> has a list of <span class="math notranslate nohighlight">\(N\)</span> axes, each corresponding to one
+edge; and every axis stores information that helps accessing that edge,
+such as its <a class="reference internal" href="#tensorkrowch.Axis.name" title="tensorkrowch.Axis.name"><code class="xref py py-attr docutils literal notranslate"><span class="pre">name</span></code></a> and <a class="reference internal" href="#tensorkrowch.Axis.num" title="tensorkrowch.Axis.num"><code class="xref py py-attr docutils literal notranslate"><span class="pre">num</span></code></a> (index). Also, the axis keeps
+track of the <a class="reference internal" href="#tensorkrowch.Axis.is_batch" title="tensorkrowch.Axis.is_batch"><code class="xref py py-meth docutils literal notranslate"><span class="pre">batch</span></code></a> and <a class="reference internal" href="#tensorkrowch.Axis.is_node1" title="tensorkrowch.Axis.is_node1"><code class="xref py py-meth docutils literal notranslate"><span class="pre">node1</span></code></a>
+attributes:</p>
 <ul>
 <li><p><strong>batch</strong>: If axis name containes the word “<cite>batch</cite>”, the edge attached
 to this axis will be a batch edge, that is, that edge will not be able to

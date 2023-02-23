@@ -112,6 +112,41 @@
      Basics
     </a>
    </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../tutorials/training_mps_mnist.html">
+     Training MPS - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../tutorials/training_mps_fashion_mnist.html">
+     Training MPS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../tutorials/training_snake_sbs_fashion_mnist.html">
+     Training SnakeSBS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../tutorials/training_cnn_snake_sbs_fashion_mnist.html">
+     Training CNN-SnakeSBS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../tutorials/training_convmps_fashion_mnist.html">
+     Training ConvMPS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../tutorials/training_mps_dmrg_mnist.html">
+     Training MPS with DMRG - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../tutorials/training_mps_mnist_binarized.html">
+     Training MPS - MNIST Binarized
+    </a>
+   </li>
   </ul>
  </li>
  <li class="toctree-l1 has-children">
@@ -303,11 +338,12 @@ title="Source repository"
 <span class="c1">###############################################################################</span>
 <div class="viewcode-block" id="Axis"><a class="viewcode-back" href="../../components.html#tensorkrowch.Axis">[docs]</a><span class="k">class</span> <span class="nc">Axis</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    The axes are the objects that stick edges to nodes. Every :class:`node &lt;AbstractNode&gt;`</span>
-<span class="sd">    has a list of :math:`N` axes, each corresponding to one edge; and every axis</span>
-<span class="sd">    stores information that helps accessing that edge, such as its :attr:`name`</span>
-<span class="sd">    and :attr:`num` (index). Also, the axis keeps track of the :meth:`batch &lt;is_batch&gt;`</span>
-<span class="sd">    and :meth:`node1 &lt;is_node1&gt;` attributes:</span>
+<span class="sd">    The axes are the objects that stick edges to nodes. Every :class:`node</span>
+<span class="sd">    &lt;AbstractNode&gt;` has a list of :math:`N` axes, each corresponding to one</span>
+<span class="sd">    edge; and every axis stores information that helps accessing that edge,</span>
+<span class="sd">    such as its :attr:`name` and :attr:`num` (index). Also, the axis keeps</span>
+<span class="sd">    track of the :meth:`batch &lt;is_batch&gt;` and :meth:`node1 &lt;is_node1&gt;`</span>
+<span class="sd">    attributes:</span>
 <span class="sd">    </span>
 <span class="sd">    * **batch**: If axis name containes the word &quot;`batch`&quot;, the edge attached</span>
 <span class="sd">      to this axis will be a batch edge, that is, that edge will not be able to</span>
@@ -393,10 +429,6 @@ title="Source repository"
 
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`name` should be str type&#39;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">check_name_style</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;axis&#39;</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s1">&#39;`name` cannot contain blank spaces or special characters &#39;</span>
-                <span class="s1">&#39;since it is intended to be used as name of submodules&#39;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">AbstractNode</span><span class="p">):</span>
@@ -443,15 +475,13 @@ title="Source repository"
     <span class="nd">@name</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="n">Text</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Set axis name. Should not contain blank spaces or special characters</span>
-<span class="sd">        since it is intended to be used as name of submodules.</span>
+<span class="sd">        Set axis name. If this axis corresponds to a :class:`ParamEdge`, the</span>
+<span class="sd">        name should not contain blank spaces or special characters since it is</span>
+<span class="sd">        intended to be used as name of submodule.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`name` should be str type&#39;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">check_name_style</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;axis&#39;</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s1">&#39;`name` cannot contain blank spaces or special characters &#39;</span>
-                <span class="s1">&#39;since it is intended to be used as name of submodules&#39;</span><span class="p">)</span>
+                
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">==</span> <span class="s1">&#39;stack&#39;</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Name &quot;stack&quot; of stack edge cannot be changed&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="s1">&#39;stack&#39;</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
@@ -2924,6 +2954,12 @@ title="Source repository"
 <span class="sd">        &gt;&gt;&gt; print(new_paramedge.module_name)</span>
 <span class="sd">        edge_nodeA_right_nodeB_left</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">axis</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">check_name_style</span><span class="p">(</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span><span class="p">,</span> <span class="s1">&#39;axis&#39;</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;Axis</span><span class="se">\&#39;</span><span class="s1"> name </span><span class="si">{</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1"> cannot contain blank spaces or &#39;</span>
+                    <span class="s1">&#39;special characters since it is intended to be used as name&#39;</span>
+                    <span class="s1">&#39; of submodule&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
             <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;edge_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1">&#39;</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;edge_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1">_&#39;</span> \

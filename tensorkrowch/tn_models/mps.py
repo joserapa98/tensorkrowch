@@ -314,7 +314,7 @@ class MPS(TensorNetwork):
                 
                 stack['input'] ^ stack_data['feature']
                 
-                result = stack @ stack_data
+                result = stack_data @ stack
                 mats_result = op.unbind(result)
                 return mats_result
             else:
@@ -883,7 +883,7 @@ class UMPS(TensorNetwork):
                 
                 stack['input'] ^ stack_data['feature']
                 
-                result = stack @ stack_data
+                result = stack_data @ stack
                 mats_result = op.unbind(result)
                 return mats_result
             else:

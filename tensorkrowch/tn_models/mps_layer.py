@@ -488,7 +488,7 @@ class MPSLayer(TensorNetwork):
                 
                 stack['input'] ^ stack_data['feature']
                 
-                result = stack @ stack_data
+                result = stack_data @ stack
                 result = op.unbind(result)
                 
                 left_result = result[:len(self.left_env)]
@@ -1221,7 +1221,7 @@ class UMPSLayer(TensorNetwork):
                 
                 stack['input'] ^ stack_data['feature']
                 
-                result = stack @ stack_data
+                result = stack_data @ stack
                 result = op.unbind(result)
                 
                 left_result = result[:len(self.left_env)]

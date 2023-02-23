@@ -48,11 +48,12 @@ from tensorkrowch.utils import (check_name_style, enum_repeated_names, erase_enu
 ###############################################################################
 class Axis:
     """
-    The axes are the objects that stick edges to nodes. Every :class:`node <AbstractNode>`
-    has a list of :math:`N` axes, each corresponding to one edge; and every axis
-    stores information that helps accessing that edge, such as its :attr:`name`
-    and :attr:`num` (index). Also, the axis keeps track of the :meth:`batch <is_batch>`
-    and :meth:`node1 <is_node1>` attributes:
+    The axes are the objects that stick edges to nodes. Every :class:`node
+    <AbstractNode>` has a list of :math:`N` axes, each corresponding to one
+    edge; and every axis stores information that helps accessing that edge,
+    such as its :attr:`name` and :attr:`num` (index). Also, the axis keeps
+    track of the :meth:`batch <is_batch>` and :meth:`node1 <is_node1>`
+    attributes:
     
     * **batch**: If axis name containes the word "`batch`", the edge attached
       to this axis will be a batch edge, that is, that edge will not be able to
@@ -138,10 +139,6 @@ class Axis:
 
         if not isinstance(name, str):
             raise TypeError('`name` should be str type')
-        if not check_name_style(name, 'axis'):
-            raise ValueError(
-                '`name` cannot contain blank spaces or special characters '
-                'since it is intended to be used as name of submodules')
 
         if node is not None:
             if not isinstance(node, AbstractNode):
@@ -188,15 +185,13 @@ class Axis:
     @name.setter
     def name(self, name: Text) -> None:
         """
-        Set axis name. Should not contain blank spaces or special characters
-        since it is intended to be used as name of submodules.
+        Set axis name. If this axis corresponds to a :class:`ParamEdge`, the
+        name should not contain blank spaces or special characters since it is
+        intended to be used as name of submodule.
         """
         if not isinstance(name, str):
             raise TypeError('`name` should be str type')
-        if not check_name_style(name, 'axis'):
-            raise ValueError(
-                '`name` cannot contain blank spaces or special characters '
-                'since it is intended to be used as name of submodules')
+                
         if self._name == 'stack':
             raise ValueError('Name "stack" of stack edge cannot be changed')
         if 'stack' in name:
@@ -2669,6 +2664,12 @@ class ParamEdge(AbstractEdge, nn.Module):
         >>> print(new_paramedge.module_name)
         edge_nodeA_right_nodeB_left
         """
+        for axis in self._axes:
+            if not check_name_style(axis._name, 'axis'):
+                raise ValueError(
+                    f'Axis\' name {axis._name} cannot contain blank spaces or '
+                    'special characters since it is intended to be used as name'
+                    ' of submodule')
         if self.is_dangling():
             return f'edge_{self.node1._name}_{self.axis1._name}'
         return f'edge_{self.node1._name}_{self.axis1._name}_' \

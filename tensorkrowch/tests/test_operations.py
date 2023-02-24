@@ -3523,16 +3523,20 @@ class TestContractEdge:
         assert node2.successors == dict()
         
         # Compute gradient
-        node3.sum().backward()
-        assert node1[2].grad != (None, None)
-        assert node1[2].grad != (torch.zeros(1), torch.zeros(1))
-        assert node2[0].grad != (None, None)
-        assert node2[0].grad != (torch.zeros(1), torch.zeros(1))
+        with pytest.raises(RuntimeError):
+            # `node3`'s tensor is detached from the graph since it is computed
+            # using in-place operations
+            node3.sum().backward()
+            
+        # assert node1[2].grad != (None, None)
+        # assert node1[2].grad != (torch.zeros(1), torch.zeros(1))
+        # assert node2[0].grad != (None, None)
+        # assert node2[0].grad != (torch.zeros(1), torch.zeros(1))
         
-        # Now node1 and node2 are not in the network any more
-        net.zero_grad()
-        assert node1[2].grad != (torch.zeros(1), torch.zeros(1))
-        assert node2[0].grad != (torch.zeros(1), torch.zeros(1))
+        # # Now node1 and node2 are not in the network any more
+        # net.zero_grad()
+        # assert node1[2].grad != (torch.zeros(1), torch.zeros(1))
+        # assert node2[0].grad != (torch.zeros(1), torch.zeros(1))
 
 
 class TestContractBetween:

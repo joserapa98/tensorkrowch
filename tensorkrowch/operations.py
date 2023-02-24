@@ -2034,8 +2034,7 @@ def _contract_edges_first(edges: List[AbstractEdge],
                 tensors[i] = tensors[i].reshape(aux_shape[i])
 
         result = tensors[0] @ tensors[1]
-        if new_shape:
-            result = result.view(new_shape)
+        result = result.view(new_shape)
         
         # Put batch dims at the beggining
         indices = [None, None]
@@ -2229,9 +2228,7 @@ def _contract_edges_next(successor: Successor,
                 tensors[i] = tensors[i].reshape(aux_shape[i])
         
         result = tensors[0] @ tensors[1]
-
-        if new_shape:
-            result = result.view(new_shape)
+        result = result.view(new_shape)
         
         # Record in inverse_memory while contracting
         # (to delete memory if possible)

@@ -2584,6 +2584,14 @@ class ParamEdge(AbstractEdge, nn.Module):
         AbstractEdge.__init__(self, node1, axis1, node2, axis2)
 
         axis1, axis2 = self._axes[0], self._axes[1]
+        
+        # Check axes names
+        for axis in self._axes:
+            if (axis is not None) and not check_name_style(axis._name, 'axis'):
+                raise ValueError(
+                    f'Axis\' name {axis._name} cannot contain blank spaces or '
+                    'special characters since it is intended to be used as name'
+                    ' of submodule')
 
         # check batch
         if axis1._batch:
@@ -2664,12 +2672,12 @@ class ParamEdge(AbstractEdge, nn.Module):
         >>> print(new_paramedge.module_name)
         edge_nodeA_right_nodeB_left
         """
-        for axis in self._axes:
-            if not check_name_style(axis._name, 'axis'):
-                raise ValueError(
-                    f'Axis\' name {axis._name} cannot contain blank spaces or '
-                    'special characters since it is intended to be used as name'
-                    ' of submodule')
+        # for axis in self._axes:
+        #     if not check_name_style(axis._name, 'axis'):
+        #         raise ValueError(
+        #             f'Axis\' name {axis._name} cannot contain blank spaces or '
+        #             'special characters since it is intended to be used as name'
+        #             ' of submodule')
         if self.is_dangling():
             return f'edge_{self.node1._name}_{self.axis1._name}'
         return f'edge_{self.node1._name}_{self.axis1._name}_' \

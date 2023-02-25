@@ -4,4 +4,5 @@
 
    installation
    tutorials
+   examples
    api

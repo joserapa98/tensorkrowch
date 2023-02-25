@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>SnakeSBS - FashionMNIST &#8212; TensorKrowch 00.00.01 documentation</title>
+    <title>MPS and Canonical Form - FashionMNIST &#8212; TensorKrowch 00.00.01 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -40,6 +40,8 @@
     <link rel="shortcut icon" href="../_static/tensorkrowch_favicon_light.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="SnakeSBS - FashionMNIST" href="cirac_snake_sbs_fashion_mnist.html" />
+    <link rel="prev" title="MPS and Canonical Form - MNIST" href="jose_mps_mnist.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -94,7 +96,7 @@
   Contents:
  </span>
 </p>
-<ul class="nav bd-sidenav">
+<ul class="current nav bd-sidenav">
  <li class="toctree-l1">
   <a class="reference internal" href="../installation.html">
    Installation
@@ -117,12 +119,64 @@
    </li>
   </ul>
  </li>
+ <li class="toctree-l1 current active has-children">
+  <a class="reference internal" href="../examples.html">
+   Experiments
+  </a>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul class="current">
+   <li class="toctree-l2">
+    <a class="reference internal" href="jose_mps_mnist.html">
+     MPS and Canonical Form - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
+     MPS and Canonical Form - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="cirac_snake_sbs_fashion_mnist.html">
+     SnakeSBS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="cirac_cnn_snake_sbs_fashion_mnist.html">
+     CNN-SnakeSBS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="jose_convmps_fashion_mnist.html">
+     ConvMPS - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="jose_convtree_fashion_mnist.html">
+     ConvTree - FashionMNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="miles_mps_dmrg_mnist.html">
+     MPS with DMRG - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="jose_mps_mnist_binarized.html">
+     MPS - MNIST Binarized
+    </a>
+   </li>
+  </ul>
+ </li>
  <li class="toctree-l1 has-children">
   <a class="reference internal" href="../api.html">
    API Reference
   </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
-  <label for="toctree-checkbox-2">
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
    <i class="fas fa-chevron-down">
    </i>
   </label>
@@ -240,7 +294,7 @@ title="Source repository"
   <div class="menu-dropdown__content">
     <ul>
       <li>
-        <a href="../_sources/experiments/cirac_snake_sbs_fashion_mnist.ipynb.txt"
+        <a href="../_sources/examples/jose_mps_fashion_mnist.ipynb.txt"
    class="headerbtn"
    data-toggle="tooltip"
 data-placement="left"
@@ -289,7 +343,7 @@ title="Print to PDF"
         <div class="col pl-md-3 pl-lg-5 content-container">
             <!-- Table of contents that is only displayed when printing the page -->
             <div id="jb-print-docs-body" class="onlyprint">
-                <h1>SnakeSBS - FashionMNIST</h1>
+                <h1>MPS and Canonical Form - FashionMNIST</h1>
                 <!-- Table of contents -->
                 <div id="print-main-content">
                     <div id="jb-print-toc">
@@ -558,9 +612,8 @@ div.rendered_html tbody tr:hover {
   background: rgba(66, 165, 245, 0.2);
 }
 </style>
-<section id="SnakeSBS---FashionMNIST">
-<h1>SnakeSBS - FashionMNIST<a class="headerlink" href="#SnakeSBS---FashionMNIST" title="Permalink to this headline">#</a></h1>
-<p>Based on this <a class="reference external" href="https://arxiv.org/abs/1806.05964">paper</a>.</p>
+<section id="MPS-and-Canonical-Form---FashionMNIST">
+<h1>MPS and Canonical Form - FashionMNIST<a class="headerlink" href="#MPS-and-Canonical-Form---FashionMNIST" title="Permalink to this headline">#</a></h1>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
@@ -580,50 +633,6 @@ div.rendered_html tbody tr:hover {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">SnakeSBS</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">,</span> <span class="n">image_size</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-
-        <span class="c1"># image = batch_size x in_channels x 28 x 28</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">mps1</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">ConvMPSLayer</span><span class="p">(</span><span class="n">in_channels</span><span class="o">=</span><span class="n">in_channels</span><span class="p">,</span>
-                                    <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
-                                    <span class="n">out_channels</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
-                                    <span class="n">kernel_size</span><span class="o">=</span><span class="n">image_size</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">mps2</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">ConvMPSLayer</span><span class="p">(</span><span class="n">in_channels</span><span class="o">=</span><span class="n">in_channels</span><span class="p">,</span>
-                                    <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
-                                    <span class="n">out_channels</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
-                                    <span class="n">kernel_size</span><span class="o">=</span><span class="n">image_size</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">mps3</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">ConvMPSLayer</span><span class="p">(</span><span class="n">in_channels</span><span class="o">=</span><span class="n">in_channels</span><span class="p">,</span>
-                                    <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
-                                    <span class="n">out_channels</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
-                                    <span class="n">kernel_size</span><span class="o">=</span><span class="n">image_size</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">mps4</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">ConvMPSLayer</span><span class="p">(</span><span class="n">in_channels</span><span class="o">=</span><span class="n">in_channels</span><span class="p">,</span>
-                                    <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
-                                    <span class="n">out_channels</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
-                                    <span class="n">kernel_size</span><span class="o">=</span><span class="n">image_size</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">softmax</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Softmax</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">layers</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">mps1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mps2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mps3</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mps4</span><span class="p">]</span>
-
-    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
-        <span class="n">y1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mps1</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;snake&#39;</span><span class="p">)</span>
-        <span class="n">y2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mps2</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;snake&#39;</span><span class="p">)</span>
-        <span class="n">y3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mps2</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;snake&#39;</span><span class="p">)</span>
-        <span class="n">y4</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mps2</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;snake&#39;</span><span class="p">)</span>
-        <span class="n">y</span> <span class="o">=</span> <span class="n">y1</span> <span class="o">*</span> <span class="n">y2</span> <span class="o">*</span> <span class="n">y3</span> <span class="o">*</span> <span class="n">y4</span>
-        <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">y</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
-</pre></div>
-</div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Miscellaneous initialization</span>
 <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
@@ -632,7 +641,7 @@ div.rendered_html tbody tr:hover {
 <span class="n">num_test</span> <span class="o">=</span> <span class="mi">10000</span>
 <span class="n">batch_size</span> <span class="o">=</span> <span class="mi">500</span>
 <span class="n">image_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">)</span>
-<span class="n">num_epochs</span> <span class="o">=</span> <span class="mi">50</span>
+<span class="n">num_epochs</span> <span class="o">=</span> <span class="mi">30</span>
 <span class="n">num_epochs_canonical</span> <span class="o">=</span> <span class="mi">3</span>
 <span class="n">learn_rate</span> <span class="o">=</span> <span class="mf">1e-4</span>
 <span class="n">l2_reg</span> <span class="o">=</span> <span class="mf">0.0</span>
@@ -642,13 +651,27 @@ div.rendered_html tbody tr:hover {
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
 
-<span class="n">snake</span> <span class="o">=</span> <span class="n">SnakeSBS</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">,</span> <span class="n">image_size</span><span class="p">)</span>
-<span class="n">snake</span> <span class="o">=</span> <span class="n">snake</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+<span class="n">mps</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">MPSLayer</span><span class="p">(</span><span class="n">n_sites</span><span class="o">=</span><span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                  <span class="n">d_phys</span><span class="o">=</span><span class="n">d_phys</span><span class="p">,</span>
+                  <span class="n">n_labels</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                  <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">)</span>
+<span class="n">mps</span> <span class="o">=</span> <span class="n">mps</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Before starting training, set memory modes to True, and trace</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">unbind_mode</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -656,28 +679,16 @@ div.rendered_html tbody tr:hover {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Before starting training, set memory modes to True, and trace</span>
-<span class="k">for</span> <span class="n">mps</span> <span class="ow">in</span> <span class="n">snake</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
-    <span class="n">mps</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="kc">True</span>
-    <span class="n">mps</span><span class="o">.</span><span class="n">unbind_mode</span> <span class="o">=</span> <span class="kc">True</span>
-    <span class="n">mps</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
-</pre></div>
-</div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set our loss function and optimizer</span>
 <span class="n">loss_fun</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">CrossEntropyLoss</span><span class="p">()</span>
-<span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">snake</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span>
+<span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span>
                              <span class="n">lr</span><span class="o">=</span><span class="n">learn_rate</span><span class="p">,</span>
                              <span class="n">weight_decay</span><span class="o">=</span><span class="n">l2_reg</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">embedding</span><span class="p">(</span><span class="n">image</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
@@ -694,7 +705,7 @@ div.rendered_html tbody tr:hover {
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Put MNIST data into dataloaders</span>
@@ -730,13 +741,13 @@ div.rendered_html tbody tr:hover {
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 Training on 60000 MNIST images
-(testing on 10000) for 50 epochs
+(testing on 10000) for 30 epochs
 Using Adam w/ learning rate = 1.0e-04
 
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">epoch_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_epochs</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
@@ -745,11 +756,11 @@ Using Adam w/ learning rate = 1.0e-04
 
     <span class="k">for</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">loaders</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]:</span>
         <span class="n">inputs</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
-            <span class="p">[</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+            <span class="p">[</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
         <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">data</span>
         <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">labels</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 
-        <span class="n">scores</span> <span class="o">=</span> <span class="n">snake</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">mps</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
         <span class="n">_</span><span class="p">,</span> <span class="n">preds</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
         <span class="c1"># Compute the loss and accuracy, add them to the running totals</span>
@@ -770,12 +781,12 @@ Using Adam w/ learning rate = 1.0e-04
 
         <span class="k">for</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">loaders</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]:</span>
             <span class="n">inputs</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">view</span><span class="p">([</span>
-                <span class="n">batch_size</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+                <span class="n">batch_size</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
             <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">data</span>
             <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">labels</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 
             <span class="c1"># Call our MPS to get logit scores and predictions</span>
-            <span class="n">scores</span> <span class="o">=</span> <span class="n">snake</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+            <span class="n">scores</span> <span class="o">=</span> <span class="n">mps</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
             <span class="n">_</span><span class="p">,</span> <span class="n">preds</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
             <span class="n">running_test_acc</span> <span class="o">+=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">preds</span> <span class="o">==</span> <span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="n">batch_size</span>
 
@@ -791,60 +802,40 @@ Using Adam w/ learning rate = 1.0e-04
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-* Epoch 1: Train. Loss: 1.1136, Train. Acc.: 0.5694, Test Acc.: 0.7571
-* Epoch 2: Train. Loss: 0.5567, Train. Acc.: 0.7917, Test Acc.: 0.8063
-* Epoch 3: Train. Loss: 0.4782, Train. Acc.: 0.8233, Test Acc.: 0.8244
-* Epoch 4: Train. Loss: 0.4373, Train. Acc.: 0.8400, Test Acc.: 0.8260
-* Epoch 5: Train. Loss: 0.4154, Train. Acc.: 0.8466, Test Acc.: 0.8473
-* Epoch 6: Train. Loss: 0.3945, Train. Acc.: 0.8544, Test Acc.: 0.8496
-* Epoch 7: Train. Loss: 0.3722, Train. Acc.: 0.8636, Test Acc.: 0.8545
-* Epoch 8: Train. Loss: 0.3727, Train. Acc.: 0.8623, Test Acc.: 0.8444
-* Epoch 9: Train. Loss: 0.3544, Train. Acc.: 0.8692, Test Acc.: 0.8580
-* Epoch 10: Train. Loss: 0.3428, Train. Acc.: 0.8744, Test Acc.: 0.8598
-* Epoch 11: Train. Loss: 0.3375, Train. Acc.: 0.8759, Test Acc.: 0.8612
-* Epoch 12: Train. Loss: 0.3324, Train. Acc.: 0.8757, Test Acc.: 0.8567
-* Epoch 13: Train. Loss: 0.3287, Train. Acc.: 0.8778, Test Acc.: 0.8615
-* Epoch 14: Train. Loss: 0.3202, Train. Acc.: 0.8810, Test Acc.: 0.8643
-* Epoch 15: Train. Loss: 0.3127, Train. Acc.: 0.8833, Test Acc.: 0.8668
-* Epoch 16: Train. Loss: 0.3080, Train. Acc.: 0.8867, Test Acc.: 0.8708
-* Epoch 17: Train. Loss: 0.3051, Train. Acc.: 0.8866, Test Acc.: 0.8640
-* Epoch 18: Train. Loss: 0.2992, Train. Acc.: 0.8886, Test Acc.: 0.8725
-* Epoch 19: Train. Loss: 0.2948, Train. Acc.: 0.8906, Test Acc.: 0.8683
-* Epoch 20: Train. Loss: 0.2905, Train. Acc.: 0.8905, Test Acc.: 0.8698
-* Epoch 21: Train. Loss: 0.2878, Train. Acc.: 0.8920, Test Acc.: 0.8819
-* Epoch 22: Train. Loss: 0.2813, Train. Acc.: 0.8949, Test Acc.: 0.8805
-* Epoch 23: Train. Loss: 0.2822, Train. Acc.: 0.8941, Test Acc.: 0.8745
-* Epoch 24: Train. Loss: 0.2744, Train. Acc.: 0.8966, Test Acc.: 0.8790
-* Epoch 25: Train. Loss: 0.2696, Train. Acc.: 0.8988, Test Acc.: 0.8735
-* Epoch 26: Train. Loss: 0.2709, Train. Acc.: 0.8987, Test Acc.: 0.8779
-* Epoch 27: Train. Loss: 0.2665, Train. Acc.: 0.8995, Test Acc.: 0.8736
-* Epoch 28: Train. Loss: 0.2621, Train. Acc.: 0.9011, Test Acc.: 0.8735
-* Epoch 29: Train. Loss: 0.2641, Train. Acc.: 0.9007, Test Acc.: 0.8802
-* Epoch 30: Train. Loss: 0.2592, Train. Acc.: 0.9013, Test Acc.: 0.8771
-* Epoch 31: Train. Loss: 0.2488, Train. Acc.: 0.9059, Test Acc.: 0.8827
-* Epoch 32: Train. Loss: 0.2475, Train. Acc.: 0.9073, Test Acc.: 0.8816
-* Epoch 33: Train. Loss: 0.2456, Train. Acc.: 0.9060, Test Acc.: 0.8782
-* Epoch 34: Train. Loss: 0.2450, Train. Acc.: 0.9070, Test Acc.: 0.8817
-* Epoch 35: Train. Loss: 0.2466, Train. Acc.: 0.9071, Test Acc.: 0.8834
-* Epoch 36: Train. Loss: 0.2402, Train. Acc.: 0.9084, Test Acc.: 0.8834
-* Epoch 37: Train. Loss: 0.2381, Train. Acc.: 0.9113, Test Acc.: 0.8826
-* Epoch 38: Train. Loss: 0.2332, Train. Acc.: 0.9118, Test Acc.: 0.8810
-* Epoch 39: Train. Loss: 0.2389, Train. Acc.: 0.9089, Test Acc.: 0.8860
-* Epoch 40: Train. Loss: 0.2315, Train. Acc.: 0.9117, Test Acc.: 0.8864
-* Epoch 41: Train. Loss: 0.2278, Train. Acc.: 0.9135, Test Acc.: 0.8831
-* Epoch 42: Train. Loss: 0.2290, Train. Acc.: 0.9136, Test Acc.: 0.8860
-* Epoch 43: Train. Loss: 0.2303, Train. Acc.: 0.9129, Test Acc.: 0.8869
-* Epoch 44: Train. Loss: 0.2351, Train. Acc.: 0.9116, Test Acc.: 0.8872
-* Epoch 45: Train. Loss: 0.2232, Train. Acc.: 0.9144, Test Acc.: 0.8882
-* Epoch 46: Train. Loss: 0.2184, Train. Acc.: 0.9164, Test Acc.: 0.8909
-* Epoch 47: Train. Loss: 0.2184, Train. Acc.: 0.9177, Test Acc.: 0.8869
-* Epoch 48: Train. Loss: 0.2130, Train. Acc.: 0.9181, Test Acc.: 0.8854
-* Epoch 49: Train. Loss: 0.2149, Train. Acc.: 0.9183, Test Acc.: 0.8877
-* Epoch 50: Train. Loss: 0.2089, Train. Acc.: 0.9206, Test Acc.: 0.8905
+* Epoch 1: Train. Loss: 1.3908, Train. Acc.: 0.4461, Test Acc.: 0.7251
+* Epoch 2: Train. Loss: 0.6236, Train. Acc.: 0.7636, Test Acc.: 0.7842
+* Epoch 3: Train. Loss: 0.5318, Train. Acc.: 0.8020, Test Acc.: 0.7989
+* Epoch 4: Train. Loss: 0.4872, Train. Acc.: 0.8198, Test Acc.: 0.8069
+* Epoch 5: Train. Loss: 0.4533, Train. Acc.: 0.8324, Test Acc.: 0.8296
+* Epoch 6: Train. Loss: 0.4351, Train. Acc.: 0.8378, Test Acc.: 0.8253
+* Epoch 7: Train. Loss: 0.4111, Train. Acc.: 0.8473, Test Acc.: 0.8333
+* Epoch 8: Train. Loss: 0.3967, Train. Acc.: 0.8521, Test Acc.: 0.8431
+* Epoch 9: Train. Loss: 0.3875, Train. Acc.: 0.8570, Test Acc.: 0.8324
+* Epoch 10: Train. Loss: 0.3825, Train. Acc.: 0.8572, Test Acc.: 0.8461
+* Epoch 11: Train. Loss: 0.3754, Train. Acc.: 0.8591, Test Acc.: 0.8472
+* Epoch 12: Train. Loss: 0.3680, Train. Acc.: 0.8620, Test Acc.: 0.8452
+* Epoch 13: Train. Loss: 0.3640, Train. Acc.: 0.8635, Test Acc.: 0.8521
+* Epoch 14: Train. Loss: 0.3559, Train. Acc.: 0.8668, Test Acc.: 0.8561
+* Epoch 15: Train. Loss: 0.3479, Train. Acc.: 0.8696, Test Acc.: 0.8619
+* Epoch 16: Train. Loss: 0.3453, Train. Acc.: 0.8699, Test Acc.: 0.8521
+* Epoch 17: Train. Loss: 0.3382, Train. Acc.: 0.8740, Test Acc.: 0.8565
+* Epoch 18: Train. Loss: 0.3344, Train. Acc.: 0.8748, Test Acc.: 0.8595
+* Epoch 19: Train. Loss: 0.3274, Train. Acc.: 0.8777, Test Acc.: 0.8574
+* Epoch 20: Train. Loss: 0.3240, Train. Acc.: 0.8784, Test Acc.: 0.8667
+* Epoch 21: Train. Loss: 0.3230, Train. Acc.: 0.8801, Test Acc.: 0.8683
+* Epoch 22: Train. Loss: 0.3158, Train. Acc.: 0.8809, Test Acc.: 0.8649
+* Epoch 23: Train. Loss: 0.3131, Train. Acc.: 0.8807, Test Acc.: 0.8564
+* Epoch 24: Train. Loss: 0.3077, Train. Acc.: 0.8846, Test Acc.: 0.8634
+* Epoch 25: Train. Loss: 0.3055, Train. Acc.: 0.8862, Test Acc.: 0.8700
+* Epoch 26: Train. Loss: 0.3005, Train. Acc.: 0.8862, Test Acc.: 0.8726
+* Epoch 27: Train. Loss: 0.3023, Train. Acc.: 0.8866, Test Acc.: 0.8684
+* Epoch 28: Train. Loss: 0.2955, Train. Acc.: 0.8891, Test Acc.: 0.8692
+* Epoch 29: Train. Loss: 0.2965, Train. Acc.: 0.8880, Test Acc.: 0.8683
+* Epoch 30: Train. Loss: 0.2882, Train. Acc.: 0.8905, Test Acc.: 0.8692
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Original number of parametrs</span>
@@ -867,6 +858,121 @@ Nº params:     157440
 Memory module: 0.6006 MB
 </pre></div></div>
 </div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Canonicalize SVD</span>
+<span class="c1"># ----------------</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">canonicalize</span><span class="p">(</span><span class="n">cum_percentage</span><span class="o">=</span><span class="mf">0.98</span><span class="p">)</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+
+<span class="c1"># New test accuracy</span>
+<span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+    <span class="n">running_acc</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="k">for</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">loaders</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]:</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">labels</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="c1"># Call our MPS to get logit scores and predictions</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">mps</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">preds</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">running_acc</span> <span class="o">+=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">preds</span> <span class="o">==</span> <span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="n">batch_size</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Test Acc.: </span><span class="si">{</span><span class="n">running_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s1">&#39;test&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># Number of parametrs</span>
+<span class="n">n_params</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">memory</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">mps</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
+    <span class="n">n_params</span> <span class="o">+=</span> <span class="n">p</span><span class="o">.</span><span class="n">nelement</span><span class="p">()</span>
+    <span class="n">memory</span> <span class="o">+=</span> <span class="n">p</span><span class="o">.</span><span class="n">nelement</span><span class="p">()</span> <span class="o">*</span> <span class="n">p</span><span class="o">.</span><span class="n">element_size</span><span class="p">()</span>  <span class="c1"># Bytes</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Nº params:     </span><span class="si">{</span><span class="n">n_params</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Memory module: </span><span class="si">{</span><span class="n">memory</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="o">**</span><span class="mi">2</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1"> MB</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>  <span class="c1"># MegaBytes</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Test Acc.: 0.8321
+
+Nº params:     100664
+Memory module: 0.3840 MB
+
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Continue training and obtaining canonical form after each epoch</span>
+<span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span>
+                             <span class="n">lr</span><span class="o">=</span><span class="n">learn_rate</span><span class="p">,</span>
+                             <span class="n">weight_decay</span><span class="o">=</span><span class="n">l2_reg</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">epoch_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_epochs_canonical</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+    <span class="n">running_train_loss</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">running_train_acc</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="k">for</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">loaders</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]:</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">labels</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">mps</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">preds</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Compute the loss and accuracy, add them to the running totals</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fun</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">accuracy</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">preds</span> <span class="o">==</span> <span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="n">batch_size</span>
+            <span class="n">running_train_loss</span> <span class="o">+=</span> <span class="n">loss</span>
+            <span class="n">running_train_acc</span> <span class="o">+=</span> <span class="n">accuracy</span>
+
+        <span class="c1"># Backpropagate and update parameters</span>
+        <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+        <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+        <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="n">running_test_acc</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+        <span class="k">for</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">loaders</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]:</span>
+            <span class="n">inputs</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">view</span><span class="p">([</span>
+                <span class="n">batch_size</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">data</span>
+            <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">labels</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+            <span class="c1"># Call our MPS to get logit scores and predictions</span>
+            <span class="n">scores</span> <span class="o">=</span> <span class="n">mps</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">preds</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">running_test_acc</span> <span class="o">+=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">preds</span> <span class="o">==</span> <span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="n">batch_size</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;* Epoch </span><span class="si">{</span><span class="n">epoch_num</span><span class="si">}</span><span class="s1">: &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;Train. Loss: </span><span class="si">{</span><span class="n">running_train_loss</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;Train. Acc.: </span><span class="si">{</span><span class="n">running_train_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;Test Acc.: </span><span class="si">{</span><span class="n">running_test_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+* Epoch 1: Train. Loss: 0.3074, Train. Acc.: 0.8843, Test Acc.: 0.8691
+* Epoch 2: Train. Loss: 0.2964, Train. Acc.: 0.8894, Test Acc.: 0.8686
+* Epoch 3: Train. Loss: 0.2900, Train. Acc.: 0.8916, Test Acc.: 0.8725
+</pre></div></div>
+</div>
 </section>
 
 
@@ -877,6 +983,20 @@ Memory module: 0.6006 MB
                 
     <!-- Previous / next buttons -->
 <div class='prev-next-area'>
+    <a class='left-prev' id="prev-link" href="jose_mps_mnist.html" title="previous page">
+        <i class="fas fa-angle-left"></i>
+        <div class="prev-next-info">
+            <p class="prev-next-subtitle">previous</p>
+            <p class="prev-next-title">MPS and Canonical Form - MNIST</p>
+        </div>
+    </a>
+    <a class='right-next' id="next-link" href="cirac_snake_sbs_fashion_mnist.html" title="next page">
+    <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">SnakeSBS - FashionMNIST</p>
+    </div>
+    <i class="fas fa-angle-right"></i>
+    </a>
 </div>
             </footer>
         </div>

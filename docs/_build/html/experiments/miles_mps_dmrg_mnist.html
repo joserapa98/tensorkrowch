@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Training MPS with DMRG - MNIST &#8212; TensorKrowch 00.00.01 documentation</title>
+    <title>MPS with DMRG - MNIST &#8212; TensorKrowch 00.00.01 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -40,8 +40,6 @@
     <link rel="shortcut icon" href="../_static/tensorkrowch_favicon_light.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Training MPS - MNIST Binarized" href="training_mps_mnist_binarized.html" />
-    <link rel="prev" title="Training ConvMPS - FashionMNIST" href="training_convmps_fashion_mnist.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -96,60 +94,25 @@
   Contents:
  </span>
 </p>
-<ul class="current nav bd-sidenav">
+<ul class="nav bd-sidenav">
  <li class="toctree-l1">
   <a class="reference internal" href="../installation.html">
    Installation
   </a>
  </li>
- <li class="toctree-l1 current active has-children">
+ <li class="toctree-l1 has-children">
   <a class="reference internal" href="../tutorials.html">
    Tutorials
   </a>
-  <input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
   <label for="toctree-checkbox-1">
    <i class="fas fa-chevron-down">
    </i>
   </label>
-  <ul class="current">
+  <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="basics.html">
+    <a class="reference internal" href="../tutorials/basics.html">
      Basics
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_mps_mnist.html">
-     Training MPS - MNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_mps_fashion_mnist.html">
-     Training MPS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_snake_sbs_fashion_mnist.html">
-     Training SnakeSBS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_cnn_snake_sbs_fashion_mnist.html">
-     Training CNN-SnakeSBS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_convmps_fashion_mnist.html">
-     Training ConvMPS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2 current active">
-    <a class="current reference internal" href="#">
-     Training MPS with DMRG - MNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_mps_mnist_binarized.html">
-     Training MPS - MNIST Binarized
     </a>
    </li>
   </ul>
@@ -277,7 +240,7 @@ title="Source repository"
   <div class="menu-dropdown__content">
     <ul>
       <li>
-        <a href="../_sources/tutorials/training_mps_dmrg_mnist.ipynb.txt"
+        <a href="../_sources/experiments/miles_mps_dmrg_mnist.ipynb.txt"
    class="headerbtn"
    data-toggle="tooltip"
 data-placement="left"
@@ -326,7 +289,7 @@ title="Print to PDF"
         <div class="col pl-md-3 pl-lg-5 content-container">
             <!-- Table of contents that is only displayed when printing the page -->
             <div id="jb-print-docs-body" class="onlyprint">
-                <h1>Training MPS with DMRG - MNIST</h1>
+                <h1>MPS with DMRG - MNIST</h1>
                 <!-- Table of contents -->
                 <div id="print-main-content">
                     <div id="jb-print-toc">
@@ -595,8 +558,9 @@ div.rendered_html tbody tr:hover {
   background: rgba(66, 165, 245, 0.2);
 }
 </style>
-<section id="Training-MPS-with-DMRG---MNIST">
-<h1>Training MPS with DMRG - MNIST<a class="headerlink" href="#Training-MPS-with-DMRG---MNIST" title="Permalink to this headline">#</a></h1>
+<section id="MPS-with-DMRG---MNIST">
+<h1>MPS with DMRG - MNIST<a class="headerlink" href="#MPS-with-DMRG---MNIST" title="Permalink to this headline">#</a></h1>
+<p>Based on this <a class="reference external" href="https://arxiv.org/abs/1605.05775">paper</a>.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
@@ -807,13 +771,13 @@ div.rendered_html tbody tr:hover {
 <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
 <span class="c1"># Training parameters</span>
-<span class="n">num_train</span> <span class="o">=</span> <span class="mi">6000</span>
-<span class="n">num_test</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">num_train</span> <span class="o">=</span> <span class="mi">30000</span>
+<span class="n">num_test</span> <span class="o">=</span> <span class="mi">5000</span>
 <span class="n">batch_size</span> <span class="o">=</span> <span class="mi">500</span>
 <span class="n">image_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">)</span>
 <span class="n">num_epochs</span> <span class="o">=</span> <span class="mi">1</span>
 <span class="n">num_epochs_canonical</span> <span class="o">=</span> <span class="mi">3</span>
-<span class="n">learn_rate</span> <span class="o">=</span> <span class="mf">1e-4</span>
+<span class="n">learn_rate</span> <span class="o">=</span> <span class="mf">1e-5</span>
 <span class="n">l2_reg</span> <span class="o">=</span> <span class="mf">0.0</span>
 <span class="n">d_phys</span> <span class="o">=</span> <span class="mi">3</span>
 <span class="n">d_bond</span> <span class="o">=</span> <span class="mi">10</span>
@@ -912,9 +876,9 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Training on 6000 MNIST images
-(testing on 1000) for 1 epochs
-Using Adam w/ learning rate = 1.0e-04
+Training on 30000 MNIST images
+(testing on 5000) for 1 epochs
+Using Adam w/ learning rate = 1.0e-05
 
 </pre></div></div>
 </div>
@@ -986,6 +950,11 @@ Using Adam w/ learning rate = 1.0e-04
         <span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span>
                                      <span class="n">lr</span><span class="o">=</span><span class="n">learn_rate</span><span class="p">,</span>
                                      <span class="n">weight_decay</span><span class="o">=</span><span class="n">l2_reg</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;* Epoch </span><span class="si">{</span><span class="n">epoch_num</span><span class="si">}</span><span class="s1">, Move </span><span class="si">{</span><span class="n">move</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">n_moves</span><span class="si">}</span><span class="s1">: &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;Train. Loss: </span><span class="si">{</span><span class="n">running_train_loss</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;Train. Acc.: </span><span class="si">{</span><span class="n">running_train_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;Test Acc.: </span><span class="si">{</span><span class="n">running_test_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -994,22 +963,23 @@ Using Adam w/ learning rate = 1.0e-04
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-* Epoch 1, Move 0/782: Train. Loss: 2.3026, Train. Acc.: 0.0980, Test Acc.: 0.1260
-* Epoch 1, Move 100/782: Train. Loss: 2.2955, Train. Acc.: 0.1118, Test Acc.: 0.1260
-* Epoch 1, Move 200/782: Train. Loss: 2.1719, Train. Acc.: 0.1935, Test Acc.: 0.2140
-* Epoch 1, Move 300/782: Train. Loss: 1.8773, Train. Acc.: 0.4018, Test Acc.: 0.3980
-* Epoch 1, Move 400/782: Train. Loss: 1.5773, Train. Acc.: 0.5215, Test Acc.: 0.5070
-* Epoch 1, Move 500/782: Train. Loss: 1.1831, Train. Acc.: 0.6588, Test Acc.: 0.6180
-* Epoch 1, Move 600/782: Train. Loss: 0.8912, Train. Acc.: 0.7337, Test Acc.: 0.6800
-* Epoch 1, Move 700/782: Train. Loss: 0.7866, Train. Acc.: 0.7597, Test Acc.: 0.7040
-* Epoch 1, Move 800/782: Train. Loss: 0.8792, Train. Acc.: 0.7195, Test Acc.: 0.7350
-* Epoch 1, Move 900/782: Train. Loss: 992.5513, Train. Acc.: 0.6710, Test Acc.: 0.7180
-* Epoch 1, Move 1000/782: Train. Loss: 7786.3799, Train. Acc.: 0.7400, Test Acc.: 0.7050
-* Epoch 1, Move 1100/782: Train. Loss: 45351.9336, Train. Acc.: 0.7002, Test Acc.: 0.7130
-* Epoch 1, Move 1200/782: Train. Loss: 87926.8281, Train. Acc.: 0.7025, Test Acc.: 0.7280
-* Epoch 1, Move 1300/782: Train. Loss: 94097.4688, Train. Acc.: 0.7275, Test Acc.: 0.6800
-* Epoch 1, Move 1400/782: Train. Loss: 300232.4688, Train. Acc.: 0.6085, Test Acc.: 0.5630
-* Epoch 1, Move 1500/782: Train. Loss: 270656.3438, Train. Acc.: 0.6110, Test Acc.: 0.6100
+* Epoch 1, Move 0/782: Train. Loss: 2.3026, Train. Acc.: 0.1117, Test Acc.: 0.1142
+* Epoch 1, Move 100/782: Train. Loss: 2.2992, Train. Acc.: 0.1141, Test Acc.: 0.1142
+* Epoch 1, Move 200/782: Train. Loss: 2.2879, Train. Acc.: 0.1157, Test Acc.: 0.1156
+* Epoch 1, Move 300/782: Train. Loss: 2.2301, Train. Acc.: 0.2327, Test Acc.: 0.1994
+* Epoch 1, Move 400/782: Train. Loss: 2.1403, Train. Acc.: 0.3162, Test Acc.: 0.2884
+* Epoch 1, Move 500/782: Train. Loss: 2.0333, Train. Acc.: 0.3478, Test Acc.: 0.3174
+* Epoch 1, Move 600/782: Train. Loss: 1.8758, Train. Acc.: 0.3813, Test Acc.: 0.3540
+* Epoch 1, Move 700/782: Train. Loss: 1.7273, Train. Acc.: 0.4055, Test Acc.: 0.3780
+* Epoch 1, Move 800/782: Train. Loss: 1.3702, Train. Acc.: 0.5006, Test Acc.: 0.4750
+* Epoch 1, Move 900/782: Train. Loss: 1.5917, Train. Acc.: 0.6191, Test Acc.: 0.6542
+* Epoch 1, Move 1000/782: Train. Loss: 2.6530, Train. Acc.: 0.6311, Test Acc.: 0.6576
+* Epoch 1, Move 1100/782: Train. Loss: 3.9461, Train. Acc.: 0.6790, Test Acc.: 0.6784
+* Epoch 1, Move 1200/782: Train. Loss: 5.9259, Train. Acc.: 0.6698, Test Acc.: 0.6376
+* Epoch 1, Move 1300/782: Train. Loss: 7.8389, Train. Acc.: 0.6778, Test Acc.: 0.6980
+* Epoch 1, Move 1400/782: Train. Loss: 13.7298, Train. Acc.: 0.6066, Test Acc.: 0.6316
+* Epoch 1, Move 1500/782: Train. Loss: 13.8754, Train. Acc.: 0.6148, Test Acc.: 0.6324
+* Epoch 1, Move 1563/782: Train. Loss: 11.3831, Train. Acc.: 0.6347, Test Acc.: 0.6210
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -1046,20 +1016,6 @@ Memory module: 0.0034 MB
                 
     <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-    <a class='left-prev' id="prev-link" href="training_convmps_fashion_mnist.html" title="previous page">
-        <i class="fas fa-angle-left"></i>
-        <div class="prev-next-info">
-            <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">Training ConvMPS - FashionMNIST</p>
-        </div>
-    </a>
-    <a class='right-next' id="next-link" href="training_mps_mnist_binarized.html" title="next page">
-    <div class="prev-next-info">
-        <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Training MPS - MNIST Binarized</p>
-    </div>
-    <i class="fas fa-angle-right"></i>
-    </a>
 </div>
             </footer>
         </div>

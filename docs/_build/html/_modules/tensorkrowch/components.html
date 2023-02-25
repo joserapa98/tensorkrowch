@@ -112,41 +112,6 @@
      Basics
     </a>
    </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../tutorials/training_mps_mnist.html">
-     Training MPS - MNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../tutorials/training_mps_fashion_mnist.html">
-     Training MPS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../tutorials/training_snake_sbs_fashion_mnist.html">
-     Training SnakeSBS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../tutorials/training_cnn_snake_sbs_fashion_mnist.html">
-     Training CNN-SnakeSBS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../tutorials/training_convmps_fashion_mnist.html">
-     Training ConvMPS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../tutorials/training_mps_dmrg_mnist.html">
-     Training MPS with DMRG - MNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../tutorials/training_mps_mnist_binarized.html">
-     Training MPS - MNIST Binarized
-    </a>
-   </li>
   </ul>
  </li>
  <li class="toctree-l1 has-children">
@@ -2874,6 +2839,14 @@ title="Source repository"
         <span class="n">AbstractEdge</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node1</span><span class="p">,</span> <span class="n">axis1</span><span class="p">,</span> <span class="n">node2</span><span class="p">,</span> <span class="n">axis2</span><span class="p">)</span>
 
         <span class="n">axis1</span><span class="p">,</span> <span class="n">axis2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        
+        <span class="c1"># Check axes names</span>
+        <span class="k">for</span> <span class="n">axis</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">axis</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">check_name_style</span><span class="p">(</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span><span class="p">,</span> <span class="s1">&#39;axis&#39;</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;Axis</span><span class="se">\&#39;</span><span class="s1"> name </span><span class="si">{</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1"> cannot contain blank spaces or &#39;</span>
+                    <span class="s1">&#39;special characters since it is intended to be used as name&#39;</span>
+                    <span class="s1">&#39; of submodule&#39;</span><span class="p">)</span>
 
         <span class="c1"># check batch</span>
         <span class="k">if</span> <span class="n">axis1</span><span class="o">.</span><span class="n">_batch</span><span class="p">:</span>
@@ -2954,12 +2927,12 @@ title="Source repository"
 <span class="sd">        &gt;&gt;&gt; print(new_paramedge.module_name)</span>
 <span class="sd">        edge_nodeA_right_nodeB_left</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">for</span> <span class="n">axis</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">check_name_style</span><span class="p">(</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span><span class="p">,</span> <span class="s1">&#39;axis&#39;</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s1">&#39;Axis</span><span class="se">\&#39;</span><span class="s1"> name </span><span class="si">{</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1"> cannot contain blank spaces or &#39;</span>
-                    <span class="s1">&#39;special characters since it is intended to be used as name&#39;</span>
-                    <span class="s1">&#39; of submodule&#39;</span><span class="p">)</span>
+        <span class="c1"># for axis in self._axes:</span>
+        <span class="c1">#     if not check_name_style(axis._name, &#39;axis&#39;):</span>
+        <span class="c1">#         raise ValueError(</span>
+        <span class="c1">#             f&#39;Axis\&#39; name {axis._name} cannot contain blank spaces or &#39;</span>
+        <span class="c1">#             &#39;special characters since it is intended to be used as name&#39;</span>
+        <span class="c1">#             &#39; of submodule&#39;)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
             <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;edge_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1">&#39;</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;edge_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1">_&#39;</span> \

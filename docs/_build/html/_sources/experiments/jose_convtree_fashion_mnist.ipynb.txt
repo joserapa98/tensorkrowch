@@ -5,7 +5,7 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "# Training ConvMPS - FashionMNIST"
+    "# ConvTree - FashionMNIST"
    ]
   },
   {
@@ -30,36 +30,34 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "class ConvMPS(nn.Module):\n",
+    "class ConvTree(nn.Module):\n",
     "    \n",
-    "    def __init__(self, in_channels):\n",
+    "    def __init__(self, in_channels, out_dim1=10, out_dim2=3):\n",
     "        super().__init__()\n",
     "        \n",
     "        # image = batch_size x in_channels x 28 x 28\n",
-    "        self.mps1 = tk.ConvMPSLayer(in_channels=in_channels,\n",
-    "                                    out_channels=10,\n",
-    "                                    d_bond=10,\n",
-    "                                    kernel_size=4,\n",
-    "                                    stride=2)  # 13 x 13\n",
+    "        self.tree1 = tk.ConvTree(sites_per_layer=[1],\n",
+    "                                 d_bond=[[in_channels] * 4 + [out_dim1]],\n",
+    "                                 kernel_size=2,\n",
+    "                                 stride=2)  # 14 x 14\n",
     "        \n",
-    "        self.mps2 = tk.ConvMPSLayer(in_channels=10,\n",
-    "                                    out_channels=10,\n",
-    "                                    d_bond=10,\n",
-    "                                    kernel_size=4,\n",
-    "                                    stride=1)  # 10 x 10\n",
+    "        self.tree2 = tk.ConvTree(sites_per_layer=[1],\n",
+    "                                 d_bond=[[out_dim1] * 4 + [out_dim2]],\n",
+    "                                 kernel_size=2,\n",
+    "                                 stride=2)  # 7 x 7\n",
     "        \n",
-    "        self.mps3 = tk.MPSLayer(n_sites=11,\n",
-    "                                d_phys=10,\n",
-    "                                n_labels=10,\n",
-    "                                d_bond=10)\n",
+    "        self.tree3 = tk.Tree(sites_per_layer=[7, 1],\n",
+    "                             d_bond=[[out_dim2] * 7 + [out_dim2],\n",
+    "                                     [out_dim2] * 7 + [10]])\n",
     "        \n",
-    "        self.layers = [self.mps1, self.mps2, self.mps3]\n",
+    "        self.layers = [self.tree1, self.tree2, self.tree3]\n",
+    "        self.out_dim2 = out_dim2\n",
     "        \n",
     "    def forward(self, x):\n",
-    "        x = self.mps1(x)\n",
-    "        x = self.mps2(x)\n",
-    "        x = x.view(-1, 10, 100).permute(2, 0, 1)\n",
-    "        x = self.mps3(x)\n",
+    "        x = self.tree1(x)\n",
+    "        x = self.tree2(x)\n",
+    "        x = x.view(-1, self.out_dim2, 49).permute(2, 0, 1)\n",
+    "        x = self.tree3(x)\n",
     "        return x"
    ]
   },
@@ -73,15 +71,17 @@
     "torch.manual_seed(0)\n",
     "\n",
     "# Training parameters\n",
-    "num_train = 6000\n",
-    "num_test = 1000\n",
+    "num_train = 60000\n",
+    "num_test = 10000\n",
     "batch_size = 500\n",
     "image_size = (28, 28)\n",
-    "num_epochs = 10\n",
+    "num_epochs = 200\n",
     "num_epochs_canonical = 3\n",
-    "learn_rate = 1e-10\n",
+    "learn_rate = 1e-4\n",
     "l2_reg = 0.0\n",
-    "d_phys = 2"
+    "d_phys = 2\n",
+    "out_dim1 = 10\n",
+    "out_dim2 = 3"
    ]
   },
   {
@@ -92,8 +92,8 @@
    "source": [
     "device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')\n",
     "\n",
-    "convmps = ConvMPS(d_phys)\n",
-    "convmps = convmps.to(device)"
+    "convtree = ConvTree(d_phys, out_dim1, out_dim2)\n",
+    "convtree = convtree.to(device)"
    ]
   },
   {
@@ -103,17 +103,17 @@
    "outputs": [],
    "source": [
     "# Before starting training, set memory modes to True, and trace\n",
-    "convmps.mps1.automemory = True\n",
-    "convmps.mps1.unbind_mode = True\n",
-    "convmps.mps1.trace(torch.zeros(1, d_phys, image_size[0], image_size[1]).to(device))\n",
+    "convtree.tree1.automemory = True\n",
+    "convtree.tree1.unbind_mode = True\n",
+    "convtree.tree1.trace(torch.zeros(1, d_phys, image_size[0], image_size[1]).to(device))\n",
     "\n",
-    "convmps.mps2.automemory = True\n",
-    "convmps.mps2.unbind_mode = True\n",
-    "convmps.mps2.trace(torch.zeros(1, 10, 13, 13).to(device))\n",
+    "convtree.tree2.automemory = True\n",
+    "convtree.tree2.unbind_mode = True\n",
+    "convtree.tree2.trace(torch.zeros(1, out_dim1, 14, 14).to(device))\n",
     "\n",
-    "convmps.mps3.automemory = True\n",
-    "convmps.mps3.unbind_mode = True\n",
-    "convmps.mps3.trace(torch.zeros(100, 1, 10).to(device))"
+    "convtree.tree3.automemory = True\n",
+    "convtree.tree3.unbind_mode = True\n",
+    "convtree.tree3.trace(torch.zeros(49, 1, out_dim2).to(device))"
    ]
   },
   {
@@ -124,7 +124,7 @@
    "source": [
     "# Set our loss function and optimizer\n",
     "loss_fun = torch.nn.CrossEntropyLoss()\n",
-    "optimizer = torch.optim.Adam(convmps.parameters(),\n",
+    "optimizer = torch.optim.Adam(convtree.parameters(),\n",
     "                             lr=learn_rate,\n",
     "                             weight_decay=l2_reg)"
    ]
@@ -156,9 +156,9 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "Training on 6000 MNIST images \n",
-      "(testing on 1000) for 10 epochs\n",
-      "Using Adam w/ learning rate = 1.0e-10\n",
+      "Training on 60000 MNIST images \n",
+      "(testing on 10000) for 200 epochs\n",
+      "Using Adam w/ learning rate = 1.0e-04\n",
       "\n"
      ]
     }
@@ -199,16 +199,26 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "* Epoch 1: Train. Loss: 2.3026, Train. Acc.: 0.0933, Test Acc.: 0.1070\n",
-      "* Epoch 2: Train. Loss: 2.3026, Train. Acc.: 0.0933, Test Acc.: 0.1070\n",
-      "* Epoch 3: Train. Loss: 2.3026, Train. Acc.: 0.0933, Test Acc.: 0.1070\n",
-      "* Epoch 4: Train. Loss: 2.3026, Train. Acc.: 0.0933, Test Acc.: 0.1070\n",
-      "* Epoch 5: Train. Loss: 2.3026, Train. Acc.: 0.0933, Test Acc.: 0.1070\n",
-      "* Epoch 6: Train. Loss: 2.3026, Train. Acc.: 0.0933, Test Acc.: 0.1070\n",
-      "* Epoch 7: Train. Loss: 2.3026, Train. Acc.: 0.0933, Test Acc.: 0.1070\n",
-      "* Epoch 8: Train. Loss: 2.3026, Train. Acc.: 0.0933, Test Acc.: 0.1070\n",
-      "* Epoch 9: Train. Loss: 2.3026, Train. Acc.: 0.0933, Test Acc.: 0.1070\n",
-      "* Epoch 10: Train. Loss: 2.3026, Train. Acc.: 0.0933, Test Acc.: 0.1070\n"
+      "* Epoch 10: Train. Loss: 0.9932, Train. Acc.: 0.6571, Test Acc.: 0.6619\n",
+      "* Epoch 20: Train. Loss: 0.7386, Train. Acc.: 0.7325, Test Acc.: 0.7303\n",
+      "* Epoch 30: Train. Loss: 0.5930, Train. Acc.: 0.7834, Test Acc.: 0.7798\n",
+      "* Epoch 40: Train. Loss: 0.4989, Train. Acc.: 0.8188, Test Acc.: 0.8088\n",
+      "* Epoch 50: Train. Loss: 0.4541, Train. Acc.: 0.8357, Test Acc.: 0.8230\n",
+      "* Epoch 60: Train. Loss: 0.4263, Train. Acc.: 0.8454, Test Acc.: 0.8307\n",
+      "* Epoch 70: Train. Loss: 0.4081, Train. Acc.: 0.8514, Test Acc.: 0.8378\n",
+      "* Epoch 80: Train. Loss: 0.3949, Train. Acc.: 0.8546, Test Acc.: 0.8387\n",
+      "* Epoch 90: Train. Loss: 0.3838, Train. Acc.: 0.8587, Test Acc.: 0.8416\n",
+      "* Epoch 100: Train. Loss: 0.3764, Train. Acc.: 0.8612, Test Acc.: 0.8449\n",
+      "* Epoch 110: Train. Loss: 0.3665, Train. Acc.: 0.8651, Test Acc.: 0.8464\n",
+      "* Epoch 120: Train. Loss: 0.3577, Train. Acc.: 0.8671, Test Acc.: 0.8486\n",
+      "* Epoch 130: Train. Loss: 0.3505, Train. Acc.: 0.8690, Test Acc.: 0.8504\n",
+      "* Epoch 140: Train. Loss: 0.3437, Train. Acc.: 0.8715, Test Acc.: 0.8530\n",
+      "* Epoch 150: Train. Loss: 0.3390, Train. Acc.: 0.8735, Test Acc.: 0.8535\n",
+      "* Epoch 160: Train. Loss: 0.3320, Train. Acc.: 0.8755, Test Acc.: 0.8539\n",
+      "* Epoch 170: Train. Loss: 0.3274, Train. Acc.: 0.8773, Test Acc.: 0.8569\n",
+      "* Epoch 180: Train. Loss: 0.3194, Train. Acc.: 0.8799, Test Acc.: 0.8532\n",
+      "* Epoch 190: Train. Loss: 0.3169, Train. Acc.: 0.8813, Test Acc.: 0.8554\n",
+      "* Epoch 200: Train. Loss: 0.3100, Train. Acc.: 0.8835, Test Acc.: 0.8586\n"
      ]
     }
    ],
@@ -223,7 +233,7 @@
     "        labels = labels.data\n",
     "        inputs, labels = inputs.to(device), labels.to(device)\n",
     "\n",
-    "        scores = convmps(inputs)\n",
+    "        scores = convtree(inputs)\n",
     "        _, preds = torch.max(scores, 1)\n",
     "\n",
     "        # Compute the loss and accuracy, add them to the running totals\n",
@@ -249,14 +259,15 @@
     "            inputs, labels = inputs.to(device), labels.to(device)\n",
     "\n",
     "            # Call our MPS to get logit scores and predictions\n",
-    "            scores = convmps(inputs)\n",
+    "            scores = convtree(inputs)\n",
     "            _, preds = torch.max(scores, 1)\n",
     "            running_test_acc += torch.sum(preds == labels).item() / batch_size\n",
     "    \n",
-    "    print(f'* Epoch {epoch_num}: '\n",
-    "          f'Train. Loss: {running_train_loss / num_batches[\"train\"]:.4f}, '\n",
-    "          f'Train. Acc.: {running_train_acc / num_batches[\"train\"]:.4f}, '\n",
-    "          f'Test Acc.: {running_test_acc / num_batches[\"test\"]:.4f}')"
+    "    if epoch_num % 10 == 0:\n",
+    "        print(f'* Epoch {epoch_num}: '\n",
+    "            f'Train. Loss: {running_train_loss / num_batches[\"train\"]:.4f}, '\n",
+    "            f'Train. Acc.: {running_train_acc / num_batches[\"train\"]:.4f}, '\n",
+    "            f'Test Acc.: {running_test_acc / num_batches[\"test\"]:.4f}')"
    ]
   },
   {
@@ -265,34 +276,11 @@
    "metadata": {},
    "outputs": [
     {
-     "data": {
-      "text/plain": [
-       "tensor(0.0346, device='cuda:0')"
-      ]
-     },
-     "execution_count": 10,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "norm = 0.0\n",
-    "for p in convmps.parameters():\n",
-    "    norm += p.grad.norm()\n",
-    "norm"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 11,
-   "metadata": {},
-   "outputs": [
-    {
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "Nº params:     28240\n",
-      "Memory module: 0.1077 MB\n"
+      "Nº params:     97957\n",
+      "Memory module: 0.3737 MB\n"
      ]
     }
    ],
@@ -300,7 +288,7 @@
     "# Original number of parametrs\n",
     "n_params = 0\n",
     "memory = 0\n",
-    "for p in convmps.parameters():\n",
+    "for p in convtree.parameters():\n",
     "    n_params += p.nelement()\n",
     "    memory += p.nelement() * p.element_size()  # Bytes\n",
     "print(f'Nº params:     {n_params}')\n",

@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Training SnakeSBS - FashionMNIST &#8212; TensorKrowch 00.00.01 documentation</title>
+    <title>SnakeSBS - FashionMNIST &#8212; TensorKrowch 00.00.01 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -40,8 +40,6 @@
     <link rel="shortcut icon" href="../_static/tensorkrowch_favicon_light.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Training CNN-SnakeSBS - FashionMNIST" href="training_cnn_snake_sbs_fashion_mnist.html" />
-    <link rel="prev" title="Training MPS - FashionMNIST" href="training_mps_fashion_mnist.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -96,60 +94,25 @@
   Contents:
  </span>
 </p>
-<ul class="current nav bd-sidenav">
+<ul class="nav bd-sidenav">
  <li class="toctree-l1">
   <a class="reference internal" href="../installation.html">
    Installation
   </a>
  </li>
- <li class="toctree-l1 current active has-children">
+ <li class="toctree-l1 has-children">
   <a class="reference internal" href="../tutorials.html">
    Tutorials
   </a>
-  <input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
   <label for="toctree-checkbox-1">
    <i class="fas fa-chevron-down">
    </i>
   </label>
-  <ul class="current">
+  <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="basics.html">
+    <a class="reference internal" href="../tutorials/basics.html">
      Basics
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_mps_mnist.html">
-     Training MPS - MNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_mps_fashion_mnist.html">
-     Training MPS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2 current active">
-    <a class="current reference internal" href="#">
-     Training SnakeSBS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_cnn_snake_sbs_fashion_mnist.html">
-     Training CNN-SnakeSBS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_convmps_fashion_mnist.html">
-     Training ConvMPS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_mps_dmrg_mnist.html">
-     Training MPS with DMRG - MNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_mps_mnist_binarized.html">
-     Training MPS - MNIST Binarized
     </a>
    </li>
   </ul>
@@ -277,7 +240,7 @@ title="Source repository"
   <div class="menu-dropdown__content">
     <ul>
       <li>
-        <a href="../_sources/tutorials/training_snake_sbs_fashion_mnist.ipynb.txt"
+        <a href="../_sources/experiments/cirac_snake_sbs_fashion_mnist.ipynb.txt"
    class="headerbtn"
    data-toggle="tooltip"
 data-placement="left"
@@ -326,7 +289,7 @@ title="Print to PDF"
         <div class="col pl-md-3 pl-lg-5 content-container">
             <!-- Table of contents that is only displayed when printing the page -->
             <div id="jb-print-docs-body" class="onlyprint">
-                <h1>Training SnakeSBS - FashionMNIST</h1>
+                <h1>SnakeSBS - FashionMNIST</h1>
                 <!-- Table of contents -->
                 <div id="print-main-content">
                     <div id="jb-print-toc">
@@ -595,8 +558,8 @@ div.rendered_html tbody tr:hover {
   background: rgba(66, 165, 245, 0.2);
 }
 </style>
-<section id="Training-SnakeSBS---FashionMNIST">
-<h1>Training SnakeSBS - FashionMNIST<a class="headerlink" href="#Training-SnakeSBS---FashionMNIST" title="Permalink to this headline">#</a></h1>
+<section id="SnakeSBS---FashionMNIST">
+<h1>SnakeSBS - FashionMNIST<a class="headerlink" href="#SnakeSBS---FashionMNIST" title="Permalink to this headline">#</a></h1>
 <p>Based on this <a class="reference external" href="https://arxiv.org/abs/1806.05964">paper</a>.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
@@ -914,20 +877,6 @@ Memory module: 0.6006 MB
                 
     <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-    <a class='left-prev' id="prev-link" href="training_mps_fashion_mnist.html" title="previous page">
-        <i class="fas fa-angle-left"></i>
-        <div class="prev-next-info">
-            <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">Training MPS - FashionMNIST</p>
-        </div>
-    </a>
-    <a class='right-next' id="next-link" href="training_cnn_snake_sbs_fashion_mnist.html" title="next page">
-    <div class="prev-next-info">
-        <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Training CNN-SnakeSBS - FashionMNIST</p>
-    </div>
-    <i class="fas fa-angle-right"></i>
-    </a>
 </div>
             </footer>
         </div>

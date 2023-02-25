@@ -112,41 +112,6 @@
      Basics
     </a>
    </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../tutorials/training_mps_mnist.html">
-     Training MPS - MNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../tutorials/training_mps_fashion_mnist.html">
-     Training MPS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../tutorials/training_snake_sbs_fashion_mnist.html">
-     Training SnakeSBS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../tutorials/training_cnn_snake_sbs_fashion_mnist.html">
-     Training CNN-SnakeSBS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../tutorials/training_convmps_fashion_mnist.html">
-     Training ConvMPS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../tutorials/training_mps_dmrg_mnist.html">
-     Training MPS with DMRG - MNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../tutorials/training_mps_mnist_binarized.html">
-     Training MPS - MNIST Binarized
-    </a>
-   </li>
   </ul>
  </li>
  <li class="toctree-l1 has-children">
@@ -2324,8 +2289,7 @@ title="Source repository"
                 <span class="n">tensors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">aux_shape</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
 
         <span class="n">result</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">@</span> <span class="n">tensors</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">new_shape</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">new_shape</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">new_shape</span><span class="p">)</span>
         
         <span class="c1"># Put batch dims at the beggining</span>
         <span class="n">indices</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
@@ -2519,9 +2483,7 @@ title="Source repository"
                 <span class="n">tensors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">aux_shape</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
         
         <span class="n">result</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">@</span> <span class="n">tensors</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="n">new_shape</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">new_shape</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">new_shape</span><span class="p">)</span>
         
         <span class="c1"># Record in inverse_memory while contracting</span>
         <span class="c1"># (to delete memory if possible)</span>

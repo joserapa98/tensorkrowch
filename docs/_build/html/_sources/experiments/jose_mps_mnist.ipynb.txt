@@ -5,7 +5,7 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "# Training MPS - FashionMNIST"
+    "# MPS and Canonical Form - MNIST"
    ]
   },
   {
@@ -38,11 +38,11 @@
     "num_test = 10000\n",
     "batch_size = 500\n",
     "image_size = (28, 28)\n",
-    "num_epochs = 30\n",
+    "num_epochs = 10\n",
     "num_epochs_canonical = 3\n",
     "learn_rate = 1e-4\n",
     "l2_reg = 0.0\n",
-    "d_phys = 2\n",
+    "d_phys = 3\n",
     "d_bond = 10"
    ]
   },
@@ -97,11 +97,11 @@
     "\n",
     "transform = transforms.Compose([transforms.Resize(image_size),\n",
     "                                transforms.ToTensor(),\n",
-    "                                transforms.Lambda(partial(tk.add_ones, dim=1))])  # partial(tk.add_ones, dim=1)\n",
+    "                                transforms.Lambda(embedding)])  # partial(tk.add_ones, dim=1)\n",
     "\n",
-    "train_set = datasets.FashionMNIST('./data', download=True, transform=transform)\n",
-    "test_set = datasets.FashionMNIST('./data', download=True, transform=transform,\n",
-    "                                 train=False)"
+    "train_set = datasets.MNIST('./data', download=True, transform=transform)\n",
+    "test_set = datasets.MNIST('./data', download=True, transform=transform,\n",
+    "                          train=False)"
    ]
   },
   {
@@ -114,7 +114,7 @@
      "output_type": "stream",
      "text": [
       "Training on 60000 MNIST images \n",
-      "(testing on 10000) for 30 epochs\n",
+      "(testing on 10000) for 10 epochs\n",
       "Using Adam w/ learning rate = 1.0e-04\n",
       "\n"
      ]
@@ -156,36 +156,16 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "* Epoch 1: Train. Loss: 1.3908, Train. Acc.: 0.4461, Test Acc.: 0.7251\n",
-      "* Epoch 2: Train. Loss: 0.6236, Train. Acc.: 0.7636, Test Acc.: 0.7842\n",
-      "* Epoch 3: Train. Loss: 0.5318, Train. Acc.: 0.8020, Test Acc.: 0.7989\n",
-      "* Epoch 4: Train. Loss: 0.4872, Train. Acc.: 0.8198, Test Acc.: 0.8069\n",
-      "* Epoch 5: Train. Loss: 0.4533, Train. Acc.: 0.8324, Test Acc.: 0.8296\n",
-      "* Epoch 6: Train. Loss: 0.4351, Train. Acc.: 0.8378, Test Acc.: 0.8253\n",
-      "* Epoch 7: Train. Loss: 0.4111, Train. Acc.: 0.8473, Test Acc.: 0.8333\n",
-      "* Epoch 8: Train. Loss: 0.3967, Train. Acc.: 0.8521, Test Acc.: 0.8431\n",
-      "* Epoch 9: Train. Loss: 0.3875, Train. Acc.: 0.8570, Test Acc.: 0.8324\n",
-      "* Epoch 10: Train. Loss: 0.3825, Train. Acc.: 0.8572, Test Acc.: 0.8461\n",
-      "* Epoch 11: Train. Loss: 0.3754, Train. Acc.: 0.8591, Test Acc.: 0.8472\n",
-      "* Epoch 12: Train. Loss: 0.3680, Train. Acc.: 0.8620, Test Acc.: 0.8452\n",
-      "* Epoch 13: Train. Loss: 0.3640, Train. Acc.: 0.8635, Test Acc.: 0.8521\n",
-      "* Epoch 14: Train. Loss: 0.3559, Train. Acc.: 0.8668, Test Acc.: 0.8561\n",
-      "* Epoch 15: Train. Loss: 0.3479, Train. Acc.: 0.8696, Test Acc.: 0.8619\n",
-      "* Epoch 16: Train. Loss: 0.3453, Train. Acc.: 0.8699, Test Acc.: 0.8521\n",
-      "* Epoch 17: Train. Loss: 0.3382, Train. Acc.: 0.8740, Test Acc.: 0.8565\n",
-      "* Epoch 18: Train. Loss: 0.3344, Train. Acc.: 0.8748, Test Acc.: 0.8595\n",
-      "* Epoch 19: Train. Loss: 0.3274, Train. Acc.: 0.8777, Test Acc.: 0.8574\n",
-      "* Epoch 20: Train. Loss: 0.3240, Train. Acc.: 0.8784, Test Acc.: 0.8667\n",
-      "* Epoch 21: Train. Loss: 0.3230, Train. Acc.: 0.8801, Test Acc.: 0.8683\n",
-      "* Epoch 22: Train. Loss: 0.3158, Train. Acc.: 0.8809, Test Acc.: 0.8649\n",
-      "* Epoch 23: Train. Loss: 0.3131, Train. Acc.: 0.8807, Test Acc.: 0.8564\n",
-      "* Epoch 24: Train. Loss: 0.3077, Train. Acc.: 0.8846, Test Acc.: 0.8634\n",
-      "* Epoch 25: Train. Loss: 0.3055, Train. Acc.: 0.8862, Test Acc.: 0.8700\n",
-      "* Epoch 26: Train. Loss: 0.3005, Train. Acc.: 0.8862, Test Acc.: 0.8726\n",
-      "* Epoch 27: Train. Loss: 0.3023, Train. Acc.: 0.8866, Test Acc.: 0.8684\n",
-      "* Epoch 28: Train. Loss: 0.2955, Train. Acc.: 0.8891, Test Acc.: 0.8692\n",
-      "* Epoch 29: Train. Loss: 0.2965, Train. Acc.: 0.8880, Test Acc.: 0.8683\n",
-      "* Epoch 30: Train. Loss: 0.2882, Train. Acc.: 0.8905, Test Acc.: 0.8692\n"
+      "* Epoch 1: Train. Loss: 0.9456, Train. Acc.: 0.6753, Test Acc.: 0.8924\n",
+      "* Epoch 2: Train. Loss: 0.2921, Train. Acc.: 0.9121, Test Acc.: 0.9360\n",
+      "* Epoch 3: Train. Loss: 0.2066, Train. Acc.: 0.9378, Test Acc.: 0.9443\n",
+      "* Epoch 4: Train. Loss: 0.1642, Train. Acc.: 0.9502, Test Acc.: 0.9595\n",
+      "* Epoch 5: Train. Loss: 0.1317, Train. Acc.: 0.9601, Test Acc.: 0.9632\n",
+      "* Epoch 6: Train. Loss: 0.1135, Train. Acc.: 0.9654, Test Acc.: 0.9655\n",
+      "* Epoch 7: Train. Loss: 0.1046, Train. Acc.: 0.9687, Test Acc.: 0.9668\n",
+      "* Epoch 8: Train. Loss: 0.0904, Train. Acc.: 0.9720, Test Acc.: 0.9723\n",
+      "* Epoch 9: Train. Loss: 0.0836, Train. Acc.: 0.9740, Test Acc.: 0.9725\n",
+      "* Epoch 10: Train. Loss: 0.0751, Train. Acc.: 0.9764, Test Acc.: 0.9748\n"
      ]
     }
    ],
@@ -245,8 +225,8 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "Nº params:     157440\n",
-      "Memory module: 0.6006 MB\n"
+      "Nº params:     235660\n",
+      "Memory module: 0.8990 MB\n"
      ]
     }
    ],
@@ -270,10 +250,10 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "Test Acc.: 0.8321\n",
+      "Test Acc.: 0.9196\n",
       "\n",
-      "Nº params:     100664\n",
-      "Memory module: 0.3840 MB\n",
+      "Nº params:     150710\n",
+      "Memory module: 0.5749 MB\n",
       "\n"
      ]
     }
@@ -320,9 +300,9 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "* Epoch 1: Train. Loss: 0.3074, Train. Acc.: 0.8843, Test Acc.: 0.8691\n",
-      "* Epoch 2: Train. Loss: 0.2964, Train. Acc.: 0.8894, Test Acc.: 0.8686\n",
-      "* Epoch 3: Train. Loss: 0.2900, Train. Acc.: 0.8916, Test Acc.: 0.8725\n"
+      "* Epoch 1: Train. Loss: 0.1018, Train. Acc.: 0.9684, Test Acc.: 0.9693\n",
+      "* Epoch 2: Train. Loss: 0.0815, Train. Acc.: 0.9746, Test Acc.: 0.9698\n",
+      "* Epoch 3: Train. Loss: 0.0716, Train. Acc.: 0.9778, Test Acc.: 0.9721\n"
      ]
     }
    ],

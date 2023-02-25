@@ -5,7 +5,9 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "# Training MPS with DMRG - MNIST"
+    "# MPS with DMRG - MNIST\n",
+    "\n",
+    "Based on this [paper](https://arxiv.org/abs/1605.05775)."
    ]
   },
   {
@@ -222,13 +224,13 @@
     "torch.manual_seed(0)\n",
     "\n",
     "# Training parameters\n",
-    "num_train = 6000\n",
-    "num_test = 1000\n",
+    "num_train = 30000\n",
+    "num_test = 5000\n",
     "batch_size = 500\n",
     "image_size = (28, 28)\n",
     "num_epochs = 1\n",
     "num_epochs_canonical = 3\n",
-    "learn_rate = 1e-4\n",
+    "learn_rate = 1e-5\n",
     "l2_reg = 0.0\n",
     "d_phys = 3\n",
     "d_bond = 10\n",
@@ -303,9 +305,9 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "Training on 6000 MNIST images \n",
-      "(testing on 1000) for 1 epochs\n",
-      "Using Adam w/ learning rate = 1.0e-04\n",
+      "Training on 30000 MNIST images \n",
+      "(testing on 5000) for 1 epochs\n",
+      "Using Adam w/ learning rate = 1.0e-05\n",
       "\n"
      ]
     }
@@ -346,22 +348,23 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "* Epoch 1, Move 0/782: Train. Loss: 2.3026, Train. Acc.: 0.0980, Test Acc.: 0.1260\n",
-      "* Epoch 1, Move 100/782: Train. Loss: 2.2955, Train. Acc.: 0.1118, Test Acc.: 0.1260\n",
-      "* Epoch 1, Move 200/782: Train. Loss: 2.1719, Train. Acc.: 0.1935, Test Acc.: 0.2140\n",
-      "* Epoch 1, Move 300/782: Train. Loss: 1.8773, Train. Acc.: 0.4018, Test Acc.: 0.3980\n",
-      "* Epoch 1, Move 400/782: Train. Loss: 1.5773, Train. Acc.: 0.5215, Test Acc.: 0.5070\n",
-      "* Epoch 1, Move 500/782: Train. Loss: 1.1831, Train. Acc.: 0.6588, Test Acc.: 0.6180\n",
-      "* Epoch 1, Move 600/782: Train. Loss: 0.8912, Train. Acc.: 0.7337, Test Acc.: 0.6800\n",
-      "* Epoch 1, Move 700/782: Train. Loss: 0.7866, Train. Acc.: 0.7597, Test Acc.: 0.7040\n",
-      "* Epoch 1, Move 800/782: Train. Loss: 0.8792, Train. Acc.: 0.7195, Test Acc.: 0.7350\n",
-      "* Epoch 1, Move 900/782: Train. Loss: 992.5513, Train. Acc.: 0.6710, Test Acc.: 0.7180\n",
-      "* Epoch 1, Move 1000/782: Train. Loss: 7786.3799, Train. Acc.: 0.7400, Test Acc.: 0.7050\n",
-      "* Epoch 1, Move 1100/782: Train. Loss: 45351.9336, Train. Acc.: 0.7002, Test Acc.: 0.7130\n",
-      "* Epoch 1, Move 1200/782: Train. Loss: 87926.8281, Train. Acc.: 0.7025, Test Acc.: 0.7280\n",
-      "* Epoch 1, Move 1300/782: Train. Loss: 94097.4688, Train. Acc.: 0.7275, Test Acc.: 0.6800\n",
-      "* Epoch 1, Move 1400/782: Train. Loss: 300232.4688, Train. Acc.: 0.6085, Test Acc.: 0.5630\n",
-      "* Epoch 1, Move 1500/782: Train. Loss: 270656.3438, Train. Acc.: 0.6110, Test Acc.: 0.6100\n"
+      "* Epoch 1, Move 0/782: Train. Loss: 2.3026, Train. Acc.: 0.1117, Test Acc.: 0.1142\n",
+      "* Epoch 1, Move 100/782: Train. Loss: 2.2992, Train. Acc.: 0.1141, Test Acc.: 0.1142\n",
+      "* Epoch 1, Move 200/782: Train. Loss: 2.2879, Train. Acc.: 0.1157, Test Acc.: 0.1156\n",
+      "* Epoch 1, Move 300/782: Train. Loss: 2.2301, Train. Acc.: 0.2327, Test Acc.: 0.1994\n",
+      "* Epoch 1, Move 400/782: Train. Loss: 2.1403, Train. Acc.: 0.3162, Test Acc.: 0.2884\n",
+      "* Epoch 1, Move 500/782: Train. Loss: 2.0333, Train. Acc.: 0.3478, Test Acc.: 0.3174\n",
+      "* Epoch 1, Move 600/782: Train. Loss: 1.8758, Train. Acc.: 0.3813, Test Acc.: 0.3540\n",
+      "* Epoch 1, Move 700/782: Train. Loss: 1.7273, Train. Acc.: 0.4055, Test Acc.: 0.3780\n",
+      "* Epoch 1, Move 800/782: Train. Loss: 1.3702, Train. Acc.: 0.5006, Test Acc.: 0.4750\n",
+      "* Epoch 1, Move 900/782: Train. Loss: 1.5917, Train. Acc.: 0.6191, Test Acc.: 0.6542\n",
+      "* Epoch 1, Move 1000/782: Train. Loss: 2.6530, Train. Acc.: 0.6311, Test Acc.: 0.6576\n",
+      "* Epoch 1, Move 1100/782: Train. Loss: 3.9461, Train. Acc.: 0.6790, Test Acc.: 0.6784\n",
+      "* Epoch 1, Move 1200/782: Train. Loss: 5.9259, Train. Acc.: 0.6698, Test Acc.: 0.6376\n",
+      "* Epoch 1, Move 1300/782: Train. Loss: 7.8389, Train. Acc.: 0.6778, Test Acc.: 0.6980\n",
+      "* Epoch 1, Move 1400/782: Train. Loss: 13.7298, Train. Acc.: 0.6066, Test Acc.: 0.6316\n",
+      "* Epoch 1, Move 1500/782: Train. Loss: 13.8754, Train. Acc.: 0.6148, Test Acc.: 0.6324\n",
+      "* Epoch 1, Move 1563/782: Train. Loss: 11.3831, Train. Acc.: 0.6347, Test Acc.: 0.6210\n"
      ]
     }
    ],
@@ -429,7 +432,12 @@
     "        mps.trace(torch.zeros(image_size[0] * image_size[1], 1, d_phys).to(device))\n",
     "        optimizer = torch.optim.Adam(mps.parameters(),\n",
     "                                     lr=learn_rate,\n",
-    "                                     weight_decay=l2_reg)"
+    "                                     weight_decay=l2_reg)\n",
+    "        \n",
+    "    print(f'* Epoch {epoch_num}, Move {move}/{n_moves}: '\n",
+    "          f'Train. Loss: {running_train_loss / num_batches[\"train\"]:.4f}, '\n",
+    "          f'Train. Acc.: {running_train_acc / num_batches[\"train\"]:.4f}, '\n",
+    "          f'Test Acc.: {running_test_acc / num_batches[\"test\"]:.4f}')"
    ]
   },
   {

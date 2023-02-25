@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Training MPS - MNIST Binarized &#8212; TensorKrowch 00.00.01 documentation</title>
+    <title>MPS and Canonical Form - MNIST &#8212; TensorKrowch 00.00.01 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -40,8 +40,6 @@
     <link rel="shortcut icon" href="../_static/tensorkrowch_favicon_light.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="API Reference" href="../api.html" />
-    <link rel="prev" title="Training MPS with DMRG - MNIST" href="training_mps_dmrg_mnist.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -96,60 +94,25 @@
   Contents:
  </span>
 </p>
-<ul class="current nav bd-sidenav">
+<ul class="nav bd-sidenav">
  <li class="toctree-l1">
   <a class="reference internal" href="../installation.html">
    Installation
   </a>
  </li>
- <li class="toctree-l1 current active has-children">
+ <li class="toctree-l1 has-children">
   <a class="reference internal" href="../tutorials.html">
    Tutorials
   </a>
-  <input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
   <label for="toctree-checkbox-1">
    <i class="fas fa-chevron-down">
    </i>
   </label>
-  <ul class="current">
+  <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="basics.html">
+    <a class="reference internal" href="../tutorials/basics.html">
      Basics
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_mps_mnist.html">
-     Training MPS - MNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_mps_fashion_mnist.html">
-     Training MPS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_snake_sbs_fashion_mnist.html">
-     Training SnakeSBS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_cnn_snake_sbs_fashion_mnist.html">
-     Training CNN-SnakeSBS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_convmps_fashion_mnist.html">
-     Training ConvMPS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="training_mps_dmrg_mnist.html">
-     Training MPS with DMRG - MNIST
-    </a>
-   </li>
-   <li class="toctree-l2 current active">
-    <a class="current reference internal" href="#">
-     Training MPS - MNIST Binarized
     </a>
    </li>
   </ul>
@@ -277,7 +240,7 @@ title="Source repository"
   <div class="menu-dropdown__content">
     <ul>
       <li>
-        <a href="../_sources/tutorials/training_mps_mnist_binarized.ipynb.txt"
+        <a href="../_sources/experiments/jose_mps_mnist.ipynb.txt"
    class="headerbtn"
    data-toggle="tooltip"
 data-placement="left"
@@ -326,7 +289,7 @@ title="Print to PDF"
         <div class="col pl-md-3 pl-lg-5 content-container">
             <!-- Table of contents that is only displayed when printing the page -->
             <div id="jb-print-docs-body" class="onlyprint">
-                <h1>Training MPS - MNIST Binarized</h1>
+                <h1>MPS and Canonical Form - MNIST</h1>
                 <!-- Table of contents -->
                 <div id="print-main-content">
                     <div id="jb-print-toc">
@@ -595,14 +558,13 @@ div.rendered_html tbody tr:hover {
   background: rgba(66, 165, 245, 0.2);
 }
 </style>
-<section id="Training-MPS---MNIST-Binarized">
-<h1>Training MPS - MNIST Binarized<a class="headerlink" href="#Training-MPS---MNIST-Binarized" title="Permalink to this headline">#</a></h1>
+<section id="MPS-and-Canonical-Form---MNIST">
+<h1>MPS and Canonical Form - MNIST<a class="headerlink" href="#MPS-and-Canonical-Form---MNIST" title="Permalink to this headline">#</a></h1>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">time</span>
-<span class="kn">import</span> <span class="nn">math</span>
 <span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
 
 <span class="kn">import</span> <span class="nn">torch</span>
@@ -629,7 +591,7 @@ div.rendered_html tbody tr:hover {
 <span class="n">num_epochs_canonical</span> <span class="o">=</span> <span class="mi">3</span>
 <span class="n">learn_rate</span> <span class="o">=</span> <span class="mf">1e-4</span>
 <span class="n">l2_reg</span> <span class="o">=</span> <span class="mf">0.0</span>
-<span class="n">d_phys</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">d_phys</span> <span class="o">=</span> <span class="mi">3</span>
 <span class="n">d_bond</span> <span class="o">=</span> <span class="mi">10</span>
 </pre></div>
 </div>
@@ -645,9 +607,6 @@ div.rendered_html tbody tr:hover {
                   <span class="n">n_labels</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
                   <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">)</span>
 <span class="n">mps</span> <span class="o">=</span> <span class="n">mps</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-
-<span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">mps</span><span class="o">.</span><span class="n">leaf_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-    <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span>
 </pre></div>
 </div>
 </div>
@@ -679,14 +638,11 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">embedding</span><span class="p">(</span><span class="n">image</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-    <span class="k">return</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span>
-        <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">image</span><span class="p">),</span> <span class="n">image</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">image</span><span class="p">),</span> <span class="n">image</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">image</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
 <span class="n">transform</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">([</span><span class="n">transforms</span><span class="o">.</span><span class="n">Resize</span><span class="p">(</span><span class="n">image_size</span><span class="p">),</span>
                                 <span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">(),</span>
-                                <span class="n">transforms</span><span class="o">.</span><span class="n">Normalize</span><span class="p">((</span><span class="mf">0.1307</span><span class="p">,),</span> <span class="p">(</span><span class="mf">0.3081</span><span class="p">,)),</span>
-                                <span class="n">transforms</span><span class="o">.</span><span class="n">Lambda</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span>
-                                <span class="n">transforms</span><span class="o">.</span><span class="n">Lambda</span><span class="p">(</span><span class="n">embedding</span><span class="p">)])</span>
+                                <span class="n">transforms</span><span class="o">.</span><span class="n">Lambda</span><span class="p">(</span><span class="n">embedding</span><span class="p">)])</span>  <span class="c1"># partial(tk.add_ones, dim=1)</span>
 
 <span class="n">train_set</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">MNIST</span><span class="p">(</span><span class="s1">&#39;./data&#39;</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">)</span>
 <span class="n">test_set</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">MNIST</span><span class="p">(</span><span class="s1">&#39;./data&#39;</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span>
@@ -792,16 +748,16 @@ Using Adam w/ learning rate = 1.0e-04
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-* Epoch 1: Train. Loss: 0.9907, Train. Acc.: 0.6497, Test Acc.: 0.8962
-* Epoch 2: Train. Loss: 0.2633, Train. Acc.: 0.9185, Test Acc.: 0.9445
-* Epoch 3: Train. Loss: 0.1751, Train. Acc.: 0.9461, Test Acc.: 0.9565
-* Epoch 4: Train. Loss: 0.1304, Train. Acc.: 0.9605, Test Acc.: 0.9631
-* Epoch 5: Train. Loss: 0.1096, Train. Acc.: 0.9658, Test Acc.: 0.9699
-* Epoch 6: Train. Loss: 0.0926, Train. Acc.: 0.9718, Test Acc.: 0.9695
-* Epoch 7: Train. Loss: 0.0809, Train. Acc.: 0.9744, Test Acc.: 0.9723
-* Epoch 8: Train. Loss: 0.0723, Train. Acc.: 0.9778, Test Acc.: 0.9747
-* Epoch 9: Train. Loss: 0.0638, Train. Acc.: 0.9792, Test Acc.: 0.9740
-* Epoch 10: Train. Loss: 0.0591, Train. Acc.: 0.9812, Test Acc.: 0.9760
+* Epoch 1: Train. Loss: 0.9456, Train. Acc.: 0.6753, Test Acc.: 0.8924
+* Epoch 2: Train. Loss: 0.2921, Train. Acc.: 0.9121, Test Acc.: 0.9360
+* Epoch 3: Train. Loss: 0.2066, Train. Acc.: 0.9378, Test Acc.: 0.9443
+* Epoch 4: Train. Loss: 0.1642, Train. Acc.: 0.9502, Test Acc.: 0.9595
+* Epoch 5: Train. Loss: 0.1317, Train. Acc.: 0.9601, Test Acc.: 0.9632
+* Epoch 6: Train. Loss: 0.1135, Train. Acc.: 0.9654, Test Acc.: 0.9655
+* Epoch 7: Train. Loss: 0.1046, Train. Acc.: 0.9687, Test Acc.: 0.9668
+* Epoch 8: Train. Loss: 0.0904, Train. Acc.: 0.9720, Test Acc.: 0.9723
+* Epoch 9: Train. Loss: 0.0836, Train. Acc.: 0.9740, Test Acc.: 0.9725
+* Epoch 10: Train. Loss: 0.0751, Train. Acc.: 0.9764, Test Acc.: 0.9748
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -824,160 +780,44 @@ Using Adam w/ learning rate = 1.0e-04
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Nº params:     157440
-Memory module: 0.6006 MB
+Nº params:     235660
+Memory module: 0.8990 MB
 </pre></div></div>
 </div>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># torch.save(mps.state_dict(), &#39;mps.pt&#39;)</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[57]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mps_lst</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
-    <span class="n">mps1</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">MPSLayer</span><span class="p">(</span><span class="n">n_sites</span><span class="o">=</span><span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
-                       <span class="n">d_phys</span><span class="o">=</span><span class="n">d_phys</span><span class="p">,</span>
-                       <span class="n">n_labels</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
-                       <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">)</span>
-    <span class="n">mps1</span> <span class="o">=</span> <span class="n">mps1</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Canonicalize SVD</span>
+<span class="c1"># ----------------</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">canonicalize</span><span class="p">(</span><span class="n">cum_percentage</span><span class="o">=</span><span class="mf">0.98</span><span class="p">)</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
 
-    <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">mps1</span><span class="o">.</span><span class="n">leaf_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-        <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span>
+<span class="c1"># New test accuracy</span>
+<span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+    <span class="n">running_acc</span> <span class="o">=</span> <span class="mf">0.0</span>
 
-    <span class="c1"># Before starting training, set memory modes to True, and trace</span>
-    <span class="n">mps1</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="kc">True</span>
-    <span class="n">mps1</span><span class="o">.</span><span class="n">unbind_mode</span> <span class="o">=</span> <span class="kc">True</span>
-    <span class="n">mps1</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">loaders</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]:</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">labels</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 
-    <span class="n">mps1</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;mps.pt&#39;</span><span class="p">))</span>
+        <span class="c1"># Call our MPS to get logit scores and predictions</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">mps</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">preds</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">running_acc</span> <span class="o">+=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">preds</span> <span class="o">==</span> <span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="n">batch_size</span>
 
-    <span class="n">mps1</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
-    <span class="n">mps1</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="n">mps1</span><span class="o">.</span><span class="n">unbind_mode</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="n">mps1</span><span class="o">.</span><span class="n">unset_data_nodes</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Test Acc.: </span><span class="si">{</span><span class="n">running_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s1">&#39;test&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
 
-    <span class="n">mps_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mps1</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[58]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">generated_class</span> <span class="o">=</span> <span class="mi">0</span>
-
-<span class="n">v_class_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-<span class="n">v_class_tensor</span><span class="p">[</span><span class="n">generated_class</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
-
-<span class="n">v1_class</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;class&#39;</span><span class="p">,),</span>
-                   <span class="n">tensor</span><span class="o">=</span><span class="n">v_class_tensor</span><span class="p">)</span>
-<span class="n">v2_class</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;class&#39;</span><span class="p">,),</span>
-                   <span class="n">tensor</span><span class="o">=</span><span class="n">v_class_tensor</span><span class="p">)</span>
-
-<span class="n">pixel_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mi">1</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span>
-                             <span class="o">-</span><span class="mi">1</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-<span class="n">v1</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;feature&#39;</span><span class="p">,),</span>
-             <span class="n">tensor</span><span class="o">=</span><span class="n">pixel_tensor</span><span class="p">)</span>
-<span class="n">v2</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;feature&#39;</span><span class="p">,),</span>
-             <span class="n">tensor</span><span class="o">=</span><span class="n">pixel_tensor</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[60]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">nodes_mps_lst</span> <span class="o">=</span> <span class="p">[([</span><span class="n">mps_lst</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">left_node</span><span class="p">]</span> <span class="o">+</span> \
-                   <span class="n">mps_lst</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">left_env</span> <span class="o">+</span> \
-                  <span class="p">[</span><span class="n">mps_lst</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">output_node</span><span class="p">]</span> <span class="o">+</span> \
-                   <span class="n">mps_lst</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">right_env</span> <span class="o">+</span> \
-                  <span class="p">[</span><span class="n">mps_lst</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">right_node</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">)]</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[61]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">nodes_mps_lst</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">nodes_mps_lst</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
-    <span class="k">if</span> <span class="s1">&#39;output&#39;</span> <span class="ow">in</span> <span class="n">node1</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
-        <span class="n">node1</span><span class="p">[</span><span class="s1">&#39;output&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">v1_class</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">]</span>
-        <span class="n">node2</span><span class="p">[</span><span class="s1">&#39;output&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">v2_class</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">]</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">node1</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node2</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[67]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Compute norm (contracting)</span>
-<span class="n">left_result_lst</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="n">right_result_lst</span> <span class="o">=</span> <span class="p">[]</span>
-
-<span class="c1"># left node</span>
-<span class="n">left_result_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nodes_mps_lst</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">@</span> <span class="n">nodes_mps_lst</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
-
-<span class="c1"># left env</span>
-<span class="n">stack1</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">nodes_mps_lst</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">:(</span><span class="nb">len</span><span class="p">(</span><span class="n">mps_lst</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">left_env</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span>
-<span class="n">stack2</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">nodes_mps_lst</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">:(</span><span class="nb">len</span><span class="p">(</span><span class="n">mps_lst</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">left_env</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span>
-<span class="n">stack1</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack2</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
-<span class="n">stack_result</span> <span class="o">=</span> <span class="n">stack1</span> <span class="o">@</span> <span class="n">stack2</span>
-<span class="n">left_result_lst</span> <span class="o">+=</span> <span class="n">tk</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">stack_result</span><span class="p">)</span>
-
-<span class="c1"># output node</span>
-<span class="n">output1</span> <span class="o">=</span> <span class="n">mps_lst</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">output_node</span> <span class="o">@</span> <span class="n">mps_lst</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">output_node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;output&#39;</span><span class="p">)</span>
-<span class="n">output2</span> <span class="o">=</span> <span class="n">mps_lst</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">output_node</span> <span class="o">@</span> <span class="n">mps_lst</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">output_node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;output&#39;</span><span class="p">)</span>
-<span class="n">left_result_lst</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">@=</span> <span class="n">output1</span>
-<span class="n">left_result_lst</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">@=</span> <span class="n">output2</span>
-
-<span class="c1"># right env</span>
-<span class="n">stack1</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">nodes_mps_lst</span><span class="p">[</span><span class="mi">0</span><span class="p">][(</span><span class="nb">len</span><span class="p">(</span><span class="n">mps_lst</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">left_env</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span><span class="p">):</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-<span class="n">stack2</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">nodes_mps_lst</span><span class="p">[</span><span class="mi">1</span><span class="p">][(</span><span class="nb">len</span><span class="p">(</span><span class="n">mps_lst</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">left_env</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span><span class="p">):</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-<span class="n">stack1</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack2</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
-<span class="n">stack_result</span> <span class="o">=</span> <span class="n">stack1</span> <span class="o">@</span> <span class="n">stack2</span>
-<span class="n">right_result_lst</span> <span class="o">+=</span> <span class="n">tk</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">stack_result</span><span class="p">)</span>
-
-<span class="c1"># right node</span>
-<span class="n">right_result_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nodes_mps_lst</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">@</span> <span class="n">nodes_mps_lst</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-<br/><br/></pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[79]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Contract matrices</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">left_result_lst</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">left_result_lst</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
-    <span class="n">result</span> <span class="o">@=</span> <span class="n">node</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[80]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">right_result_lst</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
-    <span class="n">result</span> <span class="o">@=</span> <span class="n">node</span>
-
-<span class="c1"># norm = result.tensor</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[84]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">@</span> <span class="n">right_result_lst</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="c1"># Number of parametrs</span>
+<span class="n">n_params</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">memory</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">mps</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
+    <span class="n">n_params</span> <span class="o">+=</span> <span class="n">p</span><span class="o">.</span><span class="n">nelement</span><span class="p">()</span>
+    <span class="n">memory</span> <span class="o">+=</span> <span class="n">p</span><span class="o">.</span><span class="n">nelement</span><span class="p">()</span> <span class="o">*</span> <span class="n">p</span><span class="o">.</span><span class="n">element_size</span><span class="p">()</span>  <span class="c1"># Bytes</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Nº params:     </span><span class="si">{</span><span class="n">n_params</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Memory module: </span><span class="si">{</span><span class="n">memory</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="o">**</span><span class="mi">2</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1"> MB</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>  <span class="c1"># MegaBytes</span>
 </pre></div>
 </div>
 </div>
@@ -986,93 +826,78 @@ Memory module: 0.6006 MB
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
-<span class="ansi-red-fg">ValueError</span>                                Traceback (most recent call last)
-Cell <span class="ansi-green-fg">In[84], line 1</span>
-<span class="ansi-green-fg">----&gt; 1</span> result @ right_result_lst[-1]
+Test Acc.: 0.9196
 
-File <span class="ansi-green-fg">~/VSCodeProjects/tensorkrowch/tensorkrowch/operations.py:2368</span>, in <span class="ansi-cyan-fg">contract_between</span><span class="ansi-blue-fg">(node1, node2, axes)</span>
-<span class="ansi-green-intense-fg ansi-bold">   2365</span> if not edges:
-<span class="ansi-green-intense-fg ansi-bold">   2366</span>     raise ValueError(f&#39;No batch edges or shared edges between &#39;
-<span class="ansi-green-intense-fg ansi-bold">   2367</span>                      f&#39;nodes {node1!s} and {node2!s} found&#39;)
-<span class="ansi-green-fg">-&gt; 2368</span> return contract_edges(edges, node1, node2)
+Nº params:     150710
+Memory module: 0.5749 MB
 
-File <span class="ansi-green-fg">~/VSCodeProjects/tensorkrowch/tensorkrowch/operations.py:2275</span>, in <span class="ansi-cyan-fg">contract_edges</span><span class="ansi-blue-fg">(edges, node1, node2)</span>
-<span class="ansi-green-intense-fg ansi-bold">   2252</span> def contract_edges(edges: List[AbstractEdge],
-<span class="ansi-green-intense-fg ansi-bold">   2253</span>                    node1: AbstractNode,
-<span class="ansi-green-intense-fg ansi-bold">   2254</span>                    node2: AbstractNode) -&gt; Node:
-<span class="ansi-green-intense-fg ansi-bold">   2255</span>     &#34;&#34;&#34;
-<span class="ansi-green-intense-fg ansi-bold">   2256</span>     Contracts all selected edges between two nodes.
-<span class="ansi-green-intense-fg ansi-bold">   2257</span>
-<span class="ansi-green-fg">   (...)</span>
-<span class="ansi-green-intense-fg ansi-bold">   2273</span>     Node
-<span class="ansi-green-intense-fg ansi-bold">   2274</span>     &#34;&#34;&#34;
-<span class="ansi-green-fg">-&gt; 2275</span>     return contract_edges_op(edges, node1, node2)
-
-File <span class="ansi-green-fg">~/VSCodeProjects/tensorkrowch/tensorkrowch/operations.py:97</span>, in <span class="ansi-cyan-fg">Operation.__call__</span><span class="ansi-blue-fg">(self, *args, **kwargs)</span>
-<span class="ansi-green-intense-fg ansi-bold">     94</span> successor = self.check_first(*args, **kwargs)
-<span class="ansi-green-intense-fg ansi-bold">     96</span> if successor is None:
-<span class="ansi-green-fg">---&gt; 97</span>     return self.func1(*args, **kwargs)
-<span class="ansi-green-intense-fg ansi-bold">     98</span> else:
-<span class="ansi-green-intense-fg ansi-bold">     99</span>     args = [successor] + list(args)
-
-File <span class="ansi-green-fg">~/VSCodeProjects/tensorkrowch/tensorkrowch/operations.py:2076</span>, in <span class="ansi-cyan-fg">_contract_edges_first</span><span class="ansi-blue-fg">(edges, node1, node2)</span>
-<span class="ansi-green-intense-fg ansi-bold">   2073</span>     raise TypeError(&#39;Can only contract (Param)StackNode with other &#39;
-<span class="ansi-green-intense-fg ansi-bold">   2074</span>                     &#39;(Param)StackNode&#39;)
-<span class="ansi-green-intense-fg ansi-bold">   2075</span> else:
-<span class="ansi-green-fg">-&gt; 2076</span>     new_node = Node(axes_names=new_axes_names,
-<span class="ansi-green-intense-fg ansi-bold">   2077</span>                     name=&#39;contract_edges&#39;,
-<span class="ansi-green-intense-fg ansi-bold">   2078</span>                     network=node1._network,
-<span class="ansi-green-intense-fg ansi-bold">   2079</span>                     leaf=False,
-<span class="ansi-green-intense-fg ansi-bold">   2080</span>                     param_edges=False,
-<span class="ansi-green-intense-fg ansi-bold">   2081</span>                     tensor=result,
-<span class="ansi-green-intense-fg ansi-bold">   2082</span>                     edges=new_edges,
-<span class="ansi-green-intense-fg ansi-bold">   2083</span>                     node1_list=new_node1_list)
-<span class="ansi-green-intense-fg ansi-bold">   2085</span> # Create successor
-<span class="ansi-green-intense-fg ansi-bold">   2086</span> net = node1._network
-
-File <span class="ansi-green-fg">~/VSCodeProjects/tensorkrowch/tensorkrowch/components.py:1477</span>, in <span class="ansi-cyan-fg">Node.__init__</span><span class="ansi-blue-fg">(self, shape, axes_names, name, network, leaf, data, virtual, override_node, param_edges, tensor, edges, override_edges, node1_list, init_method, device, **kwargs)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1469</span>     super().__init__(shape=shape,
-<span class="ansi-green-intense-fg ansi-bold">   1470</span>                      axes_names=axes_names,
-<span class="ansi-green-intense-fg ansi-bold">   1471</span>                      name=name,
-<span class="ansi-green-fg">   (...)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1474</span>                      data=data,
-<span class="ansi-green-intense-fg ansi-bold">   1475</span>                      virtual=virtual)
-<span class="ansi-green-intense-fg ansi-bold">   1476</span> else:
-<span class="ansi-green-fg">-&gt; 1477</span>     super().__init__(shape=tensor.shape,
-<span class="ansi-green-intense-fg ansi-bold">   1478</span>                      axes_names=axes_names,
-<span class="ansi-green-intense-fg ansi-bold">   1479</span>                      name=name,
-<span class="ansi-green-intense-fg ansi-bold">   1480</span>                      network=network,
-<span class="ansi-green-intense-fg ansi-bold">   1481</span>                      leaf=leaf,
-<span class="ansi-green-intense-fg ansi-bold">   1482</span>                      data=data,
-<span class="ansi-green-intense-fg ansi-bold">   1483</span>                      virtual=virtual)
-<span class="ansi-green-intense-fg ansi-bold">   1485</span> # edges
-<span class="ansi-green-intense-fg ansi-bold">   1486</span> if edges is None:
-
-File <span class="ansi-green-fg">~/VSCodeProjects/tensorkrowch/tensorkrowch/components.py:315</span>, in <span class="ansi-cyan-fg">AbstractNode.__init__</span><span class="ansi-blue-fg">(self, shape, axes_names, name, network, leaf, data, virtual)</span>
-<span class="ansi-green-intense-fg ansi-bold">    312</span>     raise TypeError(
-<span class="ansi-green-intense-fg ansi-bold">    313</span>         &#39;`axes_names` should be tuple[str, ...] or list[str, ...] type&#39;)
-<span class="ansi-green-intense-fg ansi-bold">    314</span> if len(axes_names) != len(shape):
-<span class="ansi-green-fg">--&gt; 315</span>     raise ValueError(
-<span class="ansi-green-intense-fg ansi-bold">    316</span>         &#39;`axes_names` length should match `shape` length&#39;)
-<span class="ansi-green-intense-fg ansi-bold">    317</span> else:
-<span class="ansi-green-intense-fg ansi-bold">    318</span>     axes_names = enum_repeated_names(axes_names)
-
-<span class="ansi-red-fg">ValueError</span>: `axes_names` length should match `shape` length
 </pre></div></div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">nodes_mps_lst</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">nodes_mps_lst</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
-    <span class="n">node1</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">|</span> <span class="n">node2</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
-    <span class="n">node1</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">v1</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
-    <span class="n">node2</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">v2</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Continue training and obtaining canonical form after each epoch</span>
+<span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span>
+                             <span class="n">lr</span><span class="o">=</span><span class="n">learn_rate</span><span class="p">,</span>
+                             <span class="n">weight_decay</span><span class="o">=</span><span class="n">l2_reg</span><span class="p">)</span>
 
-    <span class="c1"># Contract everything</span>
+<span class="k">for</span> <span class="n">epoch_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_epochs_canonical</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+    <span class="n">running_train_loss</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">running_train_acc</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="k">for</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">loaders</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]:</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">labels</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">mps</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">preds</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Compute the loss and accuracy, add them to the running totals</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fun</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">accuracy</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">preds</span> <span class="o">==</span> <span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="n">batch_size</span>
+            <span class="n">running_train_loss</span> <span class="o">+=</span> <span class="n">loss</span>
+            <span class="n">running_train_acc</span> <span class="o">+=</span> <span class="n">accuracy</span>
+
+        <span class="c1"># Backpropagate and update parameters</span>
+        <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+        <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+        <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="n">running_test_acc</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+        <span class="k">for</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">loaders</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]:</span>
+            <span class="n">inputs</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">view</span><span class="p">([</span>
+                <span class="n">batch_size</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">data</span>
+            <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">labels</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+            <span class="c1"># Call our MPS to get logit scores and predictions</span>
+            <span class="n">scores</span> <span class="o">=</span> <span class="n">mps</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">preds</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">running_test_acc</span> <span class="o">+=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">preds</span> <span class="o">==</span> <span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="n">batch_size</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;* Epoch </span><span class="si">{</span><span class="n">epoch_num</span><span class="si">}</span><span class="s1">: &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;Train. Loss: </span><span class="si">{</span><span class="n">running_train_loss</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;Train. Acc.: </span><span class="si">{</span><span class="n">running_train_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;Test Acc.: </span><span class="si">{</span><span class="n">running_test_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+* Epoch 1: Train. Loss: 0.1018, Train. Acc.: 0.9684, Test Acc.: 0.9693
+* Epoch 2: Train. Loss: 0.0815, Train. Acc.: 0.9746, Test Acc.: 0.9698
+* Epoch 3: Train. Loss: 0.0716, Train. Acc.: 0.9778, Test Acc.: 0.9721
+</pre></div></div>
 </div>
 </section>
 
@@ -1084,20 +909,6 @@ File <span class="ansi-green-fg">~/VSCodeProjects/tensorkrowch/tensorkrowch/comp
                 
     <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-    <a class='left-prev' id="prev-link" href="training_mps_dmrg_mnist.html" title="previous page">
-        <i class="fas fa-angle-left"></i>
-        <div class="prev-next-info">
-            <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">Training MPS with DMRG - MNIST</p>
-        </div>
-    </a>
-    <a class='right-next' id="next-link" href="../api.html" title="next page">
-    <div class="prev-next-info">
-        <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">API Reference</p>
-    </div>
-    <i class="fas fa-angle-right"></i>
-    </a>
 </div>
             </footer>
         </div>

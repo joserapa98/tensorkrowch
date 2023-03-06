@@ -5,6 +5,7 @@ Experiments
    :maxdepth: 4
 
    examples/jose_mps_mnist
+   examples/jose_mps_canonical_mnist
    examples/jose_mps_fashion_mnist
    examples/cirac_snake_sbs_fashion_mnist
    examples/cirac_cnn_snake_sbs_fashion_mnist

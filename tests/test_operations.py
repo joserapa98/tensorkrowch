@@ -3315,6 +3315,7 @@ class TestContractEdge:
         assert node1.successors == dict()
         assert node2.successors == dict()
         
+        # TODO: change contract_between by tk.contract_edges()
         # Contract edge
         # To contract only one edge we have to call contract_between
         # with the particular list of shared edges we want to contract
@@ -5789,6 +5790,31 @@ class TestEinsum:
         
         assert node2.shape == (10, 5)
         assert torch.allclose(node1.tensor, node2.tensor)
+        
+    def test_aux(self):
+        # MPS
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        network=net,
+                        init_method='randn')
+        node2 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        network=net,
+                        init_method='randn')
+        node1['right'] ^ node2['left']
+        
+        net.set_data_nodes([node1['input'], node2['input']], 1)
+        data = torch.randn(2, 10, 5)
+        net._add_data(data)
+        
+        result_list = tk.stacked_einsum('lir,bi->lbr', [node1, node2],
+                                        list(net.data_nodes.values()))
+        
+        node3 = result_list[0] @ result_list[1]
+        node4 = tk.einsum('lbr,rbo->blo', result_list[0], result_list[1])
+        
+        assert torch.allclose(node3.tensor, node4.tensor)
 
     def test_stacked_einsum_param_mps(self):
         net = tk.TensorNetwork()

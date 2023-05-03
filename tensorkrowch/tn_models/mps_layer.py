@@ -16,6 +16,9 @@ from tensorkrowch.components import AbstractNode, Node, ParamNode
 from tensorkrowch.components import TensorNetwork
 import tensorkrowch.operations as op
 
+import time
+PRINT_MODE = False
+
 
 class MPSLayer(TensorNetwork):
     """
@@ -483,6 +486,8 @@ class MPSLayer(TensorNetwork):
 
         else:
             if self.left_env + self.right_env:
+                start = time.time()
+                
                 stack = op.stack(self.left_env + self.right_env)
                 stack_data = op.stack(self.lr_env_data)
                 
@@ -493,6 +498,10 @@ class MPSLayer(TensorNetwork):
                 
                 left_result = result[:len(self.left_env)]
                 right_result = result[len(self.left_env):]
+                
+                if PRINT_MODE:
+                    print('Input data contraction:', time.time() - start)
+                
                 return left_result, right_result
             else:
                 return [], []
@@ -501,14 +510,34 @@ class MPSLayer(TensorNetwork):
     def _inline_contraction(nodes: List[Node], left) -> Node:
         """Contracts sequence of MPS nodes (matrices) inline."""
         if left:
+            start = time.time()
+            first_ten = 0
+            
             result_node = nodes[0]
             for node in nodes[1:]:
+                if first_ten < 10:
+                    first = time.time()
+                    
                 result_node @= node
+                
+                if PRINT_MODE and (first_ten < 10):
+                    print('\tFirst inline left:', time.time() - first)
+                    first_ten += 1
+                
+            if PRINT_MODE:
+                print('\tInline left:', time.time() - start)
+            
             return result_node
         else:
+            start = time.time()
+            
             result_node = nodes[0]
             for node in nodes[1:]:
                 result_node = node @ result_node
+            
+            if PRINT_MODE:
+                print('\tInline right:', time.time() - start)
+                
             return result_node
         
     def _contract_envs_inline(self,
@@ -516,6 +545,8 @@ class MPSLayer(TensorNetwork):
                               right_env: List[Node]) -> Tuple[List[Node],
                                                               List[Node]]:
         """Contracts the left and right environments inline."""
+        start = time.time()
+        
         if left_env:
             left_node = (self.left_node @ self.left_node.neighbours('input'))
             left_env = [self._inline_contraction([left_node] + left_env, True)]
@@ -529,6 +560,9 @@ class MPSLayer(TensorNetwork):
             right_env = [self._inline_contraction(lst, False)]
         elif self.right_node is not None:
             right_env = [self.right_node @ self.right_node.neighbours('input')]
+            
+        if PRINT_MODE:
+            print('Inline mats contraction:', time.time() - start)
             
         return left_env, right_env
 
@@ -615,6 +649,8 @@ class MPSLayer(TensorNetwork):
             left_env_contracted, right_env_contracted = \
                 self._pairwise_contraction(left_env, right_env)
         
+        start = time.time()
+        
         result = self.output_node
         if left_env_contracted and right_env_contracted:
             result = left_env_contracted[0] @ result @ right_env_contracted[0]
@@ -624,6 +660,10 @@ class MPSLayer(TensorNetwork):
             result = right_env_contracted[0] @ result
         else:
             result @= result
+            
+        if PRINT_MODE:
+            print('Contraction:', time.time() - start)
+            
         return result
     
     def canonicalize(self,

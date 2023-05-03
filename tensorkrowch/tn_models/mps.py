@@ -516,7 +516,7 @@ class MPS(TensorNetwork):
         d_bond = []
         for node in nodes:
             if 'right' in node.axes_names:
-                d_bond.append(node['right'].size())
+                d_bond.append(node['right'].size())  # TODO: _size?
         self._d_bond = d_bond
         
         self.automemory = prev_automemory

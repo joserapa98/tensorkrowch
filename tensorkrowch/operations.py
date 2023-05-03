@@ -164,7 +164,7 @@ def _permute_next(successor: Successor,
     # All arguments are mandatory though some might not be used
     new_tensor = node.tensor.permute(successor.hints)
     child = successor.child
-    child._unrestricted_set_tensor(new_tensor)
+    child._unrestricted_set_tensor_ops(new_tensor)
     
     # Record in inverse_memory while contracting
     # (to delete memory if possible)
@@ -329,7 +329,7 @@ def _tprod_next(successor: Successor,
                              node2.tensor.flatten()).view(*(list(node1._shape) +
                                                             list(node2._shape)))
     child = successor.child
-    child._unrestricted_set_tensor(new_tensor)
+    child._unrestricted_set_tensor_ops(new_tensor)
     
     # Record in inverse_memory while contracting
     # (to delete memory if possible)
@@ -434,7 +434,7 @@ def _mul_next(successor: Successor,
               node2: AbstractNode) -> Node:
     new_tensor = node1.tensor * node2.tensor
     child = successor.child
-    child._unrestricted_set_tensor(new_tensor)
+    child._unrestricted_set_tensor_ops(new_tensor)
     
     # Record in inverse_memory while contracting
     # (to delete memory if possible)
@@ -536,7 +536,7 @@ def _add_next(successor: Successor,
               node2: AbstractNode) -> Node:
     new_tensor = node1.tensor + node2.tensor
     child = successor.child
-    child._unrestricted_set_tensor(new_tensor)
+    child._unrestricted_set_tensor_ops(new_tensor)
     
     # Record in inverse_memory while contracting
     # (to delete memory if possible)
@@ -638,7 +638,7 @@ def _sub_next(successor: Successor,
               node2: AbstractNode) -> Node:
     new_tensor = node1.tensor - node2.tensor
     child = successor.child
-    child._unrestricted_set_tensor(new_tensor)
+    child._unrestricted_set_tensor_ops(new_tensor)
     
     # Record in inverse_memory while contracting
     # (to delete memory if possible)
@@ -1084,8 +1084,8 @@ def _split_next(successor: Successor,
         *(batch_shape + [rank] + node2_shape.tolist()))
     
     children = successor.child
-    children[0]._unrestricted_set_tensor(node1_tensor)
-    children[1]._unrestricted_set_tensor(node2_tensor)
+    children[0]._unrestricted_set_tensor_ops(node1_tensor)
+    children[1]._unrestricted_set_tensor_ops(node2_tensor)
     
     # Record in inverse_memory while contracting
     # (to delete memory if possible)
@@ -1289,8 +1289,8 @@ def split_(node: AbstractNode,
                          mode, side, rank, cum_percentage, cutoff)
     node1.reattach_edges(True)
     node2.reattach_edges(True)
-    node1._unrestricted_set_tensor(node1.tensor.detach())
-    node2._unrestricted_set_tensor(node2.tensor.detach())
+    node1._unrestricted_set_tensor_ops(node1.tensor.detach())
+    node2._unrestricted_set_tensor_ops(node2.tensor.detach())
     
     # Delete node (and its edges) from the TN
     net = node._network
@@ -2236,7 +2236,7 @@ def _contract_edges_next(successor: Successor,
         node2._record_in_inverse_memory()
 
     child = successor.child
-    child._unrestricted_set_tensor(result)
+    child._unrestricted_set_tensor_ops(result)
 
     return child
 
@@ -2292,7 +2292,7 @@ def contract_(edge: AbstractEdge) -> Node:
     """
     result = contract_edges([edge], edge.node1, edge.node2)
     result.reattach_edges(True)
-    result._unrestricted_set_tensor(result.tensor.detach())
+    result._unrestricted_set_tensor_ops(result.tensor.detach())
     
     # Delete nodes (and their edges) from the TN
     net = result.network
@@ -2411,7 +2411,7 @@ def contract_between_(node1: AbstractNode,
     """
     result = contract_between(node1, node2, axes)
     result.reattach_edges(True)
-    result._unrestricted_set_tensor(result.tensor.detach())
+    result._unrestricted_set_tensor_ops(result.tensor.detach())
     
     # Delete nodes (and their edges) from the TN
     net = result.network
@@ -2602,7 +2602,7 @@ def _stack_next(successor: Successor,
         return child
 
     stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])
-    child._unrestricted_set_tensor(stack_tensor)
+    child._unrestricted_set_tensor_ops(stack_tensor)
             
     # Record in inverse_memory while contracting
     # (to delete memory if possible)
@@ -2767,7 +2767,7 @@ def _unbind_next(successor: Successor, node: AbstractStackNode) -> List[Node]:
         tensors = torch.unbind(node.tensor)
         children = successor.child
         for tensor, child in zip(tensors, children):
-            child._unrestricted_set_tensor(tensor)
+            child._unrestricted_set_tensor_ops(tensor, True)
             
         # Record in inverse_memory while contracting
         # (to delete memory if possible)
@@ -3016,7 +3016,7 @@ def _einsum_next(successor: Successor,
                                      optimize=hints['path'])
     
     child = successor.child
-    child._unrestricted_set_tensor(new_tensor)
+    child._unrestricted_set_tensor_ops(new_tensor)
     
     # Record in inverse_memory while contracting
     # (to delete memory if possible)

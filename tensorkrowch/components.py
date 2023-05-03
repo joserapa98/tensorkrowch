@@ -1077,6 +1077,15 @@ class AbstractNode(ABC):
 
         self._save_in_network(correct_format_tensor)
         self._shape = tensor.shape
+        
+    def _unrestricted_set_tensor_ops(self,
+                                     tensor: Optional[Tensor],
+                                     check_shape: bool = False) -> None:
+        if check_shape and not self._compatible_shape(tensor):
+            tensor = self._crop_tensor(tensor)
+            
+        self._save_in_network(tensor)
+        self._shape = tensor.shape
 
     def set_tensor(self,
                    tensor: Optional[Tensor] = None,

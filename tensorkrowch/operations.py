@@ -2332,8 +2332,7 @@ def get_shared_edges(node1: AbstractNode,
 
 
 def contract_between(node1: AbstractNode,
-                     node2: AbstractNode,
-                     axes: Optional[Sequence[Ax]] = None) -> Node:
+                     node2: AbstractNode) -> Node:
     """
     Contracts all edges shared between two nodes. Batch contraction is
     automatically performed when both nodes have batch edges with the same
@@ -2352,15 +2351,7 @@ def contract_between(node1: AbstractNode,
     -------
     Node
     """
-    if axes is None:
-        edges = get_shared_edges(node1, node2)
-    else:
-        edges = [node1.get_edge(ax) for ax in axes]
-        
-    if not edges:
-        raise ValueError(f'No batch edges or shared edges between '
-                         f'nodes {node1!s} and {node2!s} found')
-    return contract_edges(edges, node1, node2)
+    return contract_edges(None, node1, node2)
 
 
 contract_between_node = copy_func(contract_between)
@@ -2386,8 +2377,7 @@ AbstractNode.contract_between = contract_between_node
 
 
 def contract_between_(node1: AbstractNode,
-                      node2: AbstractNode,
-                      axes: Optional[Sequence[Ax]] = None) -> Node:
+                      node2: AbstractNode) -> Node:
     """
     In-place version of :func:`contract_between`.
     
@@ -2407,7 +2397,7 @@ def contract_between_(node1: AbstractNode,
     -------
     Node
     """
-    result = contract_between(node1, node2, axes)
+    result = contract_between(node1, node2)
     result.reattach_edges(True)
     result._unrestricted_set_tensor_ops(result.tensor.detach())
     

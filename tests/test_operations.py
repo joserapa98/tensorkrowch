@@ -3766,6 +3766,45 @@ class TestContractBetween:
         node1.network.zero_grad()
         assert torch.equal(node1.grad, torch.zeros(node1.shape))
         assert node1[2].grad == (torch.zeros(1), torch.zeros(1))
+        
+    def test_trace_with_batch(self):
+        node1 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'batch', 'right'),
+                        name='node1',
+                        init_method='randn')
+        node1['left'] ^ node1['right']
+        
+        assert len(node1.network.nodes) == 1
+        assert len(node1.network.leaf_nodes) == 1
+        assert len(node1.network.non_leaf_nodes) == 0
+        
+        assert node1.successors == dict()
+        
+        # Contract edge
+        node2 = node1 @ node1
+        assert node2.shape == (5,)
+        assert len(node2.edges) == 1
+        
+        assert len(node1.network.nodes) == 2
+        assert len(node1.network.leaf_nodes) == 1
+        assert len(node1.network.non_leaf_nodes) == 1
+        
+        assert node1.successors != dict()
+        assert node1.successors['contract_edges'][0].child == node2
+        
+        result_tensor = node2.tensor
+
+        # Repeat traces
+        node3 = node1 @ node1
+        assert node2 == node3
+        assert torch.equal(result_tensor, node3.tensor)
+        
+        # Repeat contraction changing batch size
+        node1.tensor = torch.randn(2, 7, 2)
+        
+        node4 = node1 @ node1
+        assert node2 == node4
+        assert not torch.equal(result_tensor, node4.tensor)
 
     def test_contract_with_same_batch(self):
         net = tk.TensorNetwork()
@@ -3855,6 +3894,14 @@ class TestContractBetween:
         assert node3 == node4
         assert torch.equal(result_tensor, node4.tensor)
         
+        # Repeat contraction changing batch sizes
+        node1.tensor = torch.randn(2, 7, 2)
+        node2.tensor = torch.randn(2, 11, 2)
+        
+        node5 = node1 @ node2
+        assert node3 == node5
+        assert not torch.equal(result_tensor, node5.tensor)
+        
     def test_contract_several_batches(self):
         net = tk.TensorNetwork()
         node1 = tk.Node(shape=(2, 10, 15, 5),
@@ -3899,6 +3946,14 @@ class TestContractBetween:
         node4 = node1 @ node2
         assert node3 == node4
         assert torch.equal(result_tensor, node4.tensor)
+        
+        # Repeat contraction changing batch sizes
+        node1.tensor = torch.randn(2, 12, 17, 7)
+        node2.tensor = torch.randn(2, 12, 23, 7)
+        
+        node5 = node1 @ node2
+        assert node3 == node5
+        assert not torch.equal(result_tensor, node5.tensor)
         
     def test_contract_nodes_in_place(self):
         net = tk.TensorNetwork()

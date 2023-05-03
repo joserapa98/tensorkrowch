@@ -40,6 +40,9 @@ from tensorkrowch.components import *
 from tensorkrowch.utils import (inverse_permutation, is_permutation,
                                 list2slice, permute_list)
 
+from tensorkrowch import _C
+
+
 Ax = Union[int, Text, Axis]
 
 
@@ -1287,8 +1290,8 @@ def split_(node: AbstractNode,
                          mode, side, rank, cum_percentage, cutoff)
     node1.reattach_edges(True)
     node2.reattach_edges(True)
-    node1._unrestricted_set_tensor_ops(node1.tensor.detach())
-    node2._unrestricted_set_tensor_ops(node2.tensor.detach())
+    node1._unrestricted_set_tensor(node1.tensor.detach())
+    node2._unrestricted_set_tensor(node2.tensor.detach())
     
     # Delete node (and its edges) from the TN
     net = node._network
@@ -1841,10 +1844,19 @@ def _contract_edges_first(edges: List[AbstractEdge],
                           node1: AbstractNode,
                           node2: AbstractNode) -> Node:
     shared_edges = get_shared_edges(node1, node2)
-    for edge in edges:
-        if edge not in shared_edges:
-            raise ValueError('Edges selected to be contracted must be shared '
-                             'edges between `node1` and `node2`')
+    if shared_edges == []:
+        raise ValueError(f'No batch edges or shared edges between nodes '
+                         f'{node1!s} and {node2!s} found')
+    
+    edges_None = False
+    if edges is None:
+        edges = shared_edges
+        edges_None = True
+    else:
+        for edge in edges:
+            if edge not in shared_edges:
+                raise ValueError('Edges selected to be contracted must be '
+                                 'shared edges between `node1` and `node2`')
 
     # Trace
     if node1 == node2:
@@ -1901,7 +1913,7 @@ def _contract_edges_first(edges: List[AbstractEdge],
                 new_edges.append(node1._edges[num])
                 new_node1_list.append(node1.is_node1(num))
 
-        hints = None
+        hints = {'edges': edges}
         
         # Record in inverse_memory while tracing
         node1._record_in_inverse_memory()
@@ -1977,63 +1989,19 @@ def _contract_edges_first(edges: List[AbstractEdge],
             non_contract_edges_perm_0 + contract_edges_perm_0
         permutation_dims[1] = batch_edges_perm_1 + \
             contract_edges_perm_1 + non_contract_edges_perm_1
-        
+            
         for i in [0, 1]:
             if permutation_dims[i] == list(range(len(permutation_dims[i]))):
                 permutation_dims[i] = []
                 
-        for i in [0, 1]:
-            if permutation_dims[i]:
-                tensors[i] = tensors[i].permute(permutation_dims[i])
-                
-        shape_limits = {'batch': len(batch_edges),
-                        'non_contract': len(non_contract_edges[0]),
-                        'contract': len(contract_edges)}
+        shape_limits = (len(batch_edges),
+                        len(non_contract_edges[0]),
+                        len(contract_edges))
         
-        aux_shape = [None, None]
-        
-        batch_edges_shape_0 = [torch.tensor(
-            tensors[0].shape[:shape_limits['batch']]
-            )]
-        batch_edges_shape_1 = [torch.tensor(
-            tensors[1].shape[:shape_limits['batch']]
-            )]
-        
-        non_contract_edges_shape_0 = [torch.tensor(
-            tensors[0].shape[shape_limits['batch']:
-                (shape_limits['batch'] + shape_limits['non_contract'])]
-            )]
-        non_contract_edges_shape_1 = [torch.tensor(
-            tensors[1].shape[(shape_limits['batch'] + shape_limits['contract']):]
-            )]
-        
-        contract_edges_shape_0 = [torch.tensor(
-            tensors[0].shape[(shape_limits['batch'] + shape_limits['non_contract']):]
-            )]
-        contract_edges_shape_1 = [torch.tensor(
-            tensors[1].shape[shape_limits['batch']:
-                (shape_limits['batch'] + shape_limits['contract'])]
-            )]
-        
-        aux_shape[0] = batch_edges_shape_0 + \
-            non_contract_edges_shape_0 + contract_edges_shape_0
-        aux_shape[1] = batch_edges_shape_1 + \
-            contract_edges_shape_1 + non_contract_edges_shape_1
-        
-        new_shape = aux_shape[0][0].tolist() + \
-            aux_shape[0][1].tolist() + aux_shape[1][2].tolist()
-        
-        for i in [0, 1]:
-            for j in range(len(aux_shape[i])):
-                aux_shape[i][j] = aux_shape[i][j].prod().long().item()
-                
-        for i in [0, 1]:
-            if aux_shape[i]:
-                tensors[i] = tensors[i].reshape(aux_shape[i])
-
-        result = tensors[0] @ tensors[1]
-        result = result.view(new_shape)
-        
+        result = _C.contract(tensors[0], tensors[1],
+                             permutation_dims,
+                             shape_limits)
+            
         # Put batch dims at the beggining
         indices = [None, None]
         indices[0] = list(map(lambda l: l[0], batch_edges.values())) + \
@@ -2050,12 +2018,13 @@ def _contract_edges_first(edges: List[AbstractEdge],
                 new_node1_list.append(nodes[i].axes[idx].is_node1())
 
         hints = {'permutation_dims': permutation_dims,
-                 'aux_shape': aux_shape,
-                 'shape_limits': shape_limits}
+                 'shape_limits': shape_limits,
+                 'edges': edges}
         
         # Record in inverse_memory while tracing
         node1._record_in_inverse_memory()
         node2._record_in_inverse_memory()
+    
         
     node1_is_stack = isinstance(node1, (StackNode, ParamStackNode))
     node2_is_stack = isinstance(node2, (StackNode, ParamStackNode))
@@ -2081,9 +2050,9 @@ def _contract_edges_first(edges: List[AbstractEdge],
 
     # Create successor
     net = node1._network
-    successor = Successor(kwargs={'edges': edges,
-                                     'node1': node1,
-                                     'node2': node2},
+    successor = Successor(kwargs={'edges': edges if not edges_None else None,
+                                  'node1': node1,
+                                  'node2': node2},
                              child=new_node,
                              hints=hints)
     
@@ -2103,6 +2072,9 @@ def _contract_edges_next(successor: Successor,
                          edges: List[AbstractEdge],
                          node1: AbstractNode,
                          node2: AbstractNode) -> Node:
+    hints = successor.hints
+    edges = hints['edges']
+    
     if node1 == node2:
         result = node1.tensor
         for j, edge in enumerate(node1._edges):
@@ -2163,8 +2135,7 @@ def _contract_edges_next(successor: Successor,
                     permutation_dims = [k if k < j else k + 1
                                         for k in range(nodes[0].rank - 1)] + [j]
                     inv_permutation_dims = inverse_permutation(permutation_dims)
-
-                    # Send multiplication dimension to the end, multiply,
+                   # Send multiplication dimension to the end, multiply,
                     # and recover original shape
                     tensors[0] = tensors[0].permute(permutation_dims)
                     if isinstance(edge, ParamStackEdge):
@@ -2176,66 +2147,19 @@ def _contract_edges_next(successor: Successor,
                     else:
                         tensors[0] = tensors[0] @ edge.matrix
                     tensors[0] = tensors[0].permute(inv_permutation_dims)
-
-        hints = successor.hints
-
-        for i in [0, 1]:
-            if hints['permutation_dims'][i]:
-                tensors[i] = tensors[i].permute(hints['permutation_dims'][i])
-                
-        shape_limits = hints['shape_limits']
-        aux_shape = [None, None]
-        
-        batch_edges_shape_0 = [torch.tensor(
-            tensors[0].shape[:shape_limits['batch']]
-            )]
-        batch_edges_shape_1 = [torch.tensor(
-            tensors[1].shape[:shape_limits['batch']]
-            )]
-        
-        non_contract_edges_shape_0 = [torch.tensor(
-            tensors[0].shape[shape_limits['batch']:
-                (shape_limits['batch'] + shape_limits['non_contract'])]
-            )]
-        non_contract_edges_shape_1 = [torch.tensor(
-            tensors[1].shape[(shape_limits['batch'] + shape_limits['contract']):]
-            )]
-        
-        contract_edges_shape_0 = [torch.tensor(
-            tensors[0].shape[(shape_limits['batch'] + shape_limits['non_contract']):]
-            )]
-        contract_edges_shape_1 = [torch.tensor(
-            tensors[1].shape[shape_limits['batch']:
-                (shape_limits['batch'] + shape_limits['contract'])]
-            )]
-        
-        aux_shape[0] = batch_edges_shape_0 + \
-            non_contract_edges_shape_0 + contract_edges_shape_0
-        aux_shape[1] = batch_edges_shape_1 + \
-            contract_edges_shape_1 + non_contract_edges_shape_1
-        
-        new_shape = aux_shape[0][0].tolist() + \
-            aux_shape[0][1].tolist() + aux_shape[1][2].tolist()
-        
-        for i in [0, 1]:
-            for j in range(len(aux_shape[i])):
-                aux_shape[i][j] = aux_shape[i][j].prod().long().item()
-            
-        for i in [0, 1]:
-            if aux_shape[i]:
-                tensors[i] = tensors[i].reshape(aux_shape[i])
-        
-        result = tensors[0] @ tensors[1]
-        result = result.view(new_shape)
+                    
+        result = _C.contract(tensors[0], tensors[1],
+                             hints['permutation_dims'],
+                             hints['shape_limits'])
         
         # Record in inverse_memory while contracting
         # (to delete memory if possible)
         node1._record_in_inverse_memory()
         node2._record_in_inverse_memory()
-
+        
     child = successor.child
     child._unrestricted_set_tensor_ops(result)
-
+    
     return child
 
 
@@ -2290,7 +2214,7 @@ def contract_(edge: AbstractEdge) -> Node:
     """
     result = contract_edges([edge], edge.node1, edge.node2)
     result.reattach_edges(True)
-    result._unrestricted_set_tensor_ops(result.tensor.detach())
+    result._unrestricted_set_tensor(result.tensor.detach())
     
     # Delete nodes (and their edges) from the TN
     net = result.network
@@ -2399,7 +2323,7 @@ def contract_between_(node1: AbstractNode,
     """
     result = contract_between(node1, node2)
     result.reattach_edges(True)
-    result._unrestricted_set_tensor_ops(result.tensor.detach())
+    result._unrestricted_set_tensor(result.tensor.detach())
     
     # Delete nodes (and their edges) from the TN
     net = result.network
@@ -2511,7 +2435,7 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
         stack_node = StackNode(nodes=nodes,
                                name='stack')
 
-    # Both conditions can only only be satisfied in index_mode
+    # Both conditions can only be satisfied in index_mode
     if all_same_ref:
         # Memory of stack is just a reference to the stack_node_ref
         stack_indices = list2slice(stack_indices)
@@ -2755,6 +2679,7 @@ def _unbind_next(successor: Successor, node: AbstractStackNode) -> List[Node]:
         children = successor.child
         for tensor, child in zip(tensors, children):
             child._unrestricted_set_tensor_ops(tensor, True)
+            # child._save_in_network(tensor)  # NOTE: no se puede cambiar, aquí hay que recortar los tensores al usar unbind
             
         # Record in inverse_memory while contracting
         # (to delete memory if possible)

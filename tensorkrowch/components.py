@@ -992,7 +992,7 @@ class AbstractNode(ABC):
             return True
         return False
 
-    def _crop_tensor(self, tensor: Tensor, allow_diff_shape: bool = False) -> Tensor:
+    def _crop_tensor(self, tensor: Tensor) -> Tensor:
         """
         Crops the tensor in case its shape is not compatible with the node's shape.
         That is, if the tensor has a size that is smaller than the corresponding
@@ -1004,11 +1004,6 @@ class AbstractNode(ABC):
         ----------
         tensor : torch.Tensor
             Tensor to be cropped.
-        allow_diff_shape : bool
-            Boolean indicating whether different sizes are allowed for all axes
-            (``True``), rather than just for batch axes (``Falsee``). If ``True``,
-            any tensor could be set in the node, and the node's shape would change
-            accordingly.
             
         Returns
         -------
@@ -1019,7 +1014,7 @@ class AbstractNode(ABC):
             for i, dim in enumerate(tensor.shape):
                 edge = self.get_edge(i)
 
-                if edge.is_batch() or (dim == edge.size()) or allow_diff_shape:
+                if edge.is_batch() or (dim == edge.size()):
                     index.append(slice(0, dim))
                 elif dim > edge.size():
                     index.append(slice(dim - edge.size(), dim))
@@ -1034,7 +1029,6 @@ class AbstractNode(ABC):
 
     def _unrestricted_set_tensor(self,
                                  tensor: Optional[Tensor] = None,
-                                 allow_diff_shape: bool = False,
                                  init_method: Optional[Text] = 'zeros',
                                  device: Optional[torch.device] = None,
                                  **kwargs: float) -> None:
@@ -1051,11 +1045,6 @@ class AbstractNode(ABC):
             Tensor to be set in the node. If None, and `init_method` is provided,
             the tensor is created with :meth:`make_tensor`. Otherwise, a None is
             set as node's tensor.
-        allow_diff_shape : bool, optional
-            Boolean indicating whether different sizes are allowed for all axes
-            (``True``), rather than just for batch axes (``Falsee``). If ``True``,
-            any tensor could be set in the node, and the node's shape would change
-            accordingly.
         init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
             Initialization method.
         device : torch.device, optional
@@ -1072,7 +1061,7 @@ class AbstractNode(ABC):
                               'a tensor that is already in the required device')
             
             if not self._compatible_shape(tensor):
-                tensor = self._crop_tensor(tensor, allow_diff_shape)
+                tensor = self._crop_tensor(tensor)
             correct_format_tensor = self._set_tensor_format(tensor)
 
         elif init_method is not None:

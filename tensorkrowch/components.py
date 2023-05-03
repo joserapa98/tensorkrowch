@@ -987,7 +987,7 @@ class AbstractNode(ABC):
         if len(tensor.shape) == self.rank:
             for i, dim in enumerate(tensor.shape):
                 edge = self.get_edge(i)
-                if not edge.is_batch() and (dim != edge.size()):
+                if not edge.is_batch() and (dim != edge._size):
                     return False
             return True
         return False
@@ -1014,10 +1014,10 @@ class AbstractNode(ABC):
             for i, dim in enumerate(tensor.shape):
                 edge = self.get_edge(i)
 
-                if edge.is_batch() or (dim == edge.size()):
+                if edge.is_batch() or (dim == edge._size):
                     index.append(slice(0, dim))
-                elif dim > edge.size():
-                    index.append(slice(dim - edge.size(), dim))
+                elif dim > edge._size:
+                    index.append(slice(dim - edge._size, dim))
                 else:
                     raise ValueError(f'Cannot crop tensor if its size at axis {i}'
                                      ' is smaller than node\'s size')
@@ -2354,7 +2354,7 @@ class Edge(AbstractEdge):
         Returns dimension of tensor at the corresponding axis. For edges, this
         coincides with the size of the tensor.
         """
-        return self.size()
+        return self._size
 
     def change_size(self, size: int) -> None:
         """
@@ -2750,9 +2750,9 @@ class ParamEdge(AbstractEdge, nn.Module):
         Creates the matrix based on ``shift`` and ``slope``. The matrix is a
         diagonal square matrix with (almost) 0's and 1's on the diagonal.
         """
-        matrix = torch.zeros((self.size(), self.size()),
+        matrix = torch.zeros((self._size, self._size),
                              device=self.shift.device)
-        i = torch.arange(self.size(), device=self.shift.device)
+        i = torch.arange(self._size, device=self.shift.device)
         # matrix[(i, i)] = self.sigmoid(self.slope * (self.shift - i))
         matrix[(i, i)] = self.sigmoid(self.slope * (i - self.shift))
         return matrix

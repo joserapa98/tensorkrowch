@@ -3716,7 +3716,6 @@ class TensorNetwork(nn.Module):
         self._tracing = False     # Tracing mode (True while calling .trace())
 
         # Lis of operations used to contract the TN
-        self._list_ops = []
         self._seq_ops = []
 
     # ----------
@@ -4272,7 +4271,6 @@ class TensorNetwork(nn.Module):
         each node stores its corresponding tensor. Also, the lists of successors
         of all ``leaf`` and ``data`` nodes are emptied.
         """
-        self._list_ops = []
         self._seq_ops = []
         self._inverse_memory = dict()
 
@@ -4528,12 +4526,6 @@ class TensorNetwork(nn.Module):
 
         if not self._non_leaf_nodes:
             output = self.contract(*args, **kwargs)
-
-            self._seq_ops = []
-            for op in self._list_ops:
-                self._seq_ops.append(
-                    (op[1], op[0]._successors[op[1]][op[2]].kwargs))
-
             return output.tensor
 
         else:

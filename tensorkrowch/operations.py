@@ -148,9 +148,7 @@ def _permute_first(node: AbstractNode, axes: Sequence[Ax]) -> Node:
         node._successors['permute'] = [successor]
 
     # Add operation to list of performed operations of TN
-    net._list_ops.append((node,         # Which node stores the successor
-                          'permute',    # With what key (in successor dict)
-                          len(node._successors['permute']) - 1)) # Index in list
+    net._seq_ops.append(('permute', successor.kwargs))
     
     # Record in inverse_memory while tracing
     node._record_in_inverse_memory()
@@ -313,7 +311,7 @@ def _tprod_first(node1: AbstractNode, node2: AbstractNode) -> Node:
         node1._successors['tprod'] = [successor]
 
     # Add operation to list of performed operations of TN
-    net._list_ops.append((node1, 'tprod', len(node1._successors['tprod']) - 1))
+    net._seq_ops.append(('tprod', successor.kwargs))
     
     # Record in inverse_memory while tracing
     node1._record_in_inverse_memory()
@@ -420,7 +418,7 @@ def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
         node1._successors['mul'] = [successor]
 
     # Add operation to list of performed operations of TN
-    net._list_ops.append((node1, 'mul', len(node1._successors['mul']) - 1))
+    net._seq_ops.append(('mul', successor.kwargs))
     
     # Record in inverse_memory while tracing
     node1._record_in_inverse_memory()
@@ -522,7 +520,7 @@ def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
         node1._successors['add'] = [successor]
 
     # Add operation to list of performed operations of TN
-    net._list_ops.append((node1, 'add', len(node1._successors['add']) - 1))
+    net._seq_ops.append(('add', successor.kwargs))
     
     # Record in inverse_memory while tracing
     node1._record_in_inverse_memory()
@@ -624,7 +622,7 @@ def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
         node1._successors['sub'] = [successor]
 
     # Add operation to list of performed operations of TN
-    net._list_ops.append((node1, 'sub', len(node1._successors['sub']) - 1))
+    net._seq_ops.append(('sub', successor.kwargs))
     
     # Record in inverse_memory while tracing
     node1._record_in_inverse_memory()
@@ -958,7 +956,7 @@ def _split_first(node: AbstractNode,
         node._successors['split'] = [successor]
 
     # Add operation to list of performed operations of TN
-    net._list_ops.append((node, 'split', len(node._successors['split']) - 1))
+    net._seq_ops.append(('split', successor.kwargs))
     
     # Record in inverse_memory while tracing
     node._record_in_inverse_memory()
@@ -1305,7 +1303,7 @@ def split_(node: AbstractNode,
     net._change_node_type(node2, 'leaf')
     
     node._successors = dict()
-    net._list_ops = []
+    net._seq_ops = []
     
     # Remove non-leaf names
     node1.name = 'split_ip'
@@ -2096,7 +2094,7 @@ def _contract_edges_first(edges: List[AbstractEdge],
         node1._successors['contract_edges'] = [successor]
 
     # Add operation to list of performed operations of TN
-    net._list_ops.append((node1, 'contract_edges', len(node1._successors['contract_edges']) - 1))
+    net._seq_ops.append(('contract_edges', successor.kwargs))
 
     return new_node
 
@@ -2308,7 +2306,7 @@ def contract_(edge: AbstractEdge) -> Node:
     
     edge.node1._successors = dict()
     edge.node2._successors = dict()
-    net._list_ops = []
+    net._seq_ops = []
     
     # Remove non-leaf name
     result.name = 'contract_edges_ip'
@@ -2427,7 +2425,7 @@ def contract_between_(node1: AbstractNode,
     
     node1._successors = dict()
     node2._successors = dict()
-    net._list_ops = []
+    net._seq_ops = []
     
     # Remove non-leaf name
     result.name = 'contract_edges_ip'
@@ -2588,8 +2586,7 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
         nodes[0]._successors['stack'] = [successor]
 
     # Add operation to list of performed operations of TN
-    net._list_ops.append((nodes[0], 'stack',
-                          len(nodes[0]._successors['stack']) - 1))
+    net._seq_ops.append(('stack', successor.kwargs))
 
     return stack_node
 
@@ -2754,7 +2751,7 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
         node._successors['unbind'] = [successor]
 
     # Add operation to list of performed operations of TN
-    net._list_ops.append((node, 'unbind', len(node._successors['unbind']) - 1))
+    net._seq_ops.append(('unbind', successor.kwargs))
 
     # Returns copy in order not to modify the successor
     # if the returned list gets modified by any means
@@ -2994,8 +2991,7 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
 
     # Add operation to list of performed operations of TN
     net = nodes[0]._network
-    net._list_ops.append((nodes[0], 'einsum',
-                          len(nodes[0]._successors['einsum']) - 1))
+    net._seq_ops.append(('einsum', successor.kwargs))
     
     # Record in inverse_memory while tracing
     for node in nodes:

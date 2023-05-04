@@ -3,6 +3,10 @@
 __pycache__
 .ipynb_checkpoints
 
+/build
+/tensorkrowch.egg-info
+_C*
+
 /training_scripts
 /data
 

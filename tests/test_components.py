@@ -2173,7 +2173,7 @@ class TestTensorNetwork:
         assert len(net.data_nodes) == 2
         assert len(net.virtual_nodes) == 3
 
-    def test_add_data_same_shape(self):
+    def testadd_data_same_shape(self):
         net = tk.TensorNetwork(name='net')
         for i in range(4):
             _ = tk.Node(shape=(2, 5, 2),
@@ -2191,7 +2191,7 @@ class TestTensorNetwork:
 
         # data shape = n_features x batch_dim x feature_dim
         data = torch.randn(2, 10, 5)
-        net._add_data(data)
+        net.add_data(data)
         assert torch.equal(net.data_nodes['data_0'].tensor, data[0, :, :])
         assert torch.equal(net.data_nodes['data_1'].tensor, data[1, :, :])
         assert torch.equal(net.nodes['stack_data_memory'].tensor, data)
@@ -2199,16 +2199,16 @@ class TestTensorNetwork:
         # This causes no error, because the data tensor will be cropped to fit
         # the shape of the stack_data_memory node. It gives a warning
         data = torch.randn(3, 10, 5)
-        net._add_data(data)
+        net.add_data(data)
         
         # This does not give warning, batch size can be changed as we wish
         data = torch.randn(2, 100, 5)
-        net._add_data(data)
+        net.add_data(data)
 
         # Add data with no data nodes raises error
         net.unset_data_nodes()
         with pytest.raises(ValueError):
-            net._add_data(data)
+            net.add_data(data)
             
     def test_set_data_nodes_diff_shape(self):
         net = tk.TensorNetwork(name='net')
@@ -2240,7 +2240,7 @@ class TestTensorNetwork:
         assert len(net.data_nodes) == 0
         assert len(net.virtual_nodes) == 0
         
-    def test_add_data_diff_shape(self):
+    def testadd_data_diff_shape(self):
         net = tk.TensorNetwork(name='net')
         data = []
         for i in range(4):
@@ -2261,7 +2261,7 @@ class TestTensorNetwork:
         for i in range(3):
             net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
 
-        net._add_data(data)
+        net.add_data(data)
         for i in range(4):
             assert torch.equal(net.data_nodes[f'data_{i}'].tensor, data[i])
 
@@ -2271,17 +2271,17 @@ class TestTensorNetwork:
         # greater than any of the "feature" dimensions used in data nodes,
         # since we are cropping
         data = torch.randn(4, 6, 100)
-        net._add_data(data)
+        net.add_data(data)
         
         # If feature dimension is small, it would raise an error
         data = torch.randn(4, 4, 100)
         with pytest.raises(ValueError):
-            net._add_data(data)
+            net.add_data(data)
 
         # Add data with no data nodes raises error
         net.unset_data_nodes()
         with pytest.raises(ValueError):
-            net._add_data(data)
+            net.add_data(data)
         
     def test_copy_tn(self):
         net = tk.TensorNetwork(name='net')

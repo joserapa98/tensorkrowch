@@ -4446,7 +4446,7 @@ class TensorNetwork(nn.Module):
                 self.delete_node(self._virtual_nodes['virtual_n_features'])
                 self.delete_node(self._virtual_nodes['virtual_feature'])
 
-    def _add_data(self, data: Union[Tensor, Sequence[Tensor]]) -> None:
+    def add_data(self, data: Union[Tensor, Sequence[Tensor]]) -> None:
         """
         Adds data tensor(s) to ``data`` nodes, that is, changes their tensors
         by new data tensors when a new batch is provided.
@@ -4522,7 +4522,7 @@ class TensorNetwork(nn.Module):
         if data is not None:
             if not self._data_nodes:
                 self.set_data_nodes()
-            self._add_data(data=data)
+            self.add_data(data=data)
 
         if not self._resultant_nodes:
             output = self.contract(*args, **kwargs)

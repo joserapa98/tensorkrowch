@@ -5275,7 +5275,7 @@ class TestStackUnbind:
         
         net.set_data_nodes(input_edges, 1)
         data = torch.randn(2 * 5, 10, 3)
-        net._add_data(data)
+        net.add_data(data)
         
         stack_node = tk.stack(nodes)
         stack_input_0 = tk.stack([node.neighbours('input_0') for node in nodes])
@@ -5370,7 +5370,7 @@ class TestStackUnbind:
         
         net.set_data_nodes(input_edges, 1)
         data = torch.randn(2 * 5, 10, 3)
-        net._add_data(data)
+        net.add_data(data)
 
         stack_node = tk.stack(nodes)
         stack_input_0 = tk.stack([node.neighbours('input_0') for node in nodes])
@@ -5420,7 +5420,7 @@ class TestStackUnbind:
             input_edges += [node['input_0'], node['input_1']]
         net.set_data_nodes(input_edges, 1)
         data = torch.randn(2 * 5, 10, 3)
-        net._add_data(data)
+        net.add_data(data)
 
         net._contracting = True
         stack_node = tk.stack(nodes)
@@ -5472,7 +5472,7 @@ class TestStackUnbind:
             input_edges += [node['input_0'], node['input_1']]
         net.set_data_nodes(input_edges, 1)
         data = torch.randn(2 * 5, 10, 3)
-        net._add_data(data)
+        net.add_data(data)
 
         stack_node = tk.stack(nodes)
         stack_input_0 = tk.stack([node.neighbours('input_0') for node in nodes])
@@ -5554,7 +5554,7 @@ class TestStackUnbind:
             input_edges += [node['input_0'], node['input_1']]
         net.set_data_nodes(input_edges, 1)
         data = torch.randn(2 * 5, 10, 3)
-        net._add_data(data)
+        net.add_data(data)
 
         stack_node = tk.stack(nodes)
         stack_input_0 = tk.stack([node.neighbours('input_0') for node in nodes])
@@ -5587,7 +5587,7 @@ class TestStackUnbind:
             input_edges += [node['input_0'], node['input_1']]
         net.set_data_nodes(input_edges, 1)
         data = torch.randn(2 * 5, 10, 3)
-        net._add_data(data)
+        net.add_data(data)
 
         stack_node = tk.stack(nodes)
         stack_input_0 = tk.stack([node.neighbours('input_0') for node in nodes])
@@ -5728,7 +5728,7 @@ class TestEinsum:
                        init_method='randn')
         net.set_data_nodes(node.edges[:-1], 1)
         data = torch.randn(4, 10, 5)
-        net._add_data(data)
+        net.add_data(data)
 
         out_node = tk.einsum('ijklm,bi,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
         assert out_node.shape == (10, 2)
@@ -5741,7 +5741,7 @@ class TestEinsum:
                             init_method='randn')
         net.set_data_nodes(node.edges[:-1], 1)
         data = torch.randn(4, 10, 5)
-        net._add_data(data)
+        net.add_data(data)
 
         out_node = tk.einsum('ijklm,bi,bj,bk,bl->bm', *([node] + list(net.data_nodes.values())))
         assert out_node.shape == (10, 2)
@@ -5768,7 +5768,7 @@ class TestEinsum:
         
         net.set_data_nodes(input_edges, 1)
         data = torch.randn(10, 10, 5)
-        net._add_data(data)
+        net.add_data(data)
         
         result_list = tk.stacked_einsum('lir,bi->lbr', nodes[:5] + nodes[6:],
                                         list(net.data_nodes.values()))
@@ -5805,7 +5805,7 @@ class TestEinsum:
         
         net.set_data_nodes([node1['input'], node2['input']], 1)
         data = torch.randn(2, 10, 5)
-        net._add_data(data)
+        net.add_data(data)
         
         result_list = tk.stacked_einsum('lir,bi->lbr', [node1, node2],
                                         list(net.data_nodes.values()))
@@ -5837,7 +5837,7 @@ class TestEinsum:
         
         net.set_data_nodes(input_edges, 1)
         data = torch.randn(10, 10, 5)
-        net._add_data(data)
+        net.add_data(data)
         
         result_list = tk.stacked_einsum('lir,bi->lbr', nodes[:5] + nodes[6:],
                                         list(net.data_nodes.values()))

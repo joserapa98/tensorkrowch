@@ -812,9 +812,9 @@ title="Source repository"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_virtual</span></div>
 
-<div class="viewcode-block" id="AbstractNode.is_non_leaf"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.is_non_leaf">[docs]</a>    <span class="k">def</span> <span class="nf">is_non_leaf</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.is_resultant"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.is_resultant">[docs]</a>    <span class="k">def</span> <span class="nf">is_resultant</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns a boolean indicating if the node is a ``non_leaf`` node. These</span>
+<span class="sd">        Returns a boolean indicating if the node is a ``resultant`` node. These</span>
 <span class="sd">        are the nodes that result from an operation on any type of nodes.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_leaf</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_virtual</span><span class="p">)</span></div>
@@ -1350,7 +1350,7 @@ title="Source repository"
 <span class="sd">        it. Before setting it, it is casted to the correct type, so that a</span>
 <span class="sd">        ``torch.Tensor`` can be turned into a ``nn.Parameter`` when setting it</span>
 <span class="sd">        in :class:`ParamNodes &lt;ParamNode`. This can be used in any node, even in</span>
-<span class="sd">        non-leaf nodes.</span>
+<span class="sd">        resultant nodes.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1408,7 +1408,7 @@ title="Source repository"
 <span class="sd">        in :class:`ParamNodes &lt;ParamNode&gt;`.</span>
 <span class="sd">        </span>
 <span class="sd">        This way of setting tensors is only applicable to ``leaf`` nodes. For</span>
-<span class="sd">        ``non-leaf`` nodes, their tensors come from the result of operations on</span>
+<span class="sd">        ``resultant`` nodes, their tensors come from the result of operations on</span>
 <span class="sd">        ``leaf`` tensors; hence they should not be modified. For ``data`` nodes,</span>
 <span class="sd">        tensors are set into nodes when calling the :meth:`TensorNetwork.forward`</span>
 <span class="sd">        method of :class:`tensor networks &lt;TensorNetwork&gt;` with a data tensor or</span>
@@ -1494,11 +1494,11 @@ title="Source repository"
                     <span class="n">net</span><span class="o">.</span><span class="n">_inverse_memory</span><span class="p">[</span><span class="n">address</span><span class="p">][</span><span class="s1">&#39;accessed&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="c1"># Node can only be erased if both itself and the node from which</span>
-                <span class="c1"># it is taking the tensor information (node_ref) are non-leaf or</span>
+                <span class="c1"># it is taking the tensor information (node_ref) are resultant or</span>
                 <span class="c1"># data nodes (including virtual node that stores stack data tensor)</span>
                 <span class="n">erase</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">check_nodes</span><span class="p">:</span>
-                    <span class="n">erase</span> <span class="o">&amp;=</span> <span class="n">node</span><span class="o">.</span><span class="n">is_non_leaf</span><span class="p">()</span> <span class="ow">or</span> \
+                    <span class="n">erase</span> <span class="o">&amp;=</span> <span class="n">node</span><span class="o">.</span><span class="n">is_resultant</span><span class="p">()</span> <span class="ow">or</span> \
                         <span class="n">node</span><span class="o">.</span><span class="n">is_data</span><span class="p">()</span> <span class="ow">or</span> \
                         <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">is_virtual</span><span class="p">()</span> <span class="ow">and</span>
                          <span class="n">node</span><span class="o">.</span><span class="n">_name</span> <span class="o">==</span> <span class="s1">&#39;stack_data_memory&#39;</span><span class="p">)</span>
@@ -1708,7 +1708,7 @@ title="Source repository"
 <span class="sd">        will be created to contain the node.</span>
 <span class="sd">    leaf : bool</span>
 <span class="sd">        Boolean indicating if the node is a ``leaf`` node. If a node is neither</span>
-<span class="sd">        ``leaf`` nor ``data`` nor ``virtual``, it is ``non-leaf``.</span>
+<span class="sd">        ``leaf`` nor ``data`` nor ``virtual``, it is ``resultant``.</span>
 <span class="sd">    data : bool</span>
 <span class="sd">        Boolean indicating if the node is a ``data`` node.</span>
 <span class="sd">    virtual : bool</span>
@@ -3856,19 +3856,19 @@ title="Source repository"
 <span class="sd">      of ancillay, hidden nodes that accomplish some useful task (e.g. in uniform</span>
 <span class="sd">      tensor networks a virtual node has the shared tensor, while all the other</span>
 <span class="sd">      nodes in the network just have a reference to it).</span>
-<span class="sd">    * **non-leaf**: These are :class:`Nodes &lt;Node&gt;` that result from an</span>
+<span class="sd">    * **resultant**: These are :class:`Nodes &lt;Node&gt;` that result from an</span>
 <span class="sd">      :class:`Operation`. They are intermediate nodes that (almost always)</span>
 <span class="sd">      inherit edges from ``leaf``  and ``data`` nodes, the ones that really</span>
-<span class="sd">      establish the network&#39;s graph. Thus ``non-leaf`` nodes can be though of</span>
+<span class="sd">      establish the network&#39;s graph. Thus ``resultant`` nodes can be though of</span>
 <span class="sd">      like permutations or combinations of ``leaf`` nodes.</span>
 <span class="sd">      </span>
 <span class="sd">    This way, when the Tensor Network is defined, it has a bunch of ``leaf``,</span>
 <span class="sd">    ``data`` and ``virtual`` nodes that make up the network structure, each of</span>
 <span class="sd">    them storing its own tensor. However, when the network is contracted, several</span>
-<span class="sd">    ``non-leaf`` nodes become new members of the network, even modifying its</span>
+<span class="sd">    ``resultant`` nodes become new members of the network, even modifying its</span>
 <span class="sd">    memory (depending on the ``automemory`` and ``unbind_mode`` modes). Therefore,</span>
 <span class="sd">    if one wants to `reset` the network to its initial state after performing</span>
-<span class="sd">    some operations, all the ``non-leaf`` nodes should be deleted, and all the</span>
+<span class="sd">    some operations, all the ``resultant`` nodes should be deleted, and all the</span>
 <span class="sd">    tensors should return to its nodes. This is exactly what :meth:`reset` does.</span>
 <span class="sd">    Besides, since ``automemory`` and ``unbind_mode`` can change how the tensors</span>
 <span class="sd">    are stored, if one wants to change these modes, the network should be first</span>
@@ -4007,7 +4007,7 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_data_nodes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_virtual_nodes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_non_leaf_nodes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         
         <span class="c1"># Repeated nodes to keep track of enumeration</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_repeated_nodes_names</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
@@ -4035,26 +4035,26 @@ title="Source repository"
     <span class="k">def</span> <span class="nf">nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Text</span><span class="p">,</span> <span class="n">AbstractNode</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns dictionary with all the nodes belonging to the network (``leaf``,</span>
-<span class="sd">        ``data``, ``virtual`` and ``non-leaf``).</span>
+<span class="sd">        ``data``, ``virtual`` and ``resultant``).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">all_nodes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="n">all_nodes</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="p">)</span>
         <span class="n">all_nodes</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_nodes</span><span class="p">)</span>
         <span class="n">all_nodes</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_virtual_nodes</span><span class="p">)</span>
-        <span class="n">all_nodes</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_non_leaf_nodes</span><span class="p">)</span>
+        <span class="n">all_nodes</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">all_nodes</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">nodes_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Text</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns list of names of all the nodes belonging to the network (``leaf``,</span>
-<span class="sd">        ``data``, ``virtual`` and ``non-leaf``).</span>
+<span class="sd">        ``data``, ``virtual`` and ``resultant``).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">all_nodes_names</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">al_nodes_names</span> <span class="o">+=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
         <span class="n">al_nodes_names</span> <span class="o">+=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_nodes</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
         <span class="n">al_nodes_names</span> <span class="o">+=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_virtual_nodes</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-        <span class="n">al_nodes_names</span> <span class="o">+=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_non_leaf_nodes</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">al_nodes_names</span> <span class="o">+=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
         <span class="k">return</span> <span class="n">all_nodes_names</span>
 
     <span class="nd">@property</span>
@@ -4073,9 +4073,9 @@ title="Source repository"
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_virtual_nodes</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">non_leaf_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Text</span><span class="p">,</span> <span class="n">AbstractNode</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``non-leaf`` nodes of the network.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_non_leaf_nodes</span>
+    <span class="k">def</span> <span class="nf">resultant_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Text</span><span class="p">,</span> <span class="n">AbstractNode</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``resultant`` nodes of the network.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">edges</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractEdge</span><span class="p">]:</span>
@@ -4114,7 +4114,7 @@ title="Source repository"
         <span class="k">elif</span> <span class="n">node</span><span class="o">.</span><span class="n">_virtual</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_virtual_nodes</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_non_leaf_nodes</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span>
 
     <span class="k">def</span> <span class="nf">_add_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge</span><span class="p">:</span> <span class="n">AbstractEdge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -4341,7 +4341,7 @@ title="Source repository"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">non_enum_prev_name</span> <span class="o">=</span> <span class="n">erase_enum</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">is_non_leaf</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">non_enum_prev_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">operations</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">is_resultant</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">non_enum_prev_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">operations</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Node</span><span class="se">\&#39;</span><span class="s1">s name cannot be an operation name: &#39;</span>
                              <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">operations</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 
@@ -4468,8 +4468,8 @@ title="Source repository"
 <span class="sd">        Changes type of node in the network. Mainly used for in-place operations</span>
 <span class="sd">        like :func:`split_` or :func:`contract_between_`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;leaf&#39;</span><span class="p">,</span> <span class="s1">&#39;non_leaf&#39;</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;virtual&#39;</span><span class="p">]:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`type` can only be &quot;leaf&quot;, &quot;non_leaf&quot;, &#39;</span>
+        <span class="k">if</span> <span class="nb">type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;leaf&#39;</span><span class="p">,</span> <span class="s1">&#39;resultant&#39;</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;virtual&#39;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`type` can only be &quot;leaf&quot;, &quot;resultant&quot;, &#39;</span>
                              <span class="s1">&#39;&quot;data&quot; or &quot;virtual&quot;&#39;</span><span class="p">)</span>
 
         <span class="n">prev_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_which_dict</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
@@ -4489,8 +4489,8 @@ title="Source repository"
             <span class="n">node</span><span class="o">.</span><span class="n">_leaf</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="n">node</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="n">node</span><span class="o">.</span><span class="n">_virtual</span> <span class="o">=</span> <span class="kc">True</span>
-        <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="s1">&#39;non_leaf&#39;</span><span class="p">:</span>
-            <span class="n">new_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_non_leaf_nodes</span>
+        <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="s1">&#39;resultant&#39;</span><span class="p">:</span>
+            <span class="n">new_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span>
             <span class="n">node</span><span class="o">.</span><span class="n">_leaf</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="n">node</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="n">node</span><span class="o">.</span><span class="n">_virtual</span> <span class="o">=</span> <span class="kc">False</span>
@@ -4522,8 +4522,8 @@ title="Source repository"
         <span class="k">else</span><span class="p">:</span>
             <span class="n">net</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_non_leaf_nodes</span><span class="p">:</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Non-leaf nodes will be removed before parameterizing&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;resultant nodes will be removed before parameterizing&#39;</span>
                           <span class="s1">&#39; the TN&#39;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
 
@@ -4537,7 +4537,7 @@ title="Source repository"
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Traces the tensor network contraction algorithm with two purposes:</span>
 <span class="sd">        </span>
-<span class="sd">        * Create all the intermediate ``non-leaf`` nodes that result from</span>
+<span class="sd">        * Create all the intermediate ``resultant`` nodes that result from</span>
 <span class="sd">          :class:`Operations &lt;Operation&gt;` so that in the next contractions only</span>
 <span class="sd">          the tensor-like operations have to be computed, thus saving a lot of time.</span>
 <span class="sd">        </span>
@@ -4576,7 +4576,7 @@ title="Source repository"
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Resets the tensor network as it was before tracing, contracting or, in</span>
 <span class="sd">        general, performing any non-in-place :class:`Operation`. Hence, it deletes</span>
-<span class="sd">        all ``non-leaf`` and ``virtual`` nodes that are created when performing</span>
+<span class="sd">        all ``resultant`` and ``virtual`` nodes that are created when performing</span>
 <span class="sd">        an operation, and resets the ``memory_nodes`` of the network, so that</span>
 <span class="sd">        each node stores its corresponding tensor. Also, the lists of successors</span>
 <span class="sd">        of all ``leaf`` and ``data`` nodes are emptied.</span>
@@ -4585,10 +4585,10 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">_seq_ops</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_inverse_memory</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_non_leaf_nodes</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_virtual_nodes</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_virtual_nodes</span><span class="p">:</span>
             <span class="n">aux_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
             <span class="n">aux_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="p">)</span>
-            <span class="n">aux_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_non_leaf_nodes</span><span class="p">)</span>
+            <span class="n">aux_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span><span class="p">)</span>
             <span class="n">aux_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_virtual_nodes</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">aux_dict</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
                 <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_virtual</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;virtual_stack&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">):</span>
@@ -4631,7 +4631,7 @@ title="Source repository"
                 <span class="n">node</span><span class="o">.</span><span class="n">_successors</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 
             <span class="n">aux_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-            <span class="n">aux_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_non_leaf_nodes</span><span class="p">)</span>
+            <span class="n">aux_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span><span class="p">)</span>
             <span class="n">aux_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_virtual_nodes</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">aux_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
                 <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_virtual</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;virtual_stack&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">):</span>
@@ -4835,7 +4835,7 @@ title="Source repository"
                 <span class="bp">self</span><span class="o">.</span><span class="n">set_data_nodes</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_add_data</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_non_leaf_nodes</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span><span class="p">:</span>
             <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">contract</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">_seq_ops</span> <span class="o">=</span> <span class="p">[]</span>

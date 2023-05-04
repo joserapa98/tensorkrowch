@@ -1607,14 +1607,14 @@ title="Source repository"
     <span class="k">for</span> <span class="n">res_edge</span> <span class="ow">in</span> <span class="n">node1</span><span class="o">.</span><span class="n">_edges</span> <span class="o">+</span> <span class="n">node2</span><span class="o">.</span><span class="n">_edges</span><span class="p">:</span>
         <span class="n">net</span><span class="o">.</span><span class="n">_add_edge</span><span class="p">(</span><span class="n">res_edge</span><span class="p">)</span>
     
-    <span class="c1"># Transform non-leaf to leaf nodes</span>
+    <span class="c1"># Transform resultant to leaf nodes</span>
     <span class="n">net</span><span class="o">.</span><span class="n">_change_node_type</span><span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="s1">&#39;leaf&#39;</span><span class="p">)</span>
     <span class="n">net</span><span class="o">.</span><span class="n">_change_node_type</span><span class="p">(</span><span class="n">node2</span><span class="p">,</span> <span class="s1">&#39;leaf&#39;</span><span class="p">)</span>
     
     <span class="n">node</span><span class="o">.</span><span class="n">_successors</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
     <span class="n">net</span><span class="o">.</span><span class="n">_list_ops</span> <span class="o">=</span> <span class="p">[]</span>
     
-    <span class="c1"># Remove non-leaf names</span>
+    <span class="c1"># Remove resultant names</span>
     <span class="n">node1</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;split_ip&#39;</span>
     <span class="n">node2</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;split_ip&#39;</span>
     
@@ -2610,14 +2610,14 @@ title="Source repository"
     <span class="k">for</span> <span class="n">res_edge</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">_edges</span><span class="p">:</span>
         <span class="n">net</span><span class="o">.</span><span class="n">_add_edge</span><span class="p">(</span><span class="n">res_edge</span><span class="p">)</span>
     
-    <span class="c1"># Transform non-leaf to leaf nodes</span>
+    <span class="c1"># Transform resultant to leaf nodes</span>
     <span class="n">net</span><span class="o">.</span><span class="n">_change_node_type</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="s1">&#39;leaf&#39;</span><span class="p">)</span>
     
     <span class="n">edge</span><span class="o">.</span><span class="n">node1</span><span class="o">.</span><span class="n">_successors</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
     <span class="n">edge</span><span class="o">.</span><span class="n">node2</span><span class="o">.</span><span class="n">_successors</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
     <span class="n">net</span><span class="o">.</span><span class="n">_list_ops</span> <span class="o">=</span> <span class="p">[]</span>
     
-    <span class="c1"># Remove non-leaf name</span>
+    <span class="c1"># Remove resultant name</span>
     <span class="n">result</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;contract_edges_ip&#39;</span>
     
     <span class="k">return</span> <span class="n">result</span></div>
@@ -2729,14 +2729,14 @@ title="Source repository"
     <span class="k">for</span> <span class="n">res_edge</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">_edges</span><span class="p">:</span>
         <span class="n">net</span><span class="o">.</span><span class="n">_add_edge</span><span class="p">(</span><span class="n">res_edge</span><span class="p">)</span>
     
-    <span class="c1"># Transform non-leaf to leaf nodes</span>
+    <span class="c1"># Transform resultant to leaf nodes</span>
     <span class="n">net</span><span class="o">.</span><span class="n">_change_node_type</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="s1">&#39;leaf&#39;</span><span class="p">)</span>
     
     <span class="n">node1</span><span class="o">.</span><span class="n">_successors</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
     <span class="n">node2</span><span class="o">.</span><span class="n">_successors</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
     <span class="n">net</span><span class="o">.</span><span class="n">_list_ops</span> <span class="o">=</span> <span class="p">[]</span>
     
-    <span class="c1"># Remove non-leaf name</span>
+    <span class="c1"># Remove resultant name</span>
     <span class="n">result</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;contract_edges_ip&#39;</span>
     
     <span class="k">return</span> <span class="n">result</span></div>

@@ -476,7 +476,7 @@ class TestNodeName:
         assert data_node.name == 'node'
         assert data_node.is_data()
         
-    def test_put_non_leaf_name(self, setup):
+    def test_put_resultant_name(self, setup):
         net = setup
         
         node1 = net['node1']
@@ -489,7 +489,7 @@ class TestNodeName:
         with pytest.raises(ValueError):
             node1.name = 'contract_edges'
             
-    def test_name_non_leaf(self, setup):
+    def test_name_resultant(self, setup):
         net = setup
         
         node1 = net['node1']
@@ -501,7 +501,7 @@ class TestNodeName:
         node3 = node1 @ node2
         assert node3.name == 'contract_edges'
         
-        # We can change the name of non_leaf nodes also
+        # We can change the name of resultant nodes also
         node3.name = 'node3'
         assert node3.name == 'node3'
             
@@ -668,7 +668,7 @@ class TestSetTensorNode:
         assert node1['right'].size() == 2
         
         # If using _unrestricted_set_tensor, used for
-        # setting tensors in non-leaf nodes, size of
+        # setting tensors in resultant nodes, size of
         # edges is not updated, so that we don't change
         # the original shapes
         diff_tensor = torch.randn(2, 10, 2)
@@ -806,7 +806,7 @@ class TestSetTensorParamNode:
         assert node1['right'].size() == 2
         
         # If using _unrestricted_set_tensor, used for
-        # setting tensors in non-leaf nodes, size of
+        # setting tensors in resultant nodes, size of
         # edges is not updated, so that we don't change
         # the original shapes
         diff_tensor = torch.randn(2, 10, 2)
@@ -1339,7 +1339,7 @@ class TestParameterize:
         assert paramnode1.name == 'node_1'
         assert node2.name == 'node_0'
         
-    def test_parameterize_non_leaf(self):
+    def test_parameterize_resultant(self):
         node1 = tk.randn(shape=(2, 3, 2))
         node2 = tk.randn(shape=(2, 3, 2))
         
@@ -2328,13 +2328,13 @@ class TestTensorNetwork:
             node @= net[f'node_{i}']
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 3
-        assert len(net.non_leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 2
         assert len(net.edges) == 5
         
         net.delete_node(node)
         assert len(net.nodes) == 4
         assert len(net.leaf_nodes) == 3
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         assert len(net.edges) == 5
         
     def test_clear(self):
@@ -2356,19 +2356,19 @@ class TestTensorNetwork:
         stack_node1['right'] ^ stack_node2['left']
         assert len(net.nodes) == 6
         assert len(net.leaf_nodes) == 4
-        assert len(net.non_leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 2
         assert len(net.edges) == 6
         
         contract_node = stack_node1 @ stack_node2
         assert len(net.nodes) == 7
         assert len(net.leaf_nodes) == 4
-        assert len(net.non_leaf_nodes) == 3
+        assert len(net.resultant_nodes) == 3
         assert len(net.edges) == 6
         
         net.reset()
         assert len(net.nodes) == 4
         assert len(net.leaf_nodes) == 4
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         assert len(net.edges) == 6
         
     def test_automemory(self):
@@ -2394,7 +2394,7 @@ class TestTensorNetwork:
         # All nodes still have their own memory
         for node in net.leaf_nodes.values():
             assert node._tensor_info['address'] is not None
-        for node in net.non_leaf_nodes.values():
+        for node in net.resultant_nodes.values():
             assert node._tensor_info['address'] is not None
             
         net.automemory = True
@@ -2405,7 +2405,7 @@ class TestTensorNetwork:
         # Now leaf nodes have their emory stored in the stack
         for node in net.leaf_nodes.values():
             assert node._tensor_info['address'] is None
-        for node in net.non_leaf_nodes.values():
+        for node in net.resultant_nodes.values():
             assert node._tensor_info['address'] is not None
             
     def test_unbind_mode(self):
@@ -2452,6 +2452,6 @@ class TestTensorNetwork:
         for node in net.leaf_nodes.values():
             assert node._tensor_info['address'] is not None
             assert node._tensor_info['node_ref'] is None
-        for node in net.non_leaf_nodes.values():
+        for node in net.resultant_nodes.values():
             assert node._tensor_info['node_ref'] is None
             assert node._tensor_info['address'] is not None

@@ -1302,14 +1302,14 @@ def split_(node: AbstractNode,
     for res_edge in node1._edges + node2._edges:
         net._add_edge(res_edge)
     
-    # Transform non-leaf to leaf nodes
+    # Transform resultant to leaf nodes
     net._change_node_type(node1, 'leaf')
     net._change_node_type(node2, 'leaf')
     
     node._successors = dict()
     net._seq_ops = []
     
-    # Remove non-leaf names
+    # Remove resultant names
     node1.name = 'split_ip'
     node2.name = 'split_ip'
     
@@ -2226,14 +2226,14 @@ def contract_(edge: AbstractEdge) -> Node:
     for res_edge in result._edges:
         net._add_edge(res_edge)
     
-    # Transform non-leaf to leaf nodes
+    # Transform resultant to leaf nodes
     net._change_node_type(result, 'leaf')
     
     edge.node1._successors = dict()
     edge.node2._successors = dict()
     net._seq_ops = []
     
-    # Remove non-leaf name
+    # Remove resultant name
     result.name = 'contract_edges_ip'
     
     return result
@@ -2335,14 +2335,14 @@ def contract_between_(node1: AbstractNode,
     for res_edge in result._edges:
         net._add_edge(res_edge)
     
-    # Transform non-leaf to leaf nodes
+    # Transform resultant to leaf nodes
     net._change_node_type(result, 'leaf')
     
     node1._successors = dict()
     node2._successors = dict()
     net._seq_ops = []
     
-    # Remove non-leaf name
+    # Remove resultant name
     result.name = 'contract_edges_ip'
     
     return result

@@ -161,12 +161,12 @@ class TestBasicOps:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         
         net.reset()
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         node1[1].change_size(node2[0].size())
         node1[1] ^ node2[0]
@@ -207,12 +207,12 @@ class TestBasicOps:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         
         net.reset()
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         node1[1] ^ node2[0]
         # Tensor product cannot be performed between connected nodes
@@ -252,12 +252,12 @@ class TestBasicOps:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         
         net.reset()
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         node1[1] ^ node2[0]
         # Tensor product cannot be performed between connected nodes
@@ -297,12 +297,12 @@ class TestBasicOps:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         
         net.reset()
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         node1[1] ^ node2[0]
         # Tensor product cannot be performed between connected nodes
@@ -360,12 +360,12 @@ class TestBasicOps:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         
         net.reset()
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         node1[1].change_size(node2[0].size())
         node1[1].change_dim(node2[0].size())
@@ -415,12 +415,12 @@ class TestBasicOps:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         
         net.reset()
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         node1[1] ^ node2[0]
         # Tensor product cannot be performed between connected nodes
@@ -468,12 +468,12 @@ class TestBasicOps:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         
         net.reset()
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         node1[1] ^ node2[0]
         # Tensor product cannot be performed between connected nodes
@@ -521,12 +521,12 @@ class TestBasicOps:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         
         net.reset()
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         node1[1] ^ node2[0]
         # Tensor product cannot be performed between connected nodes
@@ -553,7 +553,7 @@ class TestSplitSVD:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         assert node1.successors['contract_edges'][0].child == result
         
         # Split result
@@ -574,7 +574,7 @@ class TestSplitSVD:
         
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
+        assert len(net.resultant_nodes) == 3
         assert result.successors['split'][0].child == [new_node1, new_node2]
         
         assert net.edges == [node1['left'], node1['input'],
@@ -785,13 +785,13 @@ class TestSplitSVD:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 3
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         result = node1.contract_between_(node2)
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         assert node1.network != net
         assert node2.network != net
         
@@ -813,7 +813,7 @@ class TestSplitSVD:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 3
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         assert result.network != net
         
     def test_split_paramnode(self):
@@ -825,7 +825,7 @@ class TestSplitSVD:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split(node1_axes=['left_0', 'left_1'],
@@ -836,7 +836,7 @@ class TestSplitSVD:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 2
         
         assert net.edges == node.edges
         
@@ -849,7 +849,7 @@ class TestSplitSVD:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split_(node1_axes=['left_0', 'left_1'],
@@ -860,7 +860,7 @@ class TestSplitSVD:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert net.edges == node1.edges[:-1] + node2.edges[1:]
         
@@ -875,7 +875,7 @@ class TestSplitSVD:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split(node1_axes=['left_0', 'right_0'],
@@ -886,7 +886,7 @@ class TestSplitSVD:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 2
         
         assert net.edges == []
         
@@ -905,7 +905,7 @@ class TestSplitSVD:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split(node1_axes=['left_0', 'right_0'],
@@ -916,7 +916,7 @@ class TestSplitSVD:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 2
         
         assert net.edges == [node['left_1'], node['right_1']]
         
@@ -937,7 +937,7 @@ class TestSplitSVD:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split_(node1_axes=['left_0', 'right_0'],
@@ -948,7 +948,7 @@ class TestSplitSVD:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert net.edges == []
         
@@ -968,7 +968,7 @@ class TestSplitSVD:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split_(node1_axes=['left_0', 'right_0'],
@@ -979,7 +979,7 @@ class TestSplitSVD:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert net.edges == [node2['left'], node2['right']]
         
@@ -1010,7 +1010,7 @@ class TestSplitSVDR:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         assert node1.successors['contract_edges'][0].child == result
         
         # Split result
@@ -1032,7 +1032,7 @@ class TestSplitSVDR:
         
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
+        assert len(net.resultant_nodes) == 3
         assert result.successors['split'][0].child == [new_node1, new_node2]
         
         assert net.edges == [node1['left'], node1['input'],
@@ -1250,13 +1250,13 @@ class TestSplitSVDR:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 3
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         result = node1.contract_between_(node2)
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         assert node1.network != net
         assert node2.network != net
         
@@ -1279,7 +1279,7 @@ class TestSplitSVDR:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 3
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         assert result.network != net
         
     def test_split_paramnode(self):
@@ -1291,7 +1291,7 @@ class TestSplitSVDR:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split(node1_axes=['left_0', 'left_1'],
@@ -1303,7 +1303,7 @@ class TestSplitSVDR:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 2
         
         assert net.edges == node.edges
         
@@ -1316,7 +1316,7 @@ class TestSplitSVDR:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split_(node1_axes=['left_0', 'left_1'],
@@ -1328,7 +1328,7 @@ class TestSplitSVDR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert net.edges == node1.edges[:-1] + node2.edges[1:]
         
@@ -1343,7 +1343,7 @@ class TestSplitSVDR:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split(node1_axes=['left_0', 'right_0'],
@@ -1355,7 +1355,7 @@ class TestSplitSVDR:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 2
         
         assert net.edges == []
         
@@ -1374,7 +1374,7 @@ class TestSplitSVDR:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split(node1_axes=['left_0', 'right_0'],
@@ -1386,7 +1386,7 @@ class TestSplitSVDR:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 2
         
         assert net.edges == [node['left_1'], node['right_1']]
         
@@ -1407,7 +1407,7 @@ class TestSplitSVDR:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split_(node1_axes=['left_0', 'right_0'],
@@ -1419,7 +1419,7 @@ class TestSplitSVDR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert net.edges == []
         
@@ -1439,7 +1439,7 @@ class TestSplitSVDR:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split_(node1_axes=['left_0', 'right_0'],
@@ -1451,7 +1451,7 @@ class TestSplitSVDR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert net.edges == [node2['left'], node2['right']]
         
@@ -1482,7 +1482,7 @@ class TestSplitQR:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         assert node1.successors['contract_edges'][0].child == result
         
         # Split result
@@ -1504,7 +1504,7 @@ class TestSplitQR:
         
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
+        assert len(net.resultant_nodes) == 3
         assert result.successors['split'][0].child == [new_node1, new_node2]
         
         assert net.edges == [node1['left'], node1['input'],
@@ -1574,13 +1574,13 @@ class TestSplitQR:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 3
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         result = node1.contract_between_(node2)
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         assert node1.network != net
         assert node2.network != net
         
@@ -1603,7 +1603,7 @@ class TestSplitQR:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 3
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         assert result.network != net
         
     def test_split_paramnode(self):
@@ -1615,7 +1615,7 @@ class TestSplitQR:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split(node1_axes=['left_0', 'left_1'],
@@ -1627,7 +1627,7 @@ class TestSplitQR:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 2
         
         assert net.edges == node.edges
         
@@ -1640,7 +1640,7 @@ class TestSplitQR:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split_(node1_axes=['left_0', 'left_1'],
@@ -1652,7 +1652,7 @@ class TestSplitQR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert net.edges == node1.edges[:-1] + node2.edges[1:]
         
@@ -1667,7 +1667,7 @@ class TestSplitQR:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split(node1_axes=['left_0', 'right_0'],
@@ -1679,7 +1679,7 @@ class TestSplitQR:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 2
         
         assert net.edges == []
         
@@ -1698,7 +1698,7 @@ class TestSplitQR:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split(node1_axes=['left_0', 'right_0'],
@@ -1710,7 +1710,7 @@ class TestSplitQR:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 2
         
         assert net.edges == [node['left_1'], node['right_1']]
         
@@ -1731,7 +1731,7 @@ class TestSplitQR:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split_(node1_axes=['left_0', 'right_0'],
@@ -1743,7 +1743,7 @@ class TestSplitQR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert net.edges == []
         
@@ -1763,7 +1763,7 @@ class TestSplitQR:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split_(node1_axes=['left_0', 'right_0'],
@@ -1775,7 +1775,7 @@ class TestSplitQR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert net.edges == [node2['left'], node2['right']]
         
@@ -1806,7 +1806,7 @@ class TestSplitRQ:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         assert node1.successors['contract_edges'][0].child == result
         
         # Split result
@@ -1828,7 +1828,7 @@ class TestSplitRQ:
         
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
+        assert len(net.resultant_nodes) == 3
         assert result.successors['split'][0].child == [new_node1, new_node2]
         
         assert net.edges == [node1['left'], node1['input'],
@@ -1898,13 +1898,13 @@ class TestSplitRQ:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 3
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         result = node1.contract_between_(node2)
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         assert node1.network != net
         assert node2.network != net
         
@@ -1927,7 +1927,7 @@ class TestSplitRQ:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 3
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         assert result.network != net
         
     def test_split_paramnode(self):
@@ -1939,7 +1939,7 @@ class TestSplitRQ:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split(node1_axes=['left_0', 'left_1'],
@@ -1951,7 +1951,7 @@ class TestSplitRQ:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 2
         
         assert net.edges == node.edges
         
@@ -1964,7 +1964,7 @@ class TestSplitRQ:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split_(node1_axes=['left_0', 'left_1'],
@@ -1976,7 +1976,7 @@ class TestSplitRQ:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert net.edges == node1.edges[:-1] + node2.edges[1:]
         
@@ -1991,7 +1991,7 @@ class TestSplitRQ:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split(node1_axes=['left_0', 'right_0'],
@@ -2003,7 +2003,7 @@ class TestSplitRQ:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 2
         
         assert net.edges == []
         
@@ -2022,7 +2022,7 @@ class TestSplitRQ:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split(node1_axes=['left_0', 'right_0'],
@@ -2034,7 +2034,7 @@ class TestSplitRQ:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 2
         
         assert net.edges == [node['left_1'], node['right_1']]
         
@@ -2055,7 +2055,7 @@ class TestSplitRQ:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split_(node1_axes=['left_0', 'right_0'],
@@ -2067,7 +2067,7 @@ class TestSplitRQ:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert net.edges == []
         
@@ -2087,7 +2087,7 @@ class TestSplitRQ:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         # Split result
         node1, node2 = node.split_(node1_axes=['left_0', 'right_0'],
@@ -2099,7 +2099,7 @@ class TestSplitRQ:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert net.edges == [node2['left'], node2['right']]
         
@@ -2139,7 +2139,7 @@ class TestSVD:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         new_node1, new_node2 = node1['right'].svd_(rank=2)
         
@@ -2157,7 +2157,7 @@ class TestSVD:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
     def test_svd_edge_cum_percentage_inplace(self, setup):
         net, edge, node1 = setup
@@ -2167,7 +2167,7 @@ class TestSVD:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         tensor1 = torch.eye(15, 3).reshape(3, 5, 3)
         edge.node1.tensor = tensor1
@@ -2191,7 +2191,7 @@ class TestSVD:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
     def test_svd_paramedge_rank_inplace(self, setup):
         net, edge, node1 = setup
@@ -2203,7 +2203,7 @@ class TestSVD:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         new_node1, new_node2 = node1['right'].svd_(rank=2)
         
@@ -2221,7 +2221,7 @@ class TestSVD:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
     def test_svd_paramedge_cum_percentage_inplace(self, setup):
         net, edge, node1 = setup
@@ -2233,7 +2233,7 @@ class TestSVD:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         tensor1 = torch.eye(15, 3).reshape(3, 5, 3)
         edge.node1.tensor = tensor1
@@ -2257,7 +2257,7 @@ class TestSVD:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
     # To perform SVD as operation, we first contract and then split
     def test_svd_edge_rank(self, setup):
@@ -2268,7 +2268,7 @@ class TestSVD:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         node2 = net['node2']
         contracted = node1 @ node2
@@ -2297,7 +2297,7 @@ class TestSVD:
         
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
+        assert len(net.resultant_nodes) == 3
         
         # Repeat operation
         contracted = node1 @ node2
@@ -2313,7 +2313,7 @@ class TestSVD:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         tensor1 = torch.eye(15, 3).reshape(3, 5, 3)
         edge.node1.tensor = tensor1
@@ -2348,7 +2348,7 @@ class TestSVD:
         
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
+        assert len(net.resultant_nodes) == 3
         
         # Repeat operation
         contracted = node1 @ node2
@@ -2366,7 +2366,7 @@ class TestSVD:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         node2 = net['node2']
         contracted = node1 @ node2
@@ -2395,7 +2395,7 @@ class TestSVD:
         
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
+        assert len(net.resultant_nodes) == 3
         
         # Repeat operation
         contracted = node1 @ node2
@@ -2413,7 +2413,7 @@ class TestSVD:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         tensor1 = torch.eye(15, 3).reshape(3, 5, 3)
         edge.node1.tensor = tensor1
@@ -2448,7 +2448,7 @@ class TestSVD:
         
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
+        assert len(net.resultant_nodes) == 3
         
         # Repeat operation
         contracted = node1 @ node2
@@ -2522,7 +2522,7 @@ class TestSVDR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         new_node1, new_node2 = node1['right'].svdr_(rank=2)
         
@@ -2540,7 +2540,7 @@ class TestSVDR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
     def test_svd_edge_cum_percentage_inplace(self, setup):
         net, edge, node1 = setup
@@ -2550,7 +2550,7 @@ class TestSVDR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         tensor1 = torch.eye(15, 3).reshape(3, 5, 3)
         edge.node1.tensor = tensor1
@@ -2574,7 +2574,7 @@ class TestSVDR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
     def test_svd_paramedge_rank_inplace(self, setup):
         net, edge, node1 = setup
@@ -2586,7 +2586,7 @@ class TestSVDR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         new_node1, new_node2 = node1['right'].svdr_(rank=2)
         
@@ -2604,7 +2604,7 @@ class TestSVDR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
     def test_svd_paramedge_cum_percentage_inplace(self, setup):
         net, edge, node1 = setup
@@ -2616,7 +2616,7 @@ class TestSVDR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         tensor1 = torch.eye(15, 3).reshape(3, 5, 3)
         edge.node1.tensor = tensor1
@@ -2640,7 +2640,7 @@ class TestSVDR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
     # To perform SVDR as operation, we first contract and then split
     def test_svd_edge_rank(self, setup):
@@ -2651,7 +2651,7 @@ class TestSVDR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         node2 = net['node2']
         contracted = node1 @ node2
@@ -2681,7 +2681,7 @@ class TestSVDR:
         
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
+        assert len(net.resultant_nodes) == 3
         
         # Repeat operation
         contracted = node1 @ node2
@@ -2698,7 +2698,7 @@ class TestSVDR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         tensor1 = torch.eye(15, 3).reshape(3, 5, 3)
         edge.node1.tensor = tensor1
@@ -2734,7 +2734,7 @@ class TestSVDR:
         
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
+        assert len(net.resultant_nodes) == 3
         
         # Repeat operation
         contracted = node1 @ node2
@@ -2753,7 +2753,7 @@ class TestSVDR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         node2 = net['node2']
         contracted = node1 @ node2
@@ -2783,7 +2783,7 @@ class TestSVDR:
         
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
+        assert len(net.resultant_nodes) == 3
         
         # Repeat operation
         contracted = node1 @ node2
@@ -2802,7 +2802,7 @@ class TestSVDR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         tensor1 = torch.eye(15, 3).reshape(3, 5, 3)
         edge.node1.tensor = tensor1
@@ -2838,7 +2838,7 @@ class TestSVDR:
         
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
+        assert len(net.resultant_nodes) == 3
         
         # Repeat operation
         contracted = node1 @ node2
@@ -2914,7 +2914,7 @@ class TestQR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         new_node1, new_node2 = node1['right'].qr_()
         
@@ -2932,7 +2932,7 @@ class TestQR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
     def test_qr_paramedge_inplace(self, setup):
         net, edge, node1 = setup
@@ -2944,7 +2944,7 @@ class TestQR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         new_node1, new_node2 = node1['right'].qr_()
         
@@ -2962,7 +2962,7 @@ class TestQR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
     # To perform QR as operation, we first contract and then split
     def test_qr_edge(self, setup):
@@ -2973,7 +2973,7 @@ class TestQR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         node2 = net['node2']
         contracted = node1 @ node2
@@ -3002,7 +3002,7 @@ class TestQR:
         
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
+        assert len(net.resultant_nodes) == 3
         
         # Repeat operation
         contracted = node1 @ node2
@@ -3020,7 +3020,7 @@ class TestQR:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         node2 = net['node2']
         contracted = node1 @ node2
@@ -3049,7 +3049,7 @@ class TestQR:
         
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
+        assert len(net.resultant_nodes) == 3
         
         # Repeat operation
         contracted = node1 @ node2
@@ -3117,7 +3117,7 @@ class TestRQ:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         new_node1, new_node2 = node1['right'].rq_()
         
@@ -3135,7 +3135,7 @@ class TestRQ:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
     def test_rq_paramedge_inplace(self, setup):
         net, edge, node1 = setup
@@ -3147,7 +3147,7 @@ class TestRQ:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         new_node1, new_node2 = node1['right'].rq_()
         
@@ -3165,7 +3165,7 @@ class TestRQ:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
     # To perform QR as operation, we first contract and then split
     def test_rq_edge(self, setup):
@@ -3176,7 +3176,7 @@ class TestRQ:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         node2 = net['node2']
         contracted = node1 @ node2
@@ -3205,7 +3205,7 @@ class TestRQ:
         
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
+        assert len(net.resultant_nodes) == 3
         
         # Repeat operation
         contracted = node1 @ node2
@@ -3223,7 +3223,7 @@ class TestRQ:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         node2 = net['node2']
         contracted = node1 @ node2
@@ -3252,7 +3252,7 @@ class TestRQ:
         
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 3
+        assert len(net.resultant_nodes) == 3
         
         # Repeat operation
         contracted = node1 @ node2
@@ -3310,7 +3310,7 @@ class TestContractEdge:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert node1.successors == dict()
         assert node2.successors == dict()
@@ -3326,7 +3326,7 @@ class TestContractEdge:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         
         assert node1.successors != dict()
         assert node1.successors['contract_edges'][0].child == node3
@@ -3354,7 +3354,7 @@ class TestContractEdge:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert node1.successors == dict()
         assert node2.successors == dict()
@@ -3368,7 +3368,7 @@ class TestContractEdge:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         
         assert node1.successors != dict()
         assert node1.successors['contract_edges'][0].child == node3
@@ -3398,7 +3398,7 @@ class TestContractEdge:
         
         assert len(node1.network.nodes) == 1
         assert len(node1.network.leaf_nodes) == 1
-        assert len(node1.network.non_leaf_nodes) == 0
+        assert len(node1.network.resultant_nodes) == 0
         
         assert node1.successors == dict()
         
@@ -3409,7 +3409,7 @@ class TestContractEdge:
         
         assert len(node1.network.nodes) == 2
         assert len(node1.network.leaf_nodes) == 1
-        assert len(node1.network.non_leaf_nodes) == 1
+        assert len(node1.network.resultant_nodes) == 1
         
         assert node1.successors != dict()
         assert node1.successors['contract_edges'][0].child == node2
@@ -3424,7 +3424,7 @@ class TestContractEdge:
         
         assert len(node1.network.nodes) == 1
         assert len(node1.network.leaf_nodes) == 1
-        assert len(node1.network.non_leaf_nodes) == 0
+        assert len(node1.network.resultant_nodes) == 0
         
         assert node1.successors == dict()
         
@@ -3435,7 +3435,7 @@ class TestContractEdge:
         
         assert len(node1.network.nodes) == 2
         assert len(node1.network.leaf_nodes) == 1
-        assert len(node1.network.non_leaf_nodes) == 1
+        assert len(node1.network.resultant_nodes) == 1
         
         assert node1.successors != dict()
         assert node1.successors['contract_edges'][0].child == node2
@@ -3464,7 +3464,7 @@ class TestContractEdge:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert node1.successors == dict()
         assert node2.successors == dict()
@@ -3478,7 +3478,7 @@ class TestContractEdge:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert node1.successors == dict()
         assert node2.successors == dict()
@@ -3501,7 +3501,7 @@ class TestContractEdge:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert node1.successors == dict()
         assert node2.successors == dict()
@@ -3515,7 +3515,7 @@ class TestContractEdge:
         
         assert len(net.nodes) == 1
         assert len(net.leaf_nodes) == 1
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert net.edges == node3.edges
         
@@ -3558,7 +3558,7 @@ class TestContractBetween:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert node1.successors == dict()
         assert node2.successors == dict()
@@ -3572,7 +3572,7 @@ class TestContractBetween:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         
         assert node1.successors != dict()
         assert node1.successors['contract_edges'][0].child == node3
@@ -3602,7 +3602,7 @@ class TestContractBetween:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert node1.successors == dict()
         assert node2.successors == dict()
@@ -3616,7 +3616,7 @@ class TestContractBetween:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         
         assert node1.successors != dict()
         assert node1.successors['contract_edges'][0].child == node3
@@ -3648,7 +3648,7 @@ class TestContractBetween:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert node1.successors == dict()
         assert node2.successors == dict()
@@ -3662,7 +3662,7 @@ class TestContractBetween:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         
         assert node1.successors != dict()
         assert node1.successors['contract_edges'][0].child == node3
@@ -3700,7 +3700,7 @@ class TestContractBetween:
         
         assert len(node1.network.nodes) == 1
         assert len(node1.network.leaf_nodes) == 1
-        assert len(node1.network.non_leaf_nodes) == 0
+        assert len(node1.network.resultant_nodes) == 0
         
         assert node1.successors == dict()
         
@@ -3711,7 +3711,7 @@ class TestContractBetween:
         
         assert len(node1.network.nodes) == 2
         assert len(node1.network.leaf_nodes) == 1
-        assert len(node1.network.non_leaf_nodes) == 1
+        assert len(node1.network.resultant_nodes) == 1
         
         assert node1.successors != dict()
         assert node1.successors['contract_edges'][0].child == node2
@@ -3734,7 +3734,7 @@ class TestContractBetween:
         
         assert len(node1.network.nodes) == 1
         assert len(node1.network.leaf_nodes) == 1
-        assert len(node1.network.non_leaf_nodes) == 0
+        assert len(node1.network.resultant_nodes) == 0
         
         assert node1.successors == dict()
         
@@ -3745,7 +3745,7 @@ class TestContractBetween:
         
         assert len(node1.network.nodes) == 2
         assert len(node1.network.leaf_nodes) == 1
-        assert len(node1.network.non_leaf_nodes) == 1
+        assert len(node1.network.resultant_nodes) == 1
         
         assert node1.successors != dict()
         assert node1.successors['contract_edges'][0].child == node2
@@ -3776,7 +3776,7 @@ class TestContractBetween:
         
         assert len(node1.network.nodes) == 1
         assert len(node1.network.leaf_nodes) == 1
-        assert len(node1.network.non_leaf_nodes) == 0
+        assert len(node1.network.resultant_nodes) == 0
         
         assert node1.successors == dict()
         
@@ -3787,7 +3787,7 @@ class TestContractBetween:
         
         assert len(node1.network.nodes) == 2
         assert len(node1.network.leaf_nodes) == 1
-        assert len(node1.network.non_leaf_nodes) == 1
+        assert len(node1.network.resultant_nodes) == 1
         
         assert node1.successors != dict()
         assert node1.successors['contract_edges'][0].child == node2
@@ -3823,7 +3823,7 @@ class TestContractBetween:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert node1.successors == dict()
         assert node2.successors == dict()
@@ -3837,7 +3837,7 @@ class TestContractBetween:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         
         assert node1.successors != dict()
         assert node1.successors['contract_edges'][0].child == node3
@@ -3867,7 +3867,7 @@ class TestContractBetween:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert node1.successors == dict()
         assert node2.successors == dict()
@@ -3881,7 +3881,7 @@ class TestContractBetween:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         
         assert node1.successors != dict()
         assert node1.successors['contract_edges'][0].child == node3
@@ -3918,7 +3918,7 @@ class TestContractBetween:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert node1.successors == dict()
         assert node2.successors == dict()
@@ -3934,7 +3934,7 @@ class TestContractBetween:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 1
         
         assert node1.successors != dict()
         assert node1.successors['contract_edges'][0].child == node3
@@ -3977,7 +3977,7 @@ class TestContractBetween:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 3
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert node1.successors == dict()
         assert node2.successors == dict()
@@ -4001,7 +4001,7 @@ class TestContractBetween:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert node1.successors == dict()
         assert node2.successors == dict()
@@ -4036,7 +4036,7 @@ class TestContractBetween:
         
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 3
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert node1.successors == dict()
         assert node2.successors == dict()
@@ -4070,7 +4070,7 @@ class TestContractBetween:
         
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
-        assert len(net.non_leaf_nodes) == 0
+        assert len(net.resultant_nodes) == 0
         
         assert node1.successors == dict()
         assert node2.successors == dict()
@@ -4134,7 +4134,7 @@ class TestStackUnbind:
         
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are non-leaf nodes, so memory is not optimized
+            # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
             
@@ -4199,7 +4199,7 @@ class TestStackUnbind:
         
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are non-leaf nodes, so memory is not optimized
+            # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
             
@@ -4264,7 +4264,7 @@ class TestStackUnbind:
         
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are non-leaf nodes, so memory is not optimized
+            # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
             
@@ -4329,7 +4329,7 @@ class TestStackUnbind:
         
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are non-leaf nodes, so memory is not optimized
+            # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
             
@@ -4412,7 +4412,7 @@ class TestStackUnbind:
         
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are non-leaf nodes, so memory is not optimized
+            # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
             
@@ -4477,7 +4477,7 @@ class TestStackUnbind:
         
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are non-leaf nodes, so memory is not optimized
+            # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
             
@@ -4542,7 +4542,7 @@ class TestStackUnbind:
         
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are non-leaf nodes, so memory is not optimized
+            # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
             
@@ -4607,7 +4607,7 @@ class TestStackUnbind:
         
         for i, node in enumerate(unbinded):
             assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are non-leaf nodes, so memory is not optimized
+            # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
             
@@ -4709,7 +4709,7 @@ class TestStackUnbind:
         for i, node in enumerate(unbinded):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are non-leaf nodes, so memory is not optimized
+            # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
             
@@ -4801,7 +4801,7 @@ class TestStackUnbind:
         for i, node in enumerate(unbinded):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are non-leaf nodes, so memory is not optimized
+            # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
             
@@ -4893,7 +4893,7 @@ class TestStackUnbind:
         for i, node in enumerate(unbinded):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are non-leaf nodes, so memory is not optimized
+            # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
             
@@ -4985,7 +4985,7 @@ class TestStackUnbind:
         for i, node in enumerate(unbinded):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
-            # These are non-leaf nodes, so memory is not optimized
+            # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
             
@@ -5346,7 +5346,7 @@ class TestStackUnbind:
         with pytest.raises(ValueError):
             stack_node1['right'] ^ stack_node2['left']
             
-        # We have to delete non-leaf nodes, because otherwise stack operations
+        # We have to delete resultant nodes, because otherwise stack operations
         # will be repeated, using the disconnected edges
         net.reset()
         

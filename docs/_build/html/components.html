@@ -672,9 +672,9 @@ store the tensor used by all the nodes in the network).</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.AbstractNode.is_non_leaf">
-<span class="sig-name descname"><span class="pre">is_non_leaf</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.is_non_leaf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.is_non_leaf" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns a boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">non_leaf</span></code> node. These
+<dt class="sig sig-object py" id="tensorkrowch.AbstractNode.is_resultant">
+<span class="sig-name descname"><span class="pre">is_resultant</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.is_resultant"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.is_resultant" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns a boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">resultant</span></code> node. These
 are the nodes that result from an operation on any type of nodes.</p>
 </dd></dl>
 
@@ -870,7 +870,7 @@ it. Before setting it, it is casted to the correct type, so that a
 <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code> can be turned into a <code class="docutils literal notranslate"><span class="pre">nn.Parameter</span></code> when setting it
 in <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNodes</span></code></a>.</p>
 <p>This way of setting tensors is only applicable to <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes. For
-<code class="docutils literal notranslate"><span class="pre">non-leaf</span></code> nodes, their tensors come from the result of operations on
+<code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes, their tensors come from the result of operations on
 <code class="docutils literal notranslate"><span class="pre">leaf</span></code> tensors; hence they should not be modified. For <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes,
 tensors are set into nodes when calling the <a class="reference internal" href="#tensorkrowch.TensorNetwork.forward" title="tensorkrowch.TensorNetwork.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TensorNetwork.forward()</span></code></a>
 method of <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">tensor</span> <span class="pre">networks</span></code></a> with a data tensor or
@@ -1152,7 +1152,7 @@ it belongs. It cannot contain blank spaces.</p></li>
 <li><p><strong>network</strong> (<a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><em>TensorNetwork</em></a><em>, </em><em>optional</em>) – Tensor network where the node should belong. If None, a new tensor network,
 will be created to contain the node.</p></li>
 <li><p><strong>leaf</strong> (<em>bool</em>) – Boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">leaf</span></code> node. If a node is neither
-<code class="docutils literal notranslate"><span class="pre">leaf</span></code> nor <code class="docutils literal notranslate"><span class="pre">data</span></code> nor <code class="docutils literal notranslate"><span class="pre">virtual</span></code>, it is <code class="docutils literal notranslate"><span class="pre">non-leaf</span></code>.</p></li>
+<code class="docutils literal notranslate"><span class="pre">leaf</span></code> nor <code class="docutils literal notranslate"><span class="pre">data</span></code> nor <code class="docutils literal notranslate"><span class="pre">virtual</span></code>, it is <code class="docutils literal notranslate"><span class="pre">resultant</span></code>.</p></li>
 <li><p><strong>data</strong> (<em>bool</em>) – Boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">data</span></code> node.</p></li>
 <li><p><strong>virtual</strong> (<em>bool</em>) – Boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">virtual</span></code> node.</p></li>
 <li><p><strong>override_node</strong> (<em>bool</em>) – Boolean indicating whether the node should override (<code class="docutils literal notranslate"><span class="pre">True</span></code>) another
@@ -2378,19 +2378,19 @@ from input data. These are set via <a class="reference internal" href="#tensorkr
 of ancillay, hidden nodes that accomplish some useful task (e.g. in uniform
 tensor networks a virtual node has the shared tensor, while all the other
 nodes in the network just have a reference to it).</p></li>
-<li><p><strong>non-leaf</strong>: These are <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Nodes</span></code></a> that result from an
+<li><p><strong>resultant</strong>: These are <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Nodes</span></code></a> that result from an
 <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operation</span></code></a>. They are intermediate nodes that (almost always)
 inherit edges from <code class="docutils literal notranslate"><span class="pre">leaf</span></code>  and <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes, the ones that really
-establish the network’s graph. Thus <code class="docutils literal notranslate"><span class="pre">non-leaf</span></code> nodes can be though of
+establish the network’s graph. Thus <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes can be though of
 like permutations or combinations of <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes.</p></li>
 </ul>
 <p>This way, when the Tensor Network is defined, it has a bunch of <code class="docutils literal notranslate"><span class="pre">leaf</span></code>,
 <code class="docutils literal notranslate"><span class="pre">data</span></code> and <code class="docutils literal notranslate"><span class="pre">virtual</span></code> nodes that make up the network structure, each of
 them storing its own tensor. However, when the network is contracted, several
-<code class="docutils literal notranslate"><span class="pre">non-leaf</span></code> nodes become new members of the network, even modifying its
+<code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes become new members of the network, even modifying its
 memory (depending on the <code class="docutils literal notranslate"><span class="pre">automemory</span></code> and <code class="docutils literal notranslate"><span class="pre">unbind_mode</span></code> modes). Therefore,
 if one wants to <cite>reset</cite> the network to its initial state after performing
-some operations, all the <code class="docutils literal notranslate"><span class="pre">non-leaf</span></code> nodes should be deleted, and all the
+some operations, all the <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes should be deleted, and all the
 tensors should return to its nodes. This is exactly what <a class="reference internal" href="#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> does.
 Besides, since <code class="docutils literal notranslate"><span class="pre">automemory</span></code> and <code class="docutils literal notranslate"><span class="pre">unbind_mode</span></code> can change how the tensors
 are stored, if one wants to change these modes, the network should be first
@@ -2515,14 +2515,14 @@ reset (this is already done automatically when changing the modes).</p>
 <dt class="sig sig-object py" id="tensorkrowch.TensorNetwork.nodes">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">nodes</span></span><a class="headerlink" href="#tensorkrowch.TensorNetwork.nodes" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns dictionary with all the nodes belonging to the network (<code class="docutils literal notranslate"><span class="pre">leaf</span></code>,
-<code class="docutils literal notranslate"><span class="pre">data</span></code>, <code class="docutils literal notranslate"><span class="pre">virtual</span></code> and <code class="docutils literal notranslate"><span class="pre">non-leaf</span></code>).</p>
+<code class="docutils literal notranslate"><span class="pre">data</span></code>, <code class="docutils literal notranslate"><span class="pre">virtual</span></code> and <code class="docutils literal notranslate"><span class="pre">resultant</span></code>).</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="tensorkrowch.TensorNetwork.nodes_names">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">nodes_names</span></span><a class="headerlink" href="#tensorkrowch.TensorNetwork.nodes_names" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns list of names of all the nodes belonging to the network (<code class="docutils literal notranslate"><span class="pre">leaf</span></code>,
-<code class="docutils literal notranslate"><span class="pre">data</span></code>, <code class="docutils literal notranslate"><span class="pre">virtual</span></code> and <code class="docutils literal notranslate"><span class="pre">non-leaf</span></code>).</p>
+<code class="docutils literal notranslate"><span class="pre">data</span></code>, <code class="docutils literal notranslate"><span class="pre">virtual</span></code> and <code class="docutils literal notranslate"><span class="pre">resultant</span></code>).</p>
 </dd></dl>
 
 <dl class="py property">
@@ -2544,9 +2544,9 @@ reset (this is already done automatically when changing the modes).</p>
 </dd></dl>
 
 <dl class="py property">
-<dt class="sig sig-object py" id="tensorkrowch.TensorNetwork.non_leaf_nodes">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">non_leaf_nodes</span></span><a class="headerlink" href="#tensorkrowch.TensorNetwork.non_leaf_nodes" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns <code class="docutils literal notranslate"><span class="pre">non-leaf</span></code> nodes of the network.</p>
+<dt class="sig sig-object py" id="tensorkrowch.TensorNetwork.resultant_nodes">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">resultant_nodes</span></span><a class="headerlink" href="#tensorkrowch.TensorNetwork.resultant_nodes" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes of the network.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -2612,7 +2612,7 @@ in-place (<code class="docutils literal notranslate"><span class="pre">True</spa
 <span class="sig-name descname"><span class="pre">trace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">example</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#TensorNetwork.trace"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.TensorNetwork.trace" title="Permalink to this definition">#</a></dt>
 <dd><p>Traces the tensor network contraction algorithm with two purposes:</p>
 <ul class="simple">
-<li><p>Create all the intermediate <code class="docutils literal notranslate"><span class="pre">non-leaf</span></code> nodes that result from
+<li><p>Create all the intermediate <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes that result from
 <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operations</span></code></a> so that in the next contractions only
 the tensor-like operations have to be computed, thus saving a lot of time.</p></li>
 <li><p>Keep track of the tensors that are used to compute operations, so that
@@ -2644,7 +2644,7 @@ be enough to trace the contraction.</p></li>
 <span class="sig-name descname"><span class="pre">reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#TensorNetwork.reset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.TensorNetwork.reset" title="Permalink to this definition">#</a></dt>
 <dd><p>Resets the tensor network as it was before tracing, contracting or, in
 general, performing any non-in-place <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operation</span></code></a>. Hence, it deletes
-all <code class="docutils literal notranslate"><span class="pre">non-leaf</span></code> and <code class="docutils literal notranslate"><span class="pre">virtual</span></code> nodes that are created when performing
+all <code class="docutils literal notranslate"><span class="pre">resultant</span></code> and <code class="docutils literal notranslate"><span class="pre">virtual</span></code> nodes that are created when performing
 an operation, and resets the <code class="docutils literal notranslate"><span class="pre">memory_nodes</span></code> of the network, so that
 each node stores its corresponding tensor. Also, the lists of successors
 of all <code class="docutils literal notranslate"><span class="pre">leaf</span></code> and <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes are emptied.</p>

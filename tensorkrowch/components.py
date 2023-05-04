@@ -505,9 +505,9 @@ class AbstractNode(ABC):
         """
         return self._virtual
 
-    def is_non_leaf(self) -> bool:
+    def is_resultant(self) -> bool:
         """
-        Returns a boolean indicating if the node is a ``non_leaf`` node. These
+        Returns a boolean indicating if the node is a ``resultant`` node. These
         are the nodes that result from an operation on any type of nodes.
         """
         return not (self._leaf or self._data or self._virtual)
@@ -1037,7 +1037,7 @@ class AbstractNode(ABC):
         it. Before setting it, it is casted to the correct type, so that a
         ``torch.Tensor`` can be turned into a ``nn.Parameter`` when setting it
         in :class:`ParamNodes <ParamNode`. This can be used in any node, even in
-        non-leaf nodes.
+        ``resultant`` nodes.
 
         Parameters
         ----------
@@ -1099,7 +1099,7 @@ class AbstractNode(ABC):
         in :class:`ParamNodes <ParamNode>`.
         
         This way of setting tensors is only applicable to ``leaf`` nodes. For
-        ``non-leaf`` nodes, their tensors come from the result of operations on
+        ``resultant`` nodes, their tensors come from the result of operations on
         ``leaf`` tensors; hence they should not be modified. For ``data`` nodes,
         tensors are set into nodes when calling the :meth:`TensorNetwork.forward`
         method of :class:`tensor networks <TensorNetwork>` with a data tensor or
@@ -1185,11 +1185,11 @@ class AbstractNode(ABC):
                     net._inverse_memory[address]['accessed'] += 1
             else:
                 # Node can only be erased if both itself and the node from which
-                # it is taking the tensor information (node_ref) are non-leaf or
+                # it is taking the tensor information (node_ref) are resultant or
                 # data nodes (including virtual node that stores stack data tensor)
                 erase = True
                 for node in check_nodes:
-                    erase &= node.is_non_leaf() or \
+                    erase &= node.is_resultant() or \
                         node.is_data() or \
                         (node.is_virtual() and
                          node._name == 'stack_data_memory')
@@ -1399,7 +1399,7 @@ class Node(AbstractNode):
         will be created to contain the node.
     leaf : bool
         Boolean indicating if the node is a ``leaf`` node. If a node is neither
-        ``leaf`` nor ``data`` nor ``virtual``, it is ``non-leaf``.
+        ``leaf`` nor ``data`` nor ``virtual``, it is ``resultant``.
     data : bool
         Boolean indicating if the node is a ``data`` node.
     virtual : bool
@@ -3547,19 +3547,19 @@ class TensorNetwork(nn.Module):
       of ancillay, hidden nodes that accomplish some useful task (e.g. in uniform
       tensor networks a virtual node has the shared tensor, while all the other
       nodes in the network just have a reference to it).
-    * **non-leaf**: These are :class:`Nodes <Node>` that result from an
+    * **resultant**: These are :class:`Nodes <Node>` that result from an
       :class:`Operation`. They are intermediate nodes that (almost always)
       inherit edges from ``leaf``  and ``data`` nodes, the ones that really
-      establish the network's graph. Thus ``non-leaf`` nodes can be though of
+      establish the network's graph. Thus ``resultant`` nodes can be though of
       like permutations or combinations of ``leaf`` nodes.
       
     This way, when the Tensor Network is defined, it has a bunch of ``leaf``,
     ``data`` and ``virtual`` nodes that make up the network structure, each of
     them storing its own tensor. However, when the network is contracted, several
-    ``non-leaf`` nodes become new members of the network, even modifying its
+    ``resultant`` nodes become new members of the network, even modifying its
     memory (depending on the ``automemory`` and ``unbind_mode`` modes). Therefore,
     if one wants to `reset` the network to its initial state after performing
-    some operations, all the ``non-leaf`` nodes should be deleted, and all the
+    some operations, all the ``resultant`` nodes should be deleted, and all the
     tensors should return to its nodes. This is exactly what :meth:`reset` does.
     Besides, since ``automemory`` and ``unbind_mode`` can change how the tensors
     are stored, if one wants to change these modes, the network should be first
@@ -3698,7 +3698,7 @@ class TensorNetwork(nn.Module):
         self._leaf_nodes = dict()
         self._data_nodes = dict()
         self._virtual_nodes = dict()
-        self._non_leaf_nodes = dict()
+        self._resultant_nodes = dict()
         
         # Repeated nodes to keep track of enumeration
         self._repeated_nodes_names = dict()
@@ -3725,26 +3725,26 @@ class TensorNetwork(nn.Module):
     def nodes(self) -> Dict[Text, AbstractNode]:
         """
         Returns dictionary with all the nodes belonging to the network (``leaf``,
-        ``data``, ``virtual`` and ``non-leaf``).
+        ``data``, ``virtual`` and ``resultant``).
         """
         all_nodes = dict()
         all_nodes.update(self._leaf_nodes)
         all_nodes.update(self._data_nodes)
         all_nodes.update(self._virtual_nodes)
-        all_nodes.update(self._non_leaf_nodes)
+        all_nodes.update(self._resultant_nodes)
         return all_nodes
 
     @property
     def nodes_names(self) -> List[Text]:
         """
         Returns list of names of all the nodes belonging to the network (``leaf``,
-        ``data``, ``virtual`` and ``non-leaf``).
+        ``data``, ``virtual`` and ``resultant``).
         """
         all_nodes_names = []
         al_nodes_names += list(self._leaf_nodes.keys())
         al_nodes_names += list(self._data_nodes.keys())
         al_nodes_names += list(self._virtual_nodes.keys())
-        al_nodes_names += list(self._non_leaf_nodes.keys())
+        al_nodes_names += list(self._resultant_nodes.keys())
         return all_nodes_names
 
     @property
@@ -3763,9 +3763,9 @@ class TensorNetwork(nn.Module):
         return self._virtual_nodes
 
     @property
-    def non_leaf_nodes(self) -> Dict[Text, AbstractNode]:
-        """Returns ``non-leaf`` nodes of the network."""
-        return self._non_leaf_nodes
+    def resultant_nodes(self) -> Dict[Text, AbstractNode]:
+        """Returns ``resultant`` nodes of the network."""
+        return self._resultant_nodes
 
     @property
     def edges(self) -> List[AbstractEdge]:
@@ -3804,7 +3804,7 @@ class TensorNetwork(nn.Module):
         elif node._virtual:
             return self._virtual_nodes
         else:
-            return self._non_leaf_nodes
+            return self._resultant_nodes
 
     def _add_edge(self, edge: AbstractEdge) -> None:
         """
@@ -4031,7 +4031,7 @@ class TensorNetwork(nn.Module):
         """
         non_enum_prev_name = erase_enum(name)
 
-        if not node.is_non_leaf() and (non_enum_prev_name in self.operations):
+        if not node.is_resultant() and (non_enum_prev_name in self.operations):
             raise ValueError(f'Node\'s name cannot be an operation name: '
                              f'{list(self.operations.keys())}')
 
@@ -4158,8 +4158,8 @@ class TensorNetwork(nn.Module):
         Changes type of node in the network. Mainly used for in-place operations
         like :func:`split_` or :func:`contract_between_`.
         """
-        if type not in ['leaf', 'non_leaf', 'data', 'virtual']:
-            raise ValueError('`type` can only be "leaf", "non_leaf", '
+        if type not in ['leaf', 'resultant', 'data', 'virtual']:
+            raise ValueError('`type` can only be "leaf", "resultant", '
                              '"data" or "virtual"')
 
         prev_dict = self._which_dict(node)
@@ -4179,8 +4179,8 @@ class TensorNetwork(nn.Module):
             node._leaf = False
             node._data = False
             node._virtual = True
-        elif type == 'non_leaf':
-            new_dict = self._non_leaf_nodes
+        elif type == 'resultant':
+            new_dict = self._resultant_nodes
             node._leaf = False
             node._data = False
             node._virtual = False
@@ -4212,8 +4212,8 @@ class TensorNetwork(nn.Module):
         else:
             net = self.copy()
 
-        if self._non_leaf_nodes:
-            warnings.warn('Non-leaf nodes will be removed before parameterizing'
+        if self._resultant_nodes:
+            warnings.warn('Resultant nodes will be removed before parameterizing'
                           ' the TN')
             self.reset()
 
@@ -4227,7 +4227,7 @@ class TensorNetwork(nn.Module):
         """
         Traces the tensor network contraction algorithm with two purposes:
         
-        * Create all the intermediate ``non-leaf`` nodes that result from
+        * Create all the intermediate ``resultant`` nodes that result from
           :class:`Operations <Operation>` so that in the next contractions only
           the tensor-like operations have to be computed, thus saving a lot of time.
         
@@ -4266,7 +4266,7 @@ class TensorNetwork(nn.Module):
         """
         Resets the tensor network as it was before tracing, contracting or, in
         general, performing any non-in-place :class:`Operation`. Hence, it deletes
-        all ``non-leaf`` and ``virtual`` nodes that are created when performing
+        all ``resultant`` and ``virtual`` nodes that are created when performing
         an operation, and resets the ``memory_nodes`` of the network, so that
         each node stores its corresponding tensor. Also, the lists of successors
         of all ``leaf`` and ``data`` nodes are emptied.
@@ -4274,10 +4274,10 @@ class TensorNetwork(nn.Module):
         self._seq_ops = []
         self._inverse_memory = dict()
 
-        if self._non_leaf_nodes or self._virtual_nodes:
+        if self._resultant_nodes or self._virtual_nodes:
             aux_dict = dict()
             aux_dict.update(self._leaf_nodes)
-            aux_dict.update(self._non_leaf_nodes)
+            aux_dict.update(self._resultant_nodes)
             aux_dict.update(self._virtual_nodes)
             for node in aux_dict.values():
                 if node.is_virtual() and ('virtual_stack' not in node._name):
@@ -4320,7 +4320,7 @@ class TensorNetwork(nn.Module):
                 node._successors = dict()
 
             aux_dict = dict()
-            aux_dict.update(self._non_leaf_nodes)
+            aux_dict.update(self._resultant_nodes)
             aux_dict.update(self._virtual_nodes)
             for node in list(aux_dict.values()):
                 if node.is_virtual() and ('virtual_stack' not in node._name):
@@ -4524,7 +4524,7 @@ class TensorNetwork(nn.Module):
                 self.set_data_nodes()
             self._add_data(data=data)
 
-        if not self._non_leaf_nodes:
+        if not self._resultant_nodes:
             output = self.contract(*args, **kwargs)
             return output.tensor
 

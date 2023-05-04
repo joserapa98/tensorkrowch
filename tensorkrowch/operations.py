@@ -133,7 +133,6 @@ def _permute_first(node: AbstractNode, axes: Sequence[Ax]) -> Node:
                         name='permute',
                         network=node._network,
                         leaf=False,
-                        param_edges=node.param_edges(),
                         tensor=node.tensor.permute(axes_nums),
                         edges=permute_list(node._edges, axes_nums),
                         node1_list=permute_list(node.is_node1(), axes_nums))
@@ -243,7 +242,6 @@ def permute_(node: AbstractNode, axes: Sequence[Ax]) -> Node:
                         name=node._name,
                         override_node=True,
                         network=node._network,
-                        param_edges=node.param_edges(),
                         override_edges=True,
                         tensor=node.tensor.permute(axes_nums).detach(),
                         edges=permute_list(node._edges, axes_nums),
@@ -881,7 +879,6 @@ def _split_first(node: AbstractNode,
                  name='split',
                  network=net,
                  leaf=False,
-                 param_edges=node.param_edges(),
                  tensor=node1_tensor)
     
     node2_axes_names = permute_list(node.axes_names, batch_axes) + \
@@ -891,7 +888,6 @@ def _split_first(node: AbstractNode,
                  name='split',
                  network=net,
                  leaf=False,
-                 param_edges=node.param_edges(),
                  tensor=node2_tensor)
     
     n_batches = len(batch_axes)
@@ -1361,7 +1357,7 @@ split_node_.__doc__ = \
 AbstractNode.split_ = split_node_
 
 
-def svd_(edge: AbstractEdge,
+def svd_(edge: Edge,
          side: Text = 'left',
          rank: Optional[int] = None,
          cum_percentage: Optional[float] = None,
@@ -1376,7 +1372,7 @@ def svd_(edge: AbstractEdge,
 
     Parameters
     ----------
-    edge : AbstractEdge
+    edge : Edge
         Edge whose nodes are to be contracted and splitted.
     side : str, optional
         Indicates the side to which the diagonal matrix :math:`S` should be
@@ -1465,7 +1461,7 @@ def svd_(edge: AbstractEdge,
 svd_node_ = copy_func(svd_)
 svd_node_.__doc__ = \
     r"""
-    Contracts an edge in-place via :func:`~AbstractEdge.contract_` and splits
+    Contracts an edge in-place via :func:`~Edge.contract_` and splits
     it in-place via :func:`~AbstractNode.split_` using ``mode = "svd"``. See
     :func:`split` for a more complete explanation.
     
@@ -1498,10 +1494,10 @@ svd_node_.__doc__ = \
     tuple[Node, Node]
     """
 
-AbstractEdge.svd_ = svd_node_
+Edge.svd_ = svd_node_
 
 
-def svdr_(edge: AbstractEdge,
+def svdr_(edge: Edge,
           side: Text = 'left',
           rank: Optional[int] = None,
           cum_percentage: Optional[float] = None,
@@ -1516,7 +1512,7 @@ def svdr_(edge: AbstractEdge,
 
     Parameters
     ----------
-    edge : AbstractEdge
+    edge : Edge
         Edge whose nodes are to be contracted and splitted.
     side : str, optional
         Indicates the side to which the diagonal matrix :math:`S` should be
@@ -1605,7 +1601,7 @@ def svdr_(edge: AbstractEdge,
 svdr_node_ = copy_func(svdr_)
 svdr_node_.__doc__ = \
     r"""
-    Contracts an edge in-place via :func:`~AbstractEdge.contract_` and splits
+    Contracts an edge in-place via :func:`~Edge.contract_` and splits
     it in-place via :func:`~AbstractNode.split_` using ``mode = "svdr"``. See
     :func:`split` for a more complete explanation.
     
@@ -1638,7 +1634,7 @@ svdr_node_.__doc__ = \
     tuple[Node, Node]
     """
 
-AbstractEdge.svdr_ = svdr_node_
+Edge.svdr_ = svdr_node_
 
 
 def qr_(edge) -> Tuple[Node, Node]:
@@ -1652,7 +1648,7 @@ def qr_(edge) -> Tuple[Node, Node]:
 
     Parameters
     ----------
-    edge : AbstractEdge
+    edge : Edge
         Edge whose nodes are to be contracted and splitted.
 
     Returns
@@ -1719,7 +1715,7 @@ def qr_(edge) -> Tuple[Node, Node]:
 qr_node_ = copy_func(qr_)
 qr_node_.__doc__ = \
     r"""
-    Contracts an edge in-place via :func:`~AbstractEdge.contract_` and splits
+    Contracts an edge in-place via :func:`~Edge.contract_` and splits
     it in-place via :func:`~AbstractNode.split_` using ``mode = "qr"``. See
     :func:`split` for a more complete explanation.
     
@@ -1731,7 +1727,7 @@ qr_node_.__doc__ = \
     tuple[Node, Node]
     """
 
-AbstractEdge.qr_ = qr_node_
+Edge.qr_ = qr_node_
 
 
 def rq_(edge) -> Tuple[Node, Node]:
@@ -1745,7 +1741,7 @@ def rq_(edge) -> Tuple[Node, Node]:
 
     Parameters
     ----------
-    edge : AbstractEdge
+    edge : Edge
         Edge whose nodes are to be contracted and splitted.
 
     Returns
@@ -1812,7 +1808,7 @@ def rq_(edge) -> Tuple[Node, Node]:
 rq_node_ = copy_func(rq_)
 rq_node_.__doc__ = \
     r"""
-    Contracts an edge in-place via :func:`~AbstractEdge.contract_` and splits
+    Contracts an edge in-place via :func:`~Edge.contract_` and splits
     it in-place via :func:`~AbstractNode.split_` using ``mode = "qr"``. See
     :func:`split` for a more complete explanation.
     
@@ -1824,11 +1820,11 @@ rq_node_.__doc__ = \
     tuple[Node, Node]
     """
 
-AbstractEdge.rq_ = rq_node_
+Edge.rq_ = rq_node_
 
 
 ################################   CONTRACT    ################################
-def _check_first_contract_edges(edges: List[AbstractEdge],
+def _check_first_contract_edges(edges: List[Edge],
                                 node1: AbstractNode,
                                 node2: AbstractNode) -> Optional[Successor]:
     kwargs = {'edges': edges,
@@ -1841,7 +1837,7 @@ def _check_first_contract_edges(edges: List[AbstractEdge],
     return None
 
 
-def _contract_edges_first(edges: List[AbstractEdge],
+def _contract_edges_first(edges: List[Edge],
                           node1: AbstractNode,
                           node2: AbstractNode) -> Node:
     shared_edges = get_shared_edges(node1, node2)
@@ -1862,28 +1858,8 @@ def _contract_edges_first(edges: List[AbstractEdge],
     # Trace
     if node1 == node2:
         result = node1.tensor
-        for j, edge in enumerate(node1._edges):
-            if edge in edges:
-                if isinstance(edge, ParamEdge):
-                    # Obtain permutations
-                    permutation_dims = [k if k < j else k + 1
-                                        for k in range(node1.rank - 1)] + [j]
-                    inv_permutation_dims = inverse_permutation(permutation_dims)
-
-                    # Send multiplication dimension to the end, multiply,
-                    # and recover original shape
-                    result = result.permute(permutation_dims)
-                    if isinstance(edge, ParamStackEdge):
-                        mat = edge.matrix
-                        result = result @ mat.view(
-                            mat.shape[0],  # First dim is stack
-                            *[1]*(len(result.shape) - 3),
-                            *mat.shape[1:])
-                    else:
-                        result = result @ edge.matrix
-                    result = result.permute(inv_permutation_dims)
-
         axes_nums = dict(zip(range(node1.rank), range(node1.rank)))
+        
         for edge in edges:
             axes = node1.in_which_axis(edge)
             result = torch.diagonal(result,
@@ -1931,30 +1907,9 @@ def _contract_edges_first(edges: List[AbstractEdge],
                 edge = nodes[i]._edges[j]
                 if edge in edges:
                     if i == 0:
-                        if isinstance(edge, ParamEdge):
-                            # Obtain permutations
-                            permutation_dims = [k if k < j else k + 1
-                                                for k in range(
-                                                    nodes[i].rank - 1)] + [j]
-                            inv_permutation_dims = inverse_permutation(
-                                permutation_dims)
-
-                            # Send multiplication dimension to the end,
-                            # multiply, and recover original shape
-                            tensors[i] = tensors[i].permute(permutation_dims)
-                            if isinstance(edge, ParamStackEdge):
-                                mat = edge.matrix
-                                tensors[i] = tensors[i] @ mat.view(
-                                    mat.shape[0],  # First dim is stack,
-                                    *[1]*(len(tensors[i].shape) - 3),
-                                    *mat.shape[1:])
-                            else:
-                                tensors[i] = tensors[i] @ edge.matrix
-                            tensors[i] = tensors[i].permute(inv_permutation_dims)
-
-                        contract_edges[edge] = []
-                        
-                    contract_edges[edge].append(j)
+                        contract_edges[edge] = [j]
+                    else:
+                        contract_edges[edge].append(j)
 
                 elif axis.is_batch():
                     if i == 0:
@@ -2044,7 +1999,6 @@ def _contract_edges_first(edges: List[AbstractEdge],
                         name='contract_edges',
                         network=node1._network,
                         leaf=False,
-                        param_edges=False,
                         tensor=result,
                         edges=new_edges,
                         node1_list=new_node1_list)
@@ -2070,7 +2024,7 @@ def _contract_edges_first(edges: List[AbstractEdge],
 
 
 def _contract_edges_next(successor: Successor,
-                         edges: List[AbstractEdge],
+                         edges: List[Edge],
                          node1: AbstractNode,
                          node2: AbstractNode) -> Node:
     hints = successor.hints
@@ -2078,28 +2032,8 @@ def _contract_edges_next(successor: Successor,
     
     if node1 == node2:
         result = node1.tensor
-        for j, edge in enumerate(node1._edges):
-            if edge in edges:
-                if isinstance(edge, ParamEdge):
-                    # Obtain permutations
-                    permutation_dims = [k if k < j else k + 1
-                                        for k in range(node1.rank - 1)] + [j]
-                    inv_permutation_dims = inverse_permutation(permutation_dims)
-
-                    # Send multiplication dimension to the end, multiply,
-                    # and recover original shape
-                    result = result.permute(permutation_dims)
-                    if isinstance(edge, ParamStackEdge):
-                        mat = edge.matrix
-                        result = result @ mat.view(
-                            mat.shape[0],  # First dim is stack
-                            *[1]*(len(result.shape) - 3),
-                            *mat.shape[1:])
-                    else:
-                        result = result @ edge.matrix
-                    result = result.permute(inv_permutation_dims)
-
         axes_nums = dict(zip(range(node1.rank), range(node1.rank)))
+        
         for edge in edges:
             axes = node1.in_which_axis(edge)
             result = torch.diagonal(result,
@@ -2128,26 +2062,6 @@ def _contract_edges_next(successor: Successor,
     else:
         nodes = [node1, node2]
         tensors = [node1.tensor, node2.tensor]
-
-        for j, edge in enumerate(nodes[0]._edges):
-            if edge in edges:
-                if isinstance(edge, ParamEdge):
-                    # Obtain permutations
-                    permutation_dims = [k if k < j else k + 1
-                                        for k in range(nodes[0].rank - 1)] + [j]
-                    inv_permutation_dims = inverse_permutation(permutation_dims)
-                   # Send multiplication dimension to the end, multiply,
-                    # and recover original shape
-                    tensors[0] = tensors[0].permute(permutation_dims)
-                    if isinstance(edge, ParamStackEdge):
-                        mat = edge.matrix
-                        tensors[0] = tensors[0] @ mat.view(
-                            mat.shape[0],  # First dim is stack
-                            *[1]*(len(tensors[0].shape) - 3),
-                            *mat.shape[1:])
-                    else:
-                        tensors[0] = tensors[0] @ edge.matrix
-                    tensors[0] = tensors[0].permute(inv_permutation_dims)
                     
         result = _C.contract(tensors[0], tensors[1],
                              hints['permutation_dims'],
@@ -2169,7 +2083,7 @@ contract_edges_op = Operation('contract_edges',
                               _contract_edges_first,
                               _contract_edges_next)
 
-def contract_edges(edges: List[AbstractEdge],
+def contract_edges(edges: List[Edge],
                    node1: AbstractNode,
                    node2: AbstractNode) -> Node:
     """
@@ -2177,7 +2091,7 @@ def contract_edges(edges: List[AbstractEdge],
 
     Parameters
     ----------
-    edges : list[AbstractEdge]
+    edges : list[Edge]
         List of edges that are to be contracted. They must be edges shared
         between ``node1`` and ``node2``. Batch contraction is automatically
         performed when both nodes have batch edges with the same names.
@@ -2195,7 +2109,7 @@ def contract_edges(edges: List[AbstractEdge],
     return contract_edges_op(edges, node1, node2)
 
 
-def contract_(edge: AbstractEdge) -> Node:
+def contract_(edge: Edge) -> Node:
     """
     Contracts in-place the nodes that are connected through the edge. See
     :func:`contract` for a more complete explanation.
@@ -2205,7 +2119,7 @@ def contract_(edge: AbstractEdge) -> Node:
 
     Parameters
     ----------
-    edge : AbstractEdge
+    edge : Edge
         Edges that is to be contracted. Batch contraction is automatically
         performed when both nodes have batch edges with the same names.
 
@@ -2238,11 +2152,11 @@ def contract_(edge: AbstractEdge) -> Node:
     
     return result
 
-AbstractEdge.contract_ = contract_
+Edge.contract_ = contract_
 
 
 def get_shared_edges(node1: AbstractNode,
-                     node2: AbstractNode) -> List[AbstractEdge]:
+                     node2: AbstractNode) -> List[Edge]:
     """
     Returns list of edges shared between two nodes
     """
@@ -2566,7 +2480,7 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
     node1_lists = []
     batch_idx = None
     for i, edge in enumerate(node._edges[1:]):
-        if isinstance(edge, AbstractStackEdge):
+        if isinstance(edge, StackEdge):
             edges_lists.append(edge._edges)
             node1_lists.append(edge._node1_lists)
             if edge._edges[0].is_batch() and \
@@ -2761,10 +2675,6 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
         output_string = string.split('->')[1]
     else:
         output_string = ''
-
-    # Check string and collect information from involved edges
-    which_matrices = []
-    matrices_strings = []
     
     # Used for counting appearances of output subscripts in the input strings
     output_dict = dict(zip(output_string, [0] * len(output_string)))
@@ -2787,8 +2697,6 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
                           [None] * len(output_string)))
     
     for i, input_string in enumerate(input_strings):
-        if isinstance(nodes[i], (StackNode, ParamStackNode)):
-            stack_char = input_string[0]
         for j, char in enumerate(input_string):
             if char not in output_dict:
                 edge = nodes[i][j]
@@ -2801,25 +2709,14 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
                                          'index, but it does not appear among '
                                          'the output subscripts')
                     if edge != contracted_edges[char][0]:
-                        if isinstance(edge, AbstractStackEdge) and \
-                                isinstance(contracted_edges[char][0],
-                                           AbstractStackEdge):
+                        if isinstance(edge, StackEdge) and \
+                                isinstance(contracted_edges[char][0], StackEdge):
                             edge = edge ^ contracted_edges[char][0]
                         else:
                             raise ValueError(f'Subscript {char} appears in two '
                                              'nodes that do not share a connected'
                                              ' edge at the specified axis')
                     contracted_edges[char].append(edge)
-                    
-                if isinstance(edge, ParamStackEdge):
-                    if edge not in which_matrices:
-                        matrices_strings.append(stack_char + (2 * char))
-                        which_matrices.append(edge)
-                        
-                elif isinstance(edge, ParamEdge):
-                    if edge not in which_matrices:
-                        matrices_strings.append(2 * char)
-                        which_matrices.append(edge)
             else:
                 edge = nodes[i][j]
                 if output_dict[char] == 0:
@@ -2851,13 +2748,11 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
             raise ValueError(f'Subscript {char} appears only once in the input '
                              f'but none among the output subscripts')
 
-    input_string = ','.join(input_strings + matrices_strings)
+    input_string = ','.join(input_strings)
     einsum_string = input_string + '->' + output_string
     tensors = [node.tensor for node in nodes]
-    matrices = [edge.matrix for edge in which_matrices]
-    path, _ = opt_einsum.contract_path(einsum_string, *(tensors + matrices))
-    new_tensor = opt_einsum.contract(einsum_string, *(tensors + matrices),
-                                     optimize=path)
+    path, _ = opt_einsum.contract_path(einsum_string, *tensors)
+    new_tensor = opt_einsum.contract(einsum_string, *tensors, optimize=path)
 
     all_stack = True
     all_non_stack = True
@@ -2885,7 +2780,6 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
                         name='einsum',
                         network=nodes[0]._network,
                         leaf=False,
-                        param_edges=False,
                         tensor=new_tensor,
                         edges=list(edges.values()),
                         node1_list=list(node1_list.values()))
@@ -2895,7 +2789,6 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
                                     'nodes': nodes},
                           child=new_node,
                           hints={'einsum_string': einsum_string,
-                                 'which_matrices': which_matrices,
                                  'path': path})
     
     # Add successor to parent
@@ -2921,9 +2814,7 @@ def _einsum_next(successor: Successor,
     hints = successor.hints
     
     tensors = [node.tensor for node in nodes]
-    matrices = [edge.matrix for edge in hints['which_matrices']]
-    new_tensor = opt_einsum.contract(hints['einsum_string'],
-                                     *(tensors + matrices),
+    new_tensor = opt_einsum.contract(hints['einsum_string'], *tensors,
                                      optimize=hints['path'])
     
     child = successor.child

@@ -5,9 +5,8 @@ TensorKrowch
 # Network components
 from tensorkrowch.components import Axis
 from tensorkrowch.components import AbstractNode, Node, ParamNode
-from tensorkrowch.components import AbstractEdge, Edge, ParamEdge
 from tensorkrowch.components import StackNode, ParamStackNode
-from tensorkrowch.components import AbstractStackEdge, StackEdge, ParamStackEdge
+from tensorkrowch.components import Edge, StackEdge
 from tensorkrowch.components import Successor, TensorNetwork
 
 # Initializers

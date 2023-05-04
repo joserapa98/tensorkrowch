@@ -34,8 +34,6 @@ class Tree(TensorNetwork):
         Bond dimensions of nodes in each layer. Each sequence corresponds to the
         shape of the nodes in each layer (some input edges and an output edge in
         the last position).
-    param_bond : bool
-        Boolean indicating whether bond edges should be :class:`ParamEdge`.
     num_batches : int
         Number of batch edges of input data nodes. Usually ``num_batches = 1``
         (where the batch edge is used for the data batched) but it could also
@@ -55,7 +53,6 @@ class Tree(TensorNetwork):
     def __init__(self,
                  sites_per_layer: Sequence[int],
                  d_bond: Sequence[Sequence[int]],
-                 param_bond: bool = False,
                  num_batches: int = 1) -> None:
 
         super().__init__(name='tree')
@@ -106,11 +103,7 @@ class Tree(TensorNetwork):
             raise ValueError('`sites_per_layer` and `d_bond` should have the '
                              'same number of elements')
 
-        # param_bond
-        self._param_bond = param_bond
-
         self._make_nodes()
-        self.param_bond(set_param=param_bond)
         self.initialize()
         
         self._num_batches = num_batches
@@ -128,26 +121,6 @@ class Tree(TensorNetwork):
         and an output edge in the last position).
         """
         return self._d_bond
-
-    def param_bond(self, set_param: Optional[bool] = None) -> Optional[bool]:
-        """
-        Returns ``param_bond`` attribute or changes it if ``set_param`` is
-        provided.
-
-        Parameters
-        ----------
-        set_param : bool, optional
-            Boolean indicating whether edges have to be parameterized (``True``)
-            or de-parameterized (``False``).
-        """
-        if set_param is None:
-            return self._param_bond
-        else:
-            for layer in self.layers[1:]:
-                for node in layer:
-                    for edge in node._edges[:-1]:
-                        edge.parameterize(set_param=set_param)
-            self._param_bond = set_param
 
     def _make_nodes(self) -> None:
         """Creates all the nodes of the Tree."""
@@ -358,8 +331,6 @@ class Tree(TensorNetwork):
                 self.layers[i + 1] = layer2
                 
             self.automemory = prev_automemory
-            
-        self.param_bond(set_param=self._param_bond)
 
 
 class UTree(TensorNetwork):
@@ -379,8 +350,6 @@ class UTree(TensorNetwork):
         Bond dimensions of nodes in each layer. Since all nodes have the same
         shape, it is enough to pass a single sequence of dimensions (some input
         edges and an output edge in the last position).
-    param_bond : bool
-        Boolean indicating whether bond edges should be :class:`ParamEdge`.
     num_batches : int
         Number of batch edges of input data nodes. Usually ``num_batches = 1``
         (where the batch edge is used for the data batched) but it could also
@@ -391,7 +360,6 @@ class UTree(TensorNetwork):
     def __init__(self,
                  sites_per_layer: Sequence[int],
                  d_bond: Sequence[int],
-                 param_bond: bool = False,
                  num_batches: int = 1) -> None:
 
         super().__init__(name='tree')
@@ -428,11 +396,7 @@ class UTree(TensorNetwork):
             raise TypeError('`d_bond` should be a sequence of ints')
         self._d_bond = list(d_bond)
 
-        # param_bond
-        self._param_bond = param_bond
-
         self._make_nodes()
-        self.param_bond(set_param=param_bond)
         self.initialize()
         
         self._num_batches = num_batches
@@ -449,26 +413,6 @@ class UTree(TensorNetwork):
         and an output edge in the last position).
         """
         return self._d_bond
-
-    def param_bond(self, set_param: Optional[bool] = None) -> Optional[bool]:
-        """
-        Returns ``param_bond`` attribute or changes it if ``set_param`` is
-        provided.
-
-        Parameters
-        ----------
-        set_param : bool, optional
-            Boolean indicating whether edges have to be parameterized (``True``)
-            or de-parameterized (``False``).
-        """
-        if set_param is None:
-            return self._param_bond
-        else:
-            for layer in self.layers[1:]:
-                for node in layer:
-                    for edge in node._edges[:-1]:
-                        edge.parameterize(set_param=set_param)
-            self._param_bond = set_param
 
     def _make_nodes(self) -> None:
         """Creates all the nodes of the Tree."""
@@ -649,8 +593,6 @@ class ConvTree(Tree):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
-    param_bond : bool
-        Boolean indicating whether bond edges should be :class:`ParamEdge`.
         
     Examples
     --------
@@ -669,8 +611,7 @@ class ConvTree(Tree):
                  kernel_size: Union[int, Sequence],
                  stride: int = 1,
                  padding: int = 0,
-                 dilation: int = 1,
-                 param_bond: bool = False,):
+                 dilation: int = 1):
         
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -699,7 +640,6 @@ class ConvTree(Tree):
         
         super().__init__(sites_per_layer=sites_per_layer,
                          d_bond=d_bond,
-                         param_bond=param_bond,
                          num_batches=2)
         self._in_channels = d_bond[0][0]
         
@@ -834,8 +774,6 @@ class ConvUTree(UTree):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
-    param_bond : bool
-        Boolean indicating whether bond edges should be :class:`ParamEdge`.
     """
     
     def __init__(self,
@@ -844,8 +782,7 @@ class ConvUTree(UTree):
                  kernel_size: Union[int, Sequence],
                  stride: int = 1,
                  padding: int = 0,
-                 dilation: int = 1,
-                 param_bond: bool = False,):
+                 dilation: int = 1):
         
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -874,7 +811,6 @@ class ConvUTree(UTree):
         
         super().__init__(sites_per_layer=sites_per_layer,
                          d_bond=d_bond,
-                         param_bond=param_bond,
                          num_batches=2)
         self._in_channels = d_bond[0]
         

@@ -43,8 +43,6 @@ class MPS(TensorNetwork):
     boundary : {'obc', 'pbc'}
         String indicating whether periodic or open boundary conditions should
         be used.
-    param_bond : bool
-        Boolean indicating whether bond edges should be :class:`ParamEdge`.
     num_batches : int
         Number of batch edges of input data nodes. Usually ``num_batches = 1``
         (where the batch edge is used for the data batched) but it could also
@@ -80,7 +78,6 @@ class MPS(TensorNetwork):
                  d_phys: Union[int, Sequence[int]],
                  d_bond: Union[int, Sequence[int]],
                  boundary: Text = 'obc',
-                 param_bond: bool = False,
                  num_batches: int = 1) -> None:
 
         super().__init__(name='mps')
@@ -133,11 +130,7 @@ class MPS(TensorNetwork):
             raise TypeError('`d_bond` should be `int` type or a list/tuple '
                             'of ints')
 
-        # param_bond
-        self._param_bond = param_bond
-
         self._make_nodes()
-        self.param_bond(set_param=param_bond)
         self.initialize()
         
         self._num_batches = num_batches
@@ -161,27 +154,6 @@ class MPS(TensorNetwork):
     def d_bond(self) -> List[int]:
         """Returns bond dimension."""
         return self._d_bond
-
-    def param_bond(self, set_param: Optional[bool] = None) -> Optional[bool]:
-        """
-        Returns ``param_bond`` attribute or changes it if ``set_param`` is
-        provided.
-
-        Parameters
-        ----------
-        set_param : bool, optional
-            Boolean indicating whether edges have to be parameterized (``True``)
-            or de-parameterized (``False``).
-        """
-        if set_param is None:
-            return self._param_bond
-        else:
-            for node in self.leaf_nodes.values():
-                if 'left' in node.axes_names:
-                    node['left'].parameterize(set_param=set_param)
-                if 'right' in node.axes_names:
-                    node['right'].parameterize(set_param=set_param)
-            self._param_bond = set_param
 
     def _make_nodes(self) -> None:
         """Creates all the nodes of the MPS."""
@@ -510,8 +482,6 @@ class MPS(TensorNetwork):
             self.right_node = nodes[-1]
         else:
             self.mats_env = nodes
-            
-        self.param_bond(set_param=self._param_bond)
         
         d_bond = []
         for node in nodes:
@@ -711,8 +681,6 @@ class UMPS(TensorNetwork):
         Physical dimension.
     d_bond : int
         Bond dimension.
-    param_bond : bool
-        Boolean indicating whether bond edges should be :class:`ParamEdge`.
     num_batches : int
         Number of batch edges of input data nodes. Usually ``num_batches = 1``
         (where the batch edge is used for the data batched) but it could also
@@ -724,7 +692,6 @@ class UMPS(TensorNetwork):
                  n_sites: int,
                  d_phys: int,
                  d_bond: int,
-                 param_bond: bool = False,
                  num_batches: int = 1) -> None:
 
         super().__init__(name='mps')
@@ -747,11 +714,7 @@ class UMPS(TensorNetwork):
         else:
             raise TypeError('`d_bond` should be `int` type')
 
-        # param_bond
-        self._param_bond = param_bond
-
         self._make_nodes()
-        self.param_bond(set_param=param_bond)
         self.initialize()
         
         self._num_batches = num_batches
@@ -770,27 +733,6 @@ class UMPS(TensorNetwork):
     def d_bond(self) -> int:
         """Returns bond dimension."""
         return self._d_bond
-
-    def param_bond(self, set_param: Optional[bool] = None) -> Optional[bool]:
-        """
-        Returns ``param_bond`` attribute or changes it if ``set_param`` is
-        provided.
-
-        Parameters
-        ----------
-        set_param : bool, optional
-            Boolean indicating whether edges have to be parameterized (``True``)
-            or de-parameterized (``False``).
-        """
-        if set_param is None:
-            return self._param_bond
-        else:
-            for node in self.leaf_nodes.values():
-                if 'left' in node.axes_names:
-                    node['left'].parameterize(set_param=set_param)
-                if 'right' in node.axes_names:
-                    node['right'].parameterize(set_param=set_param)
-            self._param_bond = set_param
 
     def _make_nodes(self) -> None:
         """Creates all the nodes of the MPS."""
@@ -1018,8 +960,6 @@ class ConvMPS(MPS):
     boundary : {'obc', 'pbc'}
         String indicating whether periodic or open boundary conditions should
         be used.
-    param_bond : bool
-        Boolean indicating whether bond edges should be :class:`ParamEdge`.
         
     Examples
     --------
@@ -1039,8 +979,7 @@ class ConvMPS(MPS):
                  stride: int = 1,
                  padding: int = 0,
                  dilation: int = 1,
-                 boundary: Text = 'obc',
-                 param_bond: bool = False):
+                 boundary: Text = 'obc'):
         
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -1072,7 +1011,6 @@ class ConvMPS(MPS):
                          d_phys=in_channels,
                          d_bond=d_bond,
                          boundary=boundary,
-                         param_bond=param_bond,
                          num_batches=2)
         
         self.unfold = nn.Unfold(kernel_size=kernel_size,
@@ -1221,8 +1159,6 @@ class ConvUMPS(UMPS):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
-    param_bond : bool
-        Boolean indicating whether bond edges should be :class:`ParamEdge`.
     """
     
     def __init__(self,
@@ -1231,8 +1167,7 @@ class ConvUMPS(UMPS):
                     kernel_size: Union[int, Sequence],
                     stride: int = 1,
                     padding: int = 0,
-                    dilation: int = 1,
-                    param_bond: bool = False):
+                    dilation: int = 1):
         
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -1263,7 +1198,6 @@ class ConvUMPS(UMPS):
         super().__init__(n_sites=kernel_size[0] * kernel_size[1],
                          d_phys=in_channels,
                          d_bond=d_bond,
-                         param_bond=param_bond,
                          num_batches=2)
         
         self.unfold = nn.Unfold(kernel_size=kernel_size,

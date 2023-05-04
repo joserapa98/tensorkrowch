@@ -15,14 +15,12 @@ def _initializer(init_method,
                  name: Optional[Text] = None,
                  network: Optional[TensorNetwork] = None,
                  param_node: bool = False,
-                 param_edges: bool = False,
                  **kwargs: float) -> AbstractNode:
     if not param_node:
         return Node(shape=shape,
                     axes_names=axes_names,
                     name=name,
                     network=network,
-                    param_edges=param_edges,
                     init_method=init_method,
                     **kwargs)
     else:
@@ -30,7 +28,6 @@ def _initializer(init_method,
                          axes_names=axes_names,
                          name=name,
                          network=network,
-                         param_edges=param_edges,
                          init_method=init_method,
                          **kwargs)
 
@@ -39,8 +36,7 @@ def zeros(shape: Shape,
           axes_names: Optional[Sequence[Text]] = None,
           name: Optional[Text] = None,
           network: Optional[TensorNetwork] = None,
-          param_node: bool = False,
-          param_edges: bool = False) -> AbstractNode:
+          param_node: bool = False) -> AbstractNode:
      """
      Returns :class:`Node` or :class:`ParamNode` filled with zeros.
 
@@ -61,9 +57,6 @@ def zeros(shape: Shape,
      param_node : bool
           Boolean indicating whether the node should be a :class:`ParamNode`
           (``True``) or a :class:`Node` (``False``).
-     param_edges : bool
-          Boolean indicating whether all node's edges should be :class:`ParamEdges
-          <ParamEdge>` (``True``) or not (``False``).
 
      Returns
      -------
@@ -74,16 +67,14 @@ def zeros(shape: Shape,
                          axes_names=axes_names,
                          name=name,
                          network=network,
-                         param_node=param_node,
-                         param_edges=param_edges)
+                         param_node=param_node)
 
 
 def ones(shape: Optional[Shape] = None,
          axes_names: Optional[Sequence[Text]] = None,
          name: Optional[Text] = None,
          network: Optional[TensorNetwork] = None,
-         param_node: bool = False,
-         param_edges: bool = False) -> AbstractNode:
+         param_node: bool = False) -> AbstractNode:
      """
      Returns :class:`Node` or :class:`ParamNode` filled with ones.
 
@@ -104,9 +95,6 @@ def ones(shape: Optional[Shape] = None,
      param_node : bool
           Boolean indicating whether the node should be a :class:`ParamNode`
           (``True``) or a :class:`Node` (``False``).
-     param_edges : bool
-          Boolean indicating whether all node's edges should be :class:`ParamEdges
-          <ParamEdge>` (``True``) or not (``False``).
 
      Returns
      -------
@@ -117,16 +105,14 @@ def ones(shape: Optional[Shape] = None,
                          axes_names=axes_names,
                          name=name,
                          network=network,
-                         param_node=param_node,
-                         param_edges=param_edges)
+                         param_node=param_node)
 
 
 def copy(shape: Optional[Shape] = None,
          axes_names: Optional[Sequence[Text]] = None,
          name: Optional[Text] = None,
          network: Optional[TensorNetwork] = None,
-         param_node: bool = False,
-         param_edges: bool = False) -> AbstractNode:
+         param_node: bool = False) -> AbstractNode:
      """
      Returns :class:`Node` or :class:`ParamNode` with a copy tensor, that is, 
      a tensor filled with zeros except in the diagonal (elements
@@ -150,9 +136,6 @@ def copy(shape: Optional[Shape] = None,
      param_node : bool
           Boolean indicating whether the node should be a :class:`ParamNode`
           (``True``) or a :class:`Node` (``False``).
-     param_edges : bool
-          Boolean indicating whether all node's edges should be :class:`ParamEdges
-          <ParamEdge>` (``True``) or not (``False``).
 
      Returns
      -------
@@ -163,8 +146,7 @@ def copy(shape: Optional[Shape] = None,
                          axes_names=axes_names,
                          name=name,
                          network=network,
-                         param_node=param_node,
-                         param_edges=param_edges)
+                         param_node=param_node)
 
 
 def rand(shape: Optional[Shape] = None,
@@ -172,7 +154,6 @@ def rand(shape: Optional[Shape] = None,
          name: Optional[Text] = None,
          network: Optional[TensorNetwork] = None,
          param_node: bool = False,
-         param_edges: bool = False,
          low: float = 0.,
          high: float = 1.,) -> AbstractNode:
      """
@@ -196,9 +177,6 @@ def rand(shape: Optional[Shape] = None,
      param_node : bool
           Boolean indicating whether the node should be a :class:`ParamNode`
           (``True``) or a :class:`Node` (``False``).
-     param_edges : bool
-          Boolean indicating whether all node's edges should be :class:`ParamEdges
-          <ParamEdge>` (``True``) or not (``False``).
      low : float
           Lower limit of the uniform distribution.
      high : float
@@ -214,7 +192,6 @@ def rand(shape: Optional[Shape] = None,
                          name=name,
                          network=network,
                          param_node=param_node,
-                         param_edges=param_edges,
                          low=low,
                          high=high)
 
@@ -224,7 +201,6 @@ def randn(shape: Optional[Shape] = None,
           name: Optional[Text] = None,
           network: Optional[TensorNetwork] = None,
           param_node: bool = False,
-          param_edges: bool = False,
           mean: float = 0.,
           std: float = 1.,) -> AbstractNode:
      """
@@ -248,9 +224,6 @@ def randn(shape: Optional[Shape] = None,
      param_node : bool
           Boolean indicating whether the node should be a :class:`ParamNode`
           (``True``) or a :class:`Node` (``False``).
-     param_edges : bool
-          Boolean indicating whether all node's edges should be :class:`ParamEdges
-          <ParamEdge>` (``True``) or not (``False``).
      mean : float
           Mean of the normal distribution.
      std : float
@@ -266,7 +239,6 @@ def randn(shape: Optional[Shape] = None,
                          name=name,
                          network=network,
                          param_node=param_node,
-                         param_edges=param_edges,
                          mean=mean,
                          std=std)
 

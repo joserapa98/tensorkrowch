@@ -60,8 +60,6 @@ class MPSLayer(TensorNetwork):
     boundary : {'obc', 'pbc'}
         String indicating whether periodic or open boundary conditions should
         be used.
-    param_bond : bool
-        Boolean indicating whether bond edges should be :class:`ParamEdge`.
     num_batches : int
         Number of batch edges of input data nodes. Usually ``num_batches = 1``
         (where the batch edge is used for the data batched) but it could also
@@ -101,7 +99,6 @@ class MPSLayer(TensorNetwork):
                  d_bond: Union[int, Sequence[int]],
                  l_position: Optional[int] = None,
                  boundary: Text = 'obc',
-                 param_bond: bool = False,
                  num_batches: int = 1) -> None:
 
         super().__init__(name='mps')
@@ -170,11 +167,7 @@ class MPSLayer(TensorNetwork):
         else:
             raise TypeError('`n_labels` should be int type')
 
-        # param_bond
-        self._param_bond = param_bond
-
         self._make_nodes()
-        self.param_bond(set_param=param_bond)
         self.initialize()
         
         self._num_batches = num_batches
@@ -211,27 +204,6 @@ class MPSLayer(TensorNetwork):
         for input nodes.
         """
         return self._n_labels
-
-    def param_bond(self, set_param: Optional[bool] = None) -> Optional[bool]:
-        """
-        Returns ``param_bond`` attribute or changes it if ``set_param`` is
-        provided.
-
-        Parameters
-        ----------
-        set_param : bool, optional
-            Boolean indicating whether edges have to be parameterized (``True``)
-            or de-parameterized (``False``).
-        """
-        if set_param is None:
-            return self._param_bond
-        else:
-            for node in self.leaf_nodes.values():
-                if 'left' in node.axes_names:
-                    node['left'].parameterize(set_param=set_param)
-                if 'right' in node.axes_names:
-                    node['right'].parameterize(set_param=set_param)
-            self._param_bond = set_param
 
     def _make_nodes(self) -> None:
         """Creates all the nodes of the MPS."""
@@ -333,7 +305,6 @@ class MPSLayer(TensorNetwork):
                                          axes_names=('left', 'output', 'right'),
                                          name='output_node',
                                          network=self)
-                                         #param_edges=self.param_bond())
             if self.left_env:
                 self.left_env[-1]['right'] ^ self.output_node['left']
             else:
@@ -773,7 +744,6 @@ class MPSLayer(TensorNetwork):
             self.right_env = new_right_nodes[:-1]
             
         self.output_node = output_node.parameterize()
-        self.param_bond(set_param=self._param_bond)
         
         all_nodes = []
         if left_nodes:
@@ -997,8 +967,6 @@ class UMPSLayer(TensorNetwork):
         Position of the output node (label). Should be between 0 and
         ``n_sites - 1``. If ``None``, the output node will be located at the
         middle of the MPS.
-    param_bond : bool
-        Boolean indicating whether bond edges should be :class:`ParamEdge`.
     num_batches : int
         Number of batch edges of input data nodes. Usually ``num_batches = 1``
         (where the batch edge is used for the data batched) but it could also
@@ -1012,7 +980,6 @@ class UMPSLayer(TensorNetwork):
                  n_labels: int,
                  d_bond: int,
                  l_position: Optional[int] = None,
-                 param_bond: bool = False,
                  num_batches: int = 1) -> None:
 
         super().__init__(name='mps')
@@ -1046,11 +1013,7 @@ class UMPSLayer(TensorNetwork):
         else:
             raise TypeError('`n_labels` should be `int` type')
 
-        # param_bond
-        self._param_bond = param_bond
-
         self._make_nodes()
-        self.param_bond(set_param=param_bond)
         self.initialize()
         
         self._num_batches = num_batches
@@ -1082,27 +1045,6 @@ class UMPSLayer(TensorNetwork):
         for input nodes.
         """
         return self._n_labels
-
-    def param_bond(self, set_param: Optional[bool] = None) -> Optional[bool]:
-        """
-        Returns ``param_bond`` attribute or changes it if ``set_param`` is
-        provided.
-
-        Parameters
-        ----------
-        set_param : bool, optional
-            Boolean indicating whether edges have to be parameterized (``True``)
-            or de-parameterized (``False``).
-        """
-        if set_param is None:
-            return self._param_bond
-        else:
-            for node in self.leaf_nodes.values():
-                if 'left' in node.axes_names:
-                    node['left'].parameterize(set_param=set_param)
-                if 'right' in node.axes_names:
-                    node['right'].parameterize(set_param=set_param)
-            self._param_bond = set_param
 
     def _make_nodes(self) -> None:
         """Creates all the nodes of the MPS."""
@@ -1438,8 +1380,6 @@ class ConvMPSLayer(MPSLayer):
     boundary : {'obc', 'pbc'}
         String indicating whether periodic or open boundary conditions should
         be used.
-    param_bond : bool
-        Boolean indicating whether bond edges should be :class:`ParamEdge`.
         
     Examples
     --------
@@ -1462,8 +1402,7 @@ class ConvMPSLayer(MPSLayer):
                  padding: int = 0,
                  dilation: int = 1,
                  l_position: Optional[int] = None,
-                 boundary: Text = 'obc',
-                 param_bond: bool = False):
+                 boundary: Text = 'obc'):
         
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -1497,7 +1436,6 @@ class ConvMPSLayer(MPSLayer):
                          d_bond=d_bond,
                          l_position=l_position,
                          boundary=boundary,
-                         param_bond=param_bond,
                          num_batches=2)
         
         self.unfold = nn.Unfold(kernel_size=kernel_size,
@@ -1655,8 +1593,6 @@ class ConvUMPSLayer(UMPSLayer):
         Position of the output node (label). Should be between 0 and
         :math:`kernel\_size_0 \cdot kernel\_size_1`. If ``None``, the output node
         will be located at the middle of the MPS.
-    param_bond : bool
-        Boolean indicating whether bond edges should be :class:`ParamEdge`.
     """
     
     def __init__(self,
@@ -1667,8 +1603,7 @@ class ConvUMPSLayer(UMPSLayer):
                  stride: int = 1,
                  padding: int = 0,
                  dilation: int = 1,
-                 l_position: Optional[int] = None,
-                 param_bond: bool = False):
+                 l_position: Optional[int] = None):
         
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
@@ -1701,7 +1636,6 @@ class ConvUMPSLayer(UMPSLayer):
                          n_labels=out_channels,
                          d_bond=d_bond,
                          l_position=l_position,
-                         param_bond=param_bond,
                          num_batches=2)
         
         self.unfold = nn.Unfold(kernel_size=kernel_size,

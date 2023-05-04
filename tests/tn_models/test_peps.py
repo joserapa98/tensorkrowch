@@ -13,69 +13,64 @@ import time
 
 
 class TestPEPS:
-    
+
     def test_all_algorithms(self):
         example = torch.randn(3*4, 1, 5)
         data = torch.randn(3*4, 100, 5)
-        
+
         for boundary_0 in ['obc', 'pbc']:
             for boundary_1 in ['obc', 'pbc']:
-                for param_bond in [True, False]:
-                    peps = tk.PEPS(n_rows=3,
-                                   n_cols=4,
-                                   d_phys=5,
-                                   d_bond=[2, 3],
-                                   boundary=[boundary_0, boundary_1],
-                                   param_bond=param_bond)
-                
-                    for automemory in [True, False]:
-                        for unbind_mode in [True, False]:
-                            for side in ['up', 'down', 'left', 'right']:
-                                for inline in [True, False]:
-                                    print(boundary_0, boundary_1, param_bond,
-                                          automemory, unbind_mode, side, inline)
-                                    peps.automemory = automemory
-                                    peps.unbind_mode = unbind_mode
-                                    
-                                    peps.trace(example,
-                                               from_side=side,
-                                               inline=inline)
-                                    result = peps(data,
-                                                  from_side=side,
-                                                  inline=inline)
-                                    
-                                    assert result.shape == (100,)
-                                    assert len(peps.edges) == 0
-                                    assert len(peps.leaf_nodes) == 3*4
-                                    assert len(peps.data_nodes) == 3*4
-                                    if automemory:
-                                        if boundary_0 == 'obc':
-                                            if boundary_1 == 'obc':
-                                                assert len(peps.virtual_nodes) == 8
-                                            else:
-                                                assert len(peps.virtual_nodes) == 6
+                peps = tk.PEPS(n_rows=3,
+                               n_cols=4,
+                               d_phys=5,
+                               d_bond=[2, 3],
+                               boundary=[boundary_0, boundary_1],)
+
+                for automemory in [True, False]:
+                    for unbind_mode in [True, False]:
+                        for side in ['up', 'down', 'left', 'right']:
+                            for inline in [True, False]:
+                                peps.automemory = automemory
+                                peps.unbind_mode = unbind_mode
+
+                                peps.trace(example,
+                                           from_side=side,
+                                           inline=inline)
+                                result = peps(data,
+                                              from_side=side,
+                                              inline=inline)
+
+                                assert result.shape == (100,)
+                                assert len(peps.edges) == 0
+                                assert len(peps.leaf_nodes) == 3*4
+                                assert len(peps.data_nodes) == 3*4
+                                if automemory:
+                                    if boundary_0 == 'obc':
+                                        if boundary_1 == 'obc':
+                                            assert len(peps.virtual_nodes) == 8
                                         else:
-                                            if boundary_1 == 'obc':
-                                                assert len(peps.virtual_nodes) == 6
-                                            else:
-                                                assert len(peps.virtual_nodes) == 4
+                                            assert len(peps.virtual_nodes) == 6
                                     else:
-                                        assert len(peps.virtual_nodes) == 3
+                                        if boundary_1 == 'obc':
+                                            assert len(peps.virtual_nodes) == 6
+                                        else:
+                                            assert len(peps.virtual_nodes) == 4
+                                else:
+                                    assert len(peps.virtual_nodes) == 3
 
     def test_extreme_case_2_rows_2_cols(self):
         n_rows = 2
         n_cols = 2
         boundary = ['obc', 'obc']
-        
+
         peps = tk.PEPS(n_rows=n_rows,
                        n_cols=n_cols,
                        d_phys=5,
                        d_bond=[2, 3],
-                       boundary=boundary,
-                       param_bond=True)
+                       boundary=boundary)
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
-    
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -83,34 +78,33 @@ class TestPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100,)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
                         assert len(peps.virtual_nodes) == 3
-                        
+
     def test_extreme_case_1_row_3_cols(self):
         n_rows = 1
         n_cols = 3
         boundary = ['pbc', 'obc']
-        
+
         peps = tk.PEPS(n_rows=n_rows,
                        n_cols=n_cols,
                        d_phys=5,
                        d_bond=[2, 3],
-                       boundary=boundary,
-                       param_bond=True)
+                       boundary=boundary)
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
-    
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -118,14 +112,14 @@ class TestPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100,)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
@@ -134,21 +128,20 @@ class TestPEPS:
                             assert len(peps.virtual_nodes) == 6
                         else:
                             assert len(peps.virtual_nodes) == 3
-                        
+
     def test_extreme_case_1_row_2_cols(self):
         n_rows = 1
         n_cols = 2
         boundary = ['pbc', 'obc']
-        
+
         peps = tk.PEPS(n_rows=n_rows,
                        n_cols=n_cols,
                        d_phys=5,
                        d_bond=[2, 3],
-                       boundary=boundary,
-                       param_bond=True)
+                       boundary=boundary)
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
-    
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -156,14 +149,14 @@ class TestPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100,)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
@@ -172,21 +165,20 @@ class TestPEPS:
                             assert len(peps.virtual_nodes) == 5
                         else:
                             assert len(peps.virtual_nodes) == 3
-                            
+
     def test_extreme_case_3_rows_1_col(self):
         n_rows = 3
         n_cols = 1
         boundary = ['obc', 'pbc']
-        
+
         peps = tk.PEPS(n_rows=n_rows,
                        n_cols=n_cols,
                        d_phys=5,
                        d_bond=[2, 3],
-                       boundary=boundary,
-                       param_bond=True)
+                       boundary=boundary)
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
-    
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -194,14 +186,14 @@ class TestPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100,)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
@@ -210,21 +202,20 @@ class TestPEPS:
                             assert len(peps.virtual_nodes) == 6
                         else:
                             assert len(peps.virtual_nodes) == 3
-                            
+
     def test_extreme_case_2_rows_1_col(self):
         n_rows = 2
         n_cols = 1
         boundary = ['obc', 'pbc']
-        
+
         peps = tk.PEPS(n_rows=n_rows,
                        n_cols=n_cols,
                        d_phys=5,
                        d_bond=[2, 3],
-                       boundary=boundary,
-                       param_bond=True)
+                       boundary=boundary)
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
-    
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -232,14 +223,14 @@ class TestPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100,)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
@@ -248,21 +239,20 @@ class TestPEPS:
                             assert len(peps.virtual_nodes) == 5
                         else:
                             assert len(peps.virtual_nodes) == 3
-                    
+
     def test_extreme_case_1_row_1_col(self):
         n_rows = 1
         n_cols = 1
         boundary = ['pbc', 'pbc']
-        
+
         peps = tk.PEPS(n_rows=n_rows,
                        n_cols=n_cols,
                        d_phys=5,
                        d_bond=[2, 3],
-                       boundary=boundary,
-                       param_bond=True)
+                       boundary=boundary)
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
-    
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -270,14 +260,14 @@ class TestPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100,)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
@@ -286,53 +276,50 @@ class TestPEPS:
                             assert len(peps.virtual_nodes) == 4
                         else:
                             assert len(peps.virtual_nodes) == 3
-                            
+
 
 class TestUPEPS:
-    
+
     def test_all_algorithms(self):
         example = torch.randn(3*4, 1, 5)
         data = torch.randn(3*4, 100, 5)
-        
-        for param_bond in [True, False]:
-            peps = tk.UPEPS(n_rows=3,
-                            n_cols=4,
-                            d_phys=5,
-                            d_bond=[2, 3],
-                            param_bond=param_bond)
-        
-            for automemory in [True, False]:
-                for unbind_mode in [True, False]:
-                    for side in ['up', 'down', 'left', 'right']:
-                        for inline in [True, False]:
-                            peps.automemory = automemory
-                            peps.unbind_mode = unbind_mode
-                            
-                            peps.trace(example,
-                                       from_side=side,
-                                       inline=inline)
-                            result = peps(data,
-                                          from_side=side,
-                                          inline=inline)
-                            
-                            assert result.shape == (100,)
-                            assert len(peps.edges) == 0
-                            assert len(peps.leaf_nodes) == 3*4
-                            assert len(peps.data_nodes) == 3*4
-                            assert len(peps.virtual_nodes) == 4
+
+        peps = tk.UPEPS(n_rows=3,
+                        n_cols=4,
+                        d_phys=5,
+                        d_bond=[2, 3])
+
+        for automemory in [True, False]:
+            for unbind_mode in [True, False]:
+                for side in ['up', 'down', 'left', 'right']:
+                    for inline in [True, False]:
+                        peps.automemory = automemory
+                        peps.unbind_mode = unbind_mode
+
+                        peps.trace(example,
+                                   from_side=side,
+                                   inline=inline)
+                        result = peps(data,
+                                      from_side=side,
+                                      inline=inline)
+
+                        assert result.shape == (100,)
+                        assert len(peps.edges) == 0
+                        assert len(peps.leaf_nodes) == 3*4
+                        assert len(peps.data_nodes) == 3*4
+                        assert len(peps.virtual_nodes) == 4
 
     def test_extreme_case_2_rows_2_cols(self):
         n_rows = 2
         n_cols = 2
-        
+
         peps = tk.UPEPS(n_rows=n_rows,
                         n_cols=n_cols,
                         d_phys=5,
-                        d_bond=[2, 3],
-                        param_bond=True)
+                        d_bond=[2, 3])
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
-    
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -340,32 +327,31 @@ class TestUPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100,)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
                         assert len(peps.virtual_nodes) == 4
-                        
+
     def test_extreme_case_1_row_2_cols(self):
         n_rows = 1
         n_cols = 2
-        
+
         peps = tk.UPEPS(n_rows=n_rows,
                         n_cols=n_cols,
                         d_phys=5,
-                        d_bond=[2, 3],
-                        param_bond=True)
+                        d_bond=[2, 3])
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
-    
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -373,32 +359,31 @@ class TestUPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100,)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
                         assert len(peps.virtual_nodes) == 4
-                            
+
     def test_extreme_case_2_rows_1_col(self):
         n_rows = 2
         n_cols = 1
-        
+
         peps = tk.UPEPS(n_rows=n_rows,
                         n_cols=n_cols,
                         d_phys=5,
-                        d_bond=[2, 3],
-                        param_bond=True)
+                        d_bond=[2, 3])
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
-    
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -406,32 +391,31 @@ class TestUPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100,)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
                         assert len(peps.virtual_nodes) == 4
-                    
+
     def test_extreme_case_1_row_1_col(self):
         n_rows = 1
         n_cols = 1
-        
+
         peps = tk.UPEPS(n_rows=n_rows,
                         n_cols=n_cols,
                         d_phys=5,
-                        d_bond=[2, 3],
-                        param_bond=True)
+                        d_bond=[2, 3])
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
-    
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -439,14 +423,14 @@ class TestUPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100,)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
@@ -455,77 +439,72 @@ class TestUPEPS:
 
 
 class TestConvPEPS:
-    
+
     def test_all_algorithms(self):
         def embedding(data: torch.Tensor) -> torch.Tensor:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
-            
+
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
-        
+
         for boundary_0 in ['obc', 'pbc']:
             for boundary_1 in ['obc', 'pbc']:
-                for param_bond in [True, False]:
-                    peps = tk.ConvPEPS(in_channels=2,
-                                       d_bond=[2, 3],
-                                       kernel_size=3,
-                                       boundary=[boundary_0, boundary_1],
-                                       param_bond=param_bond)
-                
-                    for automemory in [True, False]:
-                        for unbind_mode in [True, False]:
-                            for side in ['up', 'down', 'left', 'right']:
-                                for inline in [True, False]:
-                                    print(boundary_0, boundary_1, param_bond,
-                                          automemory, unbind_mode, side, inline)
-                                    peps.automemory = automemory
-                                    peps.unbind_mode = unbind_mode
-                                    
-                                    peps.trace(example,
-                                               from_side=side,
-                                               inline=inline,
-                                               max_bond=8)
-                                    result = peps(data,
-                                                  from_side=side,
-                                                  inline=inline,
-                                                  max_bond=8)
-                                    
-                                    assert result.shape == (100, 3, 3)
-                                    assert len(peps.edges) == 0
-                                    assert len(peps.leaf_nodes) == 3*3
-                                    assert len(peps.data_nodes) == 3*3
-                                    if automemory:
-                                        if boundary_0 == 'obc':
-                                            if boundary_1 == 'obc':
-                                                assert len(peps.virtual_nodes) == 8
-                                            else:
-                                                assert len(peps.virtual_nodes) == 6
+                peps = tk.ConvPEPS(in_channels=2,
+                                   d_bond=[2, 3],
+                                   kernel_size=3,
+                                   boundary=[boundary_0, boundary_1])
+
+                for automemory in [True, False]:
+                    for unbind_mode in [True, False]:
+                        for side in ['up', 'down', 'left', 'right']:
+                            for inline in [True, False]:
+                                peps.automemory = automemory
+                                peps.unbind_mode = unbind_mode
+
+                                peps.trace(example,
+                                           from_side=side,
+                                           inline=inline,
+                                           max_bond=8)
+                                result = peps(data,
+                                              from_side=side,
+                                              inline=inline,
+                                              max_bond=8)
+
+                                assert result.shape == (100, 3, 3)
+                                assert len(peps.edges) == 0
+                                assert len(peps.leaf_nodes) == 3*3
+                                assert len(peps.data_nodes) == 3*3
+                                if automemory:
+                                    if boundary_0 == 'obc':
+                                        if boundary_1 == 'obc':
+                                            assert len(peps.virtual_nodes) == 8
                                         else:
-                                            if boundary_1 == 'obc':
-                                                assert len(peps.virtual_nodes) == 6
-                                            else:
-                                                assert len(peps.virtual_nodes) == 4
+                                            assert len(peps.virtual_nodes) == 6
                                     else:
-                                        assert len(peps.virtual_nodes) == 3
+                                        if boundary_1 == 'obc':
+                                            assert len(peps.virtual_nodes) == 6
+                                        else:
+                                            assert len(peps.virtual_nodes) == 4
+                                else:
+                                    assert len(peps.virtual_nodes) == 3
 
     def test_extreme_case_2_rows_2_cols(self):
         n_rows = 2
         n_cols = 2
-        
+
         def embedding(data: torch.Tensor) -> torch.Tensor:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
-            
+
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
-        
+
         peps = tk.ConvPEPS(in_channels=2,
                            d_bond=[2, 3],
                            kernel_size=(n_rows, n_cols),
-                           boundary=['obc', 'obc'],
-                           param_bond=True)
-    
+                           boundary=['obc', 'obc'])
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -533,37 +512,36 @@ class TestConvPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100, 4, 4)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
                         assert len(peps.virtual_nodes) == 3
-                        
+
     def test_extreme_case_1_row_3_cols(self):
         n_rows = 1
         n_cols = 3
-        
+
         def embedding(data: torch.Tensor) -> torch.Tensor:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
-            
+
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
-        
+
         peps = tk.ConvPEPS(in_channels=2,
                            d_bond=[2, 3],
                            kernel_size=(n_rows, n_cols),
-                           boundary=['pbc', 'obc'],
-                           param_bond=True)
-    
+                           boundary=['pbc', 'obc'])
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -571,14 +549,14 @@ class TestConvPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100, 5, 3)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
@@ -587,24 +565,23 @@ class TestConvPEPS:
                             assert len(peps.virtual_nodes) == 6
                         else:
                             assert len(peps.virtual_nodes) == 3
-                        
+
     def test_extreme_case_1_row_2_cols(self):
         n_rows = 1
         n_cols = 2
-        
+
         def embedding(data: torch.Tensor) -> torch.Tensor:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
-            
+
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
-        
+
         peps = tk.ConvPEPS(in_channels=2,
                            d_bond=[2, 3],
                            kernel_size=(n_rows, n_cols),
-                           boundary=['pbc', 'obc'],
-                           param_bond=True)
-    
+                           boundary=['pbc', 'obc'])
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -612,14 +589,14 @@ class TestConvPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100, 5, 4)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
@@ -628,24 +605,23 @@ class TestConvPEPS:
                             assert len(peps.virtual_nodes) == 5
                         else:
                             assert len(peps.virtual_nodes) == 3
-                            
+
     def test_extreme_case_3_rows_1_col(self):
         n_rows = 3
         n_cols = 1
-        
+
         def embedding(data: torch.Tensor) -> torch.Tensor:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
-            
+
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
-        
+
         peps = tk.ConvPEPS(in_channels=2,
                            d_bond=[2, 3],
                            kernel_size=(n_rows, n_cols),
-                           boundary=['obc', 'pbc'],
-                           param_bond=True)
-    
+                           boundary=['obc', 'pbc'])
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -653,14 +629,14 @@ class TestConvPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100, 3, 5)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
@@ -669,24 +645,23 @@ class TestConvPEPS:
                             assert len(peps.virtual_nodes) == 6
                         else:
                             assert len(peps.virtual_nodes) == 3
-                            
+
     def test_extreme_case_2_rows_1_col(self):
         n_rows = 2
         n_cols = 1
-        
+
         def embedding(data: torch.Tensor) -> torch.Tensor:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
-            
+
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
-        
+
         peps = tk.ConvPEPS(in_channels=2,
                            d_bond=[2, 3],
                            kernel_size=(n_rows, n_cols),
-                           boundary=['obc', 'pbc'],
-                           param_bond=True)
-    
+                           boundary=['obc', 'pbc'])
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -694,14 +669,14 @@ class TestConvPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100, 4, 5)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
@@ -710,24 +685,23 @@ class TestConvPEPS:
                             assert len(peps.virtual_nodes) == 5
                         else:
                             assert len(peps.virtual_nodes) == 3
-                    
+
     def test_extreme_case_1_row_1_col(self):
         n_rows = 1
         n_cols = 1
-        
+
         def embedding(data: torch.Tensor) -> torch.Tensor:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
-            
+
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
-        
+
         peps = tk.ConvPEPS(in_channels=2,
                            d_bond=[2, 3],
                            kernel_size=(n_rows, n_cols),
-                           boundary=['pbc', 'pbc'],
-                           param_bond=True)
-    
+                           boundary=['pbc', 'pbc'])
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -735,14 +709,14 @@ class TestConvPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100, 5, 5)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
@@ -754,59 +728,56 @@ class TestConvPEPS:
 
 
 class TestConvUPEPS:
-    
+
     def test_all_algorithms(self):
         def embedding(data: torch.Tensor) -> torch.Tensor:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
-            
+
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
-        
-        for param_bond in [True, False]:
-            peps = tk.ConvUPEPS(in_channels=2,
-                                d_bond=[2, 3],
-                                kernel_size=3,
-                                param_bond=param_bond)
-        
-            for automemory in [True, False]:
-                for unbind_mode in [True, False]:
-                    for side in ['up', 'down', 'left', 'right']:
-                        for inline in [True, False]:
-                            peps.automemory = automemory
-                            peps.unbind_mode = unbind_mode
-                            
-                            peps.trace(example,
-                                        from_side=side,
-                                        inline=inline,
-                                        max_bond=8)
-                            result = peps(data,
-                                            from_side=side,
-                                            inline=inline,
-                                            max_bond=8)
-                            
-                            assert result.shape == (100, 3, 3)
-                            assert len(peps.edges) == 0
-                            assert len(peps.leaf_nodes) == 3*3
-                            assert len(peps.data_nodes) == 3*3
-                            assert len(peps.virtual_nodes) == 4
+
+        peps = tk.ConvUPEPS(in_channels=2,
+                            d_bond=[2, 3],
+                            kernel_size=3)
+
+        for automemory in [True, False]:
+            for unbind_mode in [True, False]:
+                for side in ['up', 'down', 'left', 'right']:
+                    for inline in [True, False]:
+                        peps.automemory = automemory
+                        peps.unbind_mode = unbind_mode
+
+                        peps.trace(example,
+                                   from_side=side,
+                                   inline=inline,
+                                   max_bond=8)
+                        result = peps(data,
+                                      from_side=side,
+                                      inline=inline,
+                                      max_bond=8)
+
+                        assert result.shape == (100, 3, 3)
+                        assert len(peps.edges) == 0
+                        assert len(peps.leaf_nodes) == 3*3
+                        assert len(peps.data_nodes) == 3*3
+                        assert len(peps.virtual_nodes) == 4
 
     def test_extreme_case_2_rows_2_cols(self):
         n_rows = 2
         n_cols = 2
-        
+
         def embedding(data: torch.Tensor) -> torch.Tensor:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
-            
+
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
-        
+
         peps = tk.ConvUPEPS(in_channels=2,
                             d_bond=[2, 3],
-                            kernel_size=(n_rows, n_cols),
-                            param_bond=True)
-    
+                            kernel_size=(n_rows, n_cols))
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -814,36 +785,35 @@ class TestConvUPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100, 4, 4)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
                         assert len(peps.virtual_nodes) == 4
-                        
+
     def test_extreme_case_1_row_2_cols(self):
         n_rows = 1
         n_cols = 2
-        
+
         def embedding(data: torch.Tensor) -> torch.Tensor:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
-            
+
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
-        
+
         peps = tk.ConvUPEPS(in_channels=2,
                             d_bond=[2, 3],
-                            kernel_size=(n_rows, n_cols),
-                            param_bond=True)
-    
+                            kernel_size=(n_rows, n_cols))
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -851,36 +821,35 @@ class TestConvUPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100, 5, 4)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
                         assert len(peps.virtual_nodes) == 4
-                            
+
     def test_extreme_case_2_rows_1_col(self):
         n_rows = 2
         n_cols = 1
-        
+
         def embedding(data: torch.Tensor) -> torch.Tensor:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
-            
+
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
-        
+
         peps = tk.ConvUPEPS(in_channels=2,
                             d_bond=[2, 3],
-                            kernel_size=(n_rows, n_cols),
-                            param_bond=True)
-    
+                            kernel_size=(n_rows, n_cols))
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -888,36 +857,35 @@ class TestConvUPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100, 4, 5)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
                         assert len(peps.virtual_nodes) == 4
-                    
+
     def test_extreme_case_1_row_1_col(self):
         n_rows = 1
         n_cols = 1
-        
+
         def embedding(data: torch.Tensor) -> torch.Tensor:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
-            
+
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
-        
+
         peps = tk.ConvUPEPS(in_channels=2,
                             d_bond=[2, 3],
-                            kernel_size=(n_rows, n_cols),
-                            param_bond=True)
-    
+                            kernel_size=(n_rows, n_cols))
+
         for automemory in [True, False]:
             for unbind_mode in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
@@ -925,14 +893,14 @@ class TestConvUPEPS:
                         print(automemory, unbind_mode, side, inline)
                         peps.automemory = automemory
                         peps.unbind_mode = unbind_mode
-                        
+
                         peps.trace(example,
                                    from_side=side,
                                    inline=inline)
                         result = peps(data,
                                       from_side=side,
                                       inline=inline)
-                        
+
                         assert result.shape == (100, 5, 5)
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols

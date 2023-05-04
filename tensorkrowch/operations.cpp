@@ -3,6 +3,7 @@
 #include <array>
 #include <vector>
 
+
 at::Tensor contract(
     torch::Tensor& tensor1,
     torch::Tensor& tensor2,
@@ -23,6 +24,7 @@ at::Tensor contract(
     torch::Tensor aux1;
     torch::Tensor aux2;
 
+    /* Permute if needed */
     if (std::get<0>(permutation_dims).size() > 0)
     {
         aux1 = tensor1.permute(std::get<0>(permutation_dims));
@@ -35,36 +37,31 @@ at::Tensor contract(
         permute2 = &aux2;
     }
 
+    /* Compute sizes for reshapes */
     int64_t* aux_shape1 = new int64_t[size];
     int64_t* aux_shape2 = new int64_t[size];
     int64_t* new_shape = new int64_t[new_size];
 
     // batch edges
     int64_t aux_size;
-    int64_t cum_prod = 1;
     int j = 0;
     for (size_t i = 0; i < batch; i++)
     {
         aux_size = permute1->size(i);
-        //cum_prod *= aux_size;
         aux_shape1[i] = aux_size;
         aux_shape2[i] = aux_size;
         new_shape[j] = aux_size;
         j++;
-        //new_shape.push_back(aux_size);
     }
-    //aux_shape1[0] = cum_prod;
-    //aux_shape2[0] = cum_prod;
 
     // non contracted edges node1
-    cum_prod = 1;
+    int64_t cum_prod = 1;
     for (size_t i = batch; i < batch + non_contract_0; i++)
     {
         aux_size = permute1->size(i);
         cum_prod *= aux_size;
         new_shape[j] = aux_size;
         j++;
-        //new_shape.push_back(aux_size);
     }
     aux_shape1[size - 2] = cum_prod;
 
@@ -86,21 +83,18 @@ at::Tensor contract(
         cum_prod *= aux_size;
         new_shape[j] = aux_size;
         j++;
-        //new_shape.push_back(aux_size);
     }
     aux_shape2[size - 1] = cum_prod;
 
-    at::IntArrayRef aux_shape1_(aux_shape1, size);
-    at::IntArrayRef aux_shape2_(aux_shape2, size);
-    at::IntArrayRef new_shape_(new_shape, new_size);
+    /* Reshape and contract */
+    at::IntArrayRef aux_shape1_ref(aux_shape1, size);
+    at::IntArrayRef aux_shape2_ref(aux_shape2, size);
+    at::IntArrayRef new_shape_ref(new_shape, new_size);
 
-    //const std::vector<int> vec = {1, 2, 3};
-    //at::IntArrayRef arr(vec);
+    auto reshape1 = permute1.reshape(aux_shape1_ref);
+    auto reshape2 = permute2.reshape(aux_shape2_ref);
 
-    auto reshape1 = tensor1.reshape(aux_shape1_);
-    auto reshape2 = tensor2.reshape(aux_shape2_);
-
-    auto result = reshape1.matmul(reshape2).view(new_shape_);
+    auto result = reshape1.matmul(reshape2).view(new_shape_ref);
 
     delete[] aux_shape1;
     delete[] aux_shape2;

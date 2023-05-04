@@ -3315,11 +3315,10 @@ class TestContractEdge:
         assert node1.successors == dict()
         assert node2.successors == dict()
         
-        # TODO: change contract_between by tk.contract_edges()
         # Contract edge
         # To contract only one edge we have to call contract_between
         # with the particular list of shared edges we want to contract
-        node3 = node1.contract_between(node2, ['right'])  # We could use 2 or 'right'
+        node3 = tk.contract_edges([node1['right']], node1, node2)
         assert node3['left'] == node1['left']
         assert node3['input_0'] == node1['input']
         assert node3['right'] == node2['right']
@@ -3361,7 +3360,7 @@ class TestContractEdge:
         assert node2.successors == dict()
         
         # Contract edge
-        node3 = node1.contract_between(node2, [2])
+        node3 = tk.contract_edges([node1[2]], node1, node2)
         assert node3['left'] == node1['left']
         assert node3['input_0'] == node1['input']
         assert node3['right'] == node2['right']
@@ -3404,7 +3403,7 @@ class TestContractEdge:
         assert node1.successors == dict()
         
         # Contract edge
-        node2 = node1.contract_between(node1, [2])
+        node2 = tk.contract_edges([node1[2]], node1, node1)
         assert len(node2.edges) == 1
         assert node2[0].axis1.name == 'input'
         
@@ -3430,7 +3429,7 @@ class TestContractEdge:
         assert node1.successors == dict()
         
         # Contract edge
-        node2 = node1.contract_between(node1, [2])
+        node2 = tk.contract_edges([node1[2]], node1, node1)
         assert len(node2.edges) == 1
         assert node2[0].axis1.name == 'input'
         

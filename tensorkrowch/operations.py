@@ -91,6 +91,7 @@ class Operation:
         self.func2 = func2
         self.check_first = check_first
         
+        # Operations could be overriden
         TensorNetwork.operations[name] = self
 
     def __call__(self, *args, **kwargs):
@@ -2679,7 +2680,6 @@ def _unbind_next(successor: Successor, node: AbstractStackNode) -> List[Node]:
         children = successor.child
         for tensor, child in zip(tensors, children):
             child._unrestricted_set_tensor_ops(tensor, True)
-            # child._save_in_network(tensor)  # NOTE: no se puede cambiar, aquí hay que recortar los tensores al usar unbind
             
         # Record in inverse_memory while contracting
         # (to delete memory if possible)

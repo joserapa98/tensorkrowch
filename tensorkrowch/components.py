@@ -276,36 +276,56 @@ class AbstractNode(ABC):
     """
 
     def __init__(self,
-                 shape: Shape,
+                 shape: Optional[Shape] = None,
                  axes_names: Optional[Sequence[Text]] = None,
                  name: Optional[Text] = None,
                  network: Optional['TensorNetwork'] = None,
                  leaf: bool = True,
                  data: bool = False,
-                 virtual: bool = False) -> None:
+                 virtual: bool = False,
+                 override_node: bool = False,
+                 tensor: Optional[Tensor] = None,
+                 edges: Optional[List['Edge']] = None,
+                 override_edges: bool = False,
+                 node1_list: Optional[List[bool]] = None,
+                 init_method: Optional[Text] = None,
+                 device: Optional[torch.device] = None,
+                 **kwargs: float) -> None:
 
         super().__init__()
+        
+        # Check shape and tensor
+        if (shape is None) == (tensor is None):
+            if shape is None:
+                raise ValueError('One of `shape` or `tensor` must be provided')
+            elif tensor.shape == shape:
+                shape = None
+            else:
+                raise ValueError('If both `shape` or `tensor` are given, '
+                                 '`tensor`\'s shape should be equal to `shape`')
 
-        # check shape
+        # Check shape type
         if shape is not None:
             if not isinstance(shape, (tuple, list, Size)):
                 raise TypeError(
-                    '`shape` should be tuple[int, ...], list[int, ...] or '
-                    'torch.Size type')
+                    '`shape` should be tuple[int], list[int] or torch.Size type')
             if isinstance(shape, (tuple, list)):
                 for i in shape:
                     if not isinstance(i, int):
-                        raise TypeError('`shape` elements should be int type')
+                        raise TypeError('`shape` elements should be int type')     
+            aux_shape = shape
+        else:
+            aux_shape = tensor.shape
 
-        # check axes_names
+        # Check axes_names
         if axes_names is None:
             axes = [Axis(num=i, name=f'axis_{i}', node=self)
-                    for i, _ in enumerate(shape)]
+                    for i, _ in enumerate(aux_shape)]
         else:
             if not isinstance(axes_names, (tuple, list)):
                 raise TypeError(
                     '`axes_names` should be tuple[str, ...] or list[str, ...] type')
-            if len(axes_names) != len(shape):
+            if len(axes_names) != len(aux_shape):
                 raise ValueError(
                     '`axes_names` length should match `shape` length')
             else:
@@ -313,7 +333,7 @@ class AbstractNode(ABC):
                 axes = [Axis(num=i, name=name, node=self)
                         for i, name in enumerate(axes_names)]
 
-        # check name
+        # Check name
         if name is None:
             name = self.__class__.__name__.lower()
         elif not isinstance(name, str):
@@ -321,14 +341,14 @@ class AbstractNode(ABC):
         elif not check_name_style(name, 'node'):
             raise ValueError('Names cannot contain blank spaces')
 
-        # check network
+        # Check network
         if network is not None:
             if not isinstance(network, TensorNetwork):
                 raise TypeError('`network` should be TensorNetwork type')
         else:
             network = TensorNetwork()
 
-        # check leaf, data and virtual
+        # Check leaf, data and virtual
         if data and virtual:
             raise ValueError(
                 '`data` and `virtual` arguments cannot be both True')
@@ -338,7 +358,7 @@ class AbstractNode(ABC):
         # Set attributes
         self._tensor_info = None
         self._temp_tensor = None
-        self._shape = shape
+        self._shape = aux_shape
         self._axes = axes
         self._edges = []
         self._name = name
@@ -347,6 +367,32 @@ class AbstractNode(ABC):
         self._data = data
         self._virtual = virtual
         self._successors = dict()
+        
+        # Add edges
+        if edges is None:
+            self._edges = [self._make_edge(ax) for ax in self._axes]
+        else:
+            if node1_list is None:
+                raise ValueError(
+                    'If `edges` are provided, `node1_list` should also be provided')
+            for i, axis in enumerate(self._axes):
+                if not isinstance(node1_list[i], bool):
+                    raise TypeError('`node1_list` should be list[bool] type')
+                axis._node1 = node1_list[i]
+            self._edges = edges[:]
+            if self._leaf and not self._network._automemory:
+                self.reattach_edges(override=override_edges)
+
+        # Add to network
+        self._network._add_node(self, override=override_node)
+
+        # Set tensor
+        if shape is not None:
+            if init_method is not None:
+                self._unrestricted_set_tensor(
+                    init_method=init_method, device=device, **kwargs)
+        else:
+            self._unrestricted_set_tensor(tensor=tensor)
 
     # ----------
     # Properties
@@ -458,6 +504,10 @@ class AbstractNode(ABC):
     # ----------------
     # Abstract methods
     # ----------------
+    @abstractmethod
+    def _make_edge(self, axis: Axis) -> 'Edge':
+        pass
+    
     @staticmethod
     @abstractmethod
     def _set_tensor_format(tensor: Tensor) -> Union[Tensor, Parameter]:
@@ -1343,88 +1393,20 @@ class Node(AbstractNode):
         Keyword arguments for the different initialization methods. See
         :meth:`AbstractNode.make_tensor`.
     """
-
-    def __init__(self,
-                 shape: Optional[Shape] = None,
-                 axes_names: Optional[Sequence[Text]] = None,
-                 name: Optional[Text] = None,
-                 network: Optional['TensorNetwork'] = None,
-                 leaf: bool = True,
-                 data: bool = False,
-                 virtual: bool = False,
-                 override_node: bool = False,
-                 tensor: Optional[Tensor] = None,
-                 edges: Optional[List['Edge']] = None,
-                 override_edges: bool = False,
-                 node1_list: Optional[List[bool]] = None,
-                 init_method: Optional[Text] = None,
-                 device: Optional[torch.device] = None,
-                 **kwargs: float) -> None:
-
-        # shape and tensor
-        if (shape is None) == (tensor is None):
-            if shape is None:
-                raise ValueError('One of `shape` or `tensor` must be provided')
-            elif tensor.shape == shape:
-                shape = None
-            else:
-                raise ValueError('If both `shape` or `tensor` are given, '
-                                 '`tensor`\'s shape should be equal to `shape`')
-        if shape is not None:
-            super().__init__(shape=shape,
-                             axes_names=axes_names,
-                             name=name,
-                             network=network,
-                             leaf=leaf,
-                             data=data,
-                             virtual=virtual)
-        else:
-            super().__init__(shape=tensor.shape,
-                             axes_names=axes_names,
-                             name=name,
-                             network=network,
-                             leaf=leaf,
-                             data=data,
-                             virtual=virtual)
-
-        # edges
-        if edges is None:
-            self._edges = [self._make_edge(ax) for ax in self._axes]
-        else:
-            if node1_list is None:
-                raise ValueError(
-                    'If `edges` are provided, `node1_list` should also be provided')
-            for i, axis in enumerate(self._axes):
-                if not isinstance(node1_list[i], bool):
-                    raise TypeError('`node1_list` should be list[bool] type')
-                axis._node1 = node1_list[i]
-            self._edges = edges[:]
-            if self._leaf and not self._network._automemory:
-                self.reattach_edges(override=override_edges)
-
-        # network
-        self._network._add_node(self, override=override_node)
-
-        if shape is not None:
-            if init_method is not None:
-                self._unrestricted_set_tensor(
-                    init_method=init_method, device=device, **kwargs)
-        else:
-            self._unrestricted_set_tensor(tensor=tensor)
-
+    
     # -------
     # Methods
     # -------
+    def _make_edge(self, axis: Axis) -> 'Edge':
+        """Makes ``Edges`` that will be attached to each axis."""
+        return Edge(node1=self, axis1=axis)
+    
     @staticmethod
     def _set_tensor_format(tensor: Tensor) -> Tensor:
         """Returns a torch.Tensor if input tensor is given as nn.Parameter."""
         if isinstance(tensor, Parameter):
             return tensor.detach()
         return tensor
-    
-    def _make_edge(self, axis: Axis) -> 'Edge':
-        """Makes ``Edges`` that will be attached to each axis."""
-        return Edge(node1=self, axis1=axis)
 
     def parameterize(self, set_param: bool = True) -> Union['Node', 'ParamNode']:
         """
@@ -1481,7 +1463,7 @@ class Node(AbstractNode):
         return new_node
 
 
-class ParamNode(Node):
+class ParamNode(AbstractNode):
     """
     Class for trainable nodes. Should be subclassed by any class of nodes that
     are intended to be trained (e.g. :class:`ParamStackNode`).
@@ -1518,11 +1500,11 @@ class ParamNode(Node):
                  device: Optional[torch.device] = None,
                  **kwargs: float) -> None:
 
-        # data
+        # Check data
         if data:
             raise ValueError('ParamNode cannot be a data node')
 
-        # leaf
+        # Check leaf
         if not leaf:
             raise ValueError(
                 'ParamNode is always a leaf node. Cannot set leaf to False')
@@ -1578,6 +1560,10 @@ class ParamNode(Node):
     # -------
     # Methods
     # -------
+    def _make_edge(self, axis: Axis) -> 'Edge':
+        """Makes ``Edges`` that will be attached to each axis."""
+        return Edge(node1=self, axis1=axis)
+    
     @staticmethod
     def _set_tensor_format(tensor: Tensor) -> Parameter:
         """Returns a nn.Parameter if input tensor is just torch.Tensor."""
@@ -1744,11 +1730,12 @@ class StackNode(Node):
         if nodes is not None:
             if not isinstance(nodes, (list, tuple)):
                 raise TypeError('`nodes` should be a list or tuple of nodes')
-
             for node in nodes:
                 if isinstance(node, (StackNode, ParamStackNode)):
                     raise TypeError(
                         'Cannot create a stack using (Param)StackNode\'s')
+            if tensor is not None:
+                raise ValueError('If `nodes` are provided, `tensor` must not be given')
 
             # Check all nodes share properties
             for i in range(len(nodes[:-1])):
@@ -1780,8 +1767,7 @@ class StackNode(Node):
             self._edges_dict = edges_dict
             self._node1_lists_dict = node1_lists_dict
 
-            if tensor is None:
-                tensor = stack_unequal_tensors([node.tensor for node in nodes])
+            tensor = stack_unequal_tensors([node.tensor for node in nodes])
             super().__init__(axes_names=['stack'] + nodes[0].axes_names,
                              name=name,
                              network=nodes[0]._network,
@@ -1826,6 +1812,9 @@ class StackNode(Node):
                              edges=edges,
                              node1_list=node1_list)
 
+    # ----------
+    # Properties
+    # ----------
     @property
     def edges_dict(self) -> Dict[Text, List['Edge']]:
         """Returns dictionary with list of edges of each axis."""
@@ -1836,6 +1825,9 @@ class StackNode(Node):
         """Returns a dictionary with list of ``node1_list`` attribute of each axis."""
         return self._node1_lists_dict
 
+    # -------
+    # Methods
+    # -------
     def _make_edge(self, axis: Axis) -> 'Edge':
         """
         Makes ``StackEdges``that will be attached to each axis. Also makes an
@@ -1866,7 +1858,7 @@ class ParamStackNode(ParamNode):
     
     Parameters
     ----------
-    nodes : list[AbstractNode] or tuple[AbstractNode], optional
+    nodes : list[AbstractNode] or tuple[AbstractNode]
         Sequence of nodes that are to be stacked.
     name : str, optional
         Node's name, used to access the node from de :class:`TensorNetwork` where
@@ -1972,6 +1964,9 @@ class ParamStackNode(ParamNode):
                          override_node=override_node,
                          tensor=tensor)
 
+    # ----------
+    # Properties
+    # ----------
     @property
     def edges_dict(self) -> Dict[Text, List['Edge']]:
         """Returns dictionary with list of edges of each axis."""
@@ -1982,6 +1977,9 @@ class ParamStackNode(ParamNode):
         """Returns a dictionary with list of ``node1_list`` attribute of each axis."""
         return self._node1_lists_dict
 
+    # -------
+    # Methods
+    # -------
     def _make_edge(self, axis: Axis) -> 'Edge':
         """
         Makes ``StackEdges``that will be attached to each axis. Also makes an

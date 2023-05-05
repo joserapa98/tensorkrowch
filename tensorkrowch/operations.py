@@ -2520,7 +2520,6 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
                 del new_node._network._memory_nodes[
                     new_node._tensor_info['address']]
             new_node._tensor_info['address'] = None
-            
             new_node._tensor_info['node_ref'] = node_ref
             new_node._tensor_info['full'] = False
             

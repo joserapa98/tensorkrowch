@@ -1338,6 +1338,22 @@ class TestCopy:
                 edge._nodes[copy.is_node1(i)]
 
         assert node2['left'].node1 == node1
+        
+    def test_copy_node_preserve_name(self):
+        node1 = tk.Node(axes_names=('left', 'input', 'right'),
+                        name='node',
+                        tensor=torch.randn(2, 5, 2))
+        node2 = tk.Node(axes_names=('left', 'input', 'right'),
+                        name='node',
+                        tensor=torch.randn(2, 5, 2))
+        node1['right'] ^ node2['left']
+        
+        assert node1.name == 'node_0'
+        assert node2.name == 'node_1'
+
+        copy = node1.copy()
+        assert node1.name in copy.name
+        assert copy.name == 'node_0_copy'
 
 
 class TestStack:

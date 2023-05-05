@@ -1455,7 +1455,7 @@ class Node(AbstractNode):
         """
         new_node = Node(shape=self._shape,
                         axes_names=self.axes_names,
-                        name='copy_' + self._name,
+                        name=self._name + '_copy',
                         network=self._network,
                         tensor=self.tensor,
                         edges=self._edges,
@@ -1618,7 +1618,7 @@ class ParamNode(AbstractNode):
         """
         new_node = ParamNode(shape=self.shape,
                              axes_names=self.axes_names,
-                             name='copy_' + self._name,
+                             name=self._name + '_copy',
                              network=self._network,
                              tensor=self.tensor,
                              edges=self._edges,

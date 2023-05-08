@@ -50,7 +50,7 @@ class Axis:
     such as its :attr:`name` and :attr:`num` (index). Also, the axis keeps
     track of the :meth:`batch <is_batch>` and :meth:`node1 <is_node1>`
     attributes:
-    
+
     * **batch**: If axis name containes the word "`batch`", the edge attached
       to this axis will be a batch edge, that is, that edge will not be able to
       be connected to other nodes, but rather specify a dimension with which we
@@ -59,17 +59,17 @@ class Axis:
       edge will not be a batch edge any more. Also, :class:`StackNode` and
       :class:`ParamStackNode` instances always have an axis with name "`stack`"
       whose edge is a batch edge.
-    
+
     * **node1**: When two dangling edges are connected the result is a new
       edge linking two nodes, say ``nodeA`` and ``nodeB``. If the
       connection is performed in the following order::
-      
+
         new_edge = nodeA[edgeA] ^ nodeB[edgeB]
-        
+
       Then ``nodeA`` will be the `node1` of ``new_edge`` and ``nodeB``, the `node2`.
       Hence, to access one of the nodes from ``new_edge`` one needs to know if
       it is `node1` or `node2`.
-      
+
     Even though we can create Axis instances, that will not be usually the case,
     since axes are automatically created when instantiating a new :class:`node
     <AbstractNode>`.
@@ -87,38 +87,38 @@ class Axis:
         Boolean indicating whether `node1` of the edge attached to this axis is
         the node that contains the axis (``True``). Otherwise, the node is `node2`
         of the edge (``False``).
-        
+
     Examples
     --------
     Although Axis will not be usually explicitly instantiated, it can be done
     like so:
-    
+
     >>> axis = tk.Axis(0, 'left')
     >>> axis
     Axis( left (0) )
-    
+
     >>> axis.is_node1()
     True
-    
+
     >>> axis.is_batch()
     False
-    
+
     Since "`batch`" is not contained in "`left`", ``axis`` does not correspond
     to a batch edge, but that can be changed:
-    
+
     >>> axis.name = 'mybatch'
     >>> axis.is_batch()
     True
-    
+
     Also, as explained before, knowing if a node is the `node1` or `node2` of an
     edge enables users to access that node from the edge:
-    
+
     >>> nodeA = tk.Node(shape=(2, 3), axes_names=['left', 'right'])
     >>> nodeB = tk.Node(shape=(3, 4), axes_names=['left', 'right'])
     >>> new_edge = nodeA['right'] ^ nodeB['left']
     >>> nodeA == new_edge.nodes[1 - nodeA.get_axis('right').is_node1()]
     True
-    
+
     >>> nodeB == new_edge.nodes[nodeA.get_axis('right').is_node1()]
     True
     """
@@ -185,7 +185,7 @@ class Axis:
         """
         if not isinstance(name, str):
             raise TypeError('`name` should be str type')
-                
+
         if self._name == 'stack':
             raise ValueError('Name "stack" of stack edge cannot be changed')
         if 'stack' in name:
@@ -246,32 +246,32 @@ class AbstractNode(ABC):
     """
     Abstract class for all types of nodes. Defines what a node is and most of its
     properties and methods. Since it is an abstract class, cannot be instantiated.
-    
+
     A node is the minimum element in a :class:`TensorNetwork`. At its most basic
     level, it is just a container for a tensor that stores information about its
     neighbours (with what other nodes it is connected), edges (names to access
     each of them, whether they are batch edges or not, etc.) or successors (nodes
     that result from operating the node). Besides, and what is more important,
     this information is useful to:
-    
+
     * Perform tensor network :class:`Operations <Operation>` such as :func:`contraction
       <contract_between>` of two neighbouring nodes without having to worry about
       tensor's shapes, order of axes, etc.
-      
+
     * Perform more advanced operations such as :func:`stack` or :func:`unbind`
       saving memory and time.
-      
+
     * Keep track of operations in which a node has taken place, so that several
       steps can be skipped in further training iterations. See :meth:`TensorNetwork.trace`.
-    
+
     Refer to the subclasses of ``AbstractNode`` to see how to instantiate nodes:
-    
+
     * :class:`Node`
-    
+
     * :class:`ParamNode`
-    
+
     * :class:`StackNode`
-    
+
     * :class:`ParamStackNode`
     """
 
@@ -280,7 +280,6 @@ class AbstractNode(ABC):
                  axes_names: Optional[Sequence[Text]] = None,
                  name: Optional[Text] = None,
                  network: Optional['TensorNetwork'] = None,
-                 leaf: bool = True,
                  data: bool = False,
                  virtual: bool = False,
                  override_node: bool = False,
@@ -293,7 +292,7 @@ class AbstractNode(ABC):
                  **kwargs: float) -> None:
 
         super().__init__()
-        
+
         # Check shape and tensor
         if (shape is None) == (tensor is None):
             if shape is None:
@@ -312,7 +311,7 @@ class AbstractNode(ABC):
             if isinstance(shape, (tuple, list)):
                 for i in shape:
                     if not isinstance(i, int):
-                        raise TypeError('`shape` elements should be int type')     
+                        raise TypeError('`shape` elements should be int type')
             aux_shape = shape
         else:
             aux_shape = tensor.shape
@@ -348,13 +347,6 @@ class AbstractNode(ABC):
         else:
             network = TensorNetwork()
 
-        # Check leaf, data and virtual
-        if data and virtual:
-            raise ValueError(
-                '`data` and `virtual` arguments cannot be both True')
-        elif data or virtual:
-            leaf = False
-
         # Set attributes
         self._tensor_info = None
         self._temp_tensor = None
@@ -363,11 +355,19 @@ class AbstractNode(ABC):
         self._edges = []
         self._name = name
         self._network = network
-        self._leaf = leaf
+        self._successors = dict()
+
+        # Set node type
+        if not hasattr(self, '_leaf'):
+            self._leaf = not (data or virtual)
+            # else, it is False (check _create_resultant)
         self._data = data
         self._virtual = virtual
-        self._successors = dict()
-        
+
+        if (self._leaf + self._data + self._virtual) > 1:
+            raise ValueError('The node can only be one of `leaf`, `data`, `virtual`'
+                             ' and `resultant`')
+
         # Add edges
         if edges is None:
             self._edges = [self._make_edge(ax) for ax in self._axes]
@@ -386,6 +386,11 @@ class AbstractNode(ABC):
         # Add to network
         self._network._add_node(self, override=override_node)
 
+        # Remove from the network edges from virtual nodes
+        if self._virtual:
+            for edge in self._edges:
+                self._network._remove_edge(edge)
+
         # Set tensor
         if shape is not None:
             if init_method is not None:
@@ -393,6 +398,16 @@ class AbstractNode(ABC):
                     init_method=init_method, device=device, **kwargs)
         else:
             self._unrestricted_set_tensor(tensor=tensor)
+
+    @classmethod
+    def _create_resultant(cls, *args, **kwargs) -> None:
+        obj = super().__new__(cls, *args, **kwargs)
+
+        # Only way to set _leaf to False
+        obj._leaf = False
+        cls.__init__(obj, *args, **kwargs)
+
+        return obj
 
     # ----------
     # Properties
@@ -415,7 +430,7 @@ class AbstractNode(ABC):
         if address is None:
             address = node_ref._tensor_info['address']
         result = self._network._memory_nodes[address]
-        
+
         return_result = full or (result is None)
         if self._network._unbind_mode:
             return_result = return_result or self._name.startswith('unbind')
@@ -484,7 +499,7 @@ class AbstractNode(ABC):
         list of :class:`Successors <Successor>` of the node as values.
         """
         return self._successors
-    
+
     @property
     def name(self) -> Text:
         """
@@ -507,7 +522,7 @@ class AbstractNode(ABC):
     @abstractmethod
     def _make_edge(self, axis: Axis) -> 'Edge':
         pass
-    
+
     @staticmethod
     @abstractmethod
     def _set_tensor_format(tensor: Tensor) -> Union[Tensor, Parameter]:
@@ -528,14 +543,17 @@ class AbstractNode(ABC):
         """
         Returns a boolean indicating if the node is a ``leaf`` node. These are
         the nodes that form the :class:`TensorNetwork`. Usually, these will be
-        the `trainable` nodes.
+        the `trainable` nodes. These nodes can hold their own tensors or use
+        other node's tensor.
         """
         return self._leaf
 
     def is_data(self) -> bool:
         """
         Returns a boolean indicating if the node is a ``data`` node. These are
-        the nodes where input data tensors will be put.
+        the nodes where input data tensors will be put. Essentially these are
+        also leaf nodes, but they only store temporary data tensors that will
+        be replaced in each training epoch.
         """
         return self._data
 
@@ -546,6 +564,11 @@ class AbstractNode(ABC):
         the information of other ``leaf`` or ``data`` nodes more efficiently
         (e.g. :class:`Uniform MPS <UMPS>` uses a unique ``virtual`` node to
         store the tensor used by all the nodes in the network).
+
+        There is a special case of virtual nodes one can create: the ones
+        used as memory for uniform (traslationally invariant) tensor networks.
+        In this case, it is recommended to use the string "virtual_uniform" in
+        the node's name (e.g. "virtual_uniform_mps").
         """
         return self._virtual
 
@@ -600,7 +623,7 @@ class AbstractNode(ABC):
                                                              List['AbstractNode']]:
         """
         Returns the neighbours of the node, the nodes to which it is connected.
-        
+
         Parameters
         ----------
         axis : int, str or Axis, optional
@@ -614,7 +637,7 @@ class AbstractNode(ABC):
         if axis is not None:
             node2 = self[axis]._nodes[node1_list[self.get_axis_num(axis)]]
             return node2
-        
+
         neighbours = set()
         for i, edge in enumerate(self._edges):
             if not edge.is_dangling():
@@ -715,7 +738,7 @@ class AbstractNode(ABC):
         """Returns :class:`Axis` given its ``name`` or ``num``."""
         axis_num = self.get_axis_num(axis)
         return self._axes[axis_num]
-    
+
     def get_axis_num(self, axis: Ax) -> int:
         """Returns axis' ``num`` given the :class:`Axis` or its ``name``."""
         if isinstance(axis, int):
@@ -737,7 +760,7 @@ class AbstractNode(ABC):
             raise IndexError(f'Node {self!s} has no axis {axis!r}')
         else:
             raise TypeError('`axis` should be int, str or Axis type')
-        
+
     def _add_edge(self,
                   edge: 'Edge',
                   axis: Ax,
@@ -758,7 +781,7 @@ class AbstractNode(ABC):
         axis_num = self.get_axis_num(axis)
         self._axes[axis_num]._node1 = node1
         self._edges[axis_num] = edge
-        
+
     def get_edge(self, axis: Ax) -> 'Edge':
         """
         Returns :class:`Edge` given the :class:`Axis` (or its ``name``
@@ -766,7 +789,7 @@ class AbstractNode(ABC):
         """
         axis_num = self.get_axis_num(axis)
         return self._edges[axis_num]
-    
+
     def in_which_axis(self, edge: 'Edge') -> Axis:
         """
         Returns :class:`Axis` given the :class:`Edge` that is attached
@@ -784,7 +807,7 @@ class AbstractNode(ABC):
         else:
             # Case of trace edges (attached to the node in two axes)
             return lst
-                    
+
     def reattach_edges(self, override: bool = False) -> None:
         """
         Substitutes current edges by copies of them that are attached to the node.
@@ -793,7 +816,7 @@ class AbstractNode(ABC):
         In that case, the new copied edges will be attached to the resultant node,
         replacing each previous `node1` or `node2` with it (according to the
         ``node1`` attribute of each axis).
-        
+
         Used for in-place operations like :func:`permute_` or :func:`split_` and
         to (de)parameterize nodes.
 
@@ -907,10 +930,10 @@ class AbstractNode(ABC):
             Device where to initialize the tensor.
         kwargs : float
             Keyword arguments for the different initialization methods:
-            
+
             * ``low``, ``high`` for uniform initialization. See
               `torch.rand() <https://pytorch.org/docs/stable/generated/torch.rand.html>`_
-            
+
             * ``mean``, ``std`` for normal initialization. See
               `torch.randn() <https://pytorch.org/docs/stable/generated/torch.randn.html>`_
 
@@ -960,12 +983,12 @@ class AbstractNode(ABC):
         size of the node for a certain axis, the tensor is cropped in that axis
         (provided that the axis is not a batch axis). If that size is greater in
         the tensor that in the node, raises a ``ValueError``.
-        
+
         Parameters
         ----------
         tensor : torch.Tensor
             Tensor to be cropped.
-            
+
         Returns
         -------
         torch.Tensor
@@ -1020,7 +1043,7 @@ class AbstractNode(ABC):
             elif device is not None:
                 warnings.warn('`device` was specified but is being ignored. Provide '
                               'a tensor that is already in the required device')
-            
+
             if not self._compatible_shape(tensor):
                 tensor = self._crop_tensor(tensor)
             correct_format_tensor = self._set_tensor_format(tensor)
@@ -1038,13 +1061,13 @@ class AbstractNode(ABC):
 
         self._save_in_network(correct_format_tensor)
         self._shape = tensor.shape
-        
+
     def _unrestricted_set_tensor_ops(self,
                                      tensor: Optional[Tensor],
                                      check_shape: bool = False) -> None:
         if check_shape and not self._compatible_shape(tensor):
             tensor = self._crop_tensor(tensor)
-            
+
         self._save_in_network(tensor)
         self._shape = tensor.shape
 
@@ -1058,14 +1081,14 @@ class AbstractNode(ABC):
         it. Before setting it, it is casted to the correct type, so that a
         ``torch.Tensor`` can be turned into a ``nn.Parameter`` when setting it
         in :class:`ParamNodes <ParamNode>`.
-        
+
         This way of setting tensors is only applicable to ``leaf`` nodes. For
         ``resultant`` nodes, their tensors come from the result of operations on
         ``leaf`` tensors; hence they should not be modified. For ``data`` nodes,
         tensors are set into nodes when calling the :meth:`TensorNetwork.forward`
         method of :class:`tensor networks <TensorNetwork>` with a data tensor or
         a sequence of tensors.
-        
+
         Besides, this can only be used if the :class:`TensorNetwork` is not in
         :attr:`~TensorNetwork.automemory` mode.
 
@@ -1116,16 +1139,16 @@ class AbstractNode(ABC):
         Records information of the node in network's ``inverse memory``. This
         memory is a dictionary that, for each node used in an :class:`Operation`,
         keeps track of:
-        
+
         * The total amount of times that the node's tensor is accessed to compute
           operations (calculated when contracting the network for the first time,
           in ``tracing`` mode).
-          
+
         * The number of accesses to the node's tensor in the current contraction.
-        
+
         * Whether this node's tensor can be erased after using it for all the
           operations in which it is involved.
-        
+
         When contracting the :class:`TensorNetwork`, if the node's tensor has been
         accessed the total amount of times it has to be accessed, and it can be
         erased, then its tensor is indeed replaced by None.
@@ -1138,7 +1161,7 @@ class AbstractNode(ABC):
             check_nodes = [self, node_ref]
         else:
             check_nodes = [self]
-            
+
         # When tracing network, node is recorded in inverse memory
         if net._tracing:
             if address in net._inverse_memory:
@@ -1150,16 +1173,14 @@ class AbstractNode(ABC):
                 # data nodes (including virtual node that stores stack data tensor)
                 erase = True
                 for node in check_nodes:
-                    erase &= node.is_resultant() or \
-                        node.is_data() or \
-                        (node.is_virtual() and
-                         node._name == 'stack_data_memory')
+                    erase &= node.is_resultant() or node._data or \
+                        (node._virtual and node._name == 'stack_data_memory')
 
                 net._inverse_memory[address] = {
                     'accessed': 1,
                     're-accessed': 0,
                     'erase': erase}
-                
+
         # When contracting network, we keep track of the number of accesses
         # to "erasable" nodes
         else:
@@ -1220,10 +1241,10 @@ class AbstractNode(ABC):
         Returns the sum of all elements in the node's tensor. If an ``axis`` is
         specified, the sum is over that axis. If ``axis`` is a sequence of axes,
         reduce over all of them.
-        
+
         This is not a node :class:`Operation`, hence it returns a ``torch.Tensor``
         instead of a :class:`Node`.
-        
+
         See also `torch.sum() <https://pytorch.org/docs/stable/generated/torch.sum.html>`_.
 
         Parameters
@@ -1246,10 +1267,10 @@ class AbstractNode(ABC):
         Returns the mean of all elements in the node's tensor. If an ``axis`` is
         specified, the mean is over that axis. If ``axis`` is a sequence of axes,
         reduce over all of them.
-        
+
         This is not a node :class:`Operation`, hence it returns a ``torch.Tensor``
         instead of a :class:`Node`.
-        
+
         See also `torch.mean() <https://pytorch.org/docs/stable/generated/torch.mean.html>`_.
 
         Parameters
@@ -1272,10 +1293,10 @@ class AbstractNode(ABC):
         Returns the std of all elements in the node's tensor. If an ``axis`` is
         specified, the std is over that axis. If ``axis`` is a sequence of axes,
         reduce over all of them.
-        
+
         This is not a node :class:`Operation`, hence it returns a ``torch.Tensor``
         instead of a :class:`Node`.
-        
+
         See also `torch.std() <https://pytorch.org/docs/stable/generated/torch.std.html>`_.
 
         Parameters
@@ -1298,10 +1319,10 @@ class AbstractNode(ABC):
         Returns the norm of all elements in the node's tensor. If an ``axis`` is
         specified, the norm is over that axis. If ``axis`` is a sequence of axes,
         reduce over all of them.
-        
+
         This is not a node :class:`Operation`, hence it returns a ``torch.Tensor``
         instead of a :class:`Node`.
-        
+
         See also `torch.norm() <https://pytorch.org/docs/stable/generated/torch.norm.html>`_.
 
         Parameters
@@ -1336,10 +1357,10 @@ class Node(AbstractNode):
     """
     Base class for non-trainable nodes. Should be subclassed by any class of nodes
     that are not intended to be trained (e.g. :class:`StackNode`).
-    
+
     Can be used for fixed nodes of the :class:`TensorNetwork`, or intermediate
     nodes that are resultant from an :class:`Operation` between nodes.
-    
+
     For a complete list of properties and methods, see also :class:`AbstractNode`.
 
     Parameters
@@ -1358,9 +1379,6 @@ class Node(AbstractNode):
     network : TensorNetwork, optional
         Tensor network where the node should belong. If None, a new tensor network,
         will be created to contain the node.
-    leaf : bool
-        Boolean indicating if the node is a ``leaf`` node. If a node is neither
-        ``leaf`` nor ``data`` nor ``virtual``, it is ``resultant``.
     data : bool
         Boolean indicating if the node is a ``data`` node.
     virtual : bool
@@ -1393,14 +1411,14 @@ class Node(AbstractNode):
         Keyword arguments for the different initialization methods. See
         :meth:`AbstractNode.make_tensor`.
     """
-    
+
     # -------
     # Methods
     # -------
     def _make_edge(self, axis: Axis) -> 'Edge':
         """Makes ``Edges`` that will be attached to each axis."""
         return Edge(node1=self, axis1=axis)
-    
+
     @staticmethod
     def _set_tensor_format(tensor: Tensor) -> Tensor:
         """Returns a torch.Tensor if input tensor is given as nn.Parameter."""
@@ -1412,10 +1430,10 @@ class Node(AbstractNode):
         """
         Replaces the node with a parameterized version of it, that is, turns a
         fixed :class:`Node` into a trainable :class:`ParamNode`.
-        
+
         Since the node is `replaced`, it will be completely removed from the network,
         and its neighbours will point to the new parameterized node.
-        
+
         Parameters
         ----------
         set_param : bool
@@ -1467,19 +1485,19 @@ class ParamNode(AbstractNode):
     """
     Class for trainable nodes. Should be subclassed by any class of nodes that
     are intended to be trained (e.g. :class:`ParamStackNode`).
-    
+
     Should be used as the initial nodes conforming the :class:`TensorNetwork`,
     if it is going to be trained. When operating these initial nodes, the resultant
     nodes will be non-parameterized (e.g. :class:`Node`, :class:`StackNode`).
-    
+
     The main difference with :class:`Nodes <Node>` is that ``ParamNodes`` have
     ``nn.Parameter`` tensors instead of ``torch.Tensor``. Therefore, a ``ParamNode``
     is a sort of `parameter` that is attached to the :class:`TensorNetwork` (which
     is itself a ``nn.Module``). That is, the list of parameters of the tensor
     network module contains the tensors of all ``ParamNodes``. 
-    
+
     To see how to initialize ``ParamNodes``, see :class:`Node`.
-    
+
     For a complete list of properties and methods, see also :class:`AbstractNode`.
     """
 
@@ -1488,7 +1506,6 @@ class ParamNode(AbstractNode):
                  axes_names: Optional[Sequence[Text]] = None,
                  name: Optional[Text] = None,
                  network: Optional['TensorNetwork'] = None,
-                 leaf: bool = True,
                  data: bool = False,
                  virtual: bool = False,
                  override_node: bool = False,
@@ -1505,15 +1522,14 @@ class ParamNode(AbstractNode):
             raise ValueError('ParamNode cannot be a data node')
 
         # Check leaf
-        if not leaf:
-            raise ValueError(
-                'ParamNode is always a leaf node. Cannot set leaf to False')
+        if hasattr(self, '_leaf'):
+            # Case _create_resultant, _leaf = False
+            raise ValueError('ParamNode cannot be a resultant node')
 
         super().__init__(shape=shape,
                          axes_names=axes_names,
                          name=name,
                          network=network,
-                         leaf=leaf,
                          data=data,
                          virtual=virtual,
                          override_node=override_node,
@@ -1532,7 +1548,7 @@ class ParamNode(AbstractNode):
     def grad(self) -> Optional[Tensor]:
         """
         Returns gradient of the param-node's tensor.
-        
+
         See also `torch.Tensor.grad()
         <https://pytorch.org/docs/stable/generated/torch.Tensor.grad.html>`_
 
@@ -1563,7 +1579,7 @@ class ParamNode(AbstractNode):
     def _make_edge(self, axis: Axis) -> 'Edge':
         """Makes ``Edges`` that will be attached to each axis."""
         return Edge(node1=self, axis1=axis)
-    
+
     @staticmethod
     def _set_tensor_format(tensor: Tensor) -> Parameter:
         """Returns a nn.Parameter if input tensor is just torch.Tensor."""
@@ -1575,10 +1591,10 @@ class ParamNode(AbstractNode):
         """
         Replaces the param-node with a de-parameterized version of it, that is,
         turns a :class:`ParamNode` into a non-trainable, fixed :class:`Node`.
-        
+
         Since the param-node is `replaced`, it will be completely removed from
         the network, and its neighbours will point to the new node.
-        
+
         Parameters
         ----------
         set_param : bool
@@ -1634,7 +1650,7 @@ class StackNode(Node):
     Class for stacked nodes. ``StackNodes`` are nodes that store the information
     of a list of nodes that are stacked via :func:`stack`, although they can also
     be instantiated directly. To do so, there are two options:
-    
+
     * Provide a sequence of nodes: if ``nodes`` are provided, their tensors will
       be stacked and stored in the ``StackNode``. It is necessary that all nodes
       are of the same type (:class:`Node` or :class:`ParamNode`), have the same
@@ -1643,20 +1659,20 @@ class StackNode(Node):
       of the largest tensor in the stack), same axes names (to ensure only the
       `same kind` of nodes are stacked), belong to the same network and have edges
       with the same type in each axis (:class:`Edge` or :class:`ParamEdge`).
-      
+
     * Provide a stacked tensor: if the stacked ``tensor`` is provided, it is also
       necessary to specify the ``axes_names``, ``network``, ``edges``, ``node1_list``.
-      
+
     ``StackNodes`` have an additional axis for the new `stack` dimension, which
     is a batch edge. This way, some contractions can be computed in parallel by
     first stacking two sequences of nodes (connected pair-wise), performing the
     batch contraction and finally unbinding the ``StackNodes`` to retrieve just
     one sequence of nodes.
-    
+
     For the rest of the axes, a list of the edges corresponding to all nodes in
     the stack is stored, so that, when :func:`unbinding <unbind>` the stack, it
     can be inferred to which nodes the unbinded nodes have to be connected.
-    
+
     Parameters
     ----------
     nodes : list[AbstractNode] or tuple[AbstractNode], optional
@@ -1685,7 +1701,7 @@ class StackNode(Node):
     node1_list : list[bool], optional
         If ``edges`` are provided, the list of ``node1`` attributes of each edge
         should also be provided. Necessary if ``nodes`` are not provided.
-        
+
     Example
     -------
     >>> net = tk.TensorNetwork()
@@ -1709,10 +1725,10 @@ class StackNode(Node):
     >>> result = tk.unbind(stack_nodes @ stack_data)
     >>> print(result[0].name)
     unbind_0
-    
+
     >>> print(result[0].axes)
     [Axis( left (0) ), Axis( right (1) )]
-    
+
     >>> print(result[0].shape)
     torch.Size([2, 2])
     """
@@ -1735,7 +1751,8 @@ class StackNode(Node):
                     raise TypeError(
                         'Cannot create a stack using (Param)StackNode\'s')
             if tensor is not None:
-                raise ValueError('If `nodes` are provided, `tensor` must not be given')
+                raise ValueError(
+                    'If `nodes` are provided, `tensor` must not be given')
 
             # Check all nodes share properties
             for i in range(len(nodes[:-1])):
@@ -1771,7 +1788,6 @@ class StackNode(Node):
             super().__init__(axes_names=['stack'] + nodes[0].axes_names,
                              name=name,
                              network=nodes[0]._network,
-                             leaf=False,
                              override_node=override_node,
                              tensor=tensor)
 
@@ -1806,7 +1822,6 @@ class StackNode(Node):
             super().__init__(axes_names=axes_names,
                              name=name,
                              network=network,
-                             leaf=False,
                              override_node=override_node,
                              tensor=tensor,
                              edges=edges,
@@ -1853,9 +1868,9 @@ class ParamStackNode(ParamNode):
     reference to a slide of a greater ``ParamStackNode`` (if ``automemory`` attribute
     of the :class:`TensorNetwork` is set to ``True``). Hence, that first :func:`stack`
     is never computed.
-    
+
     ``ParamStackNodes`` can only be instantiated by providing a sequence of nodes.
-    
+
     Parameters
     ----------
     nodes : list[AbstractNode] or tuple[AbstractNode]
@@ -1873,7 +1888,7 @@ class ParamStackNode(ParamNode):
         node in the network that has the same name (e.g. if a node is parameterized,
         it would be required that a new :class:`ParamNode` replaces the non-parameterized
         node in the network).
-        
+
     Example
     -------
     >>> net = tk.TensorNetwork()
@@ -1896,7 +1911,7 @@ class ParamStackNode(ParamNode):
     >>> # ._tensor_info has info regarding where the node's tensor is stored
     >>> print(nodes[0]._tensor_info['node_ref'].name)
     my_stack
-    
+
     >>> stack_data = tk.stack(data)
     ...
     >>> # It is necessary to re-connect stacks
@@ -1904,10 +1919,10 @@ class ParamStackNode(ParamNode):
     >>> result = tk.unbind(stack_nodes @ stack_data)
     >>> print(result[0].name)
     unbind_0
-    
+
     >>> print(result[0].axes)
     [Axis( left (0) ), Axis( right (1) )]
-    
+
     >>> print(result[0].shape)
     torch.Size([2, 2])
     """
@@ -1992,26 +2007,26 @@ class ParamStackNode(ParamNode):
             return StackEdge(edges=self._edges_dict[axis._name],
                              node1_lists=self._node1_lists_dict[axis._name],
                              node1=self, axis1=axis)
-            
-            
+
+
 ###############################################################################
 #                                    EDGES                                    #
 ###############################################################################
 class Edge:
     """
     Base class for edges. Should be subclassed by any new class of edges.
-    
+
     An edge is nothing more than an object that wraps references to the nodes it
     connects. Thus it stores information like the nodes it connects, the corresponding
     nodes' axes it is attached to, whether it is dangling or batch, its size, etc.
-    
+
     Above all, its importance lies in that edges enable to connect nodes, forming
     any possible graph, and to perform easily :class:`Operations <Operation>` like
     contracting and splitting nodes.
-    
+
     Furthermore, edges have specific operations like :meth:`contract_` or :meth:`svd_`
     (and its variations) that allow in-place modification of the :class:`TensorNetwork`.
-    
+
     Parameters
     ----------
     node1 : AbstractNode
@@ -2024,7 +2039,7 @@ class Edge:
     axis2 : int, str, Axis, optional
         Axis of ``node2`` where the edge is attached.
     """
-    
+
     def __init__(self,
                  node1: AbstractNode,
                  axis1: Ax,
@@ -2075,7 +2090,7 @@ class Edge:
     def node2(self) -> AbstractNode:
         """Returns `node2` of the edge. If the edge is dangling, it is None."""
         return self._nodes[1]
-    
+
     @property
     def nodes(self) -> List[AbstractNode]:
         """Returns a list with `node1` and `node2`."""
@@ -2093,7 +2108,7 @@ class Edge:
         it is None.
         """
         return self._axes[1]
-    
+
     @property
     def axes(self) -> List[Axis]:
         """
@@ -2107,14 +2122,14 @@ class Edge:
         """
         Returns edge's name. It is formed with the corresponding nodes' and axes'
         names.
-        
+
         Example
         -------
         >>> nodeA = tk.Node(shape=(2, 3), name='nodeA', axes_names=['left', 'right'])
         >>> edge = nodeA['right']
         >>> print(edge.name)
         nodeA[right] <-> None
-        
+
         >>> nodeB = tk.Node(shape=(3, 4), name='nodeB', axes_names=['left', 'right'])
         >>> new_edge = nodeA['right'] ^ nodeB['left']
         >>> print(new_edge.name)
@@ -2143,7 +2158,7 @@ class Edge:
     def size(self) -> int:
         """Returns edge's size."""
         return self._size
-    
+
     def change_size(self, size: int) -> None:
         """
         Changes size of the edge, thus changing the size of tensors of `node1`
@@ -2158,7 +2173,7 @@ class Edge:
         if not self.is_dangling():
             self.node2._change_axis_size(self.axis2, size)
         self.node1._change_axis_size(self.axis1, size)
-        
+
     def copy(self) -> 'Edge':
         """
         Returns a copy of the edge, that is, a new edge referencing the same
@@ -2167,14 +2182,14 @@ class Edge:
         new_edge = Edge(node1=self.node1, axis1=self.axis1,
                         node2=self.node2, axis2=self.axis2)
         return new_edge
-    
+
     def connect(self, other: 'Edge') -> 'Edge':
         """
         Connects dangling edge to another dangling edge.
-        
+
         It is necessary that both edges have the same dimension so that contractions
         along that edge can be computed.
-        
+
         Parameters
         ----------
         other : Edge
@@ -2183,11 +2198,11 @@ class Edge:
         Returns
         -------
         Edge
-        
+
         Example
         -------
         To connect two edges, the overloaded operator ``^`` can also be used.
-        
+
         >>> nodeA = tk.Node(shape=(2, 3), name='nodeA', axes_names=['left', 'right'])
         >>> nodeB = tk.Node(shape=(3, 4), name='nodeB', axes_names=['left', 'right'])
         >>> new_edge = nodeA['right'] ^ nodeB['left']  # Same as .connect()
@@ -2204,18 +2219,18 @@ class Edge:
         Returns
         -------
         tuple[Edge, Edge]
-        
+
         Example
         -------
         To disconnect an edge, the overloaded operator ``|`` can also be used.
-        
+
         >>> nodeA = tk.Node(shape=(2, 3), name='nodeA', axes_names=['left', 'right'])
         >>> nodeB = tk.Node(shape=(3, 4), name='nodeB', axes_names=['left', 'right'])
         >>> new_edge = nodeA['right'] ^ nodeB['left']
         >>> new_edgeA, new_edgeB = new_edge | new_edge  # Same as .disconnect()
         >>> print(new_edgeA.name)
         nodeA[right] <-> None
-        
+
         >>> print(new_edgeB.name)
         nodeB[left] <-> None
         """
@@ -2258,7 +2273,7 @@ class StackEdge(Edge):
     `unbinding <unbind>` the stack. Thus, ``StackEdges`` have two additional
     properties, ``edges`` and ``node1_lists``, that is, the edges of all stacked
     nodes corresponding to a certain axis, and their ``node1_list``'s.
-    
+
     Parameters
     ----------
     edges : list[Edge]
@@ -2297,7 +2312,7 @@ class StackEdge(Edge):
     def node1_lists(self) -> List[bool]:
         """Returns list of ``node1_list``'s corresponding to this axis."""
         return self._node1_lists
-    
+
     def connect(self, other: 'StackEdge') -> 'StackEdge':
         """
         Same as :meth:`~Edge.connect` but it is verified that all stacked edges
@@ -2306,7 +2321,7 @@ class StackEdge(Edge):
         connected. However, this is mandatory, since when stacking two sequences
         of nodes independently it cannot be inferred that the resultant
         ``StackNodes`` had to be connected.
-        
+
         Parameters
         ----------
         other : StackEdge
@@ -2315,11 +2330,11 @@ class StackEdge(Edge):
         Returns
         -------
         StackEdge
-        
+
         Example
         -------
         To connect two stack-edges, the overloaded operator ``^`` can also be used.
-        
+
         >>> net = tk.TensorNetwork()
         >>> nodes = [tk.randn(shape=(2, 4, 2),
         ...                   axes_names=('left', 'input', 'right'),
@@ -2350,14 +2365,14 @@ def connect(edge1: Edge, edge2: Edge) -> Edge:
     """
     Connects two dangling edges. If both are :class:`Edges <Edge>`, the result
     will be also an ``Edge``. Otherwise, the result will be a :class:`ParamEdge`.
-    
+
     It is necessary that both edges have the same dimension so that contractions
     along that edge can be computed. Note that for ``ParamEdges`` the sizes could
     be different. In this case the resultant param-edge will have the minimum
     size between them.
-    
+
     This operation is the same as :meth:`Edge.connect` and :meth:`ParamEdge.connect`.
-    
+
     Parameters
     ----------
     edge1 : Edge
@@ -2383,7 +2398,7 @@ def connect(edge1: Edge, edge2: Edge) -> Edge:
         if edge.is_batch():
             raise ValueError(f'Edge {edge!s} is a batch edge. Batch edges '
                              'cannot be connected')
-    
+
     if edge1._size != edge2._size:
         raise ValueError(f'Cannot connect edges of unequal size. '
                          f'Size of edge {edge1!s}: {edge1._size}. '
@@ -2398,7 +2413,7 @@ def connect(edge1: Edge, edge2: Edge) -> Edge:
     net1._remove_edge(edge1)
     net1._remove_edge(edge2)
     net = net1
-    
+
     if isinstance(edge1, StackEdge):
         new_edge = StackEdge(edges=edge1._edges,
                              node1_lists=edge1._node1_lists,
@@ -2422,10 +2437,10 @@ def connect_stack(edge1: StackEdge, edge2: StackEdge) -> StackEdge:
     However, this is mandatory, since when stacking two sequences of nodes
     independently it cannot be inferred that the resultant ``(Param)StackNodes``
     had to be connected.
-    
+
     This operation is the same as :meth:`StackEdge.connect` and
     :meth:`ParamStackEdge.connect`.
-    
+
     Parameters
     ----------
     edge1 : StackEdge or ParamStackEdge
@@ -2450,9 +2465,9 @@ def disconnect(edge: Edge) -> Tuple[Edge, Edge]:
     """
     Disconnects connected edge, that is, the connected edge is splitted into
     two dangling edges, one for each node.
-    
+
     This operation is the same as :meth:`Edge.disconnect`.
-    
+
     Parameters
     ----------
     edge : Edge
@@ -2480,9 +2495,9 @@ def disconnect(edge: Edge) -> Tuple[Edge, Edge]:
     for axis, node in zip(axes, nodes):
         if isinstance(edge, StackEdge):
             new_edge = StackEdge(edges=edge._edges,
-                                    node1_lists=edge._node1_lists,
-                                    node1=node,
-                                    axis1=axis)
+                                 node1_lists=edge._node1_lists,
+                                 node1=node,
+                                 axis1=axis)
             new_edges.append(new_edge)
 
         else:
@@ -2505,19 +2520,19 @@ class Successor:
     """
     Class for successors. This is a sort of cache memory for :class:`operations
     <Operation>` that have been already computed.
-    
+
     For instance, when contracting two nodes, the result gives a new node that
     stores the tensor resultant from contracting both nodes's tensors. However,
     when training a :class:`TensorNetwork`, the tensors inside the nodes will
     change every epoch, but there is actually no need to create a new resultant
     node every time. Instead, it is more efficient to keep track of which node
     arose as the result of an operation, and simply change its tensor.
-    
+
     Hence, a ``Successor`` is instantiated providing the arguments of the operation
     that gave rise to a resultant node, a reference to the resultant node itself,
     and some hints that might help accelerating the computations the next time
     the operation is performed.
-    
+
     These three properties can be accessed via ``successor.kwargs``, ``successor.child``
     and ``successor.hints``.
 
@@ -2530,12 +2545,12 @@ class Successor:
     hints : dict[str, any], optional
         A dictionary of hints created the first time an operation is computed in
         order to save some computation in the next calls of the operation.
-        
+
     Example
     -------
     When contracting two nodes, a ``Successor`` is created and added to the list
     of successors of the first node (left operand).
-    
+
     >>> nodeA = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
     >>> nodeB = tk.randn(shape=(3, 4), axes_names=('left', 'right'))
     ...
@@ -2565,7 +2580,7 @@ class Successor:
 class TensorNetwork(nn.Module):
     """
     Class for arbitrary Tensor Networks. Subclass of **PyTorch** ``nn.Module``.
-    
+
     Tensor Networks are the central objects of **TensorKrowch**. Basically,
     a tensor network is a graph where vertices are :class:`Nodes <AbstractNode>`
     and edges are, pun intended, :class:`Edges <Edge>`. In these models,
@@ -2573,18 +2588,18 @@ class TensorNetwork(nn.Module):
     approximates a certain function. Hence, Tensor Networks are the `trainable
     objects` of **TensorKrowch**, very much like ``nn.Module``'s are the
     `trainable objects` of **PyTorch**.
-    
+
     Recall that the common way of defining models out of ``nn.Module`` is by
     defining a subclass where the ``__init__`` and ``forward`` methods are
     overriden:
-    
+
     * ``__init__``: Defines the model itself (its layers, attributes, etc.).
     * ``forward``: Defines the way the model operates, that is, how the different
       parts of the model migh combine to get an output from a particular input.
-      
+
     With ``TensorNetwork``, the workflow is similar, though there are other
     methods that should be overriden:
-    
+
     * ``__init__``: Defines the graph of the tensor network and initializes the
       tensors of the nodes.
     * ``set_data_nodes``: Creates the data nodes where the data tensor(s) will
@@ -2595,10 +2610,10 @@ class TensorNetwork(nn.Module):
       method that describes how the components of the network are combined.
       Hence, in ``TensorNetwork`` the ``forward`` method shall not be overriden,
       since it will just call ``contract``.
-      
+
     Although one can define how the network is going to be contracted, there a
     couple of modes that can change how this contraction behaves at a lower level:
-    
+
     * **automemory** (``False`` by default): This mode indicates whether node
       :class:`Operations <Operation>` have the ability to take control of the
       memory management of the network. For instance, if ``automemory`` is set
@@ -2609,7 +2624,7 @@ class TensorNetwork(nn.Module):
       the computation of the first :func:`stack` in every contraction. This
       behaviour is not possible if ``automemory`` is set to ``False``, in which
       case all nodes will always store their own tensors.
-      
+
     * **unbind_mode** (``False`` by default): This mode indicates whether the
       operation :func:`unbind` has to actually `unbind` the stacked tensor or
       just generate a collection of references. That is, if ``unbind_mode`` is
@@ -2621,12 +2636,12 @@ class TensorNetwork(nn.Module):
       performing the operation, since these indices will be the same in consecutive
       iterations. Hence, in a similar way to ``automemory``, this mode entails
       a certain control of the memory management of the network.
-      
+
     Once the training algorithm starts, these modes should not be changed (very
     often at least), since changing them entails first resetting the whole
     network (see :meth:`reset`), which is a costly method. To understand what
     reset means, check the different types of nodes a network might have:
-    
+
     * **leaf**: These are the nodes that make up the graph of the Tensor Network,
       except for the nodes containing data. These can be either type :class:`Node`
       or :class:`ParamNode` (trainable nodes).
@@ -2639,9 +2654,9 @@ class TensorNetwork(nn.Module):
     * **resultant**: These are :class:`Nodes <Node>` that result from an
       :class:`Operation`. They are intermediate nodes that (almost always)
       inherit edges from ``leaf``  and ``data`` nodes, the ones that really
-      establish the network's graph. Thus ``resultant`` nodes can be though of
+      establish the network's graph. Thus ``resultant`` nodes can be thought of
       like permutations or combinations of ``leaf`` nodes.
-      
+
     This way, when the Tensor Network is defined, it has a bunch of ``leaf``,
     ``data`` and ``virtual`` nodes that make up the network structure, each of
     them storing its own tensor. However, when the network is contracted, several
@@ -2653,18 +2668,18 @@ class TensorNetwork(nn.Module):
     Besides, since ``automemory`` and ``unbind_mode`` can change how the tensors
     are stored, if one wants to change these modes, the network should be first
     reset (this is already done automatically when changing the modes).
-    
+
     Example
     -------
     This is how one may define an **MPS**.
-    
+
     ::
-    
+
         class MPS(tk.TensorNetwork):
-    
+
             def __init__(self, image_size, uniform=False):
                 super().__init__(name='MPS')
-                    
+
                 # Create TN
                 input_nodes = []
                 for _ in range(image_size[0] * image_size[1]):
@@ -2675,10 +2690,10 @@ class TensorNetwork(nn.Module):
                                         name='input_node',
                                         network=self)
                     input_nodes.append(node)
-                    
+
                 for i in range(len(input_nodes) - 1):
                     input_nodes[i]['right'] ^ input_nodes[i + 1]['left']
-                    
+
                 # Periodic boundary conditions
                 output_node = tk.ParamNode(shape=(10, 10, 10),
                                            axes_names=('left',
@@ -2688,10 +2703,10 @@ class TensorNetwork(nn.Module):
                                            network=self)
                 output_node['right'] ^ input_nodes[0]['left']
                 output_node['left'] ^ input_nodes[-1]['right']
-                
+
                 self.input_nodes = input_nodes
                 self.output_node = output_node
-                
+
                 if uniform:
                     uniform_memory = tk.ParamNode(shape=(10, 3, 10),
                                                   axes_names=('left',
@@ -2701,7 +2716,7 @@ class TensorNetwork(nn.Module):
                                                   network=self,
                                                   virtual=True)
                     self.uniform_memory = uniform_memory
-                
+
                 # Initialize nodes
                 if uniform:
                     std = 1e-9
@@ -2711,9 +2726,9 @@ class TensorNetwork(nn.Module):
                     random_eye  = random_eye + torch.eye(tensor.shape[0],
                                                          tensor.shape[2])
                     tensor[:, 0, :] = random_eye
-                    
+
                     uniform_memory._unrestricted_set_tensor(tensor)
-                
+
                     # Memory of each node is just a reference
                     # to the uniform_memory tensor
                     for node in input_nodes:
@@ -2722,7 +2737,7 @@ class TensorNetwork(nn.Module):
                         node._tensor_info['node_ref'] = uniform_memory
                         node._tensor_info['full'] = True
                         node._tensor_info['index'] = None
-                    
+
                 else:
                     std = 1e-9
                     for node in input_nodes:
@@ -2732,9 +2747,9 @@ class TensorNetwork(nn.Module):
                         random_eye  = random_eye + torch.eye(tensor.shape[0],
                                                              tensor.shape[2])
                         tensor[:, 0, :] = random_eye
-                        
+
                         node.tensor = tensor
-                        
+
                 eye_tensor = torch.eye(
                     output_node.shape[0],
                     output_node.shape[2]).view([output_node.shape[0],
@@ -2742,41 +2757,41 @@ class TensorNetwork(nn.Module):
                                                 output_node.shape[2]])
                 eye_tensor = eye_tensor.expand(output_node.shape)
                 tensor = eye_tensor + std * torch.randn(output_node.shape)
-                
+
                 output_node.tensor = tensor
-                
+
                 self.input_nodes = input_nodes
                 self.output_node = output_node
-                
+
             def set_data_nodes(self) -> None:
                 input_edges = []
                 for node in self.input_nodes:
                     input_edges.append(node['input'])
-                        
+
                 super().set_data_nodes(input_edges, 1)
-            
+
             def contract(self):
                 stack_input = tk.stack(self.input_nodes)
                 stack_data = tk.stack(list(self.data_nodes.values()))
-                
+
                 stack_input['input'] ^ stack_data['feature']
                 stack_result = stack_input @ stack_data
-                
+
                 stack_result = tk.unbind(stack_result)
-                
+
                 result = stack_result[0]
                 for node in stack_result[1:]:
                     result @= node
                 result @= self.output_node
-                
+
                 return result
     """
-    
+
     operations = dict()  # References to the Operations defined for nodes
 
     def __init__(self, name: Optional[Text] = None):
         super().__init__()
-        
+
         if name is None:
             name = self.__class__.__name__.lower()
         self.name = name
@@ -2786,19 +2801,20 @@ class TensorNetwork(nn.Module):
         self._data_nodes = dict()
         self._virtual_nodes = dict()
         self._resultant_nodes = dict()
-        
+
         # Repeated nodes to keep track of enumeration
         self._repeated_nodes_names = dict()
-        
+
         # Edges
         self._edges = []
 
         # Memories
         self._memory_nodes = dict()   # address -> memory
         self._inverse_memory = dict()  # address -> nodes using that memory
-        
+
         # TN modes
-        self._automemory = False  # Auto-management of memory mode (train -> True)
+        # Auto-management of memory mode (train -> True)
+        self._automemory = False
         self._unbind_mode = False  # Unbind/index mode (train -> True)
         self._tracing = False     # Tracing mode (True while calling .trace())
 
@@ -2878,7 +2894,7 @@ class TensorNetwork(nn.Module):
     def unbind_mode(self, unbind: bool) -> None:
         self.reset()
         self._unbind_mode = unbind
-            
+
     # -------
     # Methods
     # -------
@@ -2906,7 +2922,8 @@ class TensorNetwork(nn.Module):
             Edge to be added.
         """
         if not isinstance(edge, StackEdge):
-            if edge.is_dangling() and not edge.is_batch() and (edge not in self._edges):
+            if edge.is_dangling() and not edge.is_batch() and \
+                    (edge not in self._edges):
                 self._edges.append(edge)
 
     def _remove_edge(self, edge: Edge) -> None:
@@ -2920,9 +2937,10 @@ class TensorNetwork(nn.Module):
             Edge to be removed.
         """
         if not isinstance(edge, StackEdge):
-            if edge in self._edges:
+            if edge.is_dangling() and not edge.is_batch() and \
+                    (edge in self._edges):
                 self._edges.remove(edge)
-        
+
     def _add_node(self, node: AbstractNode, override: bool = False) -> None:
         """
         Adds a node to the network. If it is a :class:`ParamEdge`, its tensor
@@ -2984,7 +3002,7 @@ class TensorNetwork(nn.Module):
     def delete_node(self, node: AbstractNode, move_names=True) -> None:
         """
         Disconnects node from all its neighbours and removes it from the network.
-        
+
         Parameters
         ----------
         node : Node or ParamNode
@@ -3018,7 +3036,8 @@ class TensorNetwork(nn.Module):
         if nodes_dict.get(prev_name) == node:
             nodes_dict[new_name] = nodes_dict.pop(prev_name)
             if node._tensor_info['address'] is not None:
-                self._memory_nodes[new_name] = self._memory_nodes.pop(prev_name)
+                self._memory_nodes[new_name] = self._memory_nodes.pop(
+                    prev_name)
                 node._tensor_info['address'] = new_name
 
                 if self._tracing and (prev_name in self._inverse_memory):
@@ -3055,7 +3074,7 @@ class TensorNetwork(nn.Module):
                 # this case will never occur
                 raise ValueError(
                     f'Network already has attribute named {node._name}')
-                
+
         for edge in node._edges:
             self._add_edge(edge)
 
@@ -3068,32 +3087,32 @@ class TensorNetwork(nn.Module):
         is stored in the network's memory (``memory_nodes``). If the node was
         in the network (case its name is being changed), the ``tensor_info`` dict
         gets updated.
-        
+
         In case there are already nodes with the same name in the network, an
         enumeration is added to the new node's name (and to the network's node
         in case there was only one node with the same name).
-        
+
         * **New node's name**: "my_node"
           **Network's nodes' names**: ["my_node_0", "my_node_1"]
           **Result**: ["my_node_0", "my_node_1", "my_node_2"(new node)]
-          
+
         * **New node's name**: "my_node"
           **Network's nodes' names**: ["my_node"]
           **Result**: ["my_node_0", "my_node_1"(new node)]
-          
+
         Also, if the new node's name already had an enumeration, it will be removed.
-        
+
         * **New node's name**: "my_node_0" -> "my_node" (then apply other rules)
           **Network's nodes' names**: ["my_node"]
           **Result**: ["my_node_0", "my_node_1"(new node)]
-          
+
         To add a custom enumeration to keep track of the nodes of the network
         in a used-defined way, one may use brackets or parenthesis.
-        
+
         * **New node's name**: "my_node_(0)"
           **Network's nodes' names**: ["my_node"]
           **Result**: ["my_node", "my_node_(0)"(new node)]
-          
+
         Parameters
         ----------
         node : Node or ParamNode
@@ -3156,7 +3175,7 @@ class TensorNetwork(nn.Module):
                 # this case will never occur
                 raise ValueError(
                     f'Network already has attribute named {node._name}')
-                
+
         for edge in node._edges:
             self._add_edge(edge)
 
@@ -3168,15 +3187,15 @@ class TensorNetwork(nn.Module):
         of all the nodes in the network that have the same name as the given
         node will be decreased by one. If only one node remains, the enumeration
         will be removed.
-        
+
         * **Node's name**: "my_node_1"
           **Network's nodes' names**: ["my_node_0", "my_node_1"(node), "my_node_2"]
           **Result**: ["my_node_0", "my_node_1"]
-          
+
         * **Node's name**: "my_node_1"
           **Network's nodes' names**: ["my_node_0", "my_node_1"(node)]
           **Result**: ["my_node"]
-          
+
         Parameters
         ----------
         node : Node or ParamNode
@@ -3231,41 +3250,6 @@ class TensorNetwork(nn.Module):
             self._unassign_node_name(node)
             self._assign_node_name(node, name)
 
-    def _change_node_type(self, node: AbstractNode, type: Text) -> None:
-        """
-        Changes type of node in the network. Mainly used for in-place operations
-        like :func:`split_` or :func:`contract_between_`.
-        """
-        if type not in ['leaf', 'resultant', 'data', 'virtual']:
-            raise ValueError('`type` can only be "leaf", "resultant", '
-                             '"data" or "virtual"')
-
-        prev_dict = self._which_dict(node)
-
-        if type == 'leaf':
-            new_dict = self._leaf_nodes
-            node._leaf = True
-            node._data = False
-            node._virtual = False
-        elif type == 'data':
-            new_dict = self._data_nodes
-            node._leaf = False
-            node._data = True
-            node._virtual = False
-        elif type == 'virtual':
-            new_dict = self._virtual_nodes
-            node._leaf = False
-            node._data = False
-            node._virtual = True
-        elif type == 'resultant':
-            new_dict = self._resultant_nodes
-            node._leaf = False
-            node._data = False
-            node._virtual = False
-
-        del prev_dict[node._name]
-        new_dict[node._name] = node
-
     def copy(self) -> 'TensorNetwork':
         """Copies the tensor network (via ``copy.deepcopy``)."""
         return copy.deepcopy(self)
@@ -3290,6 +3274,7 @@ class TensorNetwork(nn.Module):
         else:
             net = self.copy()
 
+        # TODO: reset always? care with what does parameterize, case uniform?
         if self._resultant_nodes:
             warnings.warn('Resultant nodes will be removed before parameterizing'
                           ' the TN')
@@ -3299,26 +3284,26 @@ class TensorNetwork(nn.Module):
             node.parameterize(set_param)
 
         return net
-    
+
     def trace(self, example: Optional[Tensor] = None, *args, **kwargs) -> None:
         """
         Traces the tensor network contraction algorithm with two purposes:
-        
+
         * Create all the intermediate ``resultant`` nodes that result from
           :class:`Operations <Operation>` so that in the next contractions only
           the tensor-like operations have to be computed, thus saving a lot of time.
-        
+
         * Keep track of the tensors that are used to compute operations, so that
           intermediate results that are not useful any more can be deleted, thus
           saving a lot of memory. This is achieved by constructing an ``inverse_memory``
           that, given a memory address, stores the nodes that use the tensor located
           in that address.
-        
+
         To trace a tensor network, it is necessary to provide the same arguments
         that would be required in the forward call. In case the tensor network
         is contracted with some input data, an example tensor with batch dimension
         1 and filled with zeros would be enough to trace the contraction.
-        
+
         Parameters
         ----------
         example : torch.Tensor, optional
@@ -3332,13 +3317,13 @@ class TensorNetwork(nn.Module):
             Keyword arguments that might be used in :meth:`contract`.
         """
         self.reset()
-        
+
         with torch.no_grad():
             self._tracing = True
             self(example, *args, **kwargs)
             self._tracing = False
             self(example, *args, **kwargs)
-            
+
     def reset(self):
         """
         Resets the tensor network as it was before tracing, contracting or, in
@@ -3357,7 +3342,7 @@ class TensorNetwork(nn.Module):
             aux_dict.update(self._resultant_nodes)
             aux_dict.update(self._virtual_nodes)
             for node in aux_dict.values():
-                if node.is_virtual() and ('virtual_stack' not in node._name):
+                if node._virtual and ('virtual_stack' not in node._name):
                     # Virtual nodes named "virtual_stack" are ParamStackNodes
                     # that result from stacking a collection of ParamNodes
                     # This condition is satisfied by the rest of virtual nodes
@@ -3368,7 +3353,7 @@ class TensorNetwork(nn.Module):
 
                 node_ref = node._tensor_info['node_ref']
                 if node_ref is not None:
-                    if node_ref.is_virtual() and ('virtual_uniform' in node_ref.name):
+                    if node_ref._virtual and ('virtual_uniform' in node_ref._name):
                         # Virtual nodes named "virtual_uniform" are ParamNodes
                         # whose tensor is shared accross all the nodes in a
                         # uniform tensor network
@@ -3382,8 +3367,8 @@ class TensorNetwork(nn.Module):
                 node._tensor_info['index'] = None
 
                 if isinstance(node._temp_tensor, Parameter):
-                    if hasattr(self, 'param_' + node.name):
-                        delattr(self, 'param_' + node.name)
+                    if hasattr(self, 'param_' + node._name):
+                        delattr(self, 'param_' + node._name)
 
                 if node._name not in self._memory_nodes:
                     self._memory_nodes[node._name] = None
@@ -3400,7 +3385,7 @@ class TensorNetwork(nn.Module):
             aux_dict.update(self._resultant_nodes)
             aux_dict.update(self._virtual_nodes)
             for node in list(aux_dict.values()):
-                if node.is_virtual() and ('virtual_stack' not in node._name):
+                if node._virtual and ('virtual_stack' not in node._name):
                     # This condition is satisfied by the rest of virtual nodes
                     # (e.g. "virtual_feature", "virtual_n_features")
                     continue
@@ -3413,11 +3398,11 @@ class TensorNetwork(nn.Module):
         Creates ``data`` nodes with as many batch edges as ``num_batch_edges``
         and one feature edge, and connects each of these feature edges to an
         edge from the list ``input_edges`` (following the provided order).
-        
+
         If all the data nodes have the same shape, a ``virtual`` node will
         contain all the tensors stacked in one, what will save some memory
         and time in computations.
-        
+
         This method can be overriden in subclasses so that it is specified in
         its implementation to which edges of the network the data nodes should
         be connected. In this case, there is no need to call ``set_data_nodes``
@@ -3461,21 +3446,6 @@ class TensorNetwork(nn.Module):
                                   name='stack_data_memory',
                                   network=self,
                                   virtual=True)
-                n_features_node = Node(shape=(stack_node._shape[0],),
-                                       axes_names=('n_features',),
-                                       name='virtual_n_features',
-                                       network=self,
-                                       virtual=True)
-                feature_node = Node(shape=(stack_node._shape[-1],),
-                                    axes_names=('feature',),
-                                    name='virtual_feature',
-                                    network=self,
-                                    virtual=True)
-                
-                # Virtual nodes connected to the edges of the stack
-                # to avoid having dangling edges that are virtual
-                stack_node['n_features'] ^ n_features_node['n_features']
-                stack_node['feature'] ^ feature_node['feature']
             else:
                 stack_node = self._virtual_nodes['stack_data_memory']
 
@@ -3491,7 +3461,7 @@ class TensorNetwork(nn.Module):
             else:
                 raise TypeError(
                     '`input_edges` should be list[int] or list[Edge] type')
-            
+
             node = Node(shape=(*([1]*num_batch_edges), edge._size),
                         axes_names=(*(['batch']*num_batch_edges), 'feature'),
                         name='data',
@@ -3520,8 +3490,6 @@ class TensorNetwork(nn.Module):
 
             if 'stack_data_memory' in self._virtual_nodes:
                 self.delete_node(self._virtual_nodes['stack_data_memory'])
-                self.delete_node(self._virtual_nodes['virtual_n_features'])
-                self.delete_node(self._virtual_nodes['virtual_feature'])
 
     def add_data(self, data: Union[Tensor, Sequence[Tensor]]) -> None:
         """
@@ -3564,31 +3532,31 @@ class TensorNetwork(nn.Module):
                 *args, **kwargs) -> Tensor:
         r"""
         Contract Tensor Network with input data with shape batch x n_features x feature.
-        
+
         Overrides the ``forward`` method of **PyTorch** ``nn.Module``. Sets data
         nodes automatically whenever ``set_data_nodes`` is overriden, adds data
         tensor(s) to these nodes, and contracts the whole network according to
         :meth:`contract`, returning a single ``torch.Tensor``.
-        
+
         It can be called using the ``__call__`` operator ``()``.
-        
+
         Parameters
         ----------
         data : torch.Tensor or list[torch.Tensor], optional
             If all data nodes have the same shape, thus having its tensor stored
             in "stack_data_memory", ``data`` should be a tensor of shape
-            
+
             .. math::
                 n_{features} \times batch\_size_{0} \times ... \times
                 batch\_size_{n} \times feature\_size.
-                
+
             Otherwise, it should be a list with :math:`n_{features}` elements,
             each of them being a tensor with shape
-            
+
             .. math::
                 batch\_size_{0} \times ... \times batch\_size_{n} \times
                 feature\_size.
-                
+
             Also, it is not necessary that the network has ``data`` nodes, thus
             ``None`` is also valid.
         args :

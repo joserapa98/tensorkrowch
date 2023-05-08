@@ -324,8 +324,7 @@ class TestInitParamNode:
 
         # Parametric Nodes are always leaf nodes
         with pytest.raises(ValueError):
-            node = tk.ParamNode(shape=(2, 5, 2),
-                                leaf=False)
+            node = tk.ParamNode._create_resultant(shape=(2, 5, 2))
 
         with pytest.raises(ValueError):
             node = tk.ParamNode(shape=(2, 5, 3),
@@ -1832,11 +1831,11 @@ class TestTensorNetwork:
         net.set_data_nodes(input_edges, 1)
 
         # 4 leaf nodes, 4 data nodes, and the
-        # stack_data_memory (+2 virtual nodes)
-        assert len(net.nodes) == 11
+        # stack_data_memory
+        assert len(net.nodes) == 9
         assert len(net.leaf_nodes) == 4
         assert len(net.data_nodes) == 4
-        assert len(net.virtual_nodes) == 3
+        assert len(net.virtual_nodes) == 1
 
         input_edges = []
         for i in range(3):
@@ -1852,12 +1851,12 @@ class TestTensorNetwork:
         for i in range(2):
             input_edges.append(net[f'node_{i}']['input'])
         net.set_data_nodes(input_edges, 1)
-        assert len(net.nodes) == 9
+        assert len(net.nodes) == 7
         assert len(net.leaf_nodes) == 4
         assert len(net.data_nodes) == 2
-        assert len(net.virtual_nodes) == 3
+        assert len(net.virtual_nodes) == 1
 
-    def testadd_data_same_shape(self):
+    def test_add_data_same_shape(self):
         net = tk.TensorNetwork(name='net')
         for i in range(4):
             _ = tk.Node(shape=(2, 5, 2),
@@ -1924,7 +1923,7 @@ class TestTensorNetwork:
         assert len(net.data_nodes) == 0
         assert len(net.virtual_nodes) == 0
 
-    def testadd_data_diff_shape(self):
+    def test_add_data_diff_shape(self):
         net = tk.TensorNetwork(name='net')
         data = []
         for i in range(4):
@@ -2021,7 +2020,7 @@ class TestTensorNetwork:
         assert len(net.resultant_nodes) == 1
         assert len(net.edges) == 5
 
-    def test_clear(self):
+    def test_reset(self):
         net = tk.TensorNetwork(name='net')
         for i in range(4):
             _ = tk.Node(shape=(2, 5, 2),

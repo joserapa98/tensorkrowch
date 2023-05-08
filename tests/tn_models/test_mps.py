@@ -43,9 +43,9 @@ class TestMPS:
                             assert len(mps.leaf_nodes) == 4
                             assert len(mps.data_nodes) == 4
                             if not inline_input and automemory:
-                                assert len(mps.virtual_nodes) == 4
+                                assert len(mps.virtual_nodes) == 2
                             else:
-                                assert len(mps.virtual_nodes) == 3
+                                assert len(mps.virtual_nodes) == 1
 
                             # Canonicalize and continue
                             for oc in range(4):
@@ -68,9 +68,9 @@ class TestMPS:
                                         assert len(mps.leaf_nodes) == 4
                                         assert len(mps.data_nodes) == 4
                                         if not inline_input and automemory:
-                                            assert len(mps.virtual_nodes) == 4
+                                            assert len(mps.virtual_nodes) == 2
                                         else:
-                                            assert len(mps.virtual_nodes) == 3
+                                            assert len(mps.virtual_nodes) == 1
 
     def test_all_algorithms_diff_d_phys(self):
         d_phys = torch.randint(low=2, high=7, size=(4,)).tolist()
@@ -161,9 +161,9 @@ class TestMPS:
                             assert len(mps.leaf_nodes) == 4
                             assert len(mps.data_nodes) == 4
                             if not inline_input and automemory:
-                                assert len(mps.virtual_nodes) == 4
+                                assert len(mps.virtual_nodes) == 2
                             else:
-                                assert len(mps.virtual_nodes) == 3
+                                assert len(mps.virtual_nodes) == 1
 
                             # Canonicalize and continue
                             for oc in range(4):
@@ -186,9 +186,9 @@ class TestMPS:
                                         assert len(mps.leaf_nodes) == 4
                                         assert len(mps.data_nodes) == 4
                                         if not inline_input and automemory:
-                                            assert len(mps.virtual_nodes) == 4
+                                            assert len(mps.virtual_nodes) == 2
                                         else:
-                                            assert len(mps.virtual_nodes) == 3
+                                            assert len(mps.virtual_nodes) == 1
 
     def test_all_algorithms_diff_d_phys_d_bond(self):
         d_phys = torch.randint(low=2, high=7, size=(4,)).tolist()
@@ -277,7 +277,7 @@ class TestMPS:
                         assert len(mps.edges) == 0
                         assert len(mps.leaf_nodes) == 2
                         assert len(mps.data_nodes) == 2
-                        assert len(mps.virtual_nodes) == 3
+                        assert len(mps.virtual_nodes) == 1
 
                         # Canonicalize and continue
                         for oc in range(2):
@@ -299,7 +299,7 @@ class TestMPS:
                                     assert len(mps.edges) == 0
                                     assert len(mps.leaf_nodes) == 2
                                     assert len(mps.data_nodes) == 2
-                                    assert len(mps.virtual_nodes) == 3
+                                    assert len(mps.virtual_nodes) == 1
 
     def test_extreme_case_one_node(self):
         # One node
@@ -329,9 +329,9 @@ class TestMPS:
                         assert len(mps.leaf_nodes) == 1
                         assert len(mps.data_nodes) == 1
                         if not inline_input and automemory:
-                            assert len(mps.virtual_nodes) == 4
+                            assert len(mps.virtual_nodes) == 2
                         else:
-                            assert len(mps.virtual_nodes) == 3
+                            assert len(mps.virtual_nodes) == 1
 
                         # Canonicalize and continue
                         for mode in ['svd', 'svdr', 'qr']:
@@ -353,9 +353,9 @@ class TestMPS:
                                 assert len(mps.leaf_nodes) == 1
                                 assert len(mps.data_nodes) == 1
                                 if not inline_input and automemory:
-                                    assert len(mps.virtual_nodes) == 4
+                                    assert len(mps.virtual_nodes) == 2
                                 else:
-                                    assert len(mps.virtual_nodes) == 3
+                                    assert len(mps.virtual_nodes) == 1
 
     def test_canonicalize_univocal(self):
         example = torch.randn(5, 1, 2)
@@ -387,7 +387,7 @@ class TestMPS:
         assert len(mps.edges) == 0
         assert len(mps.leaf_nodes) == 5
         assert len(mps.data_nodes) == 5
-        assert len(mps.virtual_nodes) == 3
+        assert len(mps.virtual_nodes) == 1
 
         # Contract Canonical MPS
         result = mps.left_node
@@ -528,7 +528,7 @@ class TestMPS:
         assert len(mps.edges) == 0
         assert len(mps.leaf_nodes) == 5
         assert len(mps.data_nodes) == 5
-        assert len(mps.virtual_nodes) == 3
+        assert len(mps.virtual_nodes) == 1
 
         # Contract Canonical MPS
         result = mps.left_node
@@ -571,7 +571,7 @@ class TestUMPS:
                         assert len(mps.edges) == 0
                         assert len(mps.leaf_nodes) == 4
                         assert len(mps.data_nodes) == 4
-                        assert len(mps.virtual_nodes) == 4
+                        assert len(mps.virtual_nodes) == 2
 
     def test_extreme_case_mats_env_2_nodes(self):
         # Two nodes
@@ -599,7 +599,7 @@ class TestUMPS:
                         assert len(mps.edges) == 0
                         assert len(mps.leaf_nodes) == 2
                         assert len(mps.data_nodes) == 2
-                        assert len(mps.virtual_nodes) == 4
+                        assert len(mps.virtual_nodes) == 2
 
     def test_extreme_case_mats_env_1_node(self):
         # One node
@@ -627,7 +627,7 @@ class TestUMPS:
                         assert len(mps.edges) == 0
                         assert len(mps.leaf_nodes) == 1
                         assert len(mps.data_nodes) == 1
-                        assert len(mps.virtual_nodes) == 4
+                        assert len(mps.virtual_nodes) == 2
 
 
 class TestConvMPS:
@@ -668,9 +668,9 @@ class TestConvMPS:
                                 assert len(mps.leaf_nodes) == 4
                                 assert len(mps.data_nodes) == 4
                                 if not inline_input and automemory:
-                                    assert len(mps.virtual_nodes) == 4
+                                    assert len(mps.virtual_nodes) == 2
                                 else:
-                                    assert len(mps.virtual_nodes) == 3
+                                    assert len(mps.virtual_nodes) == 1
 
                                 # Canonicalize and continue
                                 for oc in range(4):
@@ -696,10 +696,10 @@ class TestConvMPS:
                                             assert len(mps.data_nodes) == 4
                                             if not inline_input and automemory:
                                                 assert len(
-                                                    mps.virtual_nodes) == 4
+                                                    mps.virtual_nodes) == 2
                                             else:
                                                 assert len(
-                                                    mps.virtual_nodes) == 3
+                                                    mps.virtual_nodes) == 1
 
     def test_all_algorithms_diff_d_bond(self):
         def embedding(data: torch.Tensor) -> torch.Tensor:
@@ -739,9 +739,9 @@ class TestConvMPS:
                                 assert len(mps.leaf_nodes) == 4
                                 assert len(mps.data_nodes) == 4
                                 if not inline_input and automemory:
-                                    assert len(mps.virtual_nodes) == 4
+                                    assert len(mps.virtual_nodes) == 2
                                 else:
-                                    assert len(mps.virtual_nodes) == 3
+                                    assert len(mps.virtual_nodes) == 1
 
                                 # Canonicalize and continue
                                 for oc in range(4):
@@ -767,10 +767,10 @@ class TestConvMPS:
                                             assert len(mps.data_nodes) == 4
                                             if not inline_input and automemory:
                                                 assert len(
-                                                    mps.virtual_nodes) == 4
+                                                    mps.virtual_nodes) == 2
                                             else:
                                                 assert len(
-                                                    mps.virtual_nodes) == 3
+                                                    mps.virtual_nodes) == 1
 
     def test_extreme_case_left_right(self):
         # Left node + Right node
@@ -807,7 +807,7 @@ class TestConvMPS:
                             assert len(mps.edges) == 0
                             assert len(mps.leaf_nodes) == 2
                             assert len(mps.data_nodes) == 2
-                            assert len(mps.virtual_nodes) == 3
+                            assert len(mps.virtual_nodes) == 1
 
                             # Canonicalize and continue
                             for oc in range(2):
@@ -831,7 +831,7 @@ class TestConvMPS:
                                         assert len(mps.edges) == 0
                                         assert len(mps.leaf_nodes) == 2
                                         assert len(mps.data_nodes) == 2
-                                        assert len(mps.virtual_nodes) == 3
+                                        assert len(mps.virtual_nodes) == 1
 
     def test_extreme_case_one_node(self):
         # One node
@@ -869,9 +869,9 @@ class TestConvMPS:
                             assert len(mps.leaf_nodes) == 1
                             assert len(mps.data_nodes) == 1
                             if not inline_input and automemory:
-                                assert len(mps.virtual_nodes) == 4
+                                assert len(mps.virtual_nodes) == 2
                             else:
-                                assert len(mps.virtual_nodes) == 3
+                                assert len(mps.virtual_nodes) == 1
 
                             # Canonicalize and continue
                             for mode in ['svd', 'svdr', 'qr']:
@@ -895,9 +895,9 @@ class TestConvMPS:
                                     assert len(mps.leaf_nodes) == 1
                                     assert len(mps.data_nodes) == 1
                                     if not inline_input and automemory:
-                                        assert len(mps.virtual_nodes) == 4
+                                        assert len(mps.virtual_nodes) == 2
                                     else:
-                                        assert len(mps.virtual_nodes) == 3
+                                        assert len(mps.virtual_nodes) == 1
 
 
 class TestConvUMPS:

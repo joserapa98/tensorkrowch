@@ -917,9 +917,6 @@ class UPEPS(TensorNetwork):
                                           network=self,
                                           virtual=True)
         self.uniform_memory = uniform_memory
-        
-        for edge in uniform_memory._edges:
-            self._remove_edge(edge)
                     
     def initialize(self, std: float = 1e-9) -> None:
         """Initializes all the nodes."""

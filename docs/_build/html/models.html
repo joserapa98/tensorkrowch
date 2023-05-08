@@ -134,6 +134,11 @@
     </a>
    </li>
    <li class="toctree-l2">
+    <a class="reference internal" href="examples/jose_mps_canonical_mnist.html">
+     MPS and Canonical Form initializing also in canonical form - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
     <a class="reference internal" href="examples/jose_mps_fashion_mnist.html">
      MPS and Canonical Form - FashionMNIST
     </a>
@@ -427,7 +432,7 @@ title="Print to PDF"
 <h2>MPS<a class="headerlink" href="#mps" title="Permalink to this headline">#</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.MPS">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">MPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_sites</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_phys</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'obc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps.html#MPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.MPS" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">MPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_sites</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_phys</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'obc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps.html#MPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.MPS" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for Matrix Product States, where all nodes are input nodes, that is,
 they are all connected to <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes that will store the input data
 tensor(s). When contracting the MPS with new input data, the result will
@@ -447,7 +452,6 @@ to <code class="docutils literal notranslate"><span class="pre">n_sites</span></
 of the right edge of the i-th node.</p></li>
 <li><p><strong>boundary</strong> (<em>{'obc'</em><em>, </em><em>'pbc'}</em>) – String indicating whether periodic or open boundary conditions should
 be used.</p></li>
-<li><p><strong>param_bond</strong> (<em>bool</em>) – Boolean indicating whether bond edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p></li>
 <li><p><strong>num_batches</strong> (<em>int</em>) – Number of batch edges of input data nodes. Usually <code class="docutils literal notranslate"><span class="pre">num_batches</span> <span class="pre">=</span> <span class="pre">1</span></code>
 (where the batch edge is used for the data batched) but it could also
 be <code class="docutils literal notranslate"><span class="pre">num_batches</span> <span class="pre">=</span> <span class="pre">2</span></code> (one edge for data batched, other edge for image
@@ -499,19 +503,6 @@ patches in convolutional layers).</p></li>
 <dt class="sig sig-object py" id="tensorkrowch.MPS.d_bond">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">d_bond</span></span><a class="headerlink" href="#tensorkrowch.MPS.d_bond" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns bond dimension.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.MPS.param_bond">
-<span class="sig-name descname"><span class="pre">param_bond</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps.html#MPS.param_bond"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.MPS.param_bond" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns <code class="docutils literal notranslate"><span class="pre">param_bond</span></code> attribute or changes it if <code class="docutils literal notranslate"><span class="pre">set_param</span></code> is
-provided.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>set_param</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether edges have to be parameterized (<code class="docutils literal notranslate"><span class="pre">True</span></code>)
-or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -585,7 +576,7 @@ cum\_percentage\]</div>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.UMPS">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">UMPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_sites</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_phys</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps.html#UMPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.UMPS" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">UMPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_sites</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_phys</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps.html#UMPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.UMPS" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for Uniform (translationally invariant) Matrix Product States where
 all nodes are input nodes. It is the uniform version of <a class="reference internal" href="#tensorkrowch.MPS" title="tensorkrowch.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a>, that
 is, all nodes share the same tensor. Thus this class cannot have different
@@ -597,7 +588,6 @@ always periodic.</p>
 <li><p><strong>n_sites</strong> (<em>int</em>) – Number of sites.</p></li>
 <li><p><strong>d_phys</strong> (<em>int</em>) – Physical dimension.</p></li>
 <li><p><strong>d_bond</strong> (<em>int</em>) – Bond dimension.</p></li>
-<li><p><strong>param_bond</strong> (<em>bool</em>) – Boolean indicating whether bond edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p></li>
 <li><p><strong>num_batches</strong> (<em>int</em>) – Number of batch edges of input data nodes. Usually <code class="docutils literal notranslate"><span class="pre">num_batches</span> <span class="pre">=</span> <span class="pre">1</span></code>
 (where the batch edge is used for the data batched) but it could also
 be <code class="docutils literal notranslate"><span class="pre">num_batches</span> <span class="pre">=</span> <span class="pre">2</span></code> (one edge for data batched, other edge for image
@@ -621,19 +611,6 @@ patches in convolutional layers).</p></li>
 <dt class="sig sig-object py" id="tensorkrowch.UMPS.d_bond">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">d_bond</span></span><a class="headerlink" href="#tensorkrowch.UMPS.d_bond" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns bond dimension.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.UMPS.param_bond">
-<span class="sig-name descname"><span class="pre">param_bond</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps.html#UMPS.param_bond"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.UMPS.param_bond" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns <code class="docutils literal notranslate"><span class="pre">param_bond</span></code> attribute or changes it if <code class="docutils literal notranslate"><span class="pre">set_param</span></code> is
-provided.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>set_param</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether edges have to be parameterized (<code class="docutils literal notranslate"><span class="pre">True</span></code>)
-or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -674,7 +651,7 @@ or as a sequence of pairwise stacked contrations.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.ConvMPS">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ConvMPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_channels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'obc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps.html#ConvMPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ConvMPS" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ConvMPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_channels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'obc'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps.html#ConvMPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ConvMPS" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for Matrix Product States, where all nodes are input nodes, and where
 the input data is a batch of images. It is the convolutional version of
 <a class="reference internal" href="#tensorkrowch.MPS" title="tensorkrowch.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a>.</p>
@@ -703,7 +680,6 @@ If given as an <code class="docutils literal notranslate"><span class="pre">int<
 </p></li>
 <li><p><strong>boundary</strong> (<em>{'obc'</em><em>, </em><em>'pbc'}</em>) – String indicating whether periodic or open boundary conditions should
 be used.</p></li>
-<li><p><strong>param_bond</strong> (<em>bool</em>) – Boolean indicating whether bond edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -777,7 +753,7 @@ like <code class="docutils literal notranslate"><span class="pre">inline_input</
 
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.ConvUMPS">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ConvUMPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_channels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps.html#ConvUMPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ConvUMPS" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ConvUMPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_channels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps.html#ConvUMPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ConvUMPS" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for Uniform Matrix Product States, where all nodes are input nodes,
 and where the input data is a batch of images. It is the convolutional
 version of <a class="reference internal" href="#tensorkrowch.UMPS" title="tensorkrowch.UMPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">UMPS</span></code></a>. This class cannot have different bond dimensions
@@ -802,7 +778,6 @@ If given as an <code class="docutils literal notranslate"><span class="pre">int<
 If given as an <code class="docutils literal notranslate"><span class="pre">int</span></code>, the actual kernel size will be
 <code class="docutils literal notranslate"><span class="pre">(kernel_size,</span> <span class="pre">kernel_size)</span></code>.</p>
 </p></li>
-<li><p><strong>param_bond</strong> (<em>bool</em>) – Boolean indicating whether bond edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -869,7 +844,7 @@ like <code class="docutils literal notranslate"><span class="pre">inline_input</
 <h2>MPSLayer<a class="headerlink" href="#mpslayer" title="Permalink to this headline">#</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.MPSLayer">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">MPSLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_sites</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_phys</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'obc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps_layer.html#MPSLayer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.MPSLayer" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">MPSLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_sites</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_phys</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'obc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps_layer.html#MPSLayer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.MPSLayer" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for Matrix Product States with an extra node that is dedicated to the
 output. That is, this MPS has <span class="math notranslate nohighlight">\(n\)</span> nodes, being <span class="math notranslate nohighlight">\(n-1\)</span> input nodes
 connected to data nodes (nodes that will contain the data tensors), and one
@@ -900,7 +875,6 @@ of the right edge of the i-th node (including output node).</p></li>
 middle of the MPS.</p></li>
 <li><p><strong>boundary</strong> (<em>{'obc'</em><em>, </em><em>'pbc'}</em>) – String indicating whether periodic or open boundary conditions should
 be used.</p></li>
-<li><p><strong>param_bond</strong> (<em>bool</em>) – Boolean indicating whether bond edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p></li>
 <li><p><strong>num_batches</strong> (<em>int</em>) – Number of batch edges of input data nodes. Usually <code class="docutils literal notranslate"><span class="pre">num_batches</span> <span class="pre">=</span> <span class="pre">1</span></code>
 (where the batch edge is used for the data batched) but it could also
 be <code class="docutils literal notranslate"><span class="pre">num_batches</span> <span class="pre">=</span> <span class="pre">2</span></code> (one edge for data batched, other edge for image
@@ -967,19 +941,6 @@ patches in convolutional layers).</p></li>
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">n_labels</span></span><a class="headerlink" href="#tensorkrowch.MPSLayer.n_labels" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns number of labels in the output node. Same as <code class="docutils literal notranslate"><span class="pre">phys_dim</span></code>
 for input nodes.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.MPSLayer.param_bond">
-<span class="sig-name descname"><span class="pre">param_bond</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps_layer.html#MPSLayer.param_bond"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.MPSLayer.param_bond" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns <code class="docutils literal notranslate"><span class="pre">param_bond</span></code> attribute or changes it if <code class="docutils literal notranslate"><span class="pre">set_param</span></code> is
-provided.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>set_param</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether edges have to be parameterized (<code class="docutils literal notranslate"><span class="pre">True</span></code>)
-or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -1051,7 +1012,7 @@ cum\_percentage\]</div>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.UMPSLayer">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">UMPSLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_sites</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_phys</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps_layer.html#UMPSLayer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.UMPSLayer" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">UMPSLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_sites</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_phys</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps_layer.html#UMPSLayer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.UMPSLayer" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for Uniform (translationally invariant) Matrix Product States with an
 extra node that is dedicated to the output. It is the uniform version of
 <a class="reference internal" href="#tensorkrowch.MPSLayer" title="tensorkrowch.MPSLayer"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPSLayer</span></code></a>, that is, all input nodes share the same tensor. Thus
@@ -1068,7 +1029,6 @@ for input nodes.</p></li>
 <li><p><strong>l_position</strong> (<em>int</em><em>, </em><em>optional</em>) – Position of the output node (label). Should be between 0 and
 <code class="docutils literal notranslate"><span class="pre">n_sites</span> <span class="pre">-</span> <span class="pre">1</span></code>. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, the output node will be located at the
 middle of the MPS.</p></li>
-<li><p><strong>param_bond</strong> (<em>bool</em>) – Boolean indicating whether bond edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p></li>
 <li><p><strong>num_batches</strong> (<em>int</em>) – Number of batch edges of input data nodes. Usually <code class="docutils literal notranslate"><span class="pre">num_batches</span> <span class="pre">=</span> <span class="pre">1</span></code>
 (where the batch edge is used for the data batched) but it could also
 be <code class="docutils literal notranslate"><span class="pre">num_batches</span> <span class="pre">=</span> <span class="pre">2</span></code> (one edge for data batched, other edge for image
@@ -1105,19 +1065,6 @@ patches in convolutional layers).</p></li>
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">n_labels</span></span><a class="headerlink" href="#tensorkrowch.UMPSLayer.n_labels" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns number of labels in the output node. Same as <code class="docutils literal notranslate"><span class="pre">phys_dim</span></code>
 for input nodes.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.UMPSLayer.param_bond">
-<span class="sig-name descname"><span class="pre">param_bond</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps_layer.html#UMPSLayer.param_bond"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.UMPSLayer.param_bond" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns <code class="docutils literal notranslate"><span class="pre">param_bond</span></code> attribute or changes it if <code class="docutils literal notranslate"><span class="pre">set_param</span></code> is
-provided.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>set_param</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether edges have to be parameterized (<code class="docutils literal notranslate"><span class="pre">True</span></code>)
-or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -1158,7 +1105,7 @@ or as a sequence of pairwise stacked contrations.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.ConvMPSLayer">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ConvMPSLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_channels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_channels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'obc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps_layer.html#ConvMPSLayer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ConvMPSLayer" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ConvMPSLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_channels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_channels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'obc'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps_layer.html#ConvMPSLayer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ConvMPSLayer" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for Matrix Product States with an extra node that is dedicated to the
 output, and where the input data is a batch of images. It is the convolutional
 version of <a class="reference internal" href="#tensorkrowch.MPSLayer" title="tensorkrowch.MPSLayer"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPSLayer</span></code></a>.</p>
@@ -1192,7 +1139,6 @@ If given as an <code class="docutils literal notranslate"><span class="pre">int<
 will be located at the middle of the MPS.</p></li>
 <li><p><strong>boundary</strong> (<em>{'obc'</em><em>, </em><em>'pbc'}</em>) – String indicating whether periodic or open boundary conditions should
 be used.</p></li>
-<li><p><strong>param_bond</strong> (<em>bool</em>) – Boolean indicating whether bond edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1267,7 +1213,7 @@ like <code class="docutils literal notranslate"><span class="pre">inline_input</
 
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.ConvUMPSLayer">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ConvUMPSLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_channels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_channels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps_layer.html#ConvUMPSLayer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ConvUMPSLayer" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ConvUMPSLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_channels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_channels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/mps_layer.html#ConvUMPSLayer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ConvUMPSLayer" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for Uniform Matrix Product States with an extra node that is dedicated
 to the output, and where the input data is a batch of images. It is the
 convolutional version of <a class="reference internal" href="#tensorkrowch.UMPSLayer" title="tensorkrowch.UMPSLayer"><code class="xref py py-class docutils literal notranslate"><span class="pre">UMPSLayer</span></code></a>. This class cannot have different
@@ -1296,7 +1242,6 @@ If given as an <code class="docutils literal notranslate"><span class="pre">int<
 <li><p><strong>l_position</strong> (<em>int</em><em>, </em><em>optional</em>) – Position of the output node (label). Should be between 0 and
 <span class="math notranslate nohighlight">\(kernel\_size_0 \cdot kernel\_size_1\)</span>. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, the output node
 will be located at the middle of the MPS.</p></li>
-<li><p><strong>param_bond</strong> (<em>bool</em>) – Boolean indicating whether bond edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1363,7 +1308,7 @@ like <code class="docutils literal notranslate"><span class="pre">inline_input</
 <h2>Tree<a class="headerlink" href="#tree" title="Permalink to this headline">#</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.Tree">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Tree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sites_per_layer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/tree.html#Tree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Tree" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Tree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sites_per_layer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/tree.html#Tree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Tree" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for Tree States. These states form a tree structure where the <code class="docutils literal notranslate"><span class="pre">data</span></code>
 nodes are in the base. All nodes have a sequence of input edges and an
 output edge. Thus the contraction of the Tree returns a vector.</p>
@@ -1377,7 +1322,6 @@ previous layer.</p></li>
 <li><p><strong>d_bond</strong> (<em>list</em><em>[</em><em>list</em><em>[</em><em>int</em><em>]</em><em>] or </em><em>tuple</em><em>[</em><em>tuple</em><em>[</em><em>int</em><em>]</em><em>]</em>) – Bond dimensions of nodes in each layer. Each sequence corresponds to the
 shape of the nodes in each layer (some input edges and an output edge in
 the last position).</p></li>
-<li><p><strong>param_bond</strong> (<em>bool</em>) – Boolean indicating whether bond edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p></li>
 <li><p><strong>num_batches</strong> (<em>int</em>) – Number of batch edges of input data nodes. Usually <code class="docutils literal notranslate"><span class="pre">num_batches</span> <span class="pre">=</span> <span class="pre">1</span></code>
 (where the batch edge is used for the data batched) but it could also
 be <code class="docutils literal notranslate"><span class="pre">num_batches</span> <span class="pre">=</span> <span class="pre">2</span></code> (one edge for data batched, other edge for image
@@ -1406,19 +1350,6 @@ patches in convolutional layers).</p></li>
 <dd><p>Returns bond dimensions of nodes in each layer. Each sequence
 corresponds to the shape of the nodes in each layer (some input edges
 and an output edge in the last position).</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.Tree.param_bond">
-<span class="sig-name descname"><span class="pre">param_bond</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/tree.html#Tree.param_bond"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Tree.param_bond" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns <code class="docutils literal notranslate"><span class="pre">param_bond</span></code> attribute or changes it if <code class="docutils literal notranslate"><span class="pre">set_param</span></code> is
-provided.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>set_param</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether edges have to be parameterized (<code class="docutils literal notranslate"><span class="pre">True</span></code>)
-or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -1479,7 +1410,7 @@ cum\_percentage\]</div>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.UTree">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">UTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sites_per_layer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/tree.html#UTree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.UTree" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">UTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sites_per_layer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/tree.html#UTree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.UTree" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for Uniform Tree States where all nodes have the same shape. It is
 the uniform version of <a class="reference internal" href="#tensorkrowch.Tree" title="tensorkrowch.Tree"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tree</span></code></a>, that is, all nodes share the same
 tensor.</p>
@@ -1493,7 +1424,6 @@ layer.</p></li>
 <li><p><strong>d_bond</strong> (<em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em>) – Bond dimensions of nodes in each layer. Since all nodes have the same
 shape, it is enough to pass a single sequence of dimensions (some input
 edges and an output edge in the last position).</p></li>
-<li><p><strong>param_bond</strong> (<em>bool</em>) – Boolean indicating whether bond edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p></li>
 <li><p><strong>num_batches</strong> (<em>int</em>) – Number of batch edges of input data nodes. Usually <code class="docutils literal notranslate"><span class="pre">num_batches</span> <span class="pre">=</span> <span class="pre">1</span></code>
 (where the batch edge is used for the data batched) but it could also
 be <code class="docutils literal notranslate"><span class="pre">num_batches</span> <span class="pre">=</span> <span class="pre">2</span></code> (one edge for data batched, other edge for image
@@ -1513,19 +1443,6 @@ patches in convolutional layers).</p></li>
 <dd><p>Returns bond dimensions of nodes in each layer. Since all nodes have
 the same shape, it is a single sequence of dimensions (some input edges
 and an output edge in the last position).</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.UTree.param_bond">
-<span class="sig-name descname"><span class="pre">param_bond</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/tree.html#UTree.param_bond"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.UTree.param_bond" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns <code class="docutils literal notranslate"><span class="pre">param_bond</span></code> attribute or changes it if <code class="docutils literal notranslate"><span class="pre">set_param</span></code> is
-provided.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>set_param</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether edges have to be parameterized (<code class="docutils literal notranslate"><span class="pre">True</span></code>)
-or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -1560,7 +1477,7 @@ inline or in parallel (using a single stacked contraction).</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.ConvTree">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ConvTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sites_per_layer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/tree.html#ConvTree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ConvTree" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ConvTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sites_per_layer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/tree.html#ConvTree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ConvTree" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for Tree States where the input data is a batch of images. It is the
 convolutional version of <a class="reference internal" href="#tensorkrowch.Tree" title="tensorkrowch.Tree"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tree</span></code></a>.</p>
 <p>Input data as well as initialization parameters are described in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html">nn.Conv2d</a>.</p>
@@ -1588,7 +1505,6 @@ If given as an <code class="docutils literal notranslate"><span class="pre">int<
 If given as an <code class="docutils literal notranslate"><span class="pre">int</span></code>, the actual kernel size will be
 <code class="docutils literal notranslate"><span class="pre">(kernel_size,</span> <span class="pre">kernel_size)</span></code>.</p>
 </p></li>
-<li><p><strong>param_bond</strong> (<em>bool</em>) – Boolean indicating whether bond edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1657,7 +1573,7 @@ like <code class="docutils literal notranslate"><span class="pre">inline</span><
 
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.ConvUTree">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ConvUTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sites_per_layer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/tree.html#ConvUTree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ConvUTree" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ConvUTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sites_per_layer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/tree.html#ConvUTree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ConvUTree" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for Uniform Tree States where the input data is a batch of images. It
 is the convolutional version of <a class="reference internal" href="#tensorkrowch.UTree" title="tensorkrowch.UTree"><code class="xref py py-class docutils literal notranslate"><span class="pre">UTree</span></code></a>.</p>
 <p>Input data as well as initialization parameters are described in <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html">nn.Conv2d</a>.</p>
@@ -1685,7 +1601,6 @@ If given as an <code class="docutils literal notranslate"><span class="pre">int<
 If given as an <code class="docutils literal notranslate"><span class="pre">int</span></code>, the actual kernel size will be
 <code class="docutils literal notranslate"><span class="pre">(kernel_size,</span> <span class="pre">kernel_size)</span></code>.</p>
 </p></li>
-<li><p><strong>param_bond</strong> (<em>bool</em>) – Boolean indicating whether bond edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1747,7 +1662,7 @@ like <code class="docutils literal notranslate"><span class="pre">inline</span><
 <h2>PEPS<a class="headerlink" href="#peps" title="Permalink to this headline">#</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.PEPS">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">PEPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_rows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_phys</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['obc',</span> <span class="pre">'obc']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/peps.html#PEPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.PEPS" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">PEPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_rows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_phys</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['obc',</span> <span class="pre">'obc']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/peps.html#PEPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.PEPS" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for Projected Entangled Pair States, where all nodes are input nodes,
 that is, they are all connected to <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes that will store the input
 data tensor(s). When contracting the PEPS with new input data, the result
@@ -1763,7 +1678,6 @@ it should also contain 2 elements</p></li>
 <li><p><strong>boundary</strong> (<em>list</em><em>[</em><em>{'obc'</em><em>, </em><em>'pbc'}</em><em>]</em>) – List of strings indicating whether periodic or open boundary conditions
 should be used in the horizontal (up and down) and vertical (left and
 right) boundaries.</p></li>
-<li><p><strong>param_bond</strong> (<em>bool</em>) – Boolean indicating whether bond edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p></li>
 <li><p><strong>num_batches</strong> (<em>int</em>) – Number of batch edges of input data nodes. Usually <code class="docutils literal notranslate"><span class="pre">num_batches</span> <span class="pre">=</span> <span class="pre">1</span></code>
 (where the batch edge is used for the data batched) but it could also
 be <code class="docutils literal notranslate"><span class="pre">num_batches</span> <span class="pre">=</span> <span class="pre">2</span></code> (one edge for data batched, other edge for image
@@ -1814,19 +1728,6 @@ vertical (left and right) boundaries.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.PEPS.param_bond">
-<span class="sig-name descname"><span class="pre">param_bond</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/peps.html#PEPS.param_bond"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.PEPS.param_bond" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns <code class="docutils literal notranslate"><span class="pre">param_bond</span></code> attribute or changes it if <code class="docutils literal notranslate"><span class="pre">set_param</span></code> is
-provided.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>set_param</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether edges have to be parameterized (<code class="docutils literal notranslate"><span class="pre">True</span></code>)
-or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.PEPS.initialize">
 <span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">std</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-09</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/peps.html#PEPS.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.PEPS.initialize" title="Permalink to this definition">#</a></dt>
 <dd><p>Initializes all the nodes.</p>
@@ -1866,7 +1767,7 @@ inline or in parallel (using a single stacked contraction).</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.UPEPS">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">UPEPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_rows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_phys</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/peps.html#UPEPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.UPEPS" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">UPEPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_rows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_phys</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/peps.html#UPEPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.UPEPS" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for Uniform (translationally invariant) Projected Entangled Pair
 States, where all nodes are input nodes. It is the uniform version of
 <a class="reference internal" href="#tensorkrowch.PEPS" title="tensorkrowch.PEPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">PEPS</span></code></a>, that is, all nodes share the same tensor. Thus boundary
@@ -1879,7 +1780,6 @@ conditions are always periodic.</p>
 <li><p><strong>d_phys</strong> (<em>int</em>) – Physical dimension.</p></li>
 <li><p><strong>d_bond</strong> (<em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em>) – Bond dimensions for horizontal and vertical edges (in that order). Thus
 it should also contain 2 elements</p></li>
-<li><p><strong>param_bond</strong> (<em>bool</em>) – Boolean indicating whether bond edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p></li>
 <li><p><strong>num_batches</strong> (<em>int</em>) – Number of batch edges of input data nodes. Usually <code class="docutils literal notranslate"><span class="pre">num_batches</span> <span class="pre">=</span> <span class="pre">1</span></code>
 (where the batch edge is used for the data batched) but it could also
 be <code class="docutils literal notranslate"><span class="pre">num_batches</span> <span class="pre">=</span> <span class="pre">2</span></code> (one edge for data batched, other edge for image
@@ -1909,19 +1809,6 @@ patches in convolutional layers).</p></li>
 <dt class="sig sig-object py" id="tensorkrowch.UPEPS.d_bond">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">d_bond</span></span><a class="headerlink" href="#tensorkrowch.UPEPS.d_bond" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns bond dimensions for horizontal and vertical edges.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.UPEPS.param_bond">
-<span class="sig-name descname"><span class="pre">param_bond</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/peps.html#UPEPS.param_bond"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.UPEPS.param_bond" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns <code class="docutils literal notranslate"><span class="pre">param_bond</span></code> attribute or changes it if <code class="docutils literal notranslate"><span class="pre">set_param</span></code> is
-provided.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>set_param</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether edges have to be parameterized (<code class="docutils literal notranslate"><span class="pre">True</span></code>)
-or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -1964,7 +1851,7 @@ inline or in parallel (using a single stacked contraction).</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.ConvPEPS">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ConvPEPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_channels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['obc',</span> <span class="pre">'obc']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/peps.html#ConvPEPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ConvPEPS" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ConvPEPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_channels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['obc',</span> <span class="pre">'obc']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/peps.html#ConvPEPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ConvPEPS" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for Projected Entangled Pair States, where all nodes are input nodes,
 and where the input data is a batch of images. It is the convolutional
 version of <a class="reference internal" href="#tensorkrowch.PEPS" title="tensorkrowch.PEPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">PEPS</span></code></a>.</p>
@@ -1992,7 +1879,6 @@ If given as an <code class="docutils literal notranslate"><span class="pre">int<
 <li><p><strong>boundary</strong> (<em>list</em><em>[</em><em>{'obc'</em><em>, </em><em>'pbc'}</em><em>]</em>) – List of strings indicating whether periodic or open boundary conditions
 should be used in the horizontal (up and down) and vertical (left and
 right) boundaries.</p></li>
-<li><p><strong>param_bond</strong> (<em>bool</em>) – Boolean indicating whether bond edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -2061,7 +1947,7 @@ like <code class="docutils literal notranslate"><span class="pre">from_size</spa
 
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.ConvUPEPS">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ConvUPEPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_channels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_bond</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/peps.html#ConvUPEPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ConvUPEPS" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ConvUPEPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_channels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_bond</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/tn_models/peps.html#ConvUPEPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ConvUPEPS" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for Uniform Projected Entangled Pair States, where all nodes are input
 nodes, and where the input data is a batch of images. It is the convolutional
 version of <a class="reference internal" href="#tensorkrowch.UPEPS" title="tensorkrowch.UPEPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">UPEPS</span></code></a>.</p>
@@ -2086,7 +1972,6 @@ If given as an <code class="docutils literal notranslate"><span class="pre">int<
 If given as an <code class="docutils literal notranslate"><span class="pre">int</span></code>, the actual kernel size will be
 <code class="docutils literal notranslate"><span class="pre">(kernel_size,</span> <span class="pre">kernel_size)</span></code>.</p>
 </p></li>
-<li><p><strong>param_bond</strong> (<em>bool</em>) – Boolean indicating whether bond edges should be <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>

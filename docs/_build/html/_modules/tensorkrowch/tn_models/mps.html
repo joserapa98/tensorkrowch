@@ -130,6 +130,11 @@
     </a>
    </li>
    <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/jose_mps_canonical_mnist.html">
+     MPS and Canonical Form initializing also in canonical form - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
     <a class="reference internal" href="../../../examples/jose_mps_fashion_mnist.html">
      MPS and Canonical Form - FashionMNIST
     </a>
@@ -350,8 +355,6 @@ title="Source repository"
 <span class="sd">    boundary : {&#39;obc&#39;, &#39;pbc&#39;}</span>
 <span class="sd">        String indicating whether periodic or open boundary conditions should</span>
 <span class="sd">        be used.</span>
-<span class="sd">    param_bond : bool</span>
-<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
 <span class="sd">    num_batches : int</span>
 <span class="sd">        Number of batch edges of input data nodes. Usually ``num_batches = 1``</span>
 <span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
@@ -387,7 +390,6 @@ title="Source repository"
                  <span class="n">d_phys</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
                  <span class="n">d_bond</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
                  <span class="n">boundary</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span><span class="p">,</span>
-                 <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;mps&#39;</span><span class="p">)</span>
@@ -440,11 +442,7 @@ title="Source repository"
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_bond` should be `int` type or a list/tuple &#39;</span>
                             <span class="s1">&#39;of ints&#39;</span><span class="p">)</span>
 
-        <span class="c1"># param_bond</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span> <span class="o">=</span> <span class="n">param_bond</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">param_bond</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">param_bond</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_batches</span> <span class="o">=</span> <span class="n">num_batches</span>
@@ -468,27 +466,6 @@ title="Source repository"
     <span class="k">def</span> <span class="nf">d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span>
-
-<div class="viewcode-block" id="MPS.param_bond"><a class="viewcode-back" href="../../../models.html#tensorkrowch.MPS.param_bond">[docs]</a>    <span class="k">def</span> <span class="nf">param_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_param</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns ``param_bond`` attribute or changes it if ``set_param`` is</span>
-<span class="sd">        provided.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        set_param : bool, optional</span>
-<span class="sd">            Boolean indicating whether edges have to be parameterized (``True``)</span>
-<span class="sd">            or de-parameterized (``False``).</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">set_param</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">leaf_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-                <span class="k">if</span> <span class="s1">&#39;left&#39;</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
-                    <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">set_param</span><span class="p">)</span>
-                <span class="k">if</span> <span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
-                    <span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">set_param</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span> <span class="o">=</span> <span class="n">set_param</span></div>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the MPS.&quot;&quot;&quot;</span>
@@ -817,13 +794,11 @@ title="Source repository"
             <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span> <span class="o">=</span> <span class="n">nodes</span>
-            
-        <span class="bp">self</span><span class="o">.</span><span class="n">param_bond</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span><span class="p">)</span>
         
         <span class="n">d_bond</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
             <span class="k">if</span> <span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
-                <span class="n">d_bond</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+                <span class="n">d_bond</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>  <span class="c1"># TODO: _size?</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span> <span class="o">=</span> <span class="n">d_bond</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="n">prev_automemory</span></div>
@@ -1018,8 +993,6 @@ title="Source repository"
 <span class="sd">        Physical dimension.</span>
 <span class="sd">    d_bond : int</span>
 <span class="sd">        Bond dimension.</span>
-<span class="sd">    param_bond : bool</span>
-<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
 <span class="sd">    num_batches : int</span>
 <span class="sd">        Number of batch edges of input data nodes. Usually ``num_batches = 1``</span>
 <span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
@@ -1031,7 +1004,6 @@ title="Source repository"
                  <span class="n">n_sites</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                  <span class="n">d_phys</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                  <span class="n">d_bond</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-                 <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;mps&#39;</span><span class="p">)</span>
@@ -1054,11 +1026,7 @@ title="Source repository"
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_bond` should be `int` type&#39;</span><span class="p">)</span>
 
-        <span class="c1"># param_bond</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span> <span class="o">=</span> <span class="n">param_bond</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">param_bond</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">param_bond</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_batches</span> <span class="o">=</span> <span class="n">num_batches</span>
@@ -1077,27 +1045,6 @@ title="Source repository"
     <span class="k">def</span> <span class="nf">d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span>
-
-<div class="viewcode-block" id="UMPS.param_bond"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UMPS.param_bond">[docs]</a>    <span class="k">def</span> <span class="nf">param_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_param</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns ``param_bond`` attribute or changes it if ``set_param`` is</span>
-<span class="sd">        provided.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        set_param : bool, optional</span>
-<span class="sd">            Boolean indicating whether edges have to be parameterized (``True``)</span>
-<span class="sd">            or de-parameterized (``False``).</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">set_param</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">leaf_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-                <span class="k">if</span> <span class="s1">&#39;left&#39;</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
-                    <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">set_param</span><span class="p">)</span>
-                <span class="k">if</span> <span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
-                    <span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">set_param</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span> <span class="o">=</span> <span class="n">set_param</span></div>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the MPS.&quot;&quot;&quot;</span>
@@ -1325,8 +1272,6 @@ title="Source repository"
 <span class="sd">    boundary : {&#39;obc&#39;, &#39;pbc&#39;}</span>
 <span class="sd">        String indicating whether periodic or open boundary conditions should</span>
 <span class="sd">        be used.</span>
-<span class="sd">    param_bond : bool</span>
-<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
 <span class="sd">        </span>
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
@@ -1346,8 +1291,7 @@ title="Source repository"
                  <span class="n">stride</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                  <span class="n">padding</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
                  <span class="n">dilation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-                 <span class="n">boundary</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span><span class="p">,</span>
-                 <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+                 <span class="n">boundary</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span><span class="p">):</span>
         
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">kernel_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">)</span>
@@ -1379,7 +1323,6 @@ title="Source repository"
                          <span class="n">d_phys</span><span class="o">=</span><span class="n">in_channels</span><span class="p">,</span>
                          <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
                          <span class="n">boundary</span><span class="o">=</span><span class="n">boundary</span><span class="p">,</span>
-                         <span class="n">param_bond</span><span class="o">=</span><span class="n">param_bond</span><span class="p">,</span>
                          <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">unfold</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Unfold</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span>
@@ -1528,8 +1471,6 @@ title="Source repository"
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        If given as an ``int``, the actual kernel size will be</span>
 <span class="sd">        ``(kernel_size, kernel_size)``.</span>
-<span class="sd">    param_bond : bool</span>
-<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -1538,8 +1479,7 @@ title="Source repository"
                     <span class="n">kernel_size</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">],</span>
                     <span class="n">stride</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                     <span class="n">padding</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-                    <span class="n">dilation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-                    <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+                    <span class="n">dilation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">):</span>
         
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">kernel_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">)</span>
@@ -1570,7 +1510,6 @@ title="Source repository"
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">n_sites</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
                          <span class="n">d_phys</span><span class="o">=</span><span class="n">in_channels</span><span class="p">,</span>
                          <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
-                         <span class="n">param_bond</span><span class="o">=</span><span class="n">param_bond</span><span class="p">,</span>
                          <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">unfold</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Unfold</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span>

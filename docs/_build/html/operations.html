@@ -135,6 +135,11 @@
     </a>
    </li>
    <li class="toctree-l2">
+    <a class="reference internal" href="examples/jose_mps_canonical_mnist.html">
+     MPS and Canonical Form initializing also in canonical form - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
     <a class="reference internal" href="examples/jose_mps_fashion_mnist.html">
      MPS and Canonical Form - FashionMNIST
     </a>
@@ -430,23 +435,23 @@ title="Print to PDF"
 <dt class="sig sig-object py" id="tensorkrowch.connect">
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edge1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.connect" title="Permalink to this definition">#</a></dt>
 <dd><p>Connects two dangling edges. If both are <a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edges</span></code></a>, the result
-will be also an <code class="docutils literal notranslate"><span class="pre">Edge</span></code>. Otherwise, the result will be a <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code></a>.</p>
+will be also an <code class="docutils literal notranslate"><span class="pre">Edge</span></code>. Otherwise, the result will be a <code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code>.</p>
 <p>It is necessary that both edges have the same dimension so that contractions
 along that edge can be computed. Note that for <code class="docutils literal notranslate"><span class="pre">ParamEdges</span></code> the sizes could
 be different. In this case the resultant param-edge will have the minimum
 size between them.</p>
-<p>This operation is the same as <a class="reference internal" href="components.html#tensorkrowch.Edge.connect" title="tensorkrowch.Edge.connect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Edge.connect()</span></code></a> and <a class="reference internal" href="components.html#tensorkrowch.ParamEdge.connect" title="tensorkrowch.ParamEdge.connect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ParamEdge.connect()</span></code></a>.</p>
+<p>This operation is the same as <a class="reference internal" href="components.html#tensorkrowch.Edge.connect" title="tensorkrowch.Edge.connect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Edge.connect()</span></code></a> and <code class="xref py py-meth docutils literal notranslate"><span class="pre">ParamEdge.connect()</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>edge1</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><em>ParamEdge</em></a>) – The first edge that will be connected. Its node will become the <code class="docutils literal notranslate"><span class="pre">node1</span></code>
+<li><p><strong>edge1</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – The first edge that will be connected. Its node will become the <code class="docutils literal notranslate"><span class="pre">node1</span></code>
 of the resultant edge.</p></li>
-<li><p><strong>edge2</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><em>ParamEdge</em></a>) – The second edge that will be connected. Its node will become the <code class="docutils literal notranslate"><span class="pre">node2</span></code>
+<li><p><strong>edge2</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – The second edge that will be connected. Its node will become the <code class="docutils literal notranslate"><span class="pre">node2</span></code>
 of the resultant edge.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a> or <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge">ParamEdge</a></p>
+<dd class="field-even"><p><a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -461,13 +466,13 @@ However, this is mandatory, since when stacking two sequences of nodes
 independently it cannot be inferred that the resultant <code class="docutils literal notranslate"><span class="pre">(Param)StackNodes</span></code>
 had to be connected.</p>
 <p>This operation is the same as <a class="reference internal" href="components.html#tensorkrowch.StackEdge.connect" title="tensorkrowch.StackEdge.connect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">StackEdge.connect()</span></code></a> and
-<a class="reference internal" href="components.html#tensorkrowch.ParamStackEdge.connect" title="tensorkrowch.ParamStackEdge.connect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ParamStackEdge.connect()</span></code></a>.</p>
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">ParamStackEdge.connect()</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>edge1</strong> (<a class="reference internal" href="components.html#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge"><em>StackEdge</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamStackEdge" title="tensorkrowch.ParamStackEdge"><em>ParamStackEdge</em></a>) – The first edge that will be connected. Its node will become the <code class="docutils literal notranslate"><span class="pre">node1</span></code>
+<li><p><strong>edge1</strong> (<a class="reference internal" href="components.html#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge"><em>StackEdge</em></a><em> or </em><em>ParamStackEdge</em>) – The first edge that will be connected. Its node will become the <code class="docutils literal notranslate"><span class="pre">node1</span></code>
 of the resultant edge.</p></li>
-<li><p><strong>edge2</strong> (<a class="reference internal" href="components.html#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge"><em>StackEdge</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamStackEdge" title="tensorkrowch.ParamStackEdge"><em>ParamStackEdge</em></a>) – The second edge that will be connected. Its node will become the <code class="docutils literal notranslate"><span class="pre">node2</span></code>
+<li><p><strong>edge2</strong> (<a class="reference internal" href="components.html#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge"><em>StackEdge</em></a><em> or </em><em>ParamStackEdge</em>) – The second edge that will be connected. Its node will become the <code class="docutils literal notranslate"><span class="pre">node2</span></code>
 of the resultant edge.</p></li>
 </ul>
 </dd>
@@ -479,14 +484,13 @@ of the resultant edge.</p></li>
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">disconnect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edge</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#disconnect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.disconnect" title="Permalink to this definition">#</a></dt>
 <dd><p>Disconnects connected edge, that is, the connected edge is splitted into
 two dangling edges, one for each node.</p>
-<p>This operation is the same as <a class="reference internal" href="components.html#tensorkrowch.Edge.disconnect" title="tensorkrowch.Edge.disconnect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Edge.disconnect()</span></code></a> and
-<a class="reference internal" href="components.html#tensorkrowch.ParamEdge.disconnect" title="tensorkrowch.ParamEdge.disconnect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ParamEdge.disconnect()</span></code></a>.</p>
+<p>This operation is the same as <a class="reference internal" href="components.html#tensorkrowch.Edge.disconnect" title="tensorkrowch.Edge.disconnect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Edge.disconnect()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge"><em>ParamEdge</em></a>) – Edge that is going to be disconnected (splitted in two).</p>
+<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – Edge that is going to be disconnected (splitted in two).</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p>tuple[<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a>, <a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a>] or tuple[<a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge">ParamEdge</a>, <a class="reference internal" href="components.html#tensorkrowch.ParamEdge" title="tensorkrowch.ParamEdge">ParamEdge</a>]</p>
+<dd class="field-even"><p>tuple[<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a>, <a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a>]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -502,7 +506,7 @@ underscore indicate <strong>in-place</strong> operations.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractEdge" title="tensorkrowch.AbstractEdge"><em>AbstractEdge</em></a>) – Edge whose nodes are to be contracted and splitted.</p></li>
+<li><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – Edge whose nodes are to be contracted and splitted.</p></li>
 <li><p><strong>side</strong> (<em>str</em><em>, </em><em>optional</em>) – Indicates the side to which the diagonal matrix <span class="math notranslate nohighlight">\(S\)</span> should be
 contracted. If “left”, the first resultant node’s tensor will be
 <span class="math notranslate nohighlight">\(US\)</span>, and the other node’s tensor will be <span class="math notranslate nohighlight">\(V^{\dagger}\)</span>.
@@ -535,7 +539,7 @@ underscore indicate <strong>in-place</strong> operations.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractEdge" title="tensorkrowch.AbstractEdge"><em>AbstractEdge</em></a>) – Edge whose nodes are to be contracted and splitted.</p></li>
+<li><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – Edge whose nodes are to be contracted and splitted.</p></li>
 <li><p><strong>side</strong> (<em>str</em><em>, </em><em>optional</em>) – Indicates the side to which the diagonal matrix <span class="math notranslate nohighlight">\(S\)</span> should be
 contracted. If “left”, the first resultant node’s tensor will be
 <span class="math notranslate nohighlight">\(US\)</span>, and the other node’s tensor will be <span class="math notranslate nohighlight">\(V^{\dagger}\)</span>.
@@ -567,7 +571,7 @@ explanation.</p>
 underscore indicate <strong>in-place</strong> operations.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractEdge" title="tensorkrowch.AbstractEdge"><em>AbstractEdge</em></a>) – Edge whose nodes are to be contracted and splitted.</p>
+<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – Edge whose nodes are to be contracted and splitted.</p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>tuple[<a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
@@ -585,7 +589,7 @@ explanation.</p>
 underscore indicate <strong>in-place</strong> operations.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractEdge" title="tensorkrowch.AbstractEdge"><em>AbstractEdge</em></a>) – Edge whose nodes are to be contracted and splitted.</p>
+<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – Edge whose nodes are to be contracted and splitted.</p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>tuple[<a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
@@ -602,7 +606,7 @@ underscore indicate <strong>in-place</strong> operations.</p>
 underscore indicate <strong>in-place</strong> operations.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractEdge" title="tensorkrowch.AbstractEdge"><em>AbstractEdge</em></a>) – Edges that is to be contracted. Batch contraction is automatically
+<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – Edges that is to be contracted. Batch contraction is automatically
 performed when both nodes have batch edges with the same names.</p>
 </dd>
 <dt class="field-even">Return type</dt>
@@ -865,7 +869,7 @@ cum\_percentage\]</div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>edges</strong> (<em>list</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.AbstractEdge" title="tensorkrowch.AbstractEdge"><em>AbstractEdge</em></a><em>]</em>) – List of edges that are to be contracted. They must be edges shared
+<li><p><strong>edges</strong> (<em>list</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a><em>]</em>) – List of edges that are to be contracted. They must be edges shared
 between <code class="docutils literal notranslate"><span class="pre">node1</span></code> and <code class="docutils literal notranslate"><span class="pre">node2</span></code>. Batch contraction is automatically
 performed when both nodes have batch edges with the same names.</p></li>
 <li><p><strong>node1</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a>) – First node of the contraction. Its non-contracted edges will appear
@@ -882,7 +886,7 @@ last in the list of inherited edges of the resultant node.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.contract_between">
-<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">contract_between</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#contract_between"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.contract_between" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">contract_between</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#contract_between"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.contract_between" title="Permalink to this definition">#</a></dt>
 <dd><p>Contracts all edges shared between two nodes. Batch contraction is
 automatically performed when both nodes have batch edges with the same
 names.</p>
@@ -903,7 +907,7 @@ last in the list of inherited edges of the resultant node.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.contract_between_">
-<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">contract_between_</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#contract_between_"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.contract_between_" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">contract_between_</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#contract_between_"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.contract_between_" title="Permalink to this definition">#</a></dt>
 <dd><p>In-place version of <a class="reference internal" href="#tensorkrowch.contract_between" title="tensorkrowch.contract_between"><code class="xref py py-func docutils literal notranslate"><span class="pre">contract_between()</span></code></a>.</p>
 <p>Following the <strong>PyTorch</strong> convention, names of functions ended with an
 underscore indicate <strong>in-place</strong> operations.</p>

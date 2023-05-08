@@ -130,6 +130,11 @@
     </a>
    </li>
    <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/jose_mps_canonical_mnist.html">
+     MPS and Canonical Form initializing also in canonical form - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
     <a class="reference internal" href="../../../examples/jose_mps_fashion_mnist.html">
      MPS and Canonical Form - FashionMNIST
     </a>
@@ -323,6 +328,9 @@ title="Source repository"
 <span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">TensorNetwork</span>
 <span class="kn">import</span> <span class="nn">tensorkrowch.operations</span> <span class="k">as</span> <span class="nn">op</span>
 
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="n">PRINT_MODE</span> <span class="o">=</span> <span class="kc">False</span>
+
 
 <div class="viewcode-block" id="MPSLayer"><a class="viewcode-back" href="../../../models.html#tensorkrowch.MPSLayer">[docs]</a><span class="k">class</span> <span class="nc">MPSLayer</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -364,8 +372,6 @@ title="Source repository"
 <span class="sd">    boundary : {&#39;obc&#39;, &#39;pbc&#39;}</span>
 <span class="sd">        String indicating whether periodic or open boundary conditions should</span>
 <span class="sd">        be used.</span>
-<span class="sd">    param_bond : bool</span>
-<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
 <span class="sd">    num_batches : int</span>
 <span class="sd">        Number of batch edges of input data nodes. Usually ``num_batches = 1``</span>
 <span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
@@ -405,7 +411,6 @@ title="Source repository"
                  <span class="n">d_bond</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
                  <span class="n">l_position</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">boundary</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span><span class="p">,</span>
-                 <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;mps&#39;</span><span class="p">)</span>
@@ -474,11 +479,7 @@ title="Source repository"
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`n_labels` should be int type&#39;</span><span class="p">)</span>
 
-        <span class="c1"># param_bond</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span> <span class="o">=</span> <span class="n">param_bond</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">param_bond</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">param_bond</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_batches</span> <span class="o">=</span> <span class="n">num_batches</span>
@@ -515,27 +516,6 @@ title="Source repository"
 <span class="sd">        for input nodes.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_labels</span>
-
-<div class="viewcode-block" id="MPSLayer.param_bond"><a class="viewcode-back" href="../../../models.html#tensorkrowch.MPSLayer.param_bond">[docs]</a>    <span class="k">def</span> <span class="nf">param_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_param</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns ``param_bond`` attribute or changes it if ``set_param`` is</span>
-<span class="sd">        provided.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        set_param : bool, optional</span>
-<span class="sd">            Boolean indicating whether edges have to be parameterized (``True``)</span>
-<span class="sd">            or de-parameterized (``False``).</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">set_param</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">leaf_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-                <span class="k">if</span> <span class="s1">&#39;left&#39;</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
-                    <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">set_param</span><span class="p">)</span>
-                <span class="k">if</span> <span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
-                    <span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">set_param</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span> <span class="o">=</span> <span class="n">set_param</span></div>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the MPS.&quot;&quot;&quot;</span>
@@ -637,7 +617,6 @@ title="Source repository"
                                          <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;output&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
                                          <span class="n">name</span><span class="o">=</span><span class="s1">&#39;output_node&#39;</span><span class="p">,</span>
                                          <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
-                                         <span class="c1">#param_edges=self.param_bond())</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_env</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">left_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
             <span class="k">else</span><span class="p">:</span>
@@ -790,6 +769,8 @@ title="Source repository"
 
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_env</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_env</span><span class="p">:</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+                
                 <span class="n">stack</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">left_env</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_env</span><span class="p">)</span>
                 <span class="n">stack_data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lr_env_data</span><span class="p">)</span>
                 
@@ -800,6 +781,10 @@ title="Source repository"
                 
                 <span class="n">left_result</span> <span class="o">=</span> <span class="n">result</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">left_env</span><span class="p">)]</span>
                 <span class="n">right_result</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">left_env</span><span class="p">):]</span>
+                
+                <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Input data contraction:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
+                
                 <span class="k">return</span> <span class="n">left_result</span><span class="p">,</span> <span class="n">right_result</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">return</span> <span class="p">[],</span> <span class="p">[]</span>
@@ -808,14 +793,34 @@ title="Source repository"
     <span class="k">def</span> <span class="nf">_inline_contraction</span><span class="p">(</span><span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">left</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts sequence of MPS nodes (matrices) inline.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">left</span><span class="p">:</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="n">first_ten</span> <span class="o">=</span> <span class="mi">0</span>
+            
             <span class="n">result_node</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+                <span class="k">if</span> <span class="n">first_ten</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
+                    <span class="n">first</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+                    
                 <span class="n">result_node</span> <span class="o">@=</span> <span class="n">node</span>
+                
+                <span class="k">if</span> <span class="n">PRINT_MODE</span> <span class="ow">and</span> <span class="p">(</span><span class="n">first_ten</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">):</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">First inline left:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">first</span><span class="p">)</span>
+                    <span class="n">first_ten</span> <span class="o">+=</span> <span class="mi">1</span>
+                
+            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">Inline left:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
+            
             <span class="k">return</span> <span class="n">result_node</span>
         <span class="k">else</span><span class="p">:</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            
             <span class="n">result_node</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
                 <span class="n">result_node</span> <span class="o">=</span> <span class="n">node</span> <span class="o">@</span> <span class="n">result_node</span>
+            
+            <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">Inline right:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
+                
             <span class="k">return</span> <span class="n">result_node</span>
         
     <span class="k">def</span> <span class="nf">_contract_envs_inline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -823,6 +828,8 @@ title="Source repository"
                               <span class="n">right_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                                                               <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts the left and right environments inline.&quot;&quot;&quot;</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        
         <span class="k">if</span> <span class="n">left_env</span><span class="p">:</span>
             <span class="n">left_node</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">left_node</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">))</span>
             <span class="n">left_env</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_inline_contraction</span><span class="p">([</span><span class="n">left_node</span><span class="p">]</span> <span class="o">+</span> <span class="n">left_env</span><span class="p">,</span> <span class="kc">True</span><span class="p">)]</span>
@@ -836,6 +843,9 @@ title="Source repository"
             <span class="n">right_env</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_inline_contraction</span><span class="p">(</span><span class="n">lst</span><span class="p">,</span> <span class="kc">False</span><span class="p">)]</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">right_env</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">right_node</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">)]</span>
+            
+        <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Inline mats contraction:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
             
         <span class="k">return</span> <span class="n">left_env</span><span class="p">,</span> <span class="n">right_env</span>
 
@@ -922,6 +932,8 @@ title="Source repository"
             <span class="n">left_env_contracted</span><span class="p">,</span> <span class="n">right_env_contracted</span> <span class="o">=</span> \
                 <span class="bp">self</span><span class="o">.</span><span class="n">_pairwise_contraction</span><span class="p">(</span><span class="n">left_env</span><span class="p">,</span> <span class="n">right_env</span><span class="p">)</span>
         
+        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        
         <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_node</span>
         <span class="k">if</span> <span class="n">left_env_contracted</span> <span class="ow">and</span> <span class="n">right_env_contracted</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="n">left_env_contracted</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">@</span> <span class="n">result</span> <span class="o">@</span> <span class="n">right_env_contracted</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -931,6 +943,10 @@ title="Source repository"
             <span class="n">result</span> <span class="o">=</span> <span class="n">right_env_contracted</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">@</span> <span class="n">result</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">@=</span> <span class="n">result</span>
+            
+        <span class="k">if</span> <span class="n">PRINT_MODE</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Contraction:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
+            
         <span class="k">return</span> <span class="n">result</span></div>
     
 <div class="viewcode-block" id="MPSLayer.canonicalize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.MPSLayer.canonicalize">[docs]</a>    <span class="k">def</span> <span class="nf">canonicalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -1040,7 +1056,6 @@ title="Source repository"
             <span class="bp">self</span><span class="o">.</span><span class="n">right_env</span> <span class="o">=</span> <span class="n">new_right_nodes</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
             
         <span class="bp">self</span><span class="o">.</span><span class="n">output_node</span> <span class="o">=</span> <span class="n">output_node</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">param_bond</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span><span class="p">)</span>
         
         <span class="n">all_nodes</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="n">left_nodes</span><span class="p">:</span>
@@ -1264,8 +1279,6 @@ title="Source repository"
 <span class="sd">        Position of the output node (label). Should be between 0 and</span>
 <span class="sd">        ``n_sites - 1``. If ``None``, the output node will be located at the</span>
 <span class="sd">        middle of the MPS.</span>
-<span class="sd">    param_bond : bool</span>
-<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
 <span class="sd">    num_batches : int</span>
 <span class="sd">        Number of batch edges of input data nodes. Usually ``num_batches = 1``</span>
 <span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
@@ -1279,7 +1292,6 @@ title="Source repository"
                  <span class="n">n_labels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                  <span class="n">d_bond</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                  <span class="n">l_position</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;mps&#39;</span><span class="p">)</span>
@@ -1313,11 +1325,7 @@ title="Source repository"
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`n_labels` should be `int` type&#39;</span><span class="p">)</span>
 
-        <span class="c1"># param_bond</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span> <span class="o">=</span> <span class="n">param_bond</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">param_bond</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">param_bond</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_batches</span> <span class="o">=</span> <span class="n">num_batches</span>
@@ -1349,27 +1357,6 @@ title="Source repository"
 <span class="sd">        for input nodes.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_labels</span>
-
-<div class="viewcode-block" id="UMPSLayer.param_bond"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UMPSLayer.param_bond">[docs]</a>    <span class="k">def</span> <span class="nf">param_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_param</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns ``param_bond`` attribute or changes it if ``set_param`` is</span>
-<span class="sd">        provided.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        set_param : bool, optional</span>
-<span class="sd">            Boolean indicating whether edges have to be parameterized (``True``)</span>
-<span class="sd">            or de-parameterized (``False``).</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">set_param</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">leaf_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-                <span class="k">if</span> <span class="s1">&#39;left&#39;</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
-                    <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">set_param</span><span class="p">)</span>
-                <span class="k">if</span> <span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
-                    <span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">set_param</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span> <span class="o">=</span> <span class="n">set_param</span></div>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the MPS.&quot;&quot;&quot;</span>
@@ -1471,6 +1458,7 @@ title="Source repository"
         <span class="n">random_eye</span>  <span class="o">=</span> <span class="n">random_eye</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
         <span class="n">tensor</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">random_eye</span>
         
+        <span class="c1"># TODO: turn this into public function: assign node tensor to other node</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">_unrestricted_set_tensor</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
     
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_env</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_env</span><span class="p">:</span>
@@ -1478,8 +1466,8 @@ title="Source repository"
             <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span>
             <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;full&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
-            <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;stack_idx&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="c1"># NOTE: until here</span>
             
         <span class="c1"># Output node</span>
         <span class="n">eye_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
@@ -1705,8 +1693,6 @@ title="Source repository"
 <span class="sd">    boundary : {&#39;obc&#39;, &#39;pbc&#39;}</span>
 <span class="sd">        String indicating whether periodic or open boundary conditions should</span>
 <span class="sd">        be used.</span>
-<span class="sd">    param_bond : bool</span>
-<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
 <span class="sd">        </span>
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
@@ -1729,8 +1715,7 @@ title="Source repository"
                  <span class="n">padding</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
                  <span class="n">dilation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                  <span class="n">l_position</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="n">boundary</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span><span class="p">,</span>
-                 <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+                 <span class="n">boundary</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span><span class="p">):</span>
         
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">kernel_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">)</span>
@@ -1764,7 +1749,6 @@ title="Source repository"
                          <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
                          <span class="n">l_position</span><span class="o">=</span><span class="n">l_position</span><span class="p">,</span>
                          <span class="n">boundary</span><span class="o">=</span><span class="n">boundary</span><span class="p">,</span>
-                         <span class="n">param_bond</span><span class="o">=</span><span class="n">param_bond</span><span class="p">,</span>
                          <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">unfold</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Unfold</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span>
@@ -1922,8 +1906,6 @@ title="Source repository"
 <span class="sd">        Position of the output node (label). Should be between 0 and</span>
 <span class="sd">        :math:`kernel\_size_0 \cdot kernel\_size_1`. If ``None``, the output node</span>
 <span class="sd">        will be located at the middle of the MPS.</span>
-<span class="sd">    param_bond : bool</span>
-<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -1934,8 +1916,7 @@ title="Source repository"
                  <span class="n">stride</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                  <span class="n">padding</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
                  <span class="n">dilation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-                 <span class="n">l_position</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+                 <span class="n">l_position</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
         
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">kernel_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">)</span>
@@ -1968,7 +1949,6 @@ title="Source repository"
                          <span class="n">n_labels</span><span class="o">=</span><span class="n">out_channels</span><span class="p">,</span>
                          <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
                          <span class="n">l_position</span><span class="o">=</span><span class="n">l_position</span><span class="p">,</span>
-                         <span class="n">param_bond</span><span class="o">=</span><span class="n">param_bond</span><span class="p">,</span>
                          <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">unfold</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Unfold</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span>

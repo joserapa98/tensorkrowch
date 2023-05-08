@@ -135,6 +135,11 @@
     </a>
    </li>
    <li class="toctree-l2">
+    <a class="reference internal" href="jose_mps_canonical_mnist.html">
+     MPS and Canonical Form initializing also in canonical form - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
     <a class="reference internal" href="jose_mps_fashion_mnist.html">
      MPS and Canonical Form - FashionMNIST
     </a>
@@ -825,11 +830,11 @@ div.rendered_html tbody tr:hover {
 <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
 <span class="c1"># Training parameters</span>
-<span class="n">num_train</span> <span class="o">=</span> <span class="mi">30000</span>
-<span class="n">num_test</span> <span class="o">=</span> <span class="mi">5000</span>
+<span class="n">num_train</span> <span class="o">=</span> <span class="mi">60000</span>
+<span class="n">num_test</span> <span class="o">=</span> <span class="mi">10000</span>
 <span class="n">batch_size</span> <span class="o">=</span> <span class="mi">500</span>
 <span class="n">image_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">)</span>
-<span class="n">num_epochs</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">num_epochs</span> <span class="o">=</span> <span class="mi">10</span>
 <span class="n">num_epochs_canonical</span> <span class="o">=</span> <span class="mi">3</span>
 <span class="n">learn_rate</span> <span class="o">=</span> <span class="mf">1e-5</span>
 <span class="n">l2_reg</span> <span class="o">=</span> <span class="mf">0.0</span>
@@ -840,7 +845,7 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
@@ -857,6 +862,15 @@ div.rendered_html tbody tr:hover {
     <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/home/jose/anaconda3/envs/pytorch/lib/python3.8/site-packages/torch/cuda/__init__.py:83: UserWarning: CUDA initialization: CUDA unknown error - this may be due to an incorrectly set up environment, e.g. changing env variable CUDA_VISIBLE_DEVICES after program start. Setting the available devices to be zero. (Triggered internally at  /opt/conda/conda-bld/pytorch_1659484683044/work/c10/cuda/CUDAFunctions.cpp:109.)
+  return torch._C._cuda_getDeviceCount() &gt; 0
+</pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
@@ -930,14 +944,690 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Training on 30000 MNIST images
-(testing on 5000) for 1 epochs
+Training on 60000 MNIST images
+(testing on 10000) for 10 epochs
 Using Adam w/ learning rate = 1.0e-05
 
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">n_moves</span> <span class="o">=</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">block_length</span>
+
+<span class="n">mps</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+<span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span>
+                             <span class="n">lr</span><span class="o">=</span><span class="n">learn_rate</span><span class="p">,</span>
+                             <span class="n">weight_decay</span><span class="o">=</span><span class="n">l2_reg</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">epoch_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_epochs</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+
+    <span class="k">for</span> <span class="n">move</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n_moves</span><span class="p">):</span>
+        <span class="n">running_train_loss</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">running_train_acc</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">total_batches</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">for</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">loaders</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mf">0.25</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">inputs</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">data</span>
+            <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">labels</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+            <span class="n">scores</span> <span class="o">=</span> <span class="n">mps</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">preds</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+            <span class="c1"># Compute the loss and accuracy, add them to the running totals</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fun</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
+
+            <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+                <span class="n">accuracy</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">preds</span> <span class="o">==</span> <span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="n">batch_size</span>
+                <span class="n">running_train_loss</span> <span class="o">+=</span> <span class="n">loss</span>
+                <span class="n">running_train_acc</span> <span class="o">+=</span> <span class="n">accuracy</span>
+                <span class="n">total_batches</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="c1"># Backpropagate and update parameters</span>
+            <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+            <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+            <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">running_test_acc</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+            <span class="k">for</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">loaders</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]:</span>
+                <span class="n">inputs</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">view</span><span class="p">([</span>
+                    <span class="n">batch_size</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">data</span>
+                <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">labels</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+                <span class="c1"># Call our MPS to get logit scores and predictions</span>
+                <span class="n">scores</span> <span class="o">=</span> <span class="n">mps</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+                <span class="n">_</span><span class="p">,</span> <span class="n">preds</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">running_test_acc</span> <span class="o">+=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">preds</span> <span class="o">==</span> <span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="n">batch_size</span>
+
+        <span class="k">if</span> <span class="n">move</span> <span class="o">%</span> <span class="mi">10</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;* Epoch </span><span class="si">{</span><span class="n">epoch_num</span><span class="si">}</span><span class="s1">, Move </span><span class="si">{</span><span class="n">move</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">n_moves</span><span class="si">}</span><span class="s1">: &#39;</span>
+                <span class="sa">f</span><span class="s1">&#39;Train. Loss: </span><span class="si">{</span><span class="n">running_train_loss</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">total_batches</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
+                <span class="sa">f</span><span class="s1">&#39;Train. Acc.: </span><span class="si">{</span><span class="n">running_train_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">total_batches</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
+                <span class="sa">f</span><span class="s1">&#39;Test Acc.: </span><span class="si">{</span><span class="n">running_test_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">move</span> <span class="o">&lt;</span> <span class="n">n_moves</span><span class="p">:</span>
+            <span class="n">mps</span><span class="o">.</span><span class="n">move_block</span><span class="p">(</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mps</span><span class="o">.</span><span class="n">move_block</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+
+        <span class="n">mps</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+        <span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span>
+                                     <span class="n">lr</span><span class="o">=</span><span class="n">learn_rate</span><span class="p">,</span>
+                                     <span class="n">weight_decay</span><span class="o">=</span><span class="n">l2_reg</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;* Epoch </span><span class="si">{</span><span class="n">epoch_num</span><span class="si">}</span><span class="s1">, Move </span><span class="si">{</span><span class="n">move</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">n_moves</span><span class="si">}</span><span class="s1">: &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;Train. Loss: </span><span class="si">{</span><span class="n">running_train_loss</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">total_batches</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;Train. Acc.: </span><span class="si">{</span><span class="n">running_train_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">total_batches</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;Test Acc.: </span><span class="si">{</span><span class="n">running_test_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+* Epoch 1, Move 0/782: Train. Loss: 2.3026, Train. Acc.: 0.1074, Test Acc.: 0.1135
+* Epoch 1, Move 10/782: Train. Loss: 2.3020, Train. Acc.: 0.1106, Test Acc.: 0.1135
+* Epoch 1, Move 20/782: Train. Loss: 2.3015, Train. Acc.: 0.1106, Test Acc.: 0.1135
+* Epoch 1, Move 30/782: Train. Loss: 2.3016, Train. Acc.: 0.1093, Test Acc.: 0.1135
+* Epoch 1, Move 40/782: Train. Loss: 2.3010, Train. Acc.: 0.1127, Test Acc.: 0.1135
+* Epoch 1, Move 50/782: Train. Loss: 2.3011, Train. Acc.: 0.1110, Test Acc.: 0.1135
+* Epoch 1, Move 60/782: Train. Loss: 2.3011, Train. Acc.: 0.1127, Test Acc.: 0.1135
+* Epoch 1, Move 70/782: Train. Loss: 2.3010, Train. Acc.: 0.1139, Test Acc.: 0.1135
+* Epoch 1, Move 80/782: Train. Loss: 2.3020, Train. Acc.: 0.1082, Test Acc.: 0.1135
+* Epoch 1, Move 90/782: Train. Loss: 2.3017, Train. Acc.: 0.1105, Test Acc.: 0.1135
+* Epoch 1, Move 100/782: Train. Loss: 2.3003, Train. Acc.: 0.1117, Test Acc.: 0.1135
+* Epoch 1, Move 110/782: Train. Loss: 2.3007, Train. Acc.: 0.1130, Test Acc.: 0.1135
+* Epoch 1, Move 120/782: Train. Loss: 2.3007, Train. Acc.: 0.1131, Test Acc.: 0.1135
+* Epoch 1, Move 130/782: Train. Loss: 2.2997, Train. Acc.: 0.1095, Test Acc.: 0.1135
+* Epoch 1, Move 140/782: Train. Loss: 2.3001, Train. Acc.: 0.1093, Test Acc.: 0.1135
+* Epoch 1, Move 150/782: Train. Loss: 2.2988, Train. Acc.: 0.1137, Test Acc.: 0.1135
+* Epoch 1, Move 160/782: Train. Loss: 2.2983, Train. Acc.: 0.1135, Test Acc.: 0.1135
+* Epoch 1, Move 170/782: Train. Loss: 2.2979, Train. Acc.: 0.1159, Test Acc.: 0.1135
+* Epoch 1, Move 180/782: Train. Loss: 2.2964, Train. Acc.: 0.1136, Test Acc.: 0.1135
+* Epoch 1, Move 190/782: Train. Loss: 2.2967, Train. Acc.: 0.1088, Test Acc.: 0.1135
+* Epoch 1, Move 200/782: Train. Loss: 2.2961, Train. Acc.: 0.1164, Test Acc.: 0.1135
+* Epoch 1, Move 210/782: Train. Loss: 2.2947, Train. Acc.: 0.1082, Test Acc.: 0.1135
+* Epoch 1, Move 220/782: Train. Loss: 2.2934, Train. Acc.: 0.1144, Test Acc.: 0.1136
+* Epoch 1, Move 230/782: Train. Loss: 2.2929, Train. Acc.: 0.1121, Test Acc.: 0.1136
+* Epoch 1, Move 240/782: Train. Loss: 2.2913, Train. Acc.: 0.1135, Test Acc.: 0.1139
+* Epoch 1, Move 250/782: Train. Loss: 2.2898, Train. Acc.: 0.1144, Test Acc.: 0.1143
+* Epoch 1, Move 260/782: Train. Loss: 2.2883, Train. Acc.: 0.1165, Test Acc.: 0.1149
+* Epoch 1, Move 270/782: Train. Loss: 2.2848, Train. Acc.: 0.1154, Test Acc.: 0.1195
+* Epoch 1, Move 280/782: Train. Loss: 2.2835, Train. Acc.: 0.1257, Test Acc.: 0.1224
+* Epoch 1, Move 290/782: Train. Loss: 2.2813, Train. Acc.: 0.1267, Test Acc.: 0.1296
+* Epoch 1, Move 300/782: Train. Loss: 2.2773, Train. Acc.: 0.1397, Test Acc.: 0.1399
+* Epoch 1, Move 310/782: Train. Loss: 2.2773, Train. Acc.: 0.1470, Test Acc.: 0.1477
+* Epoch 1, Move 320/782: Train. Loss: 2.2717, Train. Acc.: 0.1594, Test Acc.: 0.1584
+* Epoch 1, Move 330/782: Train. Loss: 2.2691, Train. Acc.: 0.1707, Test Acc.: 0.1673
+* Epoch 1, Move 340/782: Train. Loss: 2.2690, Train. Acc.: 0.1703, Test Acc.: 0.1696
+* Epoch 1, Move 350/782: Train. Loss: 2.2612, Train. Acc.: 0.1902, Test Acc.: 0.1851
+* Epoch 1, Move 360/782: Train. Loss: 2.2604, Train. Acc.: 0.2026, Test Acc.: 0.2012
+* Epoch 1, Move 370/782: Train. Loss: 2.2580, Train. Acc.: 0.2009, Test Acc.: 0.1979
+* Epoch 1, Move 380/782: Train. Loss: 2.2520, Train. Acc.: 0.2101, Test Acc.: 0.2138
+* Epoch 1, Move 390/782: Train. Loss: 2.2517, Train. Acc.: 0.2193, Test Acc.: 0.2168
+* Epoch 1, Move 400/782: Train. Loss: 2.2473, Train. Acc.: 0.2190, Test Acc.: 0.2210
+* Epoch 1, Move 410/782: Train. Loss: 2.2440, Train. Acc.: 0.2275, Test Acc.: 0.2329
+* Epoch 1, Move 420/782: Train. Loss: 2.2412, Train. Acc.: 0.2365, Test Acc.: 0.2354
+* Epoch 1, Move 430/782: Train. Loss: 2.2384, Train. Acc.: 0.2354, Test Acc.: 0.2437
+* Epoch 1, Move 440/782: Train. Loss: 2.2323, Train. Acc.: 0.2446, Test Acc.: 0.2394
+* Epoch 1, Move 450/782: Train. Loss: 2.2322, Train. Acc.: 0.2475, Test Acc.: 0.2454
+* Epoch 1, Move 460/782: Train. Loss: 2.2279, Train. Acc.: 0.2550, Test Acc.: 0.2587
+* Epoch 1, Move 470/782: Train. Loss: 2.2271, Train. Acc.: 0.2471, Test Acc.: 0.2488
+* Epoch 1, Move 480/782: Train. Loss: 2.2259, Train. Acc.: 0.2525, Test Acc.: 0.2525
+* Epoch 1, Move 490/782: Train. Loss: 2.2218, Train. Acc.: 0.2564, Test Acc.: 0.2625
+* Epoch 1, Move 500/782: Train. Loss: 2.2192, Train. Acc.: 0.2600, Test Acc.: 0.2538
+* Epoch 1, Move 510/782: Train. Loss: 2.2165, Train. Acc.: 0.2588, Test Acc.: 0.2556
+* Epoch 1, Move 520/782: Train. Loss: 2.2139, Train. Acc.: 0.2537, Test Acc.: 0.2521
+* Epoch 1, Move 530/782: Train. Loss: 2.2133, Train. Acc.: 0.2548, Test Acc.: 0.2559
+* Epoch 1, Move 540/782: Train. Loss: 2.2098, Train. Acc.: 0.2586, Test Acc.: 0.2625
+* Epoch 1, Move 550/782: Train. Loss: 2.2083, Train. Acc.: 0.2639, Test Acc.: 0.2672
+* Epoch 1, Move 560/782: Train. Loss: 2.2062, Train. Acc.: 0.2637, Test Acc.: 0.2633
+* Epoch 1, Move 570/782: Train. Loss: 2.2019, Train. Acc.: 0.2699, Test Acc.: 0.2717
+* Epoch 1, Move 580/782: Train. Loss: 2.2009, Train. Acc.: 0.2665, Test Acc.: 0.2701
+* Epoch 1, Move 590/782: Train. Loss: 2.2003, Train. Acc.: 0.2616, Test Acc.: 0.2650
+* Epoch 1, Move 600/782: Train. Loss: 2.1981, Train. Acc.: 0.2711, Test Acc.: 0.2815
+* Epoch 1, Move 610/782: Train. Loss: 2.1948, Train. Acc.: 0.2722, Test Acc.: 0.2780
+* Epoch 1, Move 620/782: Train. Loss: 2.1927, Train. Acc.: 0.2806, Test Acc.: 0.2834
+* Epoch 1, Move 630/782: Train. Loss: 2.1897, Train. Acc.: 0.2838, Test Acc.: 0.2925
+* Epoch 1, Move 640/782: Train. Loss: 2.1888, Train. Acc.: 0.2767, Test Acc.: 0.2805
+* Epoch 1, Move 650/782: Train. Loss: 2.1872, Train. Acc.: 0.2802, Test Acc.: 0.2869
+* Epoch 1, Move 660/782: Train. Loss: 2.1837, Train. Acc.: 0.2885, Test Acc.: 0.2962
+* Epoch 1, Move 670/782: Train. Loss: 2.1802, Train. Acc.: 0.2809, Test Acc.: 0.2870
+* Epoch 1, Move 680/782: Train. Loss: 2.1780, Train. Acc.: 0.2849, Test Acc.: 0.2894
+* Epoch 1, Move 690/782: Train. Loss: 2.1740, Train. Acc.: 0.2942, Test Acc.: 0.2945
+* Epoch 1, Move 700/782: Train. Loss: 2.1757, Train. Acc.: 0.2852, Test Acc.: 0.2957
+* Epoch 1, Move 710/782: Train. Loss: 2.1684, Train. Acc.: 0.2986, Test Acc.: 0.3008
+* Epoch 1, Move 720/782: Train. Loss: 2.1676, Train. Acc.: 0.3029, Test Acc.: 0.3066
+* Epoch 1, Move 730/782: Train. Loss: 2.1647, Train. Acc.: 0.3024, Test Acc.: 0.3069
+* Epoch 1, Move 740/782: Train. Loss: 2.1621, Train. Acc.: 0.3023, Test Acc.: 0.3063
+* Epoch 1, Move 750/782: Train. Loss: 2.1593, Train. Acc.: 0.3056, Test Acc.: 0.3102
+* Epoch 1, Move 760/782: Train. Loss: 2.1567, Train. Acc.: 0.3079, Test Acc.: 0.3100
+* Epoch 1, Move 770/782: Train. Loss: 2.1507, Train. Acc.: 0.3075, Test Acc.: 0.3117
+* Epoch 1, Move 780/782: Train. Loss: 2.1473, Train. Acc.: 0.3124, Test Acc.: 0.3116
+* Epoch 1, Move 790/782: Train. Loss: 2.1206, Train. Acc.: 0.3151, Test Acc.: 0.3195
+* Epoch 1, Move 800/782: Train. Loss: 1.8818, Train. Acc.: 0.3729, Test Acc.: 0.3759
+* Epoch 1, Move 810/782: Train. Loss: 1.5419, Train. Acc.: 0.4263, Test Acc.: 0.4242
+* Epoch 1, Move 820/782: Train. Loss: 1.6147, Train. Acc.: 0.4188, Test Acc.: 0.4362
+* Epoch 1, Move 830/782: Train. Loss: 1.5731, Train. Acc.: 0.4241, Test Acc.: 0.4653
+* Epoch 1, Move 840/782: Train. Loss: 1.4790, Train. Acc.: 0.4532, Test Acc.: 0.4981
+* Epoch 1, Move 850/782: Train. Loss: 1.5718, Train. Acc.: 0.4634, Test Acc.: 0.5018
+* Epoch 1, Move 860/782: Train. Loss: 1.8852, Train. Acc.: 0.4622, Test Acc.: 0.5317
+* Epoch 1, Move 870/782: Train. Loss: 2.0618, Train. Acc.: 0.4427, Test Acc.: 0.5163
+* Epoch 1, Move 880/782: Train. Loss: 1.7859, Train. Acc.: 0.5181, Test Acc.: 0.5544
+* Epoch 1, Move 890/782: Train. Loss: 2.4730, Train. Acc.: 0.4567, Test Acc.: 0.5631
+* Epoch 1, Move 900/782: Train. Loss: 2.1808, Train. Acc.: 0.4802, Test Acc.: 0.5674
+* Epoch 1, Move 910/782: Train. Loss: 2.0909, Train. Acc.: 0.5537, Test Acc.: 0.6162
+* Epoch 1, Move 920/782: Train. Loss: 2.4267, Train. Acc.: 0.5211, Test Acc.: 0.6155
+* Epoch 1, Move 930/782: Train. Loss: 2.2734, Train. Acc.: 0.5459, Test Acc.: 0.6299
+* Epoch 1, Move 940/782: Train. Loss: 2.4616, Train. Acc.: 0.5696, Test Acc.: 0.6707
+* Epoch 1, Move 950/782: Train. Loss: 3.7486, Train. Acc.: 0.5158, Test Acc.: 0.5797
+* Epoch 1, Move 960/782: Train. Loss: 2.4387, Train. Acc.: 0.5712, Test Acc.: 0.6450
+* Epoch 1, Move 970/782: Train. Loss: 5.0107, Train. Acc.: 0.4950, Test Acc.: 0.5941
+* Epoch 1, Move 980/782: Train. Loss: 4.0709, Train. Acc.: 0.5214, Test Acc.: 0.5982
+* Epoch 1, Move 990/782: Train. Loss: 3.6391, Train. Acc.: 0.5583, Test Acc.: 0.6543
+* Epoch 1, Move 1000/782: Train. Loss: 4.4836, Train. Acc.: 0.5470, Test Acc.: 0.6099
+* Epoch 1, Move 1010/782: Train. Loss: 4.6228, Train. Acc.: 0.5563, Test Acc.: 0.6642
+* Epoch 1, Move 1020/782: Train. Loss: 3.6715, Train. Acc.: 0.6172, Test Acc.: 0.6938
+* Epoch 1, Move 1030/782: Train. Loss: 4.2366, Train. Acc.: 0.6138, Test Acc.: 0.6928
+* Epoch 1, Move 1040/782: Train. Loss: 5.0823, Train. Acc.: 0.5978, Test Acc.: 0.6574
+* Epoch 1, Move 1050/782: Train. Loss: 4.5465, Train. Acc.: 0.6306, Test Acc.: 0.6964
+* Epoch 1, Move 1060/782: Train. Loss: 5.0398, Train. Acc.: 0.6128, Test Acc.: 0.6863
+* Epoch 1, Move 1070/782: Train. Loss: 6.0122, Train. Acc.: 0.6079, Test Acc.: 0.6817
+* Epoch 1, Move 1080/782: Train. Loss: 6.8671, Train. Acc.: 0.6018, Test Acc.: 0.6944
+* Epoch 1, Move 1090/782: Train. Loss: 8.0319, Train. Acc.: 0.5860, Test Acc.: 0.6480
+* Epoch 1, Move 1100/782: Train. Loss: 6.3605, Train. Acc.: 0.6312, Test Acc.: 0.7048
+* Epoch 1, Move 1110/782: Train. Loss: 7.3987, Train. Acc.: 0.6126, Test Acc.: 0.6619
+* Epoch 1, Move 1120/782: Train. Loss: 8.0390, Train. Acc.: 0.5869, Test Acc.: 0.7174
+* Epoch 1, Move 1130/782: Train. Loss: 10.1116, Train. Acc.: 0.5817, Test Acc.: 0.6801
+* Epoch 1, Move 1140/782: Train. Loss: 9.0661, Train. Acc.: 0.6062, Test Acc.: 0.6943
+* Epoch 1, Move 1150/782: Train. Loss: 8.8096, Train. Acc.: 0.6145, Test Acc.: 0.6746
+* Epoch 1, Move 1160/782: Train. Loss: 8.1892, Train. Acc.: 0.6456, Test Acc.: 0.7329
+* Epoch 1, Move 1170/782: Train. Loss: 12.2658, Train. Acc.: 0.6095, Test Acc.: 0.7100
+* Epoch 1, Move 1180/782: Train. Loss: 9.3826, Train. Acc.: 0.6385, Test Acc.: 0.7178
+* Epoch 1, Move 1190/782: Train. Loss: 10.6238, Train. Acc.: 0.6455, Test Acc.: 0.7118
+* Epoch 1, Move 1200/782: Train. Loss: 8.9825, Train. Acc.: 0.6668, Test Acc.: 0.7116
+* Epoch 1, Move 1210/782: Train. Loss: 14.9045, Train. Acc.: 0.6085, Test Acc.: 0.7059
+* Epoch 1, Move 1220/782: Train. Loss: 10.6498, Train. Acc.: 0.6714, Test Acc.: 0.7281
+* Epoch 1, Move 1230/782: Train. Loss: 9.5558, Train. Acc.: 0.6667, Test Acc.: 0.7652
+* Epoch 1, Move 1240/782: Train. Loss: 9.3515, Train. Acc.: 0.6944, Test Acc.: 0.7678
+* Epoch 1, Move 1250/782: Train. Loss: 9.8274, Train. Acc.: 0.6699, Test Acc.: 0.7478
+* Epoch 1, Move 1260/782: Train. Loss: 12.5342, Train. Acc.: 0.6362, Test Acc.: 0.7352
+* Epoch 1, Move 1270/782: Train. Loss: 10.2359, Train. Acc.: 0.6871, Test Acc.: 0.7350
+* Epoch 1, Move 1280/782: Train. Loss: 12.0288, Train. Acc.: 0.6639, Test Acc.: 0.7119
+* Epoch 1, Move 1290/782: Train. Loss: 11.9458, Train. Acc.: 0.6614, Test Acc.: 0.7212
+* Epoch 1, Move 1300/782: Train. Loss: 12.1004, Train. Acc.: 0.6619, Test Acc.: 0.7413
+* Epoch 1, Move 1310/782: Train. Loss: 13.4440, Train. Acc.: 0.6651, Test Acc.: 0.7522
+* Epoch 1, Move 1320/782: Train. Loss: 13.3506, Train. Acc.: 0.6703, Test Acc.: 0.7382
+* Epoch 1, Move 1330/782: Train. Loss: 14.0485, Train. Acc.: 0.6644, Test Acc.: 0.7340
+* Epoch 1, Move 1340/782: Train. Loss: 13.2673, Train. Acc.: 0.6709, Test Acc.: 0.7404
+* Epoch 1, Move 1350/782: Train. Loss: 13.5306, Train. Acc.: 0.6768, Test Acc.: 0.7431
+* Epoch 1, Move 1360/782: Train. Loss: 12.7220, Train. Acc.: 0.6726, Test Acc.: 0.7242
+* Epoch 1, Move 1370/782: Train. Loss: 20.5368, Train. Acc.: 0.5954, Test Acc.: 0.6716
+* Epoch 1, Move 1380/782: Train. Loss: 17.9295, Train. Acc.: 0.6554, Test Acc.: 0.7346
+* Epoch 1, Move 1390/782: Train. Loss: 16.4633, Train. Acc.: 0.6375, Test Acc.: 0.7071
+* Epoch 1, Move 1400/782: Train. Loss: 15.8053, Train. Acc.: 0.6440, Test Acc.: 0.7143
+* Epoch 1, Move 1410/782: Train. Loss: 19.3889, Train. Acc.: 0.6427, Test Acc.: 0.6959
+* Epoch 1, Move 1420/782: Train. Loss: 16.9564, Train. Acc.: 0.6485, Test Acc.: 0.6982
+* Epoch 1, Move 1430/782: Train. Loss: 22.2287, Train. Acc.: 0.6278, Test Acc.: 0.6680
+* Epoch 1, Move 1440/782: Train. Loss: 19.9801, Train. Acc.: 0.6311, Test Acc.: 0.6991
+* Epoch 1, Move 1450/782: Train. Loss: 25.4877, Train. Acc.: 0.6027, Test Acc.: 0.6545
+* Epoch 1, Move 1460/782: Train. Loss: 18.8830, Train. Acc.: 0.6385, Test Acc.: 0.7049
+* Epoch 1, Move 1470/782: Train. Loss: 19.6843, Train. Acc.: 0.6334, Test Acc.: 0.6932
+* Epoch 1, Move 1480/782: Train. Loss: 20.6718, Train. Acc.: 0.6179, Test Acc.: 0.6766
+* Epoch 1, Move 1490/782: Train. Loss: 19.1026, Train. Acc.: 0.6303, Test Acc.: 0.6891
+* Epoch 1, Move 1500/782: Train. Loss: 18.6133, Train. Acc.: 0.6272, Test Acc.: 0.6898
+* Epoch 1, Move 1510/782: Train. Loss: 36.6882, Train. Acc.: 0.5717, Test Acc.: 0.6086
+* Epoch 1, Move 1520/782: Train. Loss: 19.3429, Train. Acc.: 0.6503, Test Acc.: 0.7005
+* Epoch 1, Move 1530/782: Train. Loss: 16.5058, Train. Acc.: 0.6554, Test Acc.: 0.7144
+* Epoch 1, Move 1540/782: Train. Loss: 21.6581, Train. Acc.: 0.6174, Test Acc.: 0.7110
+* Epoch 1, Move 1550/782: Train. Loss: 20.7331, Train. Acc.: 0.6226, Test Acc.: 0.7023
+* Epoch 1, Move 1560/782: Train. Loss: 18.8876, Train. Acc.: 0.6295, Test Acc.: 0.7126
+* Epoch 1, Move 1563/782: Train. Loss: 13.9634, Train. Acc.: 0.6740, Test Acc.: 0.7230
+* Epoch 2, Move 0/782: Train. Loss: 9.6638, Train. Acc.: 0.7195, Test Acc.: 0.7337
+* Epoch 2, Move 10/782: Train. Loss: 22.9136, Train. Acc.: 0.6090, Test Acc.: 0.6995
+* Epoch 2, Move 20/782: Train. Loss: 18.4346, Train. Acc.: 0.6647, Test Acc.: 0.7271
+* Epoch 2, Move 30/782: Train. Loss: 23.3772, Train. Acc.: 0.6231, Test Acc.: 0.7008
+* Epoch 2, Move 40/782: Train. Loss: 19.5840, Train. Acc.: 0.6364, Test Acc.: 0.6893
+* Epoch 2, Move 50/782: Train. Loss: 25.6252, Train. Acc.: 0.5990, Test Acc.: 0.6941
+* Epoch 2, Move 60/782: Train. Loss: 20.0118, Train. Acc.: 0.6259, Test Acc.: 0.7219
+* Epoch 2, Move 70/782: Train. Loss: 23.1366, Train. Acc.: 0.6173, Test Acc.: 0.7037
+* Epoch 2, Move 80/782: Train. Loss: 20.9154, Train. Acc.: 0.6221, Test Acc.: 0.6988
+* Epoch 2, Move 90/782: Train. Loss: 22.1244, Train. Acc.: 0.6121, Test Acc.: 0.6828
+* Epoch 2, Move 100/782: Train. Loss: 24.6257, Train. Acc.: 0.6156, Test Acc.: 0.6344
+* Epoch 2, Move 110/782: Train. Loss: 22.8663, Train. Acc.: 0.6184, Test Acc.: 0.6888
+* Epoch 2, Move 120/782: Train. Loss: 23.1857, Train. Acc.: 0.6110, Test Acc.: 0.7160
+* Epoch 2, Move 130/782: Train. Loss: 30.4125, Train. Acc.: 0.5610, Test Acc.: 0.6389
+* Epoch 2, Move 140/782: Train. Loss: 20.6656, Train. Acc.: 0.6218, Test Acc.: 0.6603
+* Epoch 2, Move 150/782: Train. Loss: 25.5000, Train. Acc.: 0.6077, Test Acc.: 0.6843
+* Epoch 2, Move 160/782: Train. Loss: 26.6340, Train. Acc.: 0.6198, Test Acc.: 0.6383
+* Epoch 2, Move 170/782: Train. Loss: 40.8497, Train. Acc.: 0.5547, Test Acc.: 0.6196
+* Epoch 2, Move 180/782: Train. Loss: 31.9411, Train. Acc.: 0.6104, Test Acc.: 0.6685
+* Epoch 2, Move 190/782: Train. Loss: 33.9331, Train. Acc.: 0.6085, Test Acc.: 0.6555
+* Epoch 2, Move 200/782: Train. Loss: 34.5931, Train. Acc.: 0.5997, Test Acc.: 0.6635
+* Epoch 2, Move 210/782: Train. Loss: 30.9375, Train. Acc.: 0.6372, Test Acc.: 0.6827
+* Epoch 2, Move 220/782: Train. Loss: 35.0182, Train. Acc.: 0.6072, Test Acc.: 0.6463
+* Epoch 2, Move 230/782: Train. Loss: 32.9510, Train. Acc.: 0.6134, Test Acc.: 0.6654
+* Epoch 2, Move 240/782: Train. Loss: 36.2202, Train. Acc.: 0.6145, Test Acc.: 0.6418
+* Epoch 2, Move 250/782: Train. Loss: 40.3352, Train. Acc.: 0.5816, Test Acc.: 0.6175
+* Epoch 2, Move 260/782: Train. Loss: 35.8399, Train. Acc.: 0.6143, Test Acc.: 0.6603
+* Epoch 2, Move 270/782: Train. Loss: 50.4191, Train. Acc.: 0.5536, Test Acc.: 0.5966
+* Epoch 2, Move 280/782: Train. Loss: 50.9939, Train. Acc.: 0.5331, Test Acc.: 0.5557
+* Epoch 2, Move 290/782: Train. Loss: 43.4714, Train. Acc.: 0.5784, Test Acc.: 0.5799
+* Epoch 2, Move 300/782: Train. Loss: 52.4362, Train. Acc.: 0.5583, Test Acc.: 0.5803
+* Epoch 2, Move 310/782: Train. Loss: 52.9788, Train. Acc.: 0.5488, Test Acc.: 0.5747
+* Epoch 2, Move 320/782: Train. Loss: 48.3021, Train. Acc.: 0.5902, Test Acc.: 0.6023
+* Epoch 2, Move 330/782: Train. Loss: 60.8245, Train. Acc.: 0.5556, Test Acc.: 0.5863
+* Epoch 2, Move 340/782: Train. Loss: 52.6617, Train. Acc.: 0.5857, Test Acc.: 0.6061
+* Epoch 2, Move 350/782: Train. Loss: 49.2803, Train. Acc.: 0.6302, Test Acc.: 0.6499
+* Epoch 2, Move 360/782: Train. Loss: 60.8026, Train. Acc.: 0.5744, Test Acc.: 0.5759
+* Epoch 2, Move 370/782: Train. Loss: 55.9292, Train. Acc.: 0.5901, Test Acc.: 0.6101
+* Epoch 2, Move 380/782: Train. Loss: 60.2631, Train. Acc.: 0.6018, Test Acc.: 0.6180
+* Epoch 2, Move 390/782: Train. Loss: 65.4258, Train. Acc.: 0.5674, Test Acc.: 0.5864
+* Epoch 2, Move 400/782: Train. Loss: 52.7663, Train. Acc.: 0.6315, Test Acc.: 0.6625
+* Epoch 2, Move 410/782: Train. Loss: 65.8085, Train. Acc.: 0.5632, Test Acc.: 0.5861
+* Epoch 2, Move 420/782: Train. Loss: 67.1935, Train. Acc.: 0.5457, Test Acc.: 0.5753
+* Epoch 2, Move 430/782: Train. Loss: 53.6434, Train. Acc.: 0.6223, Test Acc.: 0.6342
+* Epoch 2, Move 440/782: Train. Loss: 66.4489, Train. Acc.: 0.5299, Test Acc.: 0.5368
+* Epoch 2, Move 450/782: Train. Loss: 62.7299, Train. Acc.: 0.5306, Test Acc.: 0.5412
+* Epoch 2, Move 460/782: Train. Loss: 57.3425, Train. Acc.: 0.5472, Test Acc.: 0.5720
+* Epoch 2, Move 470/782: Train. Loss: 53.5092, Train. Acc.: 0.5254, Test Acc.: 0.5333
+* Epoch 2, Move 480/782: Train. Loss: 48.1464, Train. Acc.: 0.5436, Test Acc.: 0.5456
+* Epoch 2, Move 490/782: Train. Loss: 44.7993, Train. Acc.: 0.5481, Test Acc.: 0.5398
+* Epoch 2, Move 500/782: Train. Loss: 45.3515, Train. Acc.: 0.5262, Test Acc.: 0.5383
+* Epoch 2, Move 510/782: Train. Loss: 39.1463, Train. Acc.: 0.5678, Test Acc.: 0.5565
+* Epoch 2, Move 520/782: Train. Loss: 40.8712, Train. Acc.: 0.5408, Test Acc.: 0.5351
+* Epoch 2, Move 530/782: Train. Loss: 37.2625, Train. Acc.: 0.5565, Test Acc.: 0.5576
+* Epoch 2, Move 540/782: Train. Loss: 34.4921, Train. Acc.: 0.5715, Test Acc.: 0.5685
+* Epoch 2, Move 550/782: Train. Loss: 32.8607, Train. Acc.: 0.5577, Test Acc.: 0.5674
+* Epoch 2, Move 560/782: Train. Loss: 31.9596, Train. Acc.: 0.5431, Test Acc.: 0.5554
+* Epoch 2, Move 570/782: Train. Loss: 31.6785, Train. Acc.: 0.5369, Test Acc.: 0.5558
+* Epoch 2, Move 580/782: Train. Loss: 35.7952, Train. Acc.: 0.5079, Test Acc.: 0.5218
+* Epoch 2, Move 590/782: Train. Loss: 35.4555, Train. Acc.: 0.4983, Test Acc.: 0.5126
+* Epoch 2, Move 600/782: Train. Loss: 34.4581, Train. Acc.: 0.5002, Test Acc.: 0.5213
+* Epoch 2, Move 610/782: Train. Loss: 30.8157, Train. Acc.: 0.5027, Test Acc.: 0.5240
+* Epoch 2, Move 620/782: Train. Loss: 25.8776, Train. Acc.: 0.5326, Test Acc.: 0.5501
+* Epoch 2, Move 630/782: Train. Loss: 25.8634, Train. Acc.: 0.5209, Test Acc.: 0.5506
+* Epoch 2, Move 640/782: Train. Loss: 24.0364, Train. Acc.: 0.5227, Test Acc.: 0.5320
+* Epoch 2, Move 650/782: Train. Loss: 21.1938, Train. Acc.: 0.5376, Test Acc.: 0.5443
+* Epoch 2, Move 660/782: Train. Loss: 19.4710, Train. Acc.: 0.5247, Test Acc.: 0.5211
+* Epoch 2, Move 670/782: Train. Loss: 19.5372, Train. Acc.: 0.5093, Test Acc.: 0.4957
+* Epoch 2, Move 680/782: Train. Loss: 16.3485, Train. Acc.: 0.5298, Test Acc.: 0.5443
+* Epoch 2, Move 690/782: Train. Loss: 14.6872, Train. Acc.: 0.5154, Test Acc.: 0.5326
+* Epoch 2, Move 700/782: Train. Loss: 12.2822, Train. Acc.: 0.5177, Test Acc.: 0.5252
+* Epoch 2, Move 710/782: Train. Loss: 11.6515, Train. Acc.: 0.5084, Test Acc.: 0.5325
+* Epoch 2, Move 720/782: Train. Loss: 9.9835, Train. Acc.: 0.4796, Test Acc.: 0.5045
+* Epoch 2, Move 730/782: Train. Loss: 8.2320, Train. Acc.: 0.4581, Test Acc.: 0.4702
+* Epoch 2, Move 740/782: Train. Loss: 16.3362, Train. Acc.: 0.3526, Test Acc.: 0.4768
+* Epoch 2, Move 750/782: Train. Loss: 47.0301, Train. Acc.: 0.1230, Test Acc.: 0.1758
+* Epoch 2, Move 760/782: Train. Loss: 18.9287, Train. Acc.: 0.1726, Test Acc.: 0.2919
+* Epoch 2, Move 770/782: Train. Loss: 30.5966, Train. Acc.: 0.0974, Test Acc.: 0.0980
+* Epoch 2, Move 780/782: Train. Loss: 35.1089, Train. Acc.: 0.0966, Test Acc.: 0.0980
+* Epoch 2, Move 790/782: Train. Loss: 25.1461, Train. Acc.: 0.0959, Test Acc.: 0.0980
+* Epoch 2, Move 800/782: Train. Loss: 2.0550, Train. Acc.: 0.2948, Test Acc.: 0.3530
+* Epoch 2, Move 810/782: Train. Loss: 1.7306, Train. Acc.: 0.4304, Test Acc.: 0.4484
+* Epoch 2, Move 820/782: Train. Loss: 1.5582, Train. Acc.: 0.4799, Test Acc.: 0.5101
+* Epoch 2, Move 830/782: Train. Loss: 1.5002, Train. Acc.: 0.5146, Test Acc.: 0.5123
+* Epoch 2, Move 840/782: Train. Loss: 1.4338, Train. Acc.: 0.5373, Test Acc.: 0.5383
+* Epoch 2, Move 850/782: Train. Loss: 1.3255, Train. Acc.: 0.5651, Test Acc.: 0.5882
+* Epoch 2, Move 860/782: Train. Loss: 1.3041, Train. Acc.: 0.5813, Test Acc.: 0.5808
+* Epoch 2, Move 870/782: Train. Loss: 1.2596, Train. Acc.: 0.5978, Test Acc.: 0.6055
+* Epoch 2, Move 880/782: Train. Loss: 1.1589, Train. Acc.: 0.6225, Test Acc.: 0.6245
+* Epoch 2, Move 890/782: Train. Loss: 1.1993, Train. Acc.: 0.6095, Test Acc.: 0.6160
+* Epoch 2, Move 900/782: Train. Loss: 1.1336, Train. Acc.: 0.6397, Test Acc.: 0.6421
+* Epoch 2, Move 910/782: Train. Loss: 1.0489, Train. Acc.: 0.6616, Test Acc.: 0.6711
+* Epoch 2, Move 920/782: Train. Loss: 1.0453, Train. Acc.: 0.6701, Test Acc.: 0.6726
+* Epoch 2, Move 930/782: Train. Loss: 1.0014, Train. Acc.: 0.6836, Test Acc.: 0.6831
+* Epoch 2, Move 940/782: Train. Loss: 0.9722, Train. Acc.: 0.6843, Test Acc.: 0.6972
+* Epoch 2, Move 950/782: Train. Loss: 0.9831, Train. Acc.: 0.6861, Test Acc.: 0.6742
+* Epoch 2, Move 960/782: Train. Loss: 0.9599, Train. Acc.: 0.6928, Test Acc.: 0.6928
+* Epoch 2, Move 970/782: Train. Loss: 0.9097, Train. Acc.: 0.7032, Test Acc.: 0.7139
+* Epoch 2, Move 980/782: Train. Loss: 0.9353, Train. Acc.: 0.7032, Test Acc.: 0.7085
+* Epoch 2, Move 990/782: Train. Loss: 0.9149, Train. Acc.: 0.7089, Test Acc.: 0.7140
+* Epoch 2, Move 1000/782: Train. Loss: 0.8526, Train. Acc.: 0.7272, Test Acc.: 0.7363
+* Epoch 2, Move 1010/782: Train. Loss: 0.8494, Train. Acc.: 0.7313, Test Acc.: 0.7372
+* Epoch 2, Move 1020/782: Train. Loss: 0.8088, Train. Acc.: 0.7430, Test Acc.: 0.7494
+* Epoch 2, Move 1030/782: Train. Loss: 0.8201, Train. Acc.: 0.7306, Test Acc.: 0.7412
+* Epoch 2, Move 1040/782: Train. Loss: 0.7890, Train. Acc.: 0.7434, Test Acc.: 0.7485
+* Epoch 2, Move 1050/782: Train. Loss: 0.7146, Train. Acc.: 0.7740, Test Acc.: 0.7624
+* Epoch 2, Move 1060/782: Train. Loss: 0.8042, Train. Acc.: 0.7379, Test Acc.: 0.7470
+* Epoch 2, Move 1070/782: Train. Loss: 0.7665, Train. Acc.: 0.7516, Test Acc.: 0.7580
+* Epoch 2, Move 1080/782: Train. Loss: 0.7285, Train. Acc.: 0.7714, Test Acc.: 0.7745
+* Epoch 2, Move 1090/782: Train. Loss: 0.7634, Train. Acc.: 0.7549, Test Acc.: 0.7614
+* Epoch 2, Move 1100/782: Train. Loss: 0.7072, Train. Acc.: 0.7698, Test Acc.: 0.7762
+* Epoch 2, Move 1110/782: Train. Loss: 0.7447, Train. Acc.: 0.7606, Test Acc.: 0.7747
+* Epoch 2, Move 1120/782: Train. Loss: 0.7578, Train. Acc.: 0.7513, Test Acc.: 0.7753
+* Epoch 2, Move 1130/782: Train. Loss: 0.6987, Train. Acc.: 0.7764, Test Acc.: 0.7862
+* Epoch 2, Move 1140/782: Train. Loss: 0.7581, Train. Acc.: 0.7569, Test Acc.: 0.7703
+* Epoch 2, Move 1150/782: Train. Loss: 0.7419, Train. Acc.: 0.7636, Test Acc.: 0.7652
+* Epoch 2, Move 1160/782: Train. Loss: 0.7248, Train. Acc.: 0.7659, Test Acc.: 0.7801
+* Epoch 2, Move 1170/782: Train. Loss: 0.7794, Train. Acc.: 0.7472, Test Acc.: 0.7623
+* Epoch 2, Move 1180/782: Train. Loss: 0.7463, Train. Acc.: 0.7622, Test Acc.: 0.7755
+* Epoch 2, Move 1190/782: Train. Loss: 0.7214, Train. Acc.: 0.7675, Test Acc.: 0.7824
+* Epoch 2, Move 1200/782: Train. Loss: 0.7802, Train. Acc.: 0.7481, Test Acc.: 0.7645
+* Epoch 2, Move 1210/782: Train. Loss: 0.7369, Train. Acc.: 0.7639, Test Acc.: 0.7817
+* Epoch 2, Move 1220/782: Train. Loss: 0.7564, Train. Acc.: 0.7521, Test Acc.: 0.7695
+* Epoch 2, Move 1230/782: Train. Loss: 0.7709, Train. Acc.: 0.7496, Test Acc.: 0.7521
+* Epoch 2, Move 1240/782: Train. Loss: 0.7589, Train. Acc.: 0.7576, Test Acc.: 0.7678
+* Epoch 2, Move 1250/782: Train. Loss: 0.7950, Train. Acc.: 0.7428, Test Acc.: 0.7491
+* Epoch 2, Move 1260/782: Train. Loss: 0.7824, Train. Acc.: 0.7459, Test Acc.: 0.7613
+* Epoch 2, Move 1270/782: Train. Loss: 0.7886, Train. Acc.: 0.7442, Test Acc.: 0.7615
+* Epoch 2, Move 1280/782: Train. Loss: 0.8337, Train. Acc.: 0.7303, Test Acc.: 0.7473
+* Epoch 2, Move 1290/782: Train. Loss: 0.7860, Train. Acc.: 0.7455, Test Acc.: 0.7596
+* Epoch 2, Move 1300/782: Train. Loss: 0.7994, Train. Acc.: 0.7385, Test Acc.: 0.7563
+* Epoch 2, Move 1310/782: Train. Loss: 0.8568, Train. Acc.: 0.7244, Test Acc.: 0.7337
+* Epoch 2, Move 1320/782: Train. Loss: 0.8072, Train. Acc.: 0.7378, Test Acc.: 0.7456
+* Epoch 2, Move 1330/782: Train. Loss: 0.8456, Train. Acc.: 0.7264, Test Acc.: 0.7409
+* Epoch 2, Move 1340/782: Train. Loss: 0.9018, Train. Acc.: 0.7101, Test Acc.: 0.7221
+* Epoch 2, Move 1350/782: Train. Loss: 0.8501, Train. Acc.: 0.7322, Test Acc.: 0.7465
+* Epoch 2, Move 1360/782: Train. Loss: 0.8828, Train. Acc.: 0.7166, Test Acc.: 0.7338
+* Epoch 2, Move 1370/782: Train. Loss: 0.8904, Train. Acc.: 0.7169, Test Acc.: 0.7298
+* Epoch 2, Move 1380/782: Train. Loss: 0.8126, Train. Acc.: 0.7407, Test Acc.: 0.7577
+* Epoch 2, Move 1390/782: Train. Loss: 0.8884, Train. Acc.: 0.7127, Test Acc.: 0.7306
+* Epoch 2, Move 1400/782: Train. Loss: 0.8567, Train. Acc.: 0.7235, Test Acc.: 0.7241
+* Epoch 2, Move 1410/782: Train. Loss: 0.8531, Train. Acc.: 0.7251, Test Acc.: 0.7451
+* Epoch 2, Move 1420/782: Train. Loss: 0.8793, Train. Acc.: 0.7157, Test Acc.: 0.7332
+* Epoch 2, Move 1430/782: Train. Loss: 0.8594, Train. Acc.: 0.7251, Test Acc.: 0.7347
+* Epoch 2, Move 1440/782: Train. Loss: 0.8434, Train. Acc.: 0.7295, Test Acc.: 0.7459
+* Epoch 2, Move 1450/782: Train. Loss: 0.8806, Train. Acc.: 0.7115, Test Acc.: 0.7345
+* Epoch 2, Move 1460/782: Train. Loss: 0.8535, Train. Acc.: 0.7228, Test Acc.: 0.7321
+* Epoch 2, Move 1470/782: Train. Loss: 0.8484, Train. Acc.: 0.7229, Test Acc.: 0.7368
+* Epoch 2, Move 1480/782: Train. Loss: 0.8650, Train. Acc.: 0.7194, Test Acc.: 0.7407
+* Epoch 2, Move 1490/782: Train. Loss: 0.8163, Train. Acc.: 0.7325, Test Acc.: 0.7465
+* Epoch 2, Move 1500/782: Train. Loss: 0.8434, Train. Acc.: 0.7264, Test Acc.: 0.7376
+* Epoch 2, Move 1510/782: Train. Loss: 0.8492, Train. Acc.: 0.7215, Test Acc.: 0.7425
+* Epoch 2, Move 1520/782: Train. Loss: 0.8481, Train. Acc.: 0.7277, Test Acc.: 0.7450
+* Epoch 2, Move 1530/782: Train. Loss: 0.8144, Train. Acc.: 0.7329, Test Acc.: 0.7470
+* Epoch 2, Move 1540/782: Train. Loss: 0.8549, Train. Acc.: 0.7194, Test Acc.: 0.7358
+* Epoch 2, Move 1550/782: Train. Loss: 0.8345, Train. Acc.: 0.7329, Test Acc.: 0.7435
+* Epoch 2, Move 1560/782: Train. Loss: 0.8507, Train. Acc.: 0.7210, Test Acc.: 0.7423
+* Epoch 2, Move 1563/782: Train. Loss: 0.8090, Train. Acc.: 0.7372, Test Acc.: 0.7509
+* Epoch 3, Move 0/782: Train. Loss: 0.7988, Train. Acc.: 0.7384, Test Acc.: 0.7501
+* Epoch 3, Move 10/782: Train. Loss: 0.8389, Train. Acc.: 0.7251, Test Acc.: 0.7445
+* Epoch 3, Move 20/782: Train. Loss: 0.8194, Train. Acc.: 0.7349, Test Acc.: 0.7449
+* Epoch 3, Move 30/782: Train. Loss: 0.8430, Train. Acc.: 0.7279, Test Acc.: 0.7483
+* Epoch 3, Move 40/782: Train. Loss: 0.8483, Train. Acc.: 0.7236, Test Acc.: 0.7496
+* Epoch 3, Move 50/782: Train. Loss: 0.8232, Train. Acc.: 0.7305, Test Acc.: 0.7498
+* Epoch 3, Move 60/782: Train. Loss: 0.8259, Train. Acc.: 0.7357, Test Acc.: 0.7561
+* Epoch 3, Move 70/782: Train. Loss: 0.8019, Train. Acc.: 0.7419, Test Acc.: 0.7478
+* Epoch 3, Move 80/782: Train. Loss: 0.8431, Train. Acc.: 0.7198, Test Acc.: 0.7389
+* Epoch 3, Move 90/782: Train. Loss: 0.8424, Train. Acc.: 0.7192, Test Acc.: 0.7493
+* Epoch 3, Move 100/782: Train. Loss: 0.8468, Train. Acc.: 0.7237, Test Acc.: 0.7399
+* Epoch 3, Move 110/782: Train. Loss: 0.9802, Train. Acc.: 0.6778, Test Acc.: 0.7086
+* Epoch 3, Move 120/782: Train. Loss: 0.9439, Train. Acc.: 0.6916, Test Acc.: 0.7108
+* Epoch 3, Move 130/782: Train. Loss: 1.0043, Train. Acc.: 0.6774, Test Acc.: 0.6918
+* Epoch 3, Move 140/782: Train. Loss: 1.0488, Train. Acc.: 0.6637, Test Acc.: 0.6802
+* Epoch 3, Move 150/782: Train. Loss: 0.9671, Train. Acc.: 0.6891, Test Acc.: 0.7095
+* Epoch 3, Move 160/782: Train. Loss: 1.1152, Train. Acc.: 0.6471, Test Acc.: 0.6741
+* Epoch 3, Move 170/782: Train. Loss: 1.1184, Train. Acc.: 0.6550, Test Acc.: 0.6679
+* Epoch 3, Move 180/782: Train. Loss: 1.0184, Train. Acc.: 0.6838, Test Acc.: 0.7037
+* Epoch 3, Move 190/782: Train. Loss: 1.1133, Train. Acc.: 0.6601, Test Acc.: 0.6774
+* Epoch 3, Move 200/782: Train. Loss: 1.1532, Train. Acc.: 0.6619, Test Acc.: 0.6789
+* Epoch 3, Move 210/782: Train. Loss: 1.1043, Train. Acc.: 0.6800, Test Acc.: 0.6984
+* Epoch 3, Move 220/782: Train. Loss: 1.3143, Train. Acc.: 0.6452, Test Acc.: 0.6799
+* Epoch 3, Move 230/782: Train. Loss: 1.2027, Train. Acc.: 0.6655, Test Acc.: 0.6911
+* Epoch 3, Move 240/782: Train. Loss: 1.2462, Train. Acc.: 0.6768, Test Acc.: 0.6989
+* Epoch 3, Move 250/782: Train. Loss: 1.4403, Train. Acc.: 0.6483, Test Acc.: 0.6803
+* Epoch 3, Move 260/782: Train. Loss: 1.2344, Train. Acc.: 0.6828, Test Acc.: 0.7095
+* Epoch 3, Move 270/782: Train. Loss: 1.1933, Train. Acc.: 0.6943, Test Acc.: 0.7183
+* Epoch 3, Move 280/782: Train. Loss: 1.2876, Train. Acc.: 0.6734, Test Acc.: 0.6939
+* Epoch 3, Move 290/782: Train. Loss: 1.2672, Train. Acc.: 0.6789, Test Acc.: 0.7089
+* Epoch 3, Move 300/782: Train. Loss: 1.2695, Train. Acc.: 0.6819, Test Acc.: 0.6960
+* Epoch 3, Move 310/782: Train. Loss: 1.2316, Train. Acc.: 0.6797, Test Acc.: 0.6975
+* Epoch 3, Move 320/782: Train. Loss: 1.0720, Train. Acc.: 0.7207, Test Acc.: 0.7395
+* Epoch 3, Move 330/782: Train. Loss: 1.1628, Train. Acc.: 0.6917, Test Acc.: 0.7191
+* Epoch 3, Move 340/782: Train. Loss: 1.1181, Train. Acc.: 0.7018, Test Acc.: 0.7281
+* Epoch 3, Move 350/782: Train. Loss: 1.0402, Train. Acc.: 0.7222, Test Acc.: 0.7348
+* Epoch 3, Move 360/782: Train. Loss: 1.1964, Train. Acc.: 0.6778, Test Acc.: 0.7075
+* Epoch 3, Move 370/782: Train. Loss: 1.0905, Train. Acc.: 0.7027, Test Acc.: 0.7225
+* Epoch 3, Move 380/782: Train. Loss: 1.1087, Train. Acc.: 0.7019, Test Acc.: 0.7220
+* Epoch 3, Move 390/782: Train. Loss: 1.1397, Train. Acc.: 0.6907, Test Acc.: 0.7115
+* Epoch 3, Move 400/782: Train. Loss: 1.0578, Train. Acc.: 0.7131, Test Acc.: 0.7238
+* Epoch 3, Move 410/782: Train. Loss: 1.1017, Train. Acc.: 0.6912, Test Acc.: 0.6975
+* Epoch 3, Move 420/782: Train. Loss: 1.0954, Train. Acc.: 0.6935, Test Acc.: 0.7052
+* Epoch 3, Move 430/782: Train. Loss: 0.9999, Train. Acc.: 0.7207, Test Acc.: 0.7364
+* Epoch 3, Move 440/782: Train. Loss: 1.0528, Train. Acc.: 0.7123, Test Acc.: 0.7245
+* Epoch 3, Move 450/782: Train. Loss: 1.0304, Train. Acc.: 0.7106, Test Acc.: 0.7207
+* Epoch 3, Move 460/782: Train. Loss: 0.9813, Train. Acc.: 0.7241, Test Acc.: 0.7390
+* Epoch 3, Move 470/782: Train. Loss: 0.9799, Train. Acc.: 0.7168, Test Acc.: 0.7277
+* Epoch 3, Move 480/782: Train. Loss: 0.9555, Train. Acc.: 0.7274, Test Acc.: 0.7362
+* Epoch 3, Move 490/782: Train. Loss: 0.9265, Train. Acc.: 0.7277, Test Acc.: 0.7383
+* Epoch 3, Move 500/782: Train. Loss: 0.9704, Train. Acc.: 0.7111, Test Acc.: 0.7288
+* Epoch 3, Move 510/782: Train. Loss: 0.9200, Train. Acc.: 0.7285, Test Acc.: 0.7443
+* Epoch 3, Move 520/782: Train. Loss: 0.9343, Train. Acc.: 0.7149, Test Acc.: 0.7284
+* Epoch 3, Move 530/782: Train. Loss: 0.9198, Train. Acc.: 0.7131, Test Acc.: 0.7256
+* Epoch 3, Move 540/782: Train. Loss: 0.8762, Train. Acc.: 0.7281, Test Acc.: 0.7447
+* Epoch 3, Move 550/782: Train. Loss: 0.9286, Train. Acc.: 0.7118, Test Acc.: 0.7234
+* Epoch 3, Move 560/782: Train. Loss: 0.9193, Train. Acc.: 0.7080, Test Acc.: 0.7235
+* Epoch 3, Move 570/782: Train. Loss: 0.8666, Train. Acc.: 0.7330, Test Acc.: 0.7440
+* Epoch 3, Move 580/782: Train. Loss: 0.9513, Train. Acc.: 0.6986, Test Acc.: 0.7195
+* Epoch 3, Move 590/782: Train. Loss: 0.9292, Train. Acc.: 0.6973, Test Acc.: 0.7117
+* Epoch 3, Move 600/782: Train. Loss: 0.9189, Train. Acc.: 0.7064, Test Acc.: 0.7287
+* Epoch 3, Move 610/782: Train. Loss: 0.9484, Train. Acc.: 0.6981, Test Acc.: 0.7144
+* Epoch 3, Move 620/782: Train. Loss: 0.9558, Train. Acc.: 0.6890, Test Acc.: 0.6960
+* Epoch 3, Move 630/782: Train. Loss: 0.9502, Train. Acc.: 0.6948, Test Acc.: 0.7177
+* Epoch 3, Move 640/782: Train. Loss: 0.9325, Train. Acc.: 0.7044, Test Acc.: 0.7101
+* Epoch 3, Move 650/782: Train. Loss: 0.9052, Train. Acc.: 0.7050, Test Acc.: 0.7221
+* Epoch 3, Move 660/782: Train. Loss: 0.9493, Train. Acc.: 0.6916, Test Acc.: 0.7090
+* Epoch 3, Move 670/782: Train. Loss: 0.9649, Train. Acc.: 0.6842, Test Acc.: 0.6904
+* Epoch 3, Move 680/782: Train. Loss: 0.9558, Train. Acc.: 0.6906, Test Acc.: 0.7023
+* Epoch 3, Move 690/782: Train. Loss: 0.9708, Train. Acc.: 0.6842, Test Acc.: 0.6964
+* Epoch 3, Move 700/782: Train. Loss: 0.9607, Train. Acc.: 0.6871, Test Acc.: 0.6974
+* Epoch 3, Move 710/782: Train. Loss: 0.9619, Train. Acc.: 0.6915, Test Acc.: 0.6956
+* Epoch 3, Move 720/782: Train. Loss: 0.9686, Train. Acc.: 0.6864, Test Acc.: 0.6933
+* Epoch 3, Move 730/782: Train. Loss: 0.9837, Train. Acc.: 0.6821, Test Acc.: 0.6952
+* Epoch 3, Move 740/782: Train. Loss: 0.9828, Train. Acc.: 0.6796, Test Acc.: 0.6961
+* Epoch 3, Move 750/782: Train. Loss: 1.0143, Train. Acc.: 0.6718, Test Acc.: 0.6882
+* Epoch 3, Move 760/782: Train. Loss: 1.0424, Train. Acc.: 0.6655, Test Acc.: 0.6994
+* Epoch 3, Move 770/782: Train. Loss: 3.0724, Train. Acc.: 0.2413, Test Acc.: 0.3411
+* Epoch 3, Move 780/782: Train. Loss: 24.0977, Train. Acc.: 0.1033, Test Acc.: 0.0980
+* Epoch 3, Move 790/782: Train. Loss: 20.6549, Train. Acc.: 0.0960, Test Acc.: 0.0980
+* Epoch 3, Move 800/782: Train. Loss: 1.6164, Train. Acc.: 0.5016, Test Acc.: 0.5585
+* Epoch 3, Move 810/782: Train. Loss: 1.4135, Train. Acc.: 0.5765, Test Acc.: 0.5966
+* Epoch 3, Move 820/782: Train. Loss: 1.3201, Train. Acc.: 0.6019, Test Acc.: 0.6336
+* Epoch 3, Move 830/782: Train. Loss: 1.2399, Train. Acc.: 0.6235, Test Acc.: 0.6488
+* Epoch 3, Move 840/782: Train. Loss: 1.1771, Train. Acc.: 0.6384, Test Acc.: 0.6381
+* Epoch 3, Move 850/782: Train. Loss: 1.1453, Train. Acc.: 0.6407, Test Acc.: 0.6639
+* Epoch 3, Move 860/782: Train. Loss: 1.1472, Train. Acc.: 0.6452, Test Acc.: 0.6739
+* Epoch 3, Move 870/782: Train. Loss: 1.1164, Train. Acc.: 0.6552, Test Acc.: 0.6752
+* Epoch 3, Move 880/782: Train. Loss: 1.0560, Train. Acc.: 0.6747, Test Acc.: 0.6834
+* Epoch 3, Move 890/782: Train. Loss: 1.0848, Train. Acc.: 0.6610, Test Acc.: 0.6796
+* Epoch 3, Move 900/782: Train. Loss: 1.0428, Train. Acc.: 0.6799, Test Acc.: 0.6915
+* Epoch 3, Move 910/782: Train. Loss: 0.9860, Train. Acc.: 0.6931, Test Acc.: 0.6963
+* Epoch 3, Move 920/782: Train. Loss: 1.0136, Train. Acc.: 0.6879, Test Acc.: 0.6923
+* Epoch 3, Move 930/782: Train. Loss: 0.9878, Train. Acc.: 0.7014, Test Acc.: 0.7082
+* Epoch 3, Move 940/782: Train. Loss: 0.9681, Train. Acc.: 0.7009, Test Acc.: 0.7143
+* Epoch 3, Move 950/782: Train. Loss: 1.0226, Train. Acc.: 0.6855, Test Acc.: 0.6997
+* Epoch 3, Move 960/782: Train. Loss: 0.9880, Train. Acc.: 0.6977, Test Acc.: 0.7105
+* Epoch 3, Move 970/782: Train. Loss: 0.9376, Train. Acc.: 0.7159, Test Acc.: 0.7194
+* Epoch 3, Move 980/782: Train. Loss: 0.9742, Train. Acc.: 0.7001, Test Acc.: 0.7092
+* Epoch 3, Move 990/782: Train. Loss: 0.9628, Train. Acc.: 0.7048, Test Acc.: 0.7184
+* Epoch 3, Move 1000/782: Train. Loss: 0.9609, Train. Acc.: 0.7018, Test Acc.: 0.7050
+* Epoch 3, Move 1010/782: Train. Loss: 0.9724, Train. Acc.: 0.6933, Test Acc.: 0.7161
+* Epoch 3, Move 1020/782: Train. Loss: 0.9339, Train. Acc.: 0.7089, Test Acc.: 0.7280
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">KeyboardInterrupt</span>                         Traceback (most recent call last)
+Cell <span class="ansi-green-fg">In[9], line 24</span>
+<span class="ansi-green-intense-fg ansi-bold">     21</span> labels = labels.data
+<span class="ansi-green-intense-fg ansi-bold">     22</span> inputs, labels = inputs.to(device), labels.to(device)
+<span class="ansi-green-fg">---&gt; 24</span> scores = mps(inputs)
+<span class="ansi-green-intense-fg ansi-bold">     25</span> _, preds = torch.max(scores, 1)
+<span class="ansi-green-intense-fg ansi-bold">     27</span> # Compute the loss and accuracy, add them to the running totals
+
+File <span class="ansi-green-fg">~/anaconda3/envs/pytorch/lib/python3.8/site-packages/torch/nn/modules/module.py:1130</span>, in <span class="ansi-cyan-fg">Module._call_impl</span><span class="ansi-blue-fg">(self, *input, **kwargs)</span>
+<span class="ansi-green-intense-fg ansi-bold">   1126</span> # If we don&#39;t have any hooks, we want to skip the rest of the logic in
+<span class="ansi-green-intense-fg ansi-bold">   1127</span> # this function, and just call forward.
+<span class="ansi-green-intense-fg ansi-bold">   1128</span> if not (self._backward_hooks or self._forward_hooks or self._forward_pre_hooks or _global_backward_hooks
+<span class="ansi-green-intense-fg ansi-bold">   1129</span>         or _global_forward_hooks or _global_forward_pre_hooks):
+<span class="ansi-green-fg">-&gt; 1130</span>     return forward_call(*input, **kwargs)
+<span class="ansi-green-intense-fg ansi-bold">   1131</span> # Do not call functions when jit is used
+<span class="ansi-green-intense-fg ansi-bold">   1132</span> full_backward_hooks, non_full_backward_hooks = [], []
+
+File <span class="ansi-green-fg">~/VSCodeProjects/tensorkrowch/tensorkrowch/components.py:4543</span>, in <span class="ansi-cyan-fg">TensorNetwork.forward</span><span class="ansi-blue-fg">(self, data, *args, **kwargs)</span>
+<span class="ansi-green-intense-fg ansi-bold">   4541</span> else:
+<span class="ansi-green-intense-fg ansi-bold">   4542</span>     for op in self._seq_ops:
+<span class="ansi-green-fg">-&gt; 4543</span>         output = self.operations[op[0]](**op[1])
+<span class="ansi-green-intense-fg ansi-bold">   4545</span>     if not isinstance(output, Node):
+<span class="ansi-green-intense-fg ansi-bold">   4546</span>         if (op[0] == &#39;unbind&#39;) and (len(output) == 1):
+
+File <span class="ansi-green-fg">~/VSCodeProjects/tensorkrowch/tensorkrowch/operations.py:100</span>, in <span class="ansi-cyan-fg">Operation.__call__</span><span class="ansi-blue-fg">(self, *args, **kwargs)</span>
+<span class="ansi-green-intense-fg ansi-bold">     98</span> else:
+<span class="ansi-green-intense-fg ansi-bold">     99</span>     args = [successor] + list(args)
+<span class="ansi-green-fg">--&gt; 100</span>     return self.func2(*args, **kwargs)
+
+File <span class="ansi-green-fg">~/VSCodeProjects/tensorkrowch/tensorkrowch/operations.py:2604</span>, in <span class="ansi-cyan-fg">_stack_next</span><span class="ansi-blue-fg">(successor, nodes)</span>
+<span class="ansi-green-intense-fg ansi-bold">   2600</span> if successor.hints[&#39;all_same_ref&#39;] or \
+<span class="ansi-green-intense-fg ansi-bold">   2601</span>     (successor.hints[&#39;all_leaf&#39;] and successor.hints[&#39;automemory&#39;]):
+<span class="ansi-green-intense-fg ansi-bold">   2602</span>     return child
+<span class="ansi-green-fg">-&gt; 2604</span> stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])
+<span class="ansi-green-intense-fg ansi-bold">   2605</span> child._unrestricted_set_tensor(stack_tensor)
+<span class="ansi-green-intense-fg ansi-bold">   2607</span> # Record in inverse_memory while contracting
+<span class="ansi-green-intense-fg ansi-bold">   2608</span> # (to delete memory if possible)
+
+File <span class="ansi-green-fg">~/VSCodeProjects/tensorkrowch/tensorkrowch/utils.py:220</span>, in <span class="ansi-cyan-fg">stack_unequal_tensors</span><span class="ansi-blue-fg">(lst_tensors)</span>
+<span class="ansi-green-intense-fg ansi-bold">    218</span>             pad.reverse()
+<span class="ansi-green-intense-fg ansi-bold">    219</span>             lst_tensors[idx] = nn.functional.pad(tensor, pad)
+<span class="ansi-green-fg">--&gt; 220</span> return torch.stack(lst_tensors)
+
+<span class="ansi-red-fg">KeyboardInterrupt</span>:
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="s1">&#39;mps_dmrg_+1020.pt&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">n_moves</span> <span class="o">=</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">block_length</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">n_moves</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">loaders</span><span class="p">[</span><span class="s1">&#39;train&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">dataset</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n_moves</span><span class="p">))</span>
+<span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">loaders</span><span class="p">[</span><span class="s1">&#39;train&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">dataset</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n_moves</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">batch_size</span>
+
+<span class="n">mps</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+<span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span>
+                             <span class="n">lr</span><span class="o">=</span><span class="n">learn_rate</span><span class="p">,</span>
+                             <span class="n">weight_decay</span><span class="o">=</span><span class="n">l2_reg</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">epoch_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_epochs</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+    <span class="n">move</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">for</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">loaders</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]:</span>
+        <span class="n">running_train_loss</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">running_train_acc</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+        <span class="n">inputs</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">labels</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">mps</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">preds</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Compute the loss and accuracy, add them to the running totals</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fun</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">accuracy</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">preds</span> <span class="o">==</span> <span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="n">batch_size</span>
+            <span class="n">running_train_loss</span> <span class="o">+=</span> <span class="n">loss</span>
+            <span class="n">running_train_acc</span> <span class="o">+=</span> <span class="n">accuracy</span>
+
+        <span class="c1"># Backpropagate and update parameters</span>
+        <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+        <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+        <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">move</span> <span class="o">%</span> <span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;* Epoch </span><span class="si">{</span><span class="n">epoch_num</span><span class="si">}</span><span class="s1">, Move </span><span class="si">{</span><span class="n">move</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">n_moves</span><span class="si">}</span><span class="s1">: &#39;</span>
+                <span class="sa">f</span><span class="s1">&#39;Train. Loss: </span><span class="si">{</span><span class="n">running_train_loss</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
+                <span class="sa">f</span><span class="s1">&#39;Train. Acc.: </span><span class="si">{</span><span class="n">running_train_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">move</span> <span class="o">&lt;</span> <span class="n">n_moves</span><span class="p">:</span>
+            <span class="n">mps</span><span class="o">.</span><span class="n">move_block</span><span class="p">(</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mps</span><span class="o">.</span><span class="n">move_block</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+
+        <span class="n">mps</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+        <span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span>
+                                        <span class="n">lr</span><span class="o">=</span><span class="n">learn_rate</span><span class="p">,</span>
+                                        <span class="n">weight_decay</span><span class="o">=</span><span class="n">l2_reg</span><span class="p">)</span>
+
+        <span class="n">move</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">move</span> <span class="o">==</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n_moves</span><span class="p">):</span>
+            <span class="k">break</span>
+
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="n">running_test_acc</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+        <span class="k">for</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="ow">in</span> <span class="n">loaders</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]:</span>
+            <span class="n">inputs</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">view</span><span class="p">([</span>
+                <span class="n">batch_size</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">data</span>
+            <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">labels</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+            <span class="c1"># Call our MPS to get logit scores and predictions</span>
+            <span class="n">scores</span> <span class="o">=</span> <span class="n">mps</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">preds</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">running_test_acc</span> <span class="o">+=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">preds</span> <span class="o">==</span> <span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="n">batch_size</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;* Epoch </span><span class="si">{</span><span class="n">epoch_num</span><span class="si">}</span><span class="s1">, Move </span><span class="si">{</span><span class="n">move</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">n_moves</span><span class="si">}</span><span class="s1">: &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;Train. Loss: </span><span class="si">{</span><span class="n">running_train_loss</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;Train. Acc.: </span><span class="si">{</span><span class="n">running_train_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;Test Acc.: </span><span class="si">{</span><span class="n">running_test_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+782 38.36317135549872
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">AssertionError</span>                            Traceback (most recent call last)
+Cell <span class="ansi-green-fg">In[19], line 4</span>
+<span class="ansi-green-intense-fg ansi-bold">      1</span> n_moves = image_size[0] * image_size[1] - block_length
+<span class="ansi-green-intense-fg ansi-bold">      3</span> print(n_moves, len(loaders[&#39;train&#39;].dataset) / (2 * n_moves))
+<span class="ansi-green-fg">----&gt; 4</span> assert len(loaders[&#39;train&#39;].dataset) / (2 * n_moves) &gt;= batch_size
+<span class="ansi-green-intense-fg ansi-bold">      6</span> mps.trace(torch.zeros(image_size[0] * image_size[1], 1, d_phys).to(device))
+<span class="ansi-green-intense-fg ansi-bold">      7</span> optimizer = torch.optim.SGD(mps.parameters(),
+<span class="ansi-green-intense-fg ansi-bold">      8</span>                              lr=learn_rate,
+<span class="ansi-green-intense-fg ansi-bold">      9</span>                              weight_decay=l2_reg)
+
+<span class="ansi-red-fg">AssertionError</span>:
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">n_moves</span> <span class="o">=</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">block_length</span>
@@ -989,7 +1679,7 @@ Using Adam w/ learning rate = 1.0e-05
                 <span class="n">_</span><span class="p">,</span> <span class="n">preds</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
                 <span class="n">running_test_acc</span> <span class="o">+=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">preds</span> <span class="o">==</span> <span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="n">batch_size</span>
 
-        <span class="k">if</span> <span class="n">move</span> <span class="o">%</span> <span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">move</span> <span class="o">%</span> <span class="mi">10</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;* Epoch </span><span class="si">{</span><span class="n">epoch_num</span><span class="si">}</span><span class="s1">, Move </span><span class="si">{</span><span class="n">move</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">n_moves</span><span class="si">}</span><span class="s1">: &#39;</span>
                 <span class="sa">f</span><span class="s1">&#39;Train. Loss: </span><span class="si">{</span><span class="n">running_train_loss</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
                 <span class="sa">f</span><span class="s1">&#39;Train. Acc.: </span><span class="si">{</span><span class="n">running_train_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
@@ -1011,30 +1701,6 @@ Using Adam w/ learning rate = 1.0e-05
           <span class="sa">f</span><span class="s1">&#39;Test Acc.: </span><span class="si">{</span><span class="n">running_test_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-* Epoch 1, Move 0/782: Train. Loss: 2.3026, Train. Acc.: 0.1117, Test Acc.: 0.1142
-* Epoch 1, Move 100/782: Train. Loss: 2.2992, Train. Acc.: 0.1141, Test Acc.: 0.1142
-* Epoch 1, Move 200/782: Train. Loss: 2.2879, Train. Acc.: 0.1157, Test Acc.: 0.1156
-* Epoch 1, Move 300/782: Train. Loss: 2.2301, Train. Acc.: 0.2327, Test Acc.: 0.1994
-* Epoch 1, Move 400/782: Train. Loss: 2.1403, Train. Acc.: 0.3162, Test Acc.: 0.2884
-* Epoch 1, Move 500/782: Train. Loss: 2.0333, Train. Acc.: 0.3478, Test Acc.: 0.3174
-* Epoch 1, Move 600/782: Train. Loss: 1.8758, Train. Acc.: 0.3813, Test Acc.: 0.3540
-* Epoch 1, Move 700/782: Train. Loss: 1.7273, Train. Acc.: 0.4055, Test Acc.: 0.3780
-* Epoch 1, Move 800/782: Train. Loss: 1.3702, Train. Acc.: 0.5006, Test Acc.: 0.4750
-* Epoch 1, Move 900/782: Train. Loss: 1.5917, Train. Acc.: 0.6191, Test Acc.: 0.6542
-* Epoch 1, Move 1000/782: Train. Loss: 2.6530, Train. Acc.: 0.6311, Test Acc.: 0.6576
-* Epoch 1, Move 1100/782: Train. Loss: 3.9461, Train. Acc.: 0.6790, Test Acc.: 0.6784
-* Epoch 1, Move 1200/782: Train. Loss: 5.9259, Train. Acc.: 0.6698, Test Acc.: 0.6376
-* Epoch 1, Move 1300/782: Train. Loss: 7.8389, Train. Acc.: 0.6778, Test Acc.: 0.6980
-* Epoch 1, Move 1400/782: Train. Loss: 13.7298, Train. Acc.: 0.6066, Test Acc.: 0.6316
-* Epoch 1, Move 1500/782: Train. Loss: 13.8754, Train. Acc.: 0.6148, Test Acc.: 0.6324
-* Epoch 1, Move 1563/782: Train. Loss: 11.3831, Train. Acc.: 0.6347, Test Acc.: 0.6210
-</pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:

@@ -33,20 +33,10 @@ Nodes
 Edges
 -----
 
-.. autoclass:: AbstractEdge
-    :inherited-members:
-    :members:
-
 .. autoclass:: Edge
     :members:
 
-.. autoclass:: ParamEdge
-    :members:
-
 .. autoclass:: StackEdge
-    :members:
-
-.. autoclass:: ParamStackEdge
     :members:
 
 

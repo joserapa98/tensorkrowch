@@ -130,6 +130,11 @@
     </a>
    </li>
    <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/jose_mps_canonical_mnist.html">
+     MPS and Canonical Form initializing also in canonical form - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
     <a class="reference internal" href="../../../examples/jose_mps_fashion_mnist.html">
      MPS and Canonical Form - FashionMNIST
     </a>
@@ -341,8 +346,6 @@ title="Source repository"
 <span class="sd">        Bond dimensions of nodes in each layer. Each sequence corresponds to the</span>
 <span class="sd">        shape of the nodes in each layer (some input edges and an output edge in</span>
 <span class="sd">        the last position).</span>
-<span class="sd">    param_bond : bool</span>
-<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
 <span class="sd">    num_batches : int</span>
 <span class="sd">        Number of batch edges of input data nodes. Usually ``num_batches = 1``</span>
 <span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
@@ -362,7 +365,6 @@ title="Source repository"
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">sites_per_layer</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
                  <span class="n">d_bond</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
-                 <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;tree&#39;</span><span class="p">)</span>
@@ -413,11 +415,7 @@ title="Source repository"
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`sites_per_layer` and `d_bond` should have the &#39;</span>
                              <span class="s1">&#39;same number of elements&#39;</span><span class="p">)</span>
 
-        <span class="c1"># param_bond</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span> <span class="o">=</span> <span class="n">param_bond</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">param_bond</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">param_bond</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_batches</span> <span class="o">=</span> <span class="n">num_batches</span>
@@ -435,26 +433,6 @@ title="Source repository"
 <span class="sd">        and an output edge in the last position).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span>
-
-<div class="viewcode-block" id="Tree.param_bond"><a class="viewcode-back" href="../../../models.html#tensorkrowch.Tree.param_bond">[docs]</a>    <span class="k">def</span> <span class="nf">param_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_param</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns ``param_bond`` attribute or changes it if ``set_param`` is</span>
-<span class="sd">        provided.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        set_param : bool, optional</span>
-<span class="sd">            Boolean indicating whether edges have to be parameterized (``True``)</span>
-<span class="sd">            or de-parameterized (``False``).</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">set_param</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
-                <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">layer</span><span class="p">:</span>
-                    <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
-                        <span class="n">edge</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">set_param</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span> <span class="o">=</span> <span class="n">set_param</span></div>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the Tree.&quot;&quot;&quot;</span>
@@ -664,9 +642,7 @@ title="Source repository"
                 <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer1</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer2</span>
                 
-            <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="n">prev_automemory</span>
-            
-        <span class="bp">self</span><span class="o">.</span><span class="n">param_bond</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span><span class="p">)</span></div></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="n">prev_automemory</span></div></div>
 
 
 <div class="viewcode-block" id="UTree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UTree">[docs]</a><span class="k">class</span> <span class="nc">UTree</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
@@ -686,8 +662,6 @@ title="Source repository"
 <span class="sd">        Bond dimensions of nodes in each layer. Since all nodes have the same</span>
 <span class="sd">        shape, it is enough to pass a single sequence of dimensions (some input</span>
 <span class="sd">        edges and an output edge in the last position).</span>
-<span class="sd">    param_bond : bool</span>
-<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
 <span class="sd">    num_batches : int</span>
 <span class="sd">        Number of batch edges of input data nodes. Usually ``num_batches = 1``</span>
 <span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
@@ -698,7 +672,6 @@ title="Source repository"
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">sites_per_layer</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
                  <span class="n">d_bond</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
-                 <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;tree&#39;</span><span class="p">)</span>
@@ -735,11 +708,7 @@ title="Source repository"
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_bond` should be a sequence of ints&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">d_bond</span><span class="p">)</span>
 
-        <span class="c1"># param_bond</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span> <span class="o">=</span> <span class="n">param_bond</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">param_bond</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">param_bond</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_batches</span> <span class="o">=</span> <span class="n">num_batches</span>
@@ -756,26 +725,6 @@ title="Source repository"
 <span class="sd">        and an output edge in the last position).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span>
-
-<div class="viewcode-block" id="UTree.param_bond"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UTree.param_bond">[docs]</a>    <span class="k">def</span> <span class="nf">param_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_param</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns ``param_bond`` attribute or changes it if ``set_param`` is</span>
-<span class="sd">        provided.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        set_param : bool, optional</span>
-<span class="sd">            Boolean indicating whether edges have to be parameterized (``True``)</span>
-<span class="sd">            or de-parameterized (``False``).</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">set_param</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
-                <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">layer</span><span class="p">:</span>
-                    <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
-                        <span class="n">edge</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="o">=</span><span class="n">set_param</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_param_bond</span> <span class="o">=</span> <span class="n">set_param</span></div>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the Tree.&quot;&quot;&quot;</span>
@@ -956,8 +905,6 @@ title="Source repository"
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        If given as an ``int``, the actual kernel size will be</span>
 <span class="sd">        ``(kernel_size, kernel_size)``.</span>
-<span class="sd">    param_bond : bool</span>
-<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
 <span class="sd">        </span>
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
@@ -976,8 +923,7 @@ title="Source repository"
                  <span class="n">kernel_size</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">],</span>
                  <span class="n">stride</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                  <span class="n">padding</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-                 <span class="n">dilation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-                 <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,):</span>
+                 <span class="n">dilation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">):</span>
         
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">kernel_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">)</span>
@@ -1006,7 +952,6 @@ title="Source repository"
         
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sites_per_layer</span><span class="o">=</span><span class="n">sites_per_layer</span><span class="p">,</span>
                          <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
-                         <span class="n">param_bond</span><span class="o">=</span><span class="n">param_bond</span><span class="p">,</span>
                          <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span> <span class="o">=</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
         
@@ -1141,8 +1086,6 @@ title="Source repository"
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        If given as an ``int``, the actual kernel size will be</span>
 <span class="sd">        ``(kernel_size, kernel_size)``.</span>
-<span class="sd">    param_bond : bool</span>
-<span class="sd">        Boolean indicating whether bond edges should be :class:`ParamEdge`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -1151,8 +1094,7 @@ title="Source repository"
                  <span class="n">kernel_size</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">],</span>
                  <span class="n">stride</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                  <span class="n">padding</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-                 <span class="n">dilation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-                 <span class="n">param_bond</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,):</span>
+                 <span class="n">dilation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">):</span>
         
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">kernel_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">)</span>
@@ -1181,7 +1123,6 @@ title="Source repository"
         
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sites_per_layer</span><span class="o">=</span><span class="n">sites_per_layer</span><span class="p">,</span>
                          <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
-                         <span class="n">param_bond</span><span class="o">=</span><span class="n">param_bond</span><span class="p">,</span>
                          <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span> <span class="o">=</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         

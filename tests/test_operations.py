@@ -4794,6 +4794,66 @@ class TestStackUnbind:
         # Cannot unbind a node that is not a (Param)StackNode
         with pytest.raises(TypeError):
             result = tk.unbind(node)
+            
+    def test_batches_unbind_mode(self):
+        net = tk.TensorNetwork()
+        net.unbind_mode = True
+        
+        node1 = tk.Node(shape=(20, 30, 2),
+                       axes_names=('batch1', 'batch2', 'output'),
+                       init_method='randn',
+                       network=net)
+        node2 = tk.Node(shape=(20, 30, 2),
+                       axes_names=('batch1', 'batch2', 'output'),
+                       init_method='randn',
+                       network=net)
+        
+        # Stack
+        stack = tk.stack([node1, node2])
+        
+        # Unbind
+        unbinded = tk.unbind(stack)
+        for aux_node in unbinded:
+            assert aux_node.shape == (20, 30, 2)
+            
+        # Repeat changing batches
+        node1.tensor = torch.randn(25, 35, 2)
+        node2.tensor = torch.randn(25, 35, 2)
+        
+        stack = tk.stack([node1, node2])
+        unbinded = tk.unbind(stack)
+        for aux_node in unbinded:
+            assert aux_node.shape == (25, 35, 2)
+            
+    def test_batches_index_mode(self):
+        net = tk.TensorNetwork()
+        net.unbind_mode = False
+        
+        node1 = tk.Node(shape=(20, 30, 2),
+                       axes_names=('batch1', 'batch2', 'output'),
+                       init_method='randn',
+                       network=net)
+        node2 = tk.Node(shape=(20, 30, 2),
+                       axes_names=('batch1', 'batch2', 'output'),
+                       init_method='randn',
+                       network=net)
+        
+        # Stack
+        stack = tk.stack([node1, node2])
+        
+        # Unbind
+        unbinded = tk.unbind(stack)
+        for aux_node in unbinded:
+            assert aux_node.shape == (20, 30, 2)
+            
+        # Repeat changing batches
+        node1.tensor = torch.randn(25, 35, 2)
+        node2.tensor = torch.randn(25, 35, 2)
+        
+        stack = tk.stack([node1, node2])
+        unbinded = tk.unbind(stack)
+        for aux_node in unbinded:
+            assert aux_node.shape == (25, 35, 2)
 
 
 class TestEinsum:

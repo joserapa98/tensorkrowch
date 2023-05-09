@@ -971,7 +971,7 @@ class AbstractNode(ABC):
         if len(tensor.shape) == self.rank:
             for i, dim in enumerate(tensor.shape):
                 edge = self.get_edge(i)
-                if not edge.is_batch() and (dim != edge._size):
+                if not edge.is_batch() and (dim != edge.size()):
                     return False
             return True
         return False
@@ -998,10 +998,10 @@ class AbstractNode(ABC):
             for i, dim in enumerate(tensor.shape):
                 edge = self.get_edge(i)
 
-                if edge.is_batch() or (dim == edge._size):
+                if edge.is_batch() or (dim == edge.size()):
                     index.append(slice(0, dim))
-                elif dim > edge._size:
-                    index.append(slice(dim - edge._size, dim))
+                elif dim > edge.size():
+                    index.append(slice(dim - edge.size(), dim))
                 else:
                     raise ValueError(f'Cannot crop tensor if its size at axis {i}'
                                      ' is smaller than node\'s size')
@@ -1115,9 +1115,6 @@ class AbstractNode(ABC):
         if self._leaf and not self._network._automemory:
             self._unrestricted_set_tensor(
                 tensor=tensor, init_method=init_method, device=device, **kwargs)
-
-            for edge, size in zip(self._edges, self._shape):
-                edge._size = size
         else:
             raise ValueError('Node\'s tensor can only be changed if it is a leaf'
                              ' tensor and the network is not in automemory mode')
@@ -2076,7 +2073,6 @@ class Edge:
 
         self._nodes = [node1, node2]
         self._axes = [axis1, axis2]
-        self._size = node1._shape[axis1._num]
 
     # ----------
     # Properties
@@ -2157,7 +2153,7 @@ class Edge:
 
     def size(self) -> int:
         """Returns edge's size."""
-        return self._size
+        return self._nodes[0]._shape[self._axes[0]._num]
 
     def change_size(self, size: int) -> None:
         """
@@ -2169,7 +2165,6 @@ class Edge:
         """
         if not isinstance(size, int):
             TypeError('`size` should be int type')
-        self._size = size
         if not self.is_dangling():
             self.node2._change_axis_size(self.axis2, size)
         self.node1._change_axis_size(self.axis1, size)
@@ -2399,10 +2394,10 @@ def connect(edge1: Edge, edge2: Edge) -> Edge:
             raise ValueError(f'Edge {edge!s} is a batch edge. Batch edges '
                              'cannot be connected')
 
-    if edge1._size != edge2._size:
+    if edge1.size() != edge2.size():
         raise ValueError(f'Cannot connect edges of unequal size. '
-                         f'Size of edge {edge1!s}: {edge1._size}. '
-                         f'Size of edge {edge2!s}: {edge2._size}')
+                         f'Size of edge {edge1!s}: {edge1.size()}. '
+                         f'Size of edge {edge2!s}: {edge2.size()}')
 
     node1, axis1 = edge1.node1, edge1.axis1
     node2, axis2 = edge2.node1, edge2.axis1
@@ -3430,7 +3425,7 @@ class TensorNetwork(nn.Module):
         # have the same dimension
         same_dim = True
         for i in range(len(input_edges) - 1):
-            if input_edges[i]._size != input_edges[i + 1]._size:
+            if input_edges[i].size() != input_edges[i + 1].size():
                 same_dim = False
                 break
 
@@ -3439,7 +3434,7 @@ class TensorNetwork(nn.Module):
                 # If ``same_dim``, all input_edges have the same feature dimension
                 stack_node = Node(shape=(len(input_edges),
                                          *([1]*num_batch_edges),
-                                         input_edges[0]._size),
+                                         input_edges[0].size()),
                                   axes_names=('n_features',
                                               *(['batch']*num_batch_edges),
                                               'feature'),
@@ -3462,7 +3457,7 @@ class TensorNetwork(nn.Module):
                 raise TypeError(
                     '`input_edges` should be list[int] or list[Edge] type')
 
-            node = Node(shape=(*([1]*num_batch_edges), edge._size),
+            node = Node(shape=(*([1]*num_batch_edges), edge.size()),
                         axes_names=(*(['batch']*num_batch_edges), 'feature'),
                         name='data',
                         network=self,

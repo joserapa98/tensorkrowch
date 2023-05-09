@@ -1067,8 +1067,6 @@ def _split_next(successor: Successor,
         node1_tensor = u
         node2_tensor = vh
 
-        splitted_edge._size = rank
-
     elif mode == 'qr':
         q, r = torch.linalg.qr(node_tensor)
         rank = q.shape[-1]

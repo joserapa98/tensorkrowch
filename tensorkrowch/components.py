@@ -312,7 +312,7 @@ class AbstractNode(ABC):
                 for i in shape:
                     if not isinstance(i, int):
                         raise TypeError('`shape` elements should be int type')
-            aux_shape = shape
+            aux_shape = Size(shape)
         else:
             aux_shape = tensor.shape
 
@@ -702,7 +702,7 @@ class AbstractNode(ABC):
         if tensor is None:
             aux_shape = list(self._shape)
             aux_shape[axis_num] = size
-            self._shape = tuple(aux_shape)
+            self._shape = Size(aux_shape)
 
         else:
             if size < self._shape[axis_num]:
@@ -716,7 +716,7 @@ class AbstractNode(ABC):
                         index.append(slice(0, dim))
                 aux_shape = list(self._shape)
                 aux_shape[axis_num] = size
-                self._shape = tuple(aux_shape)
+                self._shape = Size(aux_shape)
                 self.tensor = tensor[index]
 
             elif size > self._shape[axis_num]:
@@ -731,7 +731,7 @@ class AbstractNode(ABC):
                 pad.reverse()
                 aux_shape = list(self._shape)
                 aux_shape[axis_num] = size
-                self._shape = tuple(aux_shape)
+                self._shape = Size(aux_shape)
                 self.tensor = nn.functional.pad(tensor, pad)
 
     def get_axis(self, axis: Ax) -> 'Edge':

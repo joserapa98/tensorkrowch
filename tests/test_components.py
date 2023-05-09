@@ -558,7 +558,7 @@ class TestSetTensorNode:
         node1._unrestricted_set_tensor(diff_tensor)
         assert node1.shape == (2, 10, 2)
         assert node1['left'].size() == 2
-        assert node1['batch'].size() == 5
+        assert node1['batch'].size() == 10
         assert node1['right'].size() == 2
 
     def test_set_init_method(self, setup):
@@ -694,7 +694,7 @@ class TestSetTensorParamNode:
         node1._unrestricted_set_tensor(diff_tensor)
         assert node1.shape == (2, 10, 2)
         assert node1['left'].size() == 2
-        assert node1['batch'].size() == 5
+        assert node1['batch'].size() == 10
         assert node1['right'].size() == 2
 
     def test_set_init_method(self, setup):

@@ -466,16 +466,11 @@ class UTree(TensorNetwork):
         # Virtual node
         tensor = torch.randn(self.uniform_memory._shape) * std
         tensor[(0,) * len(tensor.shape)] = 1.
-        self.uniform_memory._unrestricted_set_tensor(tensor)
+        self.uniform_memory.tensor = tensor
         
         for layer in self.layers:
             for node in layer:
-                del self._memory_nodes[node._tensor_info['address']]
-                node._tensor_info['address'] = None
-                node._tensor_info['node_ref'] = self.uniform_memory
-                node._tensor_info['full'] = True
-                node._tensor_info['stack_idx'] = None
-                node._tensor_info['index'] = None
+                node.set_tensor_from(self.uniform_memory)
 
     def set_data_nodes(self) -> None:
         """

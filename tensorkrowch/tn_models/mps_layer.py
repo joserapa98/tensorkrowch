@@ -1143,16 +1143,10 @@ class UMPSLayer(TensorNetwork):
         random_eye  = random_eye + torch.eye(tensor.shape[0], tensor.shape[2])
         tensor[:, 0, :] = random_eye
         
-        # TODO: turn this into public function: assign node tensor to other node
-        self.uniform_memory._unrestricted_set_tensor(tensor)
+        self.uniform_memory.tensor = tensor
     
         for node in self.left_env + self.right_env:
-            del self._memory_nodes[node._tensor_info['address']]
-            node._tensor_info['address'] = None
-            node._tensor_info['node_ref'] = self.uniform_memory
-            node._tensor_info['full'] = True
-            node._tensor_info['index'] = None
-        # NOTE: until here
+            node.set_tensor_from(self.uniform_memory)
             
         # Output node
         eye_tensor = torch.eye(self.output_node.shape[0],

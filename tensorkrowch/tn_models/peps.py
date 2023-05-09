@@ -922,16 +922,11 @@ class UPEPS(TensorNetwork):
         """Initializes all the nodes."""
         # Virtual node
         tensor = torch.randn(self.uniform_memory._shape) * std
-        self.uniform_memory._unrestricted_set_tensor(tensor)
+        self.uniform_memory.tensor = tensor
         
         for lst in self.grid_env:
             for node in lst:
-                del self._memory_nodes[node._tensor_info['address']]
-                node._tensor_info['address'] = None
-                node._tensor_info['node_ref'] = self.uniform_memory
-                node._tensor_info['full'] = True
-                node._tensor_info['stack_idx'] = None
-                node._tensor_info['index'] = None
+                node.set_tensor_from(self.uniform_memory)
     
     def set_data_nodes(self) -> None:
         """

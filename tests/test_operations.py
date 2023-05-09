@@ -3336,12 +3336,12 @@ class TestStackUnbind:
         return net, nodes
 
     # TODO: change names tests
-    def test_stack_all_leaf_all_non_param_automemory_unbind(self, setup):
+    def test_stack_all_leaf_all_non_param_auto_stack_unbind(self, setup):
         net, nodes = setup
 
-        # Automemory: yes, Unbind mode: yes
+        # auto_stack: yes, Unbind mode: yes
         # ---------------------------------
-        net.automemory = True
+        net.auto_stack = True
         net.auto_unbind = False
 
         # Stack
@@ -3404,9 +3404,9 @@ class TestStackUnbind:
     def test_stack_all_leaf_all_non_param_unbind(self, setup):
         net, nodes = setup
 
-        # Automemory: no, Unbind mode: yes
+        # auto_stack: no, Unbind mode: yes
         # ---------------------------------
-        net.automemory = False
+        net.auto_stack = False
         net.auto_unbind = False
 
         # Stack
@@ -3466,12 +3466,12 @@ class TestStackUnbind:
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
-    def test_stack_all_leaf_all_non_param_automemory(self, setup):
+    def test_stack_all_leaf_all_non_param_auto_stack(self, setup):
         net, nodes = setup
 
-        # Automemory: yes, Unbind mode: no
+        # auto_stack: yes, Unbind mode: no
         # ---------------------------------
-        net.automemory = True
+        net.auto_stack = True
         net.auto_unbind = True
 
         # Stack
@@ -3534,9 +3534,9 @@ class TestStackUnbind:
     def test_stack_all_leaf_all_non_param(self, setup):
         net, nodes = setup
 
-        # Automemory: no, Unbind mode: no
+        # auto_stack: no, Unbind mode: no
         # ---------------------------------
-        net.automemory = False
+        net.auto_stack = False
         net.auto_unbind = True
 
         # Stack
@@ -3613,12 +3613,12 @@ class TestStackUnbind:
 
         return net, nodes
 
-    def test_stack_all_leaf_all_param_automemory_unbind(self, setup_param):
+    def test_stack_all_leaf_all_param_auto_stack_unbind(self, setup_param):
         net, nodes = setup_param
 
-        # Automemory: yes, Unbind mode: yes
+        # auto_stack: yes, Unbind mode: yes
         # ---------------------------------
-        net.automemory = True
+        net.auto_stack = True
         net.auto_unbind = False
 
         # Stack
@@ -3681,9 +3681,9 @@ class TestStackUnbind:
     def test_stack_all_leaf_all_param_unbind(self, setup_param):
         net, nodes = setup_param
 
-        # Automemory: no, Unbind mode: yes
+        # auto_stack: no, Unbind mode: yes
         # ---------------------------------
-        net.automemory = False
+        net.auto_stack = False
         net.auto_unbind = False
 
         # Stack
@@ -3743,12 +3743,12 @@ class TestStackUnbind:
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
-    def test_stack_all_leaf_all_param_automemory(self, setup_param):
+    def test_stack_all_leaf_all_param_auto_stack(self, setup_param):
         net, nodes = setup_param
 
-        # Automemory: yes, Unbind mode: no
+        # auto_stack: yes, Unbind mode: no
         # ---------------------------------
-        net.automemory = True
+        net.auto_stack = True
         net.auto_unbind = True
 
         # Stack
@@ -3811,9 +3811,9 @@ class TestStackUnbind:
     def test_stack_all_leaf_all_param(self, setup_param):
         net, nodes = setup_param
 
-        # Automemory: no, Unbind mode: no
+        # auto_stack: no, Unbind mode: no
         # ---------------------------------
-        net.automemory = False
+        net.auto_stack = False
         net.auto_unbind = True
 
         # Stack
@@ -3901,12 +3901,12 @@ class TestStackUnbind:
 
         return net, nodes, shapes
 
-    def test_stack_diff_shapes_all_leaf_all_param_automemory_unbind(self, setup_diff_shapes):
+    def test_stack_diff_shapes_all_leaf_all_param_auto_stack_unbind(self, setup_diff_shapes):
         net, nodes, shapes = setup_diff_shapes
 
-        # Automemory: yes, Unbind mode: yes
+        # auto_stack: yes, Unbind mode: yes
         # ---------------------------------
-        net.automemory = True
+        net.auto_stack = True
         net.auto_unbind = False
 
         # Stack
@@ -3996,9 +3996,9 @@ class TestStackUnbind:
     def test_stack_diff_shapes_all_leaf_all_param_unbind(self, setup_diff_shapes):
         net, nodes, shapes = setup_diff_shapes
 
-        # Automemory: no, Unbind mode: yes
+        # auto_stack: no, Unbind mode: yes
         # ---------------------------------
-        net.automemory = False
+        net.auto_stack = False
         net.auto_unbind = False
 
         # Stack
@@ -4085,12 +4085,12 @@ class TestStackUnbind:
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
-    def test_stack_diff_shapes_all_leaf_all_param_automemory(self, setup_diff_shapes):
+    def test_stack_diff_shapes_all_leaf_all_param_auto_stack(self, setup_diff_shapes):
         net, nodes, shapes = setup_diff_shapes
 
-        # Automemory: yes, Unbind mode: no
+        # auto_stack: yes, Unbind mode: no
         # ---------------------------------
-        net.automemory = True
+        net.auto_stack = True
         net.auto_unbind = True
 
         # Stack
@@ -4180,9 +4180,9 @@ class TestStackUnbind:
     def test_stack_diff_shapes_all_leaf_all_param(self, setup_diff_shapes):
         net, nodes, shapes = setup_diff_shapes
 
-        # Automemory: no, Unbind mode: no
+        # auto_stack: no, Unbind mode: no
         # ---------------------------------
-        net.automemory = False
+        net.auto_stack = False
         net.auto_unbind = True
 
         # Stack
@@ -4269,12 +4269,12 @@ class TestStackUnbind:
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
-    def test_stack_irregular_all_leaf_all_param_automemory(self, setup_diff_shapes):
+    def test_stack_irregular_all_leaf_all_param_auto_stack(self, setup_diff_shapes):
         net, nodes, shapes = setup_diff_shapes
 
-        # Automemory: yes, Unbind mode: no
+        # auto_stack: yes, Unbind mode: no
         # ---------------------------------
-        net.automemory = True
+        net.auto_stack = True
         net.auto_unbind = True
         # It only has sense to study the index mode case
 
@@ -4374,9 +4374,9 @@ class TestStackUnbind:
     def test_stack_irregular_all_leaf_all_param(self, setup_diff_shapes):
         net, nodes, shapes = setup_diff_shapes
 
-        # Automemory: no, Unbind mode: no
+        # auto_stack: no, Unbind mode: no
         # ---------------------------------
-        net.automemory = False
+        net.auto_stack = False
         net.auto_unbind = True
         # It only has sense to study the index mode case
 
@@ -5230,7 +5230,7 @@ class TestTNModels:
         image = image.view(
             500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
 
-        mps.automemory = True
+        mps.auto_stack = True
         mps.auto_unbind = False
         mps.trace(image)
 
@@ -5260,7 +5260,7 @@ class TestTNModels:
         image = image.view(
             500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
 
-        mps.automemory = True
+        mps.auto_stack = True
         mps.auto_unbind = False
         mps.trace(image)
 
@@ -5290,7 +5290,7 @@ class TestTNModels:
         image = image.view(
             500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
 
-        mps.automemory = True
+        mps.auto_stack = True
         mps.auto_unbind = False
         mps.trace(image)
 
@@ -5320,7 +5320,7 @@ class TestTNModels:
         image = image.view(
             500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
 
-        mps.automemory = True
+        mps.auto_stack = True
         mps.auto_unbind = False
         mps.trace(image)
 
@@ -5545,7 +5545,7 @@ class TestTNModels:
         image = image.view(
             500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
 
-        peps.automemory = True
+        peps.auto_stack = True
         peps.auto_unbind = False
         peps.trace(image)
 
@@ -5575,7 +5575,7 @@ class TestTNModels:
         image = image.view(
             500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
 
-        peps.automemory = True
+        peps.auto_stack = True
         peps.auto_unbind = False
         peps.trace(image)
 
@@ -5605,7 +5605,7 @@ class TestTNModels:
         image = image.view(
             500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
 
-        peps.automemory = True
+        peps.auto_stack = True
         peps.auto_unbind = False
         peps.trace(image)
 
@@ -5635,7 +5635,7 @@ class TestTNModels:
         image = image.view(
             500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
 
-        peps.automemory = True
+        peps.auto_stack = True
         peps.auto_unbind = False
         peps.trace(image)
 
@@ -5716,7 +5716,7 @@ class TestTNModels:
                             input_dim=n_channels,
                             output_dim=5)
 
-        convnode.automemory = True
+        convnode.auto_stack = True
         convnode.auto_unbind = False
         convnode.trace(patches)
 
@@ -5901,7 +5901,7 @@ class TestTNModels:
         model = ConvNodeLayer(2, 5, (3, 3), stride=2,
                               padding=1, example_dims=(14, 14))
 
-        model.nodelayer.automemory = True
+        model.nodelayer.auto_stack = True
         model.nodelayer.auto_unbind = False
 
         # Forward

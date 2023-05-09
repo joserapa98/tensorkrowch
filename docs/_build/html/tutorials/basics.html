@@ -836,7 +836,7 @@ torch.Size([100])
 <span class="n">image</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">10</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
 <span class="c1"># Modes to manage memory efficiently while training</span>
-<span class="n">mps</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="n">mps</span><span class="o">.</span><span class="n">auto_unbind</span> <span class="o">=</span> <span class="kc">True</span>
 
 <span class="c1"># Tracing computes all network operations with an input example</span>
@@ -881,7 +881,7 @@ Time: 0.0093
                   <span class="n">inline_mats</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>   <span class="c1"># Contract final matrices inline or pairwise</span>
 
 <span class="n">mps</span> <span class="o">=</span> <span class="n">mps</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-<span class="n">mps</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="n">mps</span><span class="o">.</span><span class="n">auto_unbind</span> <span class="o">=</span> <span class="kc">True</span>
 
 <span class="n">mps</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">10</span> <span class="o">*</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
@@ -913,7 +913,7 @@ Cell <span class="ansi-green-fg">In[7], line 2</span>
 <span class="ansi-green-intense-fg ansi-bold">      9</span>                   inline_input=False,  # Contract input data nodes inline or in parallel
 <span class="ansi-green-intense-fg ansi-bold">     10</span>                   inline_mats=False)   # Contract final matrices inline or pairwise
 <span class="ansi-green-intense-fg ansi-bold">     12</span> mps = mps.to(device)
-<span class="ansi-green-intense-fg ansi-bold">     13</span> mps.automemory = True
+<span class="ansi-green-intense-fg ansi-bold">     13</span> mps.auto_stack = True
 
 <span class="ansi-red-fg">TypeError</span>: __init__() got an unexpected keyword argument &#39;inline_input&#39;
 </pre></div></div>

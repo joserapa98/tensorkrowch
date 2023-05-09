@@ -666,8 +666,8 @@ class MPSLayer(TensorNetwork):
         cutoff : float, optional
             Quantity that lower bounds singular values in order to be kept.
         """
-        prev_automemory = self._automemory
-        self.automemory = False
+        prev_auto_stack = self._auto_stack
+        self.auto_stack = False
         
         # Left
         left_nodes = []
@@ -758,7 +758,7 @@ class MPSLayer(TensorNetwork):
                 d_bond.append(node['right'].size())
         self._d_bond = d_bond
         
-        self.automemory = prev_automemory
+        self.auto_stack = prev_auto_stack
     
     def _project_to_d_bond(self,
                            nodes: List[AbstractNode],
@@ -901,8 +901,8 @@ class MPSLayer(TensorNetwork):
             raise ValueError('`canonicalize_univocal` can only be used if '
                              'boundary is `obc`')
             
-        prev_automemory = self._automemory
-        self.automemory = False
+        prev_auto_stack = self._auto_stack
+        self.auto_stack = False
         
         self.output_node.get_axis('output').name = 'input'
         
@@ -941,7 +941,7 @@ class MPSLayer(TensorNetwork):
                                    list(self._data_nodes.values())[l:]):
             node['input'] ^ data_node['feature']
             
-        self.automemory = prev_automemory
+        self.auto_stack = prev_auto_stack
 
 
 class UMPSLayer(TensorNetwork):

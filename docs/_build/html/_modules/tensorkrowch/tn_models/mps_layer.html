@@ -978,8 +978,8 @@ title="Source repository"
 <span class="sd">        cutoff : float, optional</span>
 <span class="sd">            Quantity that lower bounds singular values in order to be kept.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">prev_automemory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_automemory</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">prev_auto_stack</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="kc">False</span>
         
         <span class="c1"># Left</span>
         <span class="n">left_nodes</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1070,7 +1070,7 @@ title="Source repository"
                 <span class="n">d_bond</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span> <span class="o">=</span> <span class="n">d_bond</span>
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="n">prev_automemory</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="n">prev_auto_stack</span></div>
     
     <span class="k">def</span> <span class="nf">_project_to_d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                            <span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
@@ -1213,8 +1213,8 @@ title="Source repository"
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`canonicalize_univocal` can only be used if &#39;</span>
                              <span class="s1">&#39;boundary is `obc`&#39;</span><span class="p">)</span>
             
-        <span class="n">prev_automemory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_automemory</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">prev_auto_stack</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="kc">False</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">output_node</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;output&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;input&#39;</span>
         
@@ -1253,7 +1253,7 @@ title="Source repository"
                                    <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="n">l</span><span class="p">:]):</span>
             <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">data_node</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
             
-        <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="n">prev_automemory</span></div></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="n">prev_auto_stack</span></div></div>
 
 
 <div class="viewcode-block" id="UMPSLayer"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UMPSLayer">[docs]</a><span class="k">class</span> <span class="nc">UMPSLayer</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>

@@ -26,11 +26,11 @@ class TestPEPS:
                                d_bond=[2, 3],
                                boundary=[boundary_0, boundary_1],)
 
-                for automemory in [True, False]:
+                for auto_stack in [True, False]:
                     for auto_unbind in [True, False]:
                         for side in ['up', 'down', 'left', 'right']:
                             for inline in [True, False]:
-                                peps.automemory = automemory
+                                peps.auto_stack = auto_stack
                                 peps.auto_unbind = auto_unbind
 
                                 peps.trace(example,
@@ -44,7 +44,7 @@ class TestPEPS:
                                 assert len(peps.edges) == 0
                                 assert len(peps.leaf_nodes) == 3*4
                                 assert len(peps.data_nodes) == 3*4
-                                if automemory:
+                                if auto_stack:
                                     if boundary_0 == 'obc':
                                         if boundary_1 == 'obc':
                                             assert len(peps.virtual_nodes) == 8
@@ -71,12 +71,12 @@ class TestPEPS:
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -105,12 +105,12 @@ class TestPEPS:
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -124,7 +124,7 @@ class TestPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        if automemory:
+                        if auto_stack:
                             assert len(peps.virtual_nodes) == 6
                         else:
                             assert len(peps.virtual_nodes) == 3
@@ -142,12 +142,12 @@ class TestPEPS:
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -161,7 +161,7 @@ class TestPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        if automemory:
+                        if auto_stack:
                             assert len(peps.virtual_nodes) == 5
                         else:
                             assert len(peps.virtual_nodes) == 3
@@ -179,12 +179,12 @@ class TestPEPS:
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -198,7 +198,7 @@ class TestPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        if automemory:
+                        if auto_stack:
                             assert len(peps.virtual_nodes) == 6
                         else:
                             assert len(peps.virtual_nodes) == 3
@@ -216,12 +216,12 @@ class TestPEPS:
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -235,7 +235,7 @@ class TestPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        if automemory:
+                        if auto_stack:
                             assert len(peps.virtual_nodes) == 5
                         else:
                             assert len(peps.virtual_nodes) == 3
@@ -253,12 +253,12 @@ class TestPEPS:
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -272,7 +272,7 @@ class TestPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        if automemory:
+                        if auto_stack:
                             assert len(peps.virtual_nodes) == 4
                         else:
                             assert len(peps.virtual_nodes) == 3
@@ -289,11 +289,11 @@ class TestUPEPS:
                         d_phys=5,
                         d_bond=[2, 3])
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        peps.automemory = automemory
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -320,12 +320,12 @@ class TestUPEPS:
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -352,12 +352,12 @@ class TestUPEPS:
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -384,12 +384,12 @@ class TestUPEPS:
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -416,12 +416,12 @@ class TestUPEPS:
         example = torch.randn(n_rows * n_cols, 1, 5)
         data = torch.randn(n_rows * n_cols, 100, 5)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -455,11 +455,11 @@ class TestConvPEPS:
                                    kernel_size=3,
                                    boundary=[boundary_0, boundary_1])
 
-                for automemory in [True, False]:
+                for auto_stack in [True, False]:
                     for auto_unbind in [True, False]:
                         for side in ['up', 'down', 'left', 'right']:
                             for inline in [True, False]:
-                                peps.automemory = automemory
+                                peps.auto_stack = auto_stack
                                 peps.auto_unbind = auto_unbind
 
                                 peps.trace(example,
@@ -475,7 +475,7 @@ class TestConvPEPS:
                                 assert len(peps.edges) == 0
                                 assert len(peps.leaf_nodes) == 3*3
                                 assert len(peps.data_nodes) == 3*3
-                                if automemory:
+                                if auto_stack:
                                     if boundary_0 == 'obc':
                                         if boundary_1 == 'obc':
                                             assert len(peps.virtual_nodes) == 8
@@ -505,12 +505,12 @@ class TestConvPEPS:
                            kernel_size=(n_rows, n_cols),
                            boundary=['obc', 'obc'])
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -542,12 +542,12 @@ class TestConvPEPS:
                            kernel_size=(n_rows, n_cols),
                            boundary=['pbc', 'obc'])
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -561,7 +561,7 @@ class TestConvPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        if automemory:
+                        if auto_stack:
                             assert len(peps.virtual_nodes) == 6
                         else:
                             assert len(peps.virtual_nodes) == 3
@@ -582,12 +582,12 @@ class TestConvPEPS:
                            kernel_size=(n_rows, n_cols),
                            boundary=['pbc', 'obc'])
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -601,7 +601,7 @@ class TestConvPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        if automemory:
+                        if auto_stack:
                             assert len(peps.virtual_nodes) == 5
                         else:
                             assert len(peps.virtual_nodes) == 3
@@ -622,12 +622,12 @@ class TestConvPEPS:
                            kernel_size=(n_rows, n_cols),
                            boundary=['obc', 'pbc'])
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -641,7 +641,7 @@ class TestConvPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        if automemory:
+                        if auto_stack:
                             assert len(peps.virtual_nodes) == 6
                         else:
                             assert len(peps.virtual_nodes) == 3
@@ -662,12 +662,12 @@ class TestConvPEPS:
                            kernel_size=(n_rows, n_cols),
                            boundary=['obc', 'pbc'])
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -681,7 +681,7 @@ class TestConvPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        if automemory:
+                        if auto_stack:
                             assert len(peps.virtual_nodes) == 5
                         else:
                             assert len(peps.virtual_nodes) == 3
@@ -702,12 +702,12 @@ class TestConvPEPS:
                            kernel_size=(n_rows, n_cols),
                            boundary=['pbc', 'pbc'])
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -721,7 +721,7 @@ class TestConvPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        if automemory:
+                        if auto_stack:
                             assert len(peps.virtual_nodes) == 4
                         else:
                             assert len(peps.virtual_nodes) == 3
@@ -741,11 +741,11 @@ class TestConvUPEPS:
                             d_bond=[2, 3],
                             kernel_size=3)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        peps.automemory = automemory
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -778,12 +778,12 @@ class TestConvUPEPS:
                             d_bond=[2, 3],
                             kernel_size=(n_rows, n_cols))
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -814,12 +814,12 @@ class TestConvUPEPS:
                             d_bond=[2, 3],
                             kernel_size=(n_rows, n_cols))
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -850,12 +850,12 @@ class TestConvUPEPS:
                             d_bond=[2, 3],
                             kernel_size=(n_rows, n_cols))
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
@@ -886,12 +886,12 @@ class TestConvUPEPS:
                             d_bond=[2, 3],
                             kernel_size=(n_rows, n_cols))
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, auto_unbind, side, inline)
-                        peps.automemory = automemory
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
                         peps.auto_unbind = auto_unbind
 
                         peps.trace(example,

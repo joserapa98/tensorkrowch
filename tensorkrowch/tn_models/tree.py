@@ -315,8 +315,8 @@ class Tree(TensorNetwork):
         """
         if len(self.layers) > 1:
             
-            prev_automemory = self._automemory
-            self.automemory = False
+            prev_auto_stack = self._auto_stack
+            self.auto_stack = False
             
             for i in range(len(self.layers) - 1):
                 layer1 = self.layers[i]
@@ -330,7 +330,7 @@ class Tree(TensorNetwork):
                 self.layers[i] = layer1
                 self.layers[i + 1] = layer2
                 
-            self.automemory = prev_automemory
+            self.auto_stack = prev_auto_stack
 
 
 class UTree(TensorNetwork):

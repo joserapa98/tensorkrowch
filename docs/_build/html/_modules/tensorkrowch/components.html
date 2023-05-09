@@ -1409,7 +1409,7 @@ title="Source repository"
 <span class="sd">        a sequence of tensors.</span>
 
 <span class="sd">        Besides, this can only be used if the :class:`TensorNetwork` is not in</span>
-<span class="sd">        :attr:`~TensorNetwork.automemory` mode.</span>
+<span class="sd">        :attr:`~TensorNetwork.auto_stack` mode.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1429,7 +1429,7 @@ title="Source repository"
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
 <span class="sd">            If the node is not a ``leaf`` node or the tensor network is in</span>
-<span class="sd">            ``automemory`` mode.</span>
+<span class="sd">            ``auto_stack`` mode.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># If node stores its own tensor</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_resultant</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
@@ -2223,7 +2223,7 @@ title="Source repository"
 <span class="sd">    operation that occurs to param-nodes in a contraction (that might be</span>
 <span class="sd">    computed several times during training) is :func:`stack`. If this is the case,</span>
 <span class="sd">    the param-nodes no longer store their own tensors, but rather they make</span>
-<span class="sd">    reference to a slide of a greater ``ParamStackNode`` (if ``automemory`` attribute</span>
+<span class="sd">    reference to a slide of a greater ``ParamStackNode`` (if ``auto_stack`` attribute</span>
 <span class="sd">    of the :class:`TensorNetwork` is set to ``True``). Hence, that first :func:`stack`</span>
 <span class="sd">    is never computed.</span>
 
@@ -2250,7 +2250,7 @@ title="Source repository"
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
 <span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
-<span class="sd">    &gt;&gt;&gt; net.automemory = True</span>
+<span class="sd">    &gt;&gt;&gt; net.auto_stack = True</span>
 <span class="sd">    &gt;&gt;&gt; nodes = [tk.randn(shape=(2, 4, 2),</span>
 <span class="sd">    ...                   axes_names=(&#39;left&#39;, &#39;input&#39;, &#39;right&#39;),</span>
 <span class="sd">    ...                   network=net,</span>
@@ -2970,15 +2970,15 @@ title="Source repository"
 <span class="sd">    Although one can define how the network is going to be contracted, there a</span>
 <span class="sd">    couple of modes that can change how this contraction behaves at a lower level:</span>
 
-<span class="sd">    * **automemory** (``False`` by default): This mode indicates whether node</span>
+<span class="sd">    * **auto_stack** (``False`` by default): This mode indicates whether node</span>
 <span class="sd">      :class:`Operations &lt;Operation&gt;` have the ability to take control of the</span>
-<span class="sd">      memory management of the network. For instance, if ``automemory`` is set</span>
+<span class="sd">      memory management of the network. For instance, if ``auto_stack`` is set</span>
 <span class="sd">      to ``True`` and a collection of :class:`ParamNodes &lt;ParamNode&gt;` are</span>
 <span class="sd">      :func:`stacked &lt;stack&gt;` (as the first operation in the contraction),</span>
 <span class="sd">      then those nodes will no longer store their own tensors, but rather a</span>
 <span class="sd">      ``virtual`` :class:`ParamStackNode` will store the stacked tensor, avoiding</span>
 <span class="sd">      the computation of the first :func:`stack` in every contraction. This</span>
-<span class="sd">      behaviour is not possible if ``automemory`` is set to ``False``, in which</span>
+<span class="sd">      behaviour is not possible if ``auto_stack`` is set to ``False``, in which</span>
 <span class="sd">      case all nodes will always store their own tensors.</span>
 
 <span class="sd">    * **auto_unbind** (``True`` by default): This mode indicates whether the</span>
@@ -2990,7 +2990,7 @@ title="Source repository"
 <span class="sd">      the nodes and gives each of them an index for the stacked tensor, so that</span>
 <span class="sd">      each node&#39;s tensor would be retrieved by indexing the stack. This avoids</span>
 <span class="sd">      performing the operation, since these indices will be the same in consecutive</span>
-<span class="sd">      iterations. Hence, in a similar way to ``automemory``, this mode entails</span>
+<span class="sd">      iterations. Hence, in a similar way to ``auto_stack``, this mode entails</span>
 <span class="sd">      a certain control of the memory management of the network.</span>
 
 <span class="sd">    Once the training algorithm starts, these modes should not be changed (very</span>
@@ -3017,11 +3017,11 @@ title="Source repository"
 <span class="sd">    ``data`` and ``virtual`` nodes that make up the network structure, each of</span>
 <span class="sd">    them storing its own tensor. However, when the network is contracted, several</span>
 <span class="sd">    ``resultant`` nodes become new members of the network, even modifying its</span>
-<span class="sd">    memory (depending on the ``automemory`` and ``auto_unbind`` modes). Therefore,</span>
+<span class="sd">    memory (depending on the ``auto_stack`` and ``auto_unbind`` modes). Therefore,</span>
 <span class="sd">    if one wants to `reset` the network to its initial state after performing</span>
 <span class="sd">    some operations, all the ``resultant`` nodes should be deleted, and all the</span>
 <span class="sd">    tensors should return to its nodes. This is exactly what :meth:`reset` does.</span>
-<span class="sd">    Besides, since ``automemory`` and ``auto_unbind`` can change how the tensors</span>
+<span class="sd">    Besides, since ``auto_stack`` and ``auto_unbind`` can change how the tensors</span>
 <span class="sd">    are stored, if one wants to change these modes, the network should be first</span>
 <span class="sd">    reset (this is already done automatically when changing the modes).</span>
 
@@ -3170,7 +3170,7 @@ title="Source repository"
 
         <span class="c1"># TN modes</span>
         <span class="c1"># Auto-management of memory mode (train -&gt; True)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_automemory</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_auto_unbind</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># Unbind/index mode (train -&gt; True)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_tracing</span> <span class="o">=</span> <span class="kc">False</span>     <span class="c1"># Tracing mode (True while calling .trace())</span>
 
@@ -3232,14 +3232,14 @@ title="Source repository"
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">automemory</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boolean indicating whether ``automemory`` is on/off.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_automemory</span>
+    <span class="k">def</span> <span class="nf">auto_stack</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boolean indicating whether ``auto_stack`` is on/off.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span>
 
-    <span class="nd">@automemory</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">automemory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">automem</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nd">@auto_stack</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">auto_stack</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">automem</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_automemory</span> <span class="o">=</span> <span class="n">automem</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span> <span class="o">=</span> <span class="n">automem</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">auto_unbind</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>

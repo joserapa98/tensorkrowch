@@ -27,11 +27,11 @@ class TestMPSLayer:
                                   l_position=l_position,
                                   boundary=boundary)
 
-                for automemory in [True, False]:
+                for auto_stack in [True, False]:
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mps.automemory = automemory
+                                mps.auto_stack = auto_stack
                                 mps.auto_unbind = auto_unbind
 
                                 mps.trace(example,
@@ -45,7 +45,7 @@ class TestMPSLayer:
                                 assert len(mps.edges) == 1
                                 assert len(mps.leaf_nodes) == 5
                                 assert len(mps.data_nodes) == 4
-                                if not inline_input and automemory:
+                                if not inline_input and auto_stack:
                                     assert len(mps.virtual_nodes) == 4
                                 else:
                                     assert len(mps.virtual_nodes) == 3
@@ -68,7 +68,7 @@ class TestMPSLayer:
                                         assert len(mps.edges) == 1
                                         assert len(mps.leaf_nodes) == 5
                                         assert len(mps.data_nodes) == 4
-                                        if not inline_input and automemory:
+                                        if not inline_input and auto_stack:
                                             assert len(mps.virtual_nodes) == 4
                                         else:
                                             assert len(mps.virtual_nodes) == 3
@@ -87,11 +87,11 @@ class TestMPSLayer:
                                   l_position=l_position,
                                   boundary=boundary)
 
-                for automemory in [True, False]:
+                for auto_stack in [True, False]:
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mps.automemory = automemory
+                                mps.auto_stack = auto_stack
                                 mps.auto_unbind = auto_unbind
 
                                 mps.trace(example,
@@ -105,7 +105,7 @@ class TestMPSLayer:
                                 assert len(mps.edges) == 1
                                 assert len(mps.leaf_nodes) == 5
                                 assert len(mps.data_nodes) == 4
-                                if not inline_input and automemory:
+                                if not inline_input and auto_stack:
                                     assert len(mps.virtual_nodes) == 1
                                 else:
                                     assert len(mps.virtual_nodes) == 0
@@ -128,7 +128,7 @@ class TestMPSLayer:
                                         assert len(mps.edges) == 1
                                         assert len(mps.leaf_nodes) == 5
                                         assert len(mps.data_nodes) == 4
-                                        if not inline_input and automemory:
+                                        if not inline_input and auto_stack:
                                             assert len(mps.virtual_nodes) == 1
                                         else:
                                             assert len(mps.virtual_nodes) == 0
@@ -148,11 +148,11 @@ class TestMPSLayer:
                                   l_position=l_position,
                                   boundary=boundary)
 
-                for automemory in [True, False]:
+                for auto_stack in [True, False]:
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mps.automemory = automemory
+                                mps.auto_stack = auto_stack
                                 mps.auto_unbind = auto_unbind
 
                                 mps.trace(example,
@@ -166,7 +166,7 @@ class TestMPSLayer:
                                 assert len(mps.edges) == 1
                                 assert len(mps.leaf_nodes) == 5
                                 assert len(mps.data_nodes) == 4
-                                if not inline_input and automemory:
+                                if not inline_input and auto_stack:
                                     assert len(mps.virtual_nodes) == 4
                                 else:
                                     assert len(mps.virtual_nodes) == 3
@@ -189,7 +189,7 @@ class TestMPSLayer:
                                         assert len(mps.edges) == 1
                                         assert len(mps.leaf_nodes) == 5
                                         assert len(mps.data_nodes) == 4
-                                        if not inline_input and automemory:
+                                        if not inline_input and auto_stack:
                                             assert len(mps.virtual_nodes) == 4
                                         else:
                                             assert len(mps.virtual_nodes) == 3
@@ -210,11 +210,11 @@ class TestMPSLayer:
                                   l_position=l_position,
                                   boundary=boundary)
 
-                for automemory in [True, False]:
+                for auto_stack in [True, False]:
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mps.automemory = automemory
+                                mps.auto_stack = auto_stack
                                 mps.auto_unbind = auto_unbind
 
                                 mps.trace(example,
@@ -228,7 +228,7 @@ class TestMPSLayer:
                                 assert len(mps.edges) == 1
                                 assert len(mps.leaf_nodes) == 5
                                 assert len(mps.data_nodes) == 4
-                                if not inline_input and automemory:
+                                if not inline_input and auto_stack:
                                     assert len(mps.virtual_nodes) == 1
                                 else:
                                     assert len(mps.virtual_nodes) == 0
@@ -251,7 +251,7 @@ class TestMPSLayer:
                                         assert len(mps.edges) == 1
                                         assert len(mps.leaf_nodes) == 5
                                         assert len(mps.data_nodes) == 4
-                                        if not inline_input and automemory:
+                                        if not inline_input and auto_stack:
                                             assert len(mps.virtual_nodes) == 1
                                         else:
                                             assert len(mps.virtual_nodes) == 0
@@ -267,11 +267,11 @@ class TestMPSLayer:
         example = torch.randn(1, 1, 5)
         data = torch.randn(1, 100, 5)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
-                        mps.automemory = automemory
+                        mps.auto_stack = auto_stack
                         mps.auto_unbind = auto_unbind
 
                         mps.trace(example,
@@ -318,11 +318,11 @@ class TestMPSLayer:
         example = torch.randn(1, 1, 5)
         data = torch.randn(1, 100, 5)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
-                        mps.automemory = automemory
+                        mps.auto_stack = auto_stack
                         mps.auto_unbind = auto_unbind
 
                         mps.trace(example,
@@ -367,11 +367,11 @@ class TestMPSLayer:
                           l_position=0,
                           boundary='pbc')
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
-                        mps.automemory = automemory
+                        mps.auto_stack = auto_stack
                         mps.auto_unbind = auto_unbind
 
                         # We shouldn't pass any data since the MPS only
@@ -601,11 +601,11 @@ class TestUMPSLayer:
                                d_bond=2,
                                l_position=l_position)
 
-            for automemory in [True, False]:
+            for auto_stack in [True, False]:
                 for auto_unbind in [True, False]:
                     for inline_input in [True, False]:
                         for inline_mats in [True, False]:
-                            mps.automemory = automemory
+                            mps.auto_stack = auto_stack
                             mps.auto_unbind = auto_unbind
 
                             mps.trace(example,
@@ -631,11 +631,11 @@ class TestUMPSLayer:
         example = torch.randn(1, 1, 5)
         data = torch.randn(1, 100, 5)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
-                        mps.automemory = automemory
+                        mps.auto_stack = auto_stack
                         mps.auto_unbind = auto_unbind
 
                         mps.trace(example,
@@ -661,11 +661,11 @@ class TestUMPSLayer:
         example = torch.randn(1, 1, 5)
         data = torch.randn(1, 100, 5)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
-                        mps.automemory = automemory
+                        mps.auto_stack = auto_stack
                         mps.auto_unbind = auto_unbind
 
                         mps.trace(example,
@@ -689,11 +689,11 @@ class TestUMPSLayer:
                            d_bond=2,
                            l_position=0)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
-                        mps.automemory = automemory
+                        mps.auto_stack = auto_stack
                         mps.auto_unbind = auto_unbind
 
                         # We shouldn't pass any data since the MPS only
@@ -730,12 +730,12 @@ class TestConvMPSLayer:
                                       l_position=l_position,
                                       boundary=boundary)
 
-                for automemory in [True, False]:
+                for auto_stack in [True, False]:
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
                                 for conv_mode in ['flat', 'snake']:
-                                    mps.automemory = automemory
+                                    mps.auto_stack = auto_stack
                                     mps.auto_unbind = auto_unbind
 
                                     mps.trace(example,
@@ -751,7 +751,7 @@ class TestConvMPSLayer:
                                     assert len(mps.edges) == 1
                                     assert len(mps.leaf_nodes) == 5
                                     assert len(mps.data_nodes) == 4
-                                    if not inline_input and automemory:
+                                    if not inline_input and auto_stack:
                                         assert len(mps.virtual_nodes) == 4
                                     else:
                                         assert len(mps.virtual_nodes) == 3
@@ -778,7 +778,7 @@ class TestConvMPSLayer:
                                             assert len(mps.edges) == 1
                                             assert len(mps.leaf_nodes) == 5
                                             assert len(mps.data_nodes) == 4
-                                            if not inline_input and automemory:
+                                            if not inline_input and auto_stack:
                                                 assert len(
                                                     mps.virtual_nodes) == 4
                                             else:
@@ -804,12 +804,12 @@ class TestConvMPSLayer:
                                       l_position=l_position,
                                       boundary=boundary)
 
-                for automemory in [True, False]:
+                for auto_stack in [True, False]:
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
                                 for conv_mode in ['flat', 'snake']:
-                                    mps.automemory = automemory
+                                    mps.auto_stack = auto_stack
                                     mps.auto_unbind = auto_unbind
 
                                     mps.trace(example,
@@ -825,7 +825,7 @@ class TestConvMPSLayer:
                                     assert len(mps.edges) == 1
                                     assert len(mps.leaf_nodes) == 5
                                     assert len(mps.data_nodes) == 4
-                                    if not inline_input and automemory:
+                                    if not inline_input and auto_stack:
                                         assert len(mps.virtual_nodes) == 4
                                     else:
                                         assert len(mps.virtual_nodes) == 3
@@ -852,7 +852,7 @@ class TestConvMPSLayer:
                                             assert len(mps.edges) == 1
                                             assert len(mps.leaf_nodes) == 5
                                             assert len(mps.data_nodes) == 4
-                                            if not inline_input and automemory:
+                                            if not inline_input and auto_stack:
                                                 assert len(
                                                     mps.virtual_nodes) == 4
                                             else:
@@ -875,12 +875,12 @@ class TestConvMPSLayer:
                               l_position=1,
                               boundary='obc')
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
                         for conv_mode in ['flat', 'snake']:
-                            mps.automemory = automemory
+                            mps.auto_stack = auto_stack
                             mps.auto_unbind = auto_unbind
 
                             mps.trace(example,
@@ -936,12 +936,12 @@ class TestConvMPSLayer:
                               l_position=0,
                               boundary='obc')
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
                         for conv_mode in ['flat', 'snake']:
-                            mps.automemory = automemory
+                            mps.auto_stack = auto_stack
                             mps.auto_unbind = auto_unbind
 
                             mps.trace(example,
@@ -999,12 +999,12 @@ class TestConvUMPSLayer:
                                    kernel_size=2,
                                    l_position=l_position)
 
-            for automemory in [True, False]:
+            for auto_stack in [True, False]:
                 for auto_unbind in [True, False]:
                     for inline_input in [True, False]:
                         for inline_mats in [True, False]:
                             for conv_mode in ['flat', 'snake']:
-                                mps.automemory = automemory
+                                mps.auto_stack = auto_stack
                                 mps.auto_unbind = auto_unbind
 
                                 mps.trace(example,
@@ -1037,12 +1037,12 @@ class TestConvUMPSLayer:
                                kernel_size=1,
                                l_position=1)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
                         for conv_mode in ['flat', 'snake']:
-                            mps.automemory = automemory
+                            mps.auto_stack = auto_stack
                             mps.auto_unbind = auto_unbind
 
                             mps.trace(example,
@@ -1075,12 +1075,12 @@ class TestConvUMPSLayer:
                                kernel_size=1,
                                l_position=0)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
                         for conv_mode in ['flat', 'snake']:
-                            mps.automemory = automemory
+                            mps.auto_stack = auto_stack
                             mps.auto_unbind = auto_unbind
 
                             mps.trace(example,

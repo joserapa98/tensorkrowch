@@ -130,7 +130,7 @@
    "source": [
     "# Before starting training, set memory modes to True, and trace\n",
     "for mps in cnn_snake.layers:\n",
-    "    mps.automemory = True\n",
+    "    mps.auto_stack = True\n",
     "    mps.auto_unbind = False\n",
     "    mps.trace(torch.zeros(1, 7, image_size[0]//2, image_size[1]//2).to(device))"
    ]

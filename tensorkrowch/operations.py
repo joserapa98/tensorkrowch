@@ -2359,7 +2359,7 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
             else:
                 all_same_ref = False
 
-    if all_param and node_ref_is_stack and net._automemory:
+    if all_param and node_ref_is_stack and net._auto_stack:
         stack_node = ParamStackNode(nodes=nodes,
                                     name='virtual_stack',
                                     virtual=True)
@@ -2390,7 +2390,7 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
 
     else:
         if all_leaf and (all_param or all_non_param) \
-                and node_ref_is_stack and net._automemory:
+                and node_ref_is_stack and net._auto_stack:
             # Stacked nodes' memories are replaced by a reference to a slice
             # of the resultant stack_node
             for i, node in enumerate(nodes):
@@ -2423,7 +2423,7 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
                                  'all_leaf': all_leaf and
                                  (all_param or all_non_param) and
                                  node_ref_is_stack,
-                                 'automemory': net._automemory})
+                                 'auto_stack': net._auto_stack})
 
     # Add successor to parent
     if 'stack' in nodes[0]._successors:
@@ -2441,7 +2441,7 @@ def _stack_next(successor: Successor,
                 nodes: Sequence[AbstractNode]) -> StackNode:
     child = successor.child
     if successor.hints['all_same_ref'] or \
-            (successor.hints['all_leaf'] and successor.hints['automemory']):
+            (successor.hints['all_leaf'] and successor.hints['auto_stack']):
         return child
 
     stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])

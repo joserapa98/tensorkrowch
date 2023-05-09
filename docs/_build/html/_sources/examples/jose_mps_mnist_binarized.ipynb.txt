@@ -72,7 +72,7 @@
    "outputs": [],
    "source": [
     "# Before starting training, set memory modes to True, and trace\n",
-    "mps.automemory = True\n",
+    "mps.auto_stack = True\n",
     "mps.auto_unbind = False\n",
     "mps.trace(torch.zeros(image_size[0] * image_size[1], 1, d_phys).to(device))"
    ]

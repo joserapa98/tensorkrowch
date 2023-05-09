@@ -2671,7 +2671,7 @@ title="Source repository"
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">all_same_ref</span> <span class="o">=</span> <span class="kc">False</span>
 
-    <span class="k">if</span> <span class="n">all_param</span> <span class="ow">and</span> <span class="n">node_ref_is_stack</span> <span class="ow">and</span> <span class="n">net</span><span class="o">.</span><span class="n">_automemory</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">all_param</span> <span class="ow">and</span> <span class="n">node_ref_is_stack</span> <span class="ow">and</span> <span class="n">net</span><span class="o">.</span><span class="n">_auto_stack</span><span class="p">:</span>
         <span class="n">stack_node</span> <span class="o">=</span> <span class="n">ParamStackNode</span><span class="p">(</span><span class="n">nodes</span><span class="o">=</span><span class="n">nodes</span><span class="p">,</span>
                                     <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_stack&#39;</span><span class="p">,</span>
                                     <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -2702,7 +2702,7 @@ title="Source repository"
 
     <span class="k">else</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">all_leaf</span> <span class="ow">and</span> <span class="p">(</span><span class="n">all_param</span> <span class="ow">or</span> <span class="n">all_non_param</span><span class="p">)</span> \
-                <span class="ow">and</span> <span class="n">node_ref_is_stack</span> <span class="ow">and</span> <span class="n">net</span><span class="o">.</span><span class="n">_automemory</span><span class="p">:</span>
+                <span class="ow">and</span> <span class="n">node_ref_is_stack</span> <span class="ow">and</span> <span class="n">net</span><span class="o">.</span><span class="n">_auto_stack</span><span class="p">:</span>
             <span class="c1"># Stacked nodes&#39; memories are replaced by a reference to a slice</span>
             <span class="c1"># of the resultant stack_node</span>
             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">nodes</span><span class="p">):</span>
@@ -2735,7 +2735,7 @@ title="Source repository"
                                  <span class="s1">&#39;all_leaf&#39;</span><span class="p">:</span> <span class="n">all_leaf</span> <span class="ow">and</span>
                                  <span class="p">(</span><span class="n">all_param</span> <span class="ow">or</span> <span class="n">all_non_param</span><span class="p">)</span> <span class="ow">and</span>
                                  <span class="n">node_ref_is_stack</span><span class="p">,</span>
-                                 <span class="s1">&#39;automemory&#39;</span><span class="p">:</span> <span class="n">net</span><span class="o">.</span><span class="n">_automemory</span><span class="p">})</span>
+                                 <span class="s1">&#39;auto_stack&#39;</span><span class="p">:</span> <span class="n">net</span><span class="o">.</span><span class="n">_auto_stack</span><span class="p">})</span>
 
     <span class="c1"># Add successor to parent</span>
     <span class="k">if</span> <span class="s1">&#39;stack&#39;</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">_successors</span><span class="p">:</span>
@@ -2753,7 +2753,7 @@ title="Source repository"
                 <span class="n">nodes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">StackNode</span><span class="p">:</span>
     <span class="n">child</span> <span class="o">=</span> <span class="n">successor</span><span class="o">.</span><span class="n">child</span>
     <span class="k">if</span> <span class="n">successor</span><span class="o">.</span><span class="n">hints</span><span class="p">[</span><span class="s1">&#39;all_same_ref&#39;</span><span class="p">]</span> <span class="ow">or</span> \
-            <span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">hints</span><span class="p">[</span><span class="s1">&#39;all_leaf&#39;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">successor</span><span class="o">.</span><span class="n">hints</span><span class="p">[</span><span class="s1">&#39;automemory&#39;</span><span class="p">]):</span>
+            <span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">hints</span><span class="p">[</span><span class="s1">&#39;all_leaf&#39;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">successor</span><span class="o">.</span><span class="n">hints</span><span class="p">[</span><span class="s1">&#39;auto_stack&#39;</span><span class="p">]):</span>
         <span class="k">return</span> <span class="n">child</span>
 
     <span class="n">stack_tensor</span> <span class="o">=</span> <span class="n">stack_unequal_tensors</span><span class="p">([</span><span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">])</span>

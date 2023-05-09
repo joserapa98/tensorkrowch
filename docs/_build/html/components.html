@@ -838,7 +838,7 @@ tensors are set into nodes when calling the <a class="reference internal" href="
 method of <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">tensor</span> <span class="pre">networks</span></code></a> with a data tensor or
 a sequence of tensors.</p>
 <p>Besides, this can only be used if the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> is not in
-<a class="reference internal" href="#tensorkrowch.TensorNetwork.automemory" title="tensorkrowch.TensorNetwork.automemory"><code class="xref py py-attr docutils literal notranslate"><span class="pre">automemory</span></code></a> mode.</p>
+<a class="reference internal" href="#tensorkrowch.TensorNetwork.auto_stack" title="tensorkrowch.TensorNetwork.auto_stack"><code class="xref py py-attr docutils literal notranslate"><span class="pre">auto_stack</span></code></a> mode.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -853,7 +853,7 @@ is set as node’s tensor.</p></li>
 </dd>
 <dt class="field-even">Raises</dt>
 <dd class="field-even"><p><strong>ValueError</strong> – If the node is not a <code class="docutils literal notranslate"><span class="pre">leaf</span></code> node or the tensor network is in
-    <code class="docutils literal notranslate"><span class="pre">automemory</span></code> mode.</p>
+    <code class="docutils literal notranslate"><span class="pre">auto_stack</span></code> mode.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1356,7 +1356,7 @@ They are used to optimize memory usage and save some time when the first
 operation that occurs to param-nodes in a contraction (that might be
 computed several times during training) is <a class="reference internal" href="operations.html#tensorkrowch.stack" title="tensorkrowch.stack"><code class="xref py py-func docutils literal notranslate"><span class="pre">stack()</span></code></a>. If this is the case,
 the param-nodes no longer store their own tensors, but rather they make
-reference to a slide of a greater <code class="docutils literal notranslate"><span class="pre">ParamStackNode</span></code> (if <code class="docutils literal notranslate"><span class="pre">automemory</span></code> attribute
+reference to a slide of a greater <code class="docutils literal notranslate"><span class="pre">ParamStackNode</span></code> (if <code class="docutils literal notranslate"><span class="pre">auto_stack</span></code> attribute
 of the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>). Hence, that first <a class="reference internal" href="operations.html#tensorkrowch.stack" title="tensorkrowch.stack"><code class="xref py py-func docutils literal notranslate"><span class="pre">stack()</span></code></a>
 is never computed.</p>
 <p><code class="docutils literal notranslate"><span class="pre">ParamStackNodes</span></code> can only be instantiated by providing a sequence of nodes.</p>
@@ -1379,7 +1379,7 @@ node in the network).</p></li>
 </dl>
 <p class="rubric">Example</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">net</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">net</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">net</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">nodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
 <span class="gp">... </span>                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
 <span class="gp">... </span>                  <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">,</span>
@@ -1886,15 +1886,15 @@ since it will just call <code class="docutils literal notranslate"><span class="
 <p>Although one can define how the network is going to be contracted, there a
 couple of modes that can change how this contraction behaves at a lower level:</p>
 <ul class="simple">
-<li><p><strong>automemory</strong> (<code class="docutils literal notranslate"><span class="pre">False</span></code> by default): This mode indicates whether node
+<li><p><strong>auto_stack</strong> (<code class="docutils literal notranslate"><span class="pre">False</span></code> by default): This mode indicates whether node
 <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operations</span></code></a> have the ability to take control of the
-memory management of the network. For instance, if <code class="docutils literal notranslate"><span class="pre">automemory</span></code> is set
+memory management of the network. For instance, if <code class="docutils literal notranslate"><span class="pre">auto_stack</span></code> is set
 to <code class="docutils literal notranslate"><span class="pre">True</span></code> and a collection of <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNodes</span></code></a> are
 <a class="reference internal" href="operations.html#tensorkrowch.stack" title="tensorkrowch.stack"><code class="xref py py-func docutils literal notranslate"><span class="pre">stacked</span></code></a> (as the first operation in the contraction),
 then those nodes will no longer store their own tensors, but rather a
 <code class="docutils literal notranslate"><span class="pre">virtual</span></code> <a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a> will store the stacked tensor, avoiding
 the computation of the first <a class="reference internal" href="operations.html#tensorkrowch.stack" title="tensorkrowch.stack"><code class="xref py py-func docutils literal notranslate"><span class="pre">stack()</span></code></a> in every contraction. This
-behaviour is not possible if <code class="docutils literal notranslate"><span class="pre">automemory</span></code> is set to <code class="docutils literal notranslate"><span class="pre">False</span></code>, in which
+behaviour is not possible if <code class="docutils literal notranslate"><span class="pre">auto_stack</span></code> is set to <code class="docutils literal notranslate"><span class="pre">False</span></code>, in which
 case all nodes will always store their own tensors.</p></li>
 <li><p><strong>auto_unbind</strong> (<code class="docutils literal notranslate"><span class="pre">True</span></code> by default): This mode indicates whether the
 operation <a class="reference internal" href="operations.html#tensorkrowch.unbind" title="tensorkrowch.unbind"><code class="xref py py-func docutils literal notranslate"><span class="pre">unbind()</span></code></a> has to actually <cite>unbind</cite> the stacked tensor or
@@ -1905,7 +1905,7 @@ is set to <code class="docutils literal notranslate"><span class="pre">True</spa
 the nodes and gives each of them an index for the stacked tensor, so that
 each node’s tensor would be retrieved by indexing the stack. This avoids
 performing the operation, since these indices will be the same in consecutive
-iterations. Hence, in a similar way to <code class="docutils literal notranslate"><span class="pre">automemory</span></code>, this mode entails
+iterations. Hence, in a similar way to <code class="docutils literal notranslate"><span class="pre">auto_stack</span></code>, this mode entails
 a certain control of the memory management of the network.</p></li>
 </ul>
 <p>Once the training algorithm starts, these modes should not be changed (very
@@ -1932,11 +1932,11 @@ like permutations or combinations of <code class="docutils literal notranslate">
 <code class="docutils literal notranslate"><span class="pre">data</span></code> and <code class="docutils literal notranslate"><span class="pre">virtual</span></code> nodes that make up the network structure, each of
 them storing its own tensor. However, when the network is contracted, several
 <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes become new members of the network, even modifying its
-memory (depending on the <code class="docutils literal notranslate"><span class="pre">automemory</span></code> and <code class="docutils literal notranslate"><span class="pre">auto_unbind</span></code> modes). Therefore,
+memory (depending on the <code class="docutils literal notranslate"><span class="pre">auto_stack</span></code> and <code class="docutils literal notranslate"><span class="pre">auto_unbind</span></code> modes). Therefore,
 if one wants to <cite>reset</cite> the network to its initial state after performing
 some operations, all the <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes should be deleted, and all the
 tensors should return to its nodes. This is exactly what <a class="reference internal" href="#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> does.
-Besides, since <code class="docutils literal notranslate"><span class="pre">automemory</span></code> and <code class="docutils literal notranslate"><span class="pre">auto_unbind</span></code> can change how the tensors
+Besides, since <code class="docutils literal notranslate"><span class="pre">auto_stack</span></code> and <code class="docutils literal notranslate"><span class="pre">auto_unbind</span></code> can change how the tensors
 are stored, if one wants to change these modes, the network should be first
 reset (this is already done automatically when changing the modes).</p>
 <p class="rubric">Example</p>
@@ -2098,9 +2098,9 @@ reset (this is already done automatically when changing the modes).</p>
 </dd></dl>
 
 <dl class="py property">
-<dt class="sig sig-object py" id="tensorkrowch.TensorNetwork.automemory">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">automemory</span></span><a class="headerlink" href="#tensorkrowch.TensorNetwork.automemory" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns boolean indicating whether <code class="docutils literal notranslate"><span class="pre">automemory</span></code> is on/off.</p>
+<dt class="sig sig-object py" id="tensorkrowch.TensorNetwork.auto_stack">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">auto_stack</span></span><a class="headerlink" href="#tensorkrowch.TensorNetwork.auto_stack" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns boolean indicating whether <code class="docutils literal notranslate"><span class="pre">auto_stack</span></code> is on/off.</p>
 </dd></dl>
 
 <dl class="py property">

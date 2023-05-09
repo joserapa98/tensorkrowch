@@ -627,8 +627,8 @@ title="Source repository"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             
-            <span class="n">prev_automemory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_automemory</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">prev_auto_stack</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="kc">False</span>
             
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
                 <span class="n">layer1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
@@ -642,7 +642,7 @@ title="Source repository"
                 <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer1</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer2</span>
                 
-            <span class="bp">self</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="n">prev_automemory</span></div></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="n">prev_auto_stack</span></div></div>
 
 
 <div class="viewcode-block" id="UTree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UTree">[docs]</a><span class="k">class</span> <span class="nc">UTree</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>

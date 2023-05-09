@@ -103,15 +103,15 @@
    "outputs": [],
    "source": [
     "# Before starting training, set memory modes to True, and trace\n",
-    "convmps.mps1.automemory = True\n",
+    "convmps.mps1.auto_stack = True\n",
     "convmps.mps1.auto_unbind = False\n",
     "convmps.mps1.trace(torch.zeros(1, d_phys, image_size[0], image_size[1]).to(device))\n",
     "\n",
-    "convmps.mps2.automemory = True\n",
+    "convmps.mps2.auto_stack = True\n",
     "convmps.mps2.auto_unbind = False\n",
     "convmps.mps2.trace(torch.zeros(1, 10, 13, 13).to(device))\n",
     "\n",
-    "convmps.mps3.automemory = True\n",
+    "convmps.mps3.auto_stack = True\n",
     "convmps.mps3.auto_unbind = False\n",
     "convmps.mps3.trace(torch.zeros(100, 1, 10).to(device))"
    ]

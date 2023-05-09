@@ -2054,7 +2054,7 @@ class TestTensorNetwork:
         assert len(net.resultant_nodes) == 0
         assert len(net.edges) == 6
 
-    def test_automemory(self):
+    def test_auto_stack(self):
         net = tk.TensorNetwork(name='net')
         for i in range(4):
             _ = tk.Node(shape=(2, 5, 2),
@@ -2070,7 +2070,7 @@ class TestTensorNetwork:
         for node in net.nodes.values():
             assert node._tensor_info['address'] is not None
 
-        assert net.automemory == False
+        assert net.auto_stack == False
         assert net.auto_unbind == True
 
         stack = tk.stack(list(net.nodes.values()))
@@ -2080,8 +2080,8 @@ class TestTensorNetwork:
         for node in net.resultant_nodes.values():
             assert node._tensor_info['address'] is not None
 
-        net.automemory = True
-        assert net.automemory == True
+        net.auto_stack = True
+        assert net.auto_stack == True
         assert net.auto_unbind == True
 
         stack = tk.stack(list(net.nodes.values()))
@@ -2107,7 +2107,7 @@ class TestTensorNetwork:
         for node in net.nodes.values():
             assert node._tensor_info['address'] is not None
 
-        assert net.automemory == False
+        assert net.auto_stack == False
         assert net.auto_unbind == True
 
         stack1 = tk.stack(list(net.nodes.values()))
@@ -2125,7 +2125,7 @@ class TestTensorNetwork:
         assert stack2._tensor_info['address'] is None
 
         net.auto_unbind = False
-        assert net.automemory == False
+        assert net.auto_stack == False
         assert net.auto_unbind == False
 
         stack1 = tk.stack(list(net.nodes.values()))

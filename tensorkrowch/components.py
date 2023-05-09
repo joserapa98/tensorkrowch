@@ -1097,7 +1097,7 @@ class AbstractNode(ABC):
         a sequence of tensors.
 
         Besides, this can only be used if the :class:`TensorNetwork` is not in
-        :attr:`~TensorNetwork.automemory` mode.
+        :attr:`~TensorNetwork.auto_stack` mode.
 
         Parameters
         ----------
@@ -1117,7 +1117,7 @@ class AbstractNode(ABC):
         ------
         ValueError
             If the node is not a ``leaf`` node or the tensor network is in
-            ``automemory`` mode.
+            ``auto_stack`` mode.
         """
         # If node stores its own tensor
         if not self.is_resultant() and (self._tensor_info['address'] is not None):
@@ -1911,7 +1911,7 @@ class ParamStackNode(ParamNode):
     operation that occurs to param-nodes in a contraction (that might be
     computed several times during training) is :func:`stack`. If this is the case,
     the param-nodes no longer store their own tensors, but rather they make
-    reference to a slide of a greater ``ParamStackNode`` (if ``automemory`` attribute
+    reference to a slide of a greater ``ParamStackNode`` (if ``auto_stack`` attribute
     of the :class:`TensorNetwork` is set to ``True``). Hence, that first :func:`stack`
     is never computed.
 
@@ -1938,7 +1938,7 @@ class ParamStackNode(ParamNode):
     Example
     -------
     >>> net = tk.TensorNetwork()
-    >>> net.automemory = True
+    >>> net.auto_stack = True
     >>> nodes = [tk.randn(shape=(2, 4, 2),
     ...                   axes_names=('left', 'input', 'right'),
     ...                   network=net,
@@ -2658,15 +2658,15 @@ class TensorNetwork(nn.Module):
     Although one can define how the network is going to be contracted, there a
     couple of modes that can change how this contraction behaves at a lower level:
 
-    * **automemory** (``False`` by default): This mode indicates whether node
+    * **auto_stack** (``False`` by default): This mode indicates whether node
       :class:`Operations <Operation>` have the ability to take control of the
-      memory management of the network. For instance, if ``automemory`` is set
+      memory management of the network. For instance, if ``auto_stack`` is set
       to ``True`` and a collection of :class:`ParamNodes <ParamNode>` are
       :func:`stacked <stack>` (as the first operation in the contraction),
       then those nodes will no longer store their own tensors, but rather a
       ``virtual`` :class:`ParamStackNode` will store the stacked tensor, avoiding
       the computation of the first :func:`stack` in every contraction. This
-      behaviour is not possible if ``automemory`` is set to ``False``, in which
+      behaviour is not possible if ``auto_stack`` is set to ``False``, in which
       case all nodes will always store their own tensors.
 
     * **auto_unbind** (``True`` by default): This mode indicates whether the
@@ -2678,7 +2678,7 @@ class TensorNetwork(nn.Module):
       the nodes and gives each of them an index for the stacked tensor, so that
       each node's tensor would be retrieved by indexing the stack. This avoids
       performing the operation, since these indices will be the same in consecutive
-      iterations. Hence, in a similar way to ``automemory``, this mode entails
+      iterations. Hence, in a similar way to ``auto_stack``, this mode entails
       a certain control of the memory management of the network.
 
     Once the training algorithm starts, these modes should not be changed (very
@@ -2705,11 +2705,11 @@ class TensorNetwork(nn.Module):
     ``data`` and ``virtual`` nodes that make up the network structure, each of
     them storing its own tensor. However, when the network is contracted, several
     ``resultant`` nodes become new members of the network, even modifying its
-    memory (depending on the ``automemory`` and ``auto_unbind`` modes). Therefore,
+    memory (depending on the ``auto_stack`` and ``auto_unbind`` modes). Therefore,
     if one wants to `reset` the network to its initial state after performing
     some operations, all the ``resultant`` nodes should be deleted, and all the
     tensors should return to its nodes. This is exactly what :meth:`reset` does.
-    Besides, since ``automemory`` and ``auto_unbind`` can change how the tensors
+    Besides, since ``auto_stack`` and ``auto_unbind`` can change how the tensors
     are stored, if one wants to change these modes, the network should be first
     reset (this is already done automatically when changing the modes).
 
@@ -2858,7 +2858,7 @@ class TensorNetwork(nn.Module):
 
         # TN modes
         # Auto-management of memory mode (train -> True)
-        self._automemory = False
+        self._auto_stack = False
         self._auto_unbind = True  # Unbind/index mode (train -> True)
         self._tracing = False     # Tracing mode (True while calling .trace())
 
@@ -2920,14 +2920,14 @@ class TensorNetwork(nn.Module):
         return self._edges
 
     @property
-    def automemory(self) -> bool:
-        """Returns boolean indicating whether ``automemory`` is on/off."""
-        return self._automemory
+    def auto_stack(self) -> bool:
+        """Returns boolean indicating whether ``auto_stack`` is on/off."""
+        return self._auto_stack
 
-    @automemory.setter
-    def automemory(self, automem: bool) -> None:
+    @auto_stack.setter
+    def auto_stack(self, automem: bool) -> None:
         self.reset()
-        self._automemory = automem
+        self._auto_stack = automem
 
     @property
     def auto_unbind(self) -> bool:

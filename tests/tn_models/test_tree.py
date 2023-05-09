@@ -21,11 +21,11 @@ class TestTree:
         tree = tk.Tree(sites_per_layer=[6, 2, 1],
                        d_bond=[[5, 5, 4], [4, 4, 4, 3], [3, 3, 2]])
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, auto_unbind, inline)
-                    tree.automemory = automemory
+                    print(auto_stack, auto_unbind, inline)
+                    tree.auto_stack = auto_stack
                     tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
@@ -35,7 +35,7 @@ class TestTree:
                     assert len(tree.edges) == 1
                     assert len(tree.leaf_nodes) == 9
                     assert len(tree.data_nodes) == 12
-                    if automemory and not inline:
+                    if auto_stack and not inline:
                         assert len(tree.virtual_nodes) == 6
                     else:
                         assert len(tree.virtual_nodes) == 3
@@ -55,7 +55,7 @@ class TestTree:
                             assert len(tree.edges) == 1
                             assert len(tree.leaf_nodes) == 9
                             assert len(tree.data_nodes) == 12
-                            if automemory and not inline:
+                            if auto_stack and not inline:
                                 assert len(tree.virtual_nodes) == 6
                             else:
                                 assert len(tree.virtual_nodes) == 3
@@ -67,11 +67,11 @@ class TestTree:
         tree = tk.Tree(sites_per_layer=[1, 1, 1],
                        d_bond=[[5, 4], [4, 3], [3, 2]])
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, auto_unbind, inline)
-                    tree.automemory = automemory
+                    print(auto_stack, auto_unbind, inline)
+                    tree.auto_stack = auto_stack
                     tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
@@ -81,7 +81,7 @@ class TestTree:
                     assert len(tree.edges) == 1
                     assert len(tree.leaf_nodes) == 3
                     assert len(tree.data_nodes) == 1
-                    if automemory and not inline:
+                    if auto_stack and not inline:
                         assert len(tree.virtual_nodes) == 6
                     else:
                         assert len(tree.virtual_nodes) == 3
@@ -101,7 +101,7 @@ class TestTree:
                             assert len(tree.edges) == 1
                             assert len(tree.leaf_nodes) == 3
                             assert len(tree.data_nodes) == 1
-                            if automemory and not inline:
+                            if auto_stack and not inline:
                                 assert len(tree.virtual_nodes) == 6
                             else:
                                 assert len(tree.virtual_nodes) == 3
@@ -113,11 +113,11 @@ class TestTree:
         tree = tk.Tree(sites_per_layer=[1],
                        d_bond=[[5, 5, 5, 2]])
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, auto_unbind, inline)
-                    tree.automemory = automemory
+                    print(auto_stack, auto_unbind, inline)
+                    tree.auto_stack = auto_stack
                     tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
@@ -127,7 +127,7 @@ class TestTree:
                     assert len(tree.edges) == 1
                     assert len(tree.leaf_nodes) == 1
                     assert len(tree.data_nodes) == 3
-                    if automemory and not inline:
+                    if auto_stack and not inline:
                         assert len(tree.virtual_nodes) == 4
                     else:
                         assert len(tree.virtual_nodes) == 3
@@ -147,7 +147,7 @@ class TestTree:
                             assert len(tree.edges) == 1
                             assert len(tree.leaf_nodes) == 1
                             assert len(tree.data_nodes) == 3
-                            if automemory and not inline:
+                            if auto_stack and not inline:
                                 assert len(tree.virtual_nodes) == 4
                             else:
                                 assert len(tree.virtual_nodes) == 3
@@ -162,11 +162,11 @@ class TestUTree:
         tree = tk.UTree(sites_per_layer=[4, 2, 1],
                         d_bond=[4, 4, 4])
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, auto_unbind, inline)
-                    tree.automemory = automemory
+                    print(auto_stack, auto_unbind, inline)
+                    tree.auto_stack = auto_stack
                     tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
@@ -185,11 +185,11 @@ class TestUTree:
         tree = tk.UTree(sites_per_layer=[1, 1, 1],
                         d_bond=[4, 4])
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, auto_unbind, inline)
-                    tree.automemory = automemory
+                    print(auto_stack, auto_unbind, inline)
+                    tree.auto_stack = auto_stack
                     tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
@@ -211,11 +211,11 @@ class TestUTree:
         tree = tk.UTree(sites_per_layer=[1],
                         d_bond=[5, 5, 5, 2])
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, auto_unbind, inline)
-                    tree.automemory = automemory
+                    print(auto_stack, auto_unbind, inline)
+                    tree.auto_stack = auto_stack
                     tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
@@ -243,11 +243,11 @@ class TestConvTree:
                            d_bond=[[in_channels, 4], [4, 4, 3], [3, 3, 2]],
                            kernel_size=2)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, auto_unbind, inline)
-                    tree.automemory = automemory
+                    print(auto_stack, auto_unbind, inline)
+                    tree.auto_stack = auto_stack
                     tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
@@ -257,7 +257,7 @@ class TestConvTree:
                     assert len(tree.edges) == 1
                     assert len(tree.leaf_nodes) == 7
                     assert len(tree.data_nodes) == 4
-                    if automemory and not inline:
+                    if auto_stack and not inline:
                         assert len(tree.virtual_nodes) == 6
                     else:
                         assert len(tree.virtual_nodes) == 3
@@ -277,7 +277,7 @@ class TestConvTree:
                             assert len(tree.edges) == 1
                             assert len(tree.leaf_nodes) == 7
                             assert len(tree.data_nodes) == 4
-                            if automemory and not inline:
+                            if auto_stack and not inline:
                                 assert len(tree.virtual_nodes) == 6
                             else:
                                 assert len(tree.virtual_nodes) == 3
@@ -295,11 +295,11 @@ class TestConvTree:
                            d_bond=[[in_channels, 4], [4, 3], [3, 2]],
                            kernel_size=1)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, auto_unbind, inline)
-                    tree.automemory = automemory
+                    print(auto_stack, auto_unbind, inline)
+                    tree.auto_stack = auto_stack
                     tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
@@ -309,7 +309,7 @@ class TestConvTree:
                     assert len(tree.edges) == 1
                     assert len(tree.leaf_nodes) == 3
                     assert len(tree.data_nodes) == 1
-                    if automemory and not inline:
+                    if auto_stack and not inline:
                         assert len(tree.virtual_nodes) == 6
                     else:
                         assert len(tree.virtual_nodes) == 3
@@ -329,7 +329,7 @@ class TestConvTree:
                             assert len(tree.edges) == 1
                             assert len(tree.leaf_nodes) == 3
                             assert len(tree.data_nodes) == 1
-                            if automemory and not inline:
+                            if auto_stack and not inline:
                                 assert len(tree.virtual_nodes) == 6
                             else:
                                 assert len(tree.virtual_nodes) == 3
@@ -348,11 +348,11 @@ class TestConvTree:
                                     in_channels, in_channels, 2]],
                            kernel_size=2)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, auto_unbind, inline)
-                    tree.automemory = automemory
+                    print(auto_stack, auto_unbind, inline)
+                    tree.auto_stack = auto_stack
                     tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
@@ -362,7 +362,7 @@ class TestConvTree:
                     assert len(tree.edges) == 1
                     assert len(tree.leaf_nodes) == 1
                     assert len(tree.data_nodes) == 4
-                    if automemory and not inline:
+                    if auto_stack and not inline:
                         assert len(tree.virtual_nodes) == 4
                     else:
                         assert len(tree.virtual_nodes) == 3
@@ -382,7 +382,7 @@ class TestConvTree:
                             assert len(tree.edges) == 1
                             assert len(tree.leaf_nodes) == 1
                             assert len(tree.data_nodes) == 4
-                            if automemory and not inline:
+                            if auto_stack and not inline:
                                 assert len(tree.virtual_nodes) == 4
                             else:
                                 assert len(tree.virtual_nodes) == 3
@@ -403,11 +403,11 @@ class TestConvUTree:
                             d_bond=[in_channels, in_channels, in_channels],
                             kernel_size=(2, 4))
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, auto_unbind, inline)
-                    tree.automemory = automemory
+                    print(auto_stack, auto_unbind, inline)
+                    tree.auto_stack = auto_stack
                     tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
@@ -432,11 +432,11 @@ class TestConvUTree:
                             d_bond=[in_channels, in_channels],
                             kernel_size=1)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, auto_unbind, inline)
-                    tree.automemory = automemory
+                    print(auto_stack, auto_unbind, inline)
+                    tree.auto_stack = auto_stack
                     tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
@@ -462,11 +462,11 @@ class TestConvUTree:
                                     in_channels, in_channels, 2],
                             kernel_size=2)
 
-        for automemory in [True, False]:
+        for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, auto_unbind, inline)
-                    tree.automemory = automemory
+                    print(auto_stack, auto_unbind, inline)
+                    tree.auto_stack = auto_stack
                     tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)

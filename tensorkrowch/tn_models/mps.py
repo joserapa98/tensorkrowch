@@ -417,8 +417,8 @@ class MPS(TensorNetwork):
         cutoff : float, optional
             Quantity that lower bounds singular values in order to be kept.
         """
-        prev_automemory = self._automemory
-        self.automemory = False
+        prev_auto_stack = self._auto_stack
+        self.auto_stack = False
         
         if oc is None:
             oc = self._n_sites - 1
@@ -489,7 +489,7 @@ class MPS(TensorNetwork):
                 d_bond.append(node['right'].size())  # TODO: _size?
         self._d_bond = d_bond
         
-        self.automemory = prev_automemory
+        self.auto_stack = prev_auto_stack
         
     def _project_to_d_bond(self,
                            nodes: List[AbstractNode],
@@ -632,8 +632,8 @@ class MPS(TensorNetwork):
             raise ValueError('`canonicalize_univocal` can only be used if '
                              'boundary is `obc`')
             
-        prev_automemory = self._automemory
-        self.automemory = False
+        prev_auto_stack = self._auto_stack
+        self.auto_stack = False
         
         nodes = [self.left_node] + self.mats_env + [self.right_node]
         for node in nodes:
@@ -662,7 +662,7 @@ class MPS(TensorNetwork):
         for node, data_node in zip(nodes, self._data_nodes.values()):
             node['input'] ^ data_node['feature']
             
-        self.automemory = prev_automemory
+        self.auto_stack = prev_auto_stack
 
 
 class UMPS(TensorNetwork):

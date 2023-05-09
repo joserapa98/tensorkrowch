@@ -27,11 +27,11 @@ class TestPEPS:
                                boundary=[boundary_0, boundary_1],)
 
                 for automemory in [True, False]:
-                    for unbind_mode in [True, False]:
+                    for auto_unbind in [True, False]:
                         for side in ['up', 'down', 'left', 'right']:
                             for inline in [True, False]:
                                 peps.automemory = automemory
-                                peps.unbind_mode = unbind_mode
+                                peps.auto_unbind = auto_unbind
 
                                 peps.trace(example,
                                            from_side=side,
@@ -72,12 +72,12 @@ class TestPEPS:
         data = torch.randn(n_rows * n_cols, 100, 5)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -106,12 +106,12 @@ class TestPEPS:
         data = torch.randn(n_rows * n_cols, 100, 5)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -143,12 +143,12 @@ class TestPEPS:
         data = torch.randn(n_rows * n_cols, 100, 5)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -180,12 +180,12 @@ class TestPEPS:
         data = torch.randn(n_rows * n_cols, 100, 5)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -217,12 +217,12 @@ class TestPEPS:
         data = torch.randn(n_rows * n_cols, 100, 5)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -254,12 +254,12 @@ class TestPEPS:
         data = torch.randn(n_rows * n_cols, 100, 5)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -290,11 +290,11 @@ class TestUPEPS:
                         d_bond=[2, 3])
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -321,12 +321,12 @@ class TestUPEPS:
         data = torch.randn(n_rows * n_cols, 100, 5)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -353,12 +353,12 @@ class TestUPEPS:
         data = torch.randn(n_rows * n_cols, 100, 5)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -385,12 +385,12 @@ class TestUPEPS:
         data = torch.randn(n_rows * n_cols, 100, 5)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -417,12 +417,12 @@ class TestUPEPS:
         data = torch.randn(n_rows * n_cols, 100, 5)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -456,11 +456,11 @@ class TestConvPEPS:
                                    boundary=[boundary_0, boundary_1])
 
                 for automemory in [True, False]:
-                    for unbind_mode in [True, False]:
+                    for auto_unbind in [True, False]:
                         for side in ['up', 'down', 'left', 'right']:
                             for inline in [True, False]:
                                 peps.automemory = automemory
-                                peps.unbind_mode = unbind_mode
+                                peps.auto_unbind = auto_unbind
 
                                 peps.trace(example,
                                            from_side=side,
@@ -506,12 +506,12 @@ class TestConvPEPS:
                            boundary=['obc', 'obc'])
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -543,12 +543,12 @@ class TestConvPEPS:
                            boundary=['pbc', 'obc'])
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -583,12 +583,12 @@ class TestConvPEPS:
                            boundary=['pbc', 'obc'])
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -623,12 +623,12 @@ class TestConvPEPS:
                            boundary=['obc', 'pbc'])
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -663,12 +663,12 @@ class TestConvPEPS:
                            boundary=['obc', 'pbc'])
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -703,12 +703,12 @@ class TestConvPEPS:
                            boundary=['pbc', 'pbc'])
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -742,11 +742,11 @@ class TestConvUPEPS:
                             kernel_size=3)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -779,12 +779,12 @@ class TestConvUPEPS:
                             kernel_size=(n_rows, n_cols))
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -815,12 +815,12 @@ class TestConvUPEPS:
                             kernel_size=(n_rows, n_cols))
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -851,12 +851,12 @@ class TestConvUPEPS:
                             kernel_size=(n_rows, n_cols))
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,
@@ -887,12 +887,12 @@ class TestConvUPEPS:
                             kernel_size=(n_rows, n_cols))
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for side in ['up', 'down', 'left', 'right']:
                     for inline in [True, False]:
-                        print(automemory, unbind_mode, side, inline)
+                        print(automemory, auto_unbind, side, inline)
                         peps.automemory = automemory
-                        peps.unbind_mode = unbind_mode
+                        peps.auto_unbind = auto_unbind
 
                         peps.trace(example,
                                    from_side=side,

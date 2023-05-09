@@ -22,11 +22,11 @@ class TestTree:
                        d_bond=[[5, 5, 4], [4, 4, 4, 3], [3, 3, 2]])
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, unbind_mode, inline)
+                    print(automemory, auto_unbind, inline)
                     tree.automemory = automemory
-                    tree.unbind_mode = unbind_mode
+                    tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
                     result = tree(data, inline=inline)
@@ -68,11 +68,11 @@ class TestTree:
                        d_bond=[[5, 4], [4, 3], [3, 2]])
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, unbind_mode, inline)
+                    print(automemory, auto_unbind, inline)
                     tree.automemory = automemory
-                    tree.unbind_mode = unbind_mode
+                    tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
                     result = tree(data, inline=inline)
@@ -114,11 +114,11 @@ class TestTree:
                        d_bond=[[5, 5, 5, 2]])
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, unbind_mode, inline)
+                    print(automemory, auto_unbind, inline)
                     tree.automemory = automemory
-                    tree.unbind_mode = unbind_mode
+                    tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
                     result = tree(data, inline=inline)
@@ -163,11 +163,11 @@ class TestUTree:
                         d_bond=[4, 4, 4])
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, unbind_mode, inline)
+                    print(automemory, auto_unbind, inline)
                     tree.automemory = automemory
-                    tree.unbind_mode = unbind_mode
+                    tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
                     result = tree(data, inline=inline)
@@ -186,11 +186,11 @@ class TestUTree:
                         d_bond=[4, 4])
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, unbind_mode, inline)
+                    print(automemory, auto_unbind, inline)
                     tree.automemory = automemory
-                    tree.unbind_mode = unbind_mode
+                    tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
                     result = tree(data, inline=inline)
@@ -212,11 +212,11 @@ class TestUTree:
                         d_bond=[5, 5, 5, 2])
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, unbind_mode, inline)
+                    print(automemory, auto_unbind, inline)
                     tree.automemory = automemory
-                    tree.unbind_mode = unbind_mode
+                    tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
                     result = tree(data, inline=inline)
@@ -244,11 +244,11 @@ class TestConvTree:
                            kernel_size=2)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, unbind_mode, inline)
+                    print(automemory, auto_unbind, inline)
                     tree.automemory = automemory
-                    tree.unbind_mode = unbind_mode
+                    tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
                     result = tree(data, inline=inline)
@@ -296,11 +296,11 @@ class TestConvTree:
                            kernel_size=1)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, unbind_mode, inline)
+                    print(automemory, auto_unbind, inline)
                     tree.automemory = automemory
-                    tree.unbind_mode = unbind_mode
+                    tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
                     result = tree(data, inline=inline)
@@ -349,11 +349,11 @@ class TestConvTree:
                            kernel_size=2)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, unbind_mode, inline)
+                    print(automemory, auto_unbind, inline)
                     tree.automemory = automemory
-                    tree.unbind_mode = unbind_mode
+                    tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
                     result = tree(data, inline=inline)
@@ -404,11 +404,11 @@ class TestConvUTree:
                             kernel_size=(2, 4))
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, unbind_mode, inline)
+                    print(automemory, auto_unbind, inline)
                     tree.automemory = automemory
-                    tree.unbind_mode = unbind_mode
+                    tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
                     result = tree(data, inline=inline)
@@ -433,11 +433,11 @@ class TestConvUTree:
                             kernel_size=1)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, unbind_mode, inline)
+                    print(automemory, auto_unbind, inline)
                     tree.automemory = automemory
-                    tree.unbind_mode = unbind_mode
+                    tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
                     result = tree(data, inline=inline)
@@ -463,11 +463,11 @@ class TestConvUTree:
                             kernel_size=2)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline in [True, False]:
-                    print(automemory, unbind_mode, inline)
+                    print(automemory, auto_unbind, inline)
                     tree.automemory = automemory
-                    tree.unbind_mode = unbind_mode
+                    tree.auto_unbind = auto_unbind
 
                     tree.trace(example, inline=inline)
                     result = tree(data, inline=inline)

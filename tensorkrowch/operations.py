@@ -2520,7 +2520,7 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
                                           node1_list=list(node1_list))
         new_nodes.append(new_node)
 
-    if net._unbind_mode:
+    if not net._auto_unbind:
         # Record in inverse_memory while tracing
         node._record_in_inverse_memory()
 
@@ -2603,7 +2603,7 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
 
 def _unbind_next(successor: Successor, node: AbstractStackNode) -> List[Node]:
     net = node._network
-    if net._unbind_mode:
+    if not net._auto_unbind:
         tensors = torch.unbind(node.tensor)
         children = successor.child
         for tensor, child in zip(tensors, children):
@@ -2644,7 +2644,7 @@ def unbind(node: AbstractStackNode) -> List[Node]:
     Unbinds a :class:`StackNode` or :class:`ParamStackNode`, where the first
     dimension is assumed to be the stack dimension.
 
-    If :meth:`~TensorNetwork.unbind_mode` is set to ``True``, each resultant
+    If :meth:`~TensorNetwork.auto_unbind` is set to ``False``, each resultant
     node will store its own tensor. Otherwise, they will have only a reference
     to the corresponding slice of the ``(Param)StackNode``.
 

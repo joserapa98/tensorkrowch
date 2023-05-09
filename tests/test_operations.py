@@ -3335,13 +3335,14 @@ class TestStackUnbind:
 
         return net, nodes
 
+    # TODO: change names tests
     def test_stack_all_leaf_all_non_param_automemory_unbind(self, setup):
         net, nodes = setup
 
         # Automemory: yes, Unbind mode: yes
         # ---------------------------------
         net.automemory = True
-        net.unbind_mode = True
+        net.auto_unbind = False
 
         # Stack
         stack = tk.stack(nodes)
@@ -3406,7 +3407,7 @@ class TestStackUnbind:
         # Automemory: no, Unbind mode: yes
         # ---------------------------------
         net.automemory = False
-        net.unbind_mode = True
+        net.auto_unbind = False
 
         # Stack
         stack = tk.stack(nodes)
@@ -3471,7 +3472,7 @@ class TestStackUnbind:
         # Automemory: yes, Unbind mode: no
         # ---------------------------------
         net.automemory = True
-        net.unbind_mode = False
+        net.auto_unbind = True
 
         # Stack
         stack = tk.stack(nodes)
@@ -3536,7 +3537,7 @@ class TestStackUnbind:
         # Automemory: no, Unbind mode: no
         # ---------------------------------
         net.automemory = False
-        net.unbind_mode = False
+        net.auto_unbind = True
 
         # Stack
         stack = tk.stack(nodes)
@@ -3618,7 +3619,7 @@ class TestStackUnbind:
         # Automemory: yes, Unbind mode: yes
         # ---------------------------------
         net.automemory = True
-        net.unbind_mode = True
+        net.auto_unbind = False
 
         # Stack
         stack = tk.stack(nodes)
@@ -3683,7 +3684,7 @@ class TestStackUnbind:
         # Automemory: no, Unbind mode: yes
         # ---------------------------------
         net.automemory = False
-        net.unbind_mode = True
+        net.auto_unbind = False
 
         # Stack
         stack = tk.stack(nodes)
@@ -3748,7 +3749,7 @@ class TestStackUnbind:
         # Automemory: yes, Unbind mode: no
         # ---------------------------------
         net.automemory = True
-        net.unbind_mode = False
+        net.auto_unbind = True
 
         # Stack
         stack = tk.stack(nodes)
@@ -3813,7 +3814,7 @@ class TestStackUnbind:
         # Automemory: no, Unbind mode: no
         # ---------------------------------
         net.automemory = False
-        net.unbind_mode = False
+        net.auto_unbind = True
 
         # Stack
         stack = tk.stack(nodes)
@@ -3906,7 +3907,7 @@ class TestStackUnbind:
         # Automemory: yes, Unbind mode: yes
         # ---------------------------------
         net.automemory = True
-        net.unbind_mode = True
+        net.auto_unbind = False
 
         # Stack
         stack = tk.stack(nodes)
@@ -3998,7 +3999,7 @@ class TestStackUnbind:
         # Automemory: no, Unbind mode: yes
         # ---------------------------------
         net.automemory = False
-        net.unbind_mode = True
+        net.auto_unbind = False
 
         # Stack
         stack = tk.stack(nodes)
@@ -4090,7 +4091,7 @@ class TestStackUnbind:
         # Automemory: yes, Unbind mode: no
         # ---------------------------------
         net.automemory = True
-        net.unbind_mode = False
+        net.auto_unbind = True
 
         # Stack
         stack = tk.stack(nodes)
@@ -4182,7 +4183,7 @@ class TestStackUnbind:
         # Automemory: no, Unbind mode: no
         # ---------------------------------
         net.automemory = False
-        net.unbind_mode = False
+        net.auto_unbind = True
 
         # Stack
         stack = tk.stack(nodes)
@@ -4274,7 +4275,7 @@ class TestStackUnbind:
         # Automemory: yes, Unbind mode: no
         # ---------------------------------
         net.automemory = True
-        net.unbind_mode = False
+        net.auto_unbind = True
         # It only has sense to study the index mode case
 
         # Stack
@@ -4376,7 +4377,7 @@ class TestStackUnbind:
         # Automemory: no, Unbind mode: no
         # ---------------------------------
         net.automemory = False
-        net.unbind_mode = False
+        net.auto_unbind = True
         # It only has sense to study the index mode case
 
         # Stack
@@ -4795,9 +4796,9 @@ class TestStackUnbind:
         with pytest.raises(TypeError):
             result = tk.unbind(node)
             
-    def test_batches_unbind_mode(self):
+    def test_batches_auto_unbind(self):
         net = tk.TensorNetwork()
-        net.unbind_mode = True
+        net.auto_unbind = False
         
         node1 = tk.Node(shape=(20, 30, 2),
                        axes_names=('batch1', 'batch2', 'output'),
@@ -4827,7 +4828,7 @@ class TestStackUnbind:
             
     def test_batches_index_mode(self):
         net = tk.TensorNetwork()
-        net.unbind_mode = False
+        net.auto_unbind = True
         
         node1 = tk.Node(shape=(20, 30, 2),
                        axes_names=('batch1', 'batch2', 'output'),
@@ -5230,7 +5231,7 @@ class TestTNModels:
             500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
 
         mps.automemory = True
-        mps.unbind_mode = True
+        mps.auto_unbind = False
         mps.trace(image)
 
         # Forward
@@ -5260,7 +5261,7 @@ class TestTNModels:
             500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
 
         mps.automemory = True
-        mps.unbind_mode = True
+        mps.auto_unbind = False
         mps.trace(image)
 
         # Forward
@@ -5290,7 +5291,7 @@ class TestTNModels:
             500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
 
         mps.automemory = True
-        mps.unbind_mode = True
+        mps.auto_unbind = False
         mps.trace(image)
 
         # Forward
@@ -5320,7 +5321,7 @@ class TestTNModels:
             500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
 
         mps.automemory = True
-        mps.unbind_mode = True
+        mps.auto_unbind = False
         mps.trace(image)
 
         # Forward
@@ -5545,7 +5546,7 @@ class TestTNModels:
             500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
 
         peps.automemory = True
-        peps.unbind_mode = True
+        peps.auto_unbind = False
         peps.trace(image)
 
         # Forward
@@ -5575,7 +5576,7 @@ class TestTNModels:
             500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
 
         peps.automemory = True
-        peps.unbind_mode = True
+        peps.auto_unbind = False
         peps.trace(image)
 
         # Forward
@@ -5605,7 +5606,7 @@ class TestTNModels:
             500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
 
         peps.automemory = True
-        peps.unbind_mode = True
+        peps.auto_unbind = False
         peps.trace(image)
 
         # Forward
@@ -5635,7 +5636,7 @@ class TestTNModels:
             500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
 
         peps.automemory = True
-        peps.unbind_mode = True
+        peps.auto_unbind = False
         peps.trace(image)
 
         # Forward
@@ -5716,7 +5717,7 @@ class TestTNModels:
                             output_dim=5)
 
         convnode.automemory = True
-        convnode.unbind_mode = True
+        convnode.auto_unbind = False
         convnode.trace(patches)
 
         # Forward
@@ -5901,7 +5902,7 @@ class TestTNModels:
                               padding=1, example_dims=(14, 14))
 
         model.nodelayer.automemory = True
-        model.nodelayer.unbind_mode = True
+        model.nodelayer.auto_unbind = False
 
         # Forward
         for _ in range(5):

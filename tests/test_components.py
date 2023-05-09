@@ -2071,7 +2071,7 @@ class TestTensorNetwork:
             assert node._tensor_info['address'] is not None
 
         assert net.automemory == False
-        assert net.unbind_mode == False
+        assert net.auto_unbind == True
 
         stack = tk.stack(list(net.nodes.values()))
         # All nodes still have their own memory
@@ -2082,7 +2082,7 @@ class TestTensorNetwork:
 
         net.automemory = True
         assert net.automemory == True
-        assert net.unbind_mode == False
+        assert net.auto_unbind == True
 
         stack = tk.stack(list(net.nodes.values()))
         # Now leaf nodes have their emory stored in the stack
@@ -2091,7 +2091,7 @@ class TestTensorNetwork:
         for node in net.resultant_nodes.values():
             assert node._tensor_info['address'] is not None
 
-    def test_unbind_mode(self):
+    def test_auto_unbind(self):
         net = tk.TensorNetwork(name='net')
         for i in range(4):
             _ = tk.Node(shape=(2, 5, 2),
@@ -2108,7 +2108,7 @@ class TestTensorNetwork:
             assert node._tensor_info['address'] is not None
 
         assert net.automemory == False
-        assert net.unbind_mode == False
+        assert net.auto_unbind == True
 
         stack1 = tk.stack(list(net.nodes.values()))
         unbinded = tk.unbind(stack1)
@@ -2124,9 +2124,9 @@ class TestTensorNetwork:
             assert node._tensor_info['address'] is None
         assert stack2._tensor_info['address'] is None
 
-        net.unbind_mode = True
+        net.auto_unbind = False
         assert net.automemory == False
-        assert net.unbind_mode == True
+        assert net.auto_unbind == False
 
         stack1 = tk.stack(list(net.nodes.values()))
         unbinded = tk.unbind(stack1)

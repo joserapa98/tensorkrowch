@@ -28,11 +28,11 @@ class TestMPSLayer:
                                   boundary=boundary)
 
                 for automemory in [True, False]:
-                    for unbind_mode in [True, False]:
+                    for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
                                 mps.automemory = automemory
-                                mps.unbind_mode = unbind_mode
+                                mps.auto_unbind = auto_unbind
 
                                 mps.trace(example,
                                           inline_input=inline_input,
@@ -88,11 +88,11 @@ class TestMPSLayer:
                                   boundary=boundary)
 
                 for automemory in [True, False]:
-                    for unbind_mode in [True, False]:
+                    for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
                                 mps.automemory = automemory
-                                mps.unbind_mode = unbind_mode
+                                mps.auto_unbind = auto_unbind
 
                                 mps.trace(example,
                                           inline_input=inline_input,
@@ -149,11 +149,11 @@ class TestMPSLayer:
                                   boundary=boundary)
 
                 for automemory in [True, False]:
-                    for unbind_mode in [True, False]:
+                    for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
                                 mps.automemory = automemory
-                                mps.unbind_mode = unbind_mode
+                                mps.auto_unbind = auto_unbind
 
                                 mps.trace(example,
                                           inline_input=inline_input,
@@ -211,11 +211,11 @@ class TestMPSLayer:
                                   boundary=boundary)
 
                 for automemory in [True, False]:
-                    for unbind_mode in [True, False]:
+                    for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
                                 mps.automemory = automemory
-                                mps.unbind_mode = unbind_mode
+                                mps.auto_unbind = auto_unbind
 
                                 mps.trace(example,
                                           inline_input=inline_input,
@@ -268,11 +268,11 @@ class TestMPSLayer:
         data = torch.randn(1, 100, 5)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
                         mps.automemory = automemory
-                        mps.unbind_mode = unbind_mode
+                        mps.auto_unbind = auto_unbind
 
                         mps.trace(example,
                                   inline_input=inline_input,
@@ -319,11 +319,11 @@ class TestMPSLayer:
         data = torch.randn(1, 100, 5)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
                         mps.automemory = automemory
-                        mps.unbind_mode = unbind_mode
+                        mps.auto_unbind = auto_unbind
 
                         mps.trace(example,
                                   inline_input=inline_input,
@@ -368,11 +368,11 @@ class TestMPSLayer:
                           boundary='pbc')
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
                         mps.automemory = automemory
-                        mps.unbind_mode = unbind_mode
+                        mps.auto_unbind = auto_unbind
 
                         # We shouldn't pass any data since the MPS only
                         # has the output node
@@ -602,11 +602,11 @@ class TestUMPSLayer:
                                l_position=l_position)
 
             for automemory in [True, False]:
-                for unbind_mode in [True, False]:
+                for auto_unbind in [True, False]:
                     for inline_input in [True, False]:
                         for inline_mats in [True, False]:
                             mps.automemory = automemory
-                            mps.unbind_mode = unbind_mode
+                            mps.auto_unbind = auto_unbind
 
                             mps.trace(example,
                                       inline_input=inline_input,
@@ -632,11 +632,11 @@ class TestUMPSLayer:
         data = torch.randn(1, 100, 5)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
                         mps.automemory = automemory
-                        mps.unbind_mode = unbind_mode
+                        mps.auto_unbind = auto_unbind
 
                         mps.trace(example,
                                   inline_input=inline_input,
@@ -662,11 +662,11 @@ class TestUMPSLayer:
         data = torch.randn(1, 100, 5)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
                         mps.automemory = automemory
-                        mps.unbind_mode = unbind_mode
+                        mps.auto_unbind = auto_unbind
 
                         mps.trace(example,
                                   inline_input=inline_input,
@@ -690,11 +690,11 @@ class TestUMPSLayer:
                            l_position=0)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
                         mps.automemory = automemory
-                        mps.unbind_mode = unbind_mode
+                        mps.auto_unbind = auto_unbind
 
                         # We shouldn't pass any data since the MPS only
                         # has the output node
@@ -731,12 +731,12 @@ class TestConvMPSLayer:
                                       boundary=boundary)
 
                 for automemory in [True, False]:
-                    for unbind_mode in [True, False]:
+                    for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
                                 for conv_mode in ['flat', 'snake']:
                                     mps.automemory = automemory
-                                    mps.unbind_mode = unbind_mode
+                                    mps.auto_unbind = auto_unbind
 
                                     mps.trace(example,
                                               inline_input=inline_input,
@@ -805,12 +805,12 @@ class TestConvMPSLayer:
                                       boundary=boundary)
 
                 for automemory in [True, False]:
-                    for unbind_mode in [True, False]:
+                    for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
                                 for conv_mode in ['flat', 'snake']:
                                     mps.automemory = automemory
-                                    mps.unbind_mode = unbind_mode
+                                    mps.auto_unbind = auto_unbind
 
                                     mps.trace(example,
                                               inline_input=inline_input,
@@ -876,12 +876,12 @@ class TestConvMPSLayer:
                               boundary='obc')
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
                         for conv_mode in ['flat', 'snake']:
                             mps.automemory = automemory
-                            mps.unbind_mode = unbind_mode
+                            mps.auto_unbind = auto_unbind
 
                             mps.trace(example,
                                       inline_input=inline_input,
@@ -937,12 +937,12 @@ class TestConvMPSLayer:
                               boundary='obc')
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
                         for conv_mode in ['flat', 'snake']:
                             mps.automemory = automemory
-                            mps.unbind_mode = unbind_mode
+                            mps.auto_unbind = auto_unbind
 
                             mps.trace(example,
                                       inline_input=inline_input,
@@ -1000,12 +1000,12 @@ class TestConvUMPSLayer:
                                    l_position=l_position)
 
             for automemory in [True, False]:
-                for unbind_mode in [True, False]:
+                for auto_unbind in [True, False]:
                     for inline_input in [True, False]:
                         for inline_mats in [True, False]:
                             for conv_mode in ['flat', 'snake']:
                                 mps.automemory = automemory
-                                mps.unbind_mode = unbind_mode
+                                mps.auto_unbind = auto_unbind
 
                                 mps.trace(example,
                                           inline_input=inline_input,
@@ -1038,12 +1038,12 @@ class TestConvUMPSLayer:
                                l_position=1)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
                         for conv_mode in ['flat', 'snake']:
                             mps.automemory = automemory
-                            mps.unbind_mode = unbind_mode
+                            mps.auto_unbind = auto_unbind
 
                             mps.trace(example,
                                       inline_input=inline_input,
@@ -1076,12 +1076,12 @@ class TestConvUMPSLayer:
                                l_position=0)
 
         for automemory in [True, False]:
-            for unbind_mode in [True, False]:
+            for auto_unbind in [True, False]:
                 for inline_input in [True, False]:
                     for inline_mats in [True, False]:
                         for conv_mode in ['flat', 'snake']:
                             mps.automemory = automemory
-                            mps.unbind_mode = unbind_mode
+                            mps.auto_unbind = auto_unbind
 
                             mps.trace(example,
                                       inline_input=inline_input,

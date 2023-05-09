@@ -438,7 +438,7 @@ class AbstractNode(ABC):
         result = self._network._memory_nodes[address]
 
         return_result = full or (result is None)
-        if self._network._unbind_mode:
+        if not self._network._auto_unbind:
             return_result = return_result or self._name.startswith('unbind')
 
         if return_result:
@@ -2669,12 +2669,12 @@ class TensorNetwork(nn.Module):
       behaviour is not possible if ``automemory`` is set to ``False``, in which
       case all nodes will always store their own tensors.
 
-    * **unbind_mode** (``False`` by default): This mode indicates whether the
+    * **auto_unbind** (``True`` by default): This mode indicates whether the
       operation :func:`unbind` has to actually `unbind` the stacked tensor or
-      just generate a collection of references. That is, if ``unbind_mode`` is
-      set to ``True``, :func:`unbind` creates a collection of nodes, each of them
-      storing the corresponding slice of the stacked tensor. If ``unbind_mode``
-      is set to ``False`` (called ``index_mode``), :func:`unbind` just creates
+      just generate a collection of references. That is, if ``auto_unbind`` is
+      set to ``False``, :func:`unbind` creates a collection of nodes, each of them
+      storing the corresponding slice of the stacked tensor. If ``auto_unbind``
+      is set to ``True`` (called ``index_mode``), :func:`unbind` just creates
       the nodes and gives each of them an index for the stacked tensor, so that
       each node's tensor would be retrieved by indexing the stack. This avoids
       performing the operation, since these indices will be the same in consecutive
@@ -2705,11 +2705,11 @@ class TensorNetwork(nn.Module):
     ``data`` and ``virtual`` nodes that make up the network structure, each of
     them storing its own tensor. However, when the network is contracted, several
     ``resultant`` nodes become new members of the network, even modifying its
-    memory (depending on the ``automemory`` and ``unbind_mode`` modes). Therefore,
+    memory (depending on the ``automemory`` and ``auto_unbind`` modes). Therefore,
     if one wants to `reset` the network to its initial state after performing
     some operations, all the ``resultant`` nodes should be deleted, and all the
     tensors should return to its nodes. This is exactly what :meth:`reset` does.
-    Besides, since ``automemory`` and ``unbind_mode`` can change how the tensors
+    Besides, since ``automemory`` and ``auto_unbind`` can change how the tensors
     are stored, if one wants to change these modes, the network should be first
     reset (this is already done automatically when changing the modes).
 
@@ -2859,7 +2859,7 @@ class TensorNetwork(nn.Module):
         # TN modes
         # Auto-management of memory mode (train -> True)
         self._automemory = False
-        self._unbind_mode = False  # Unbind/index mode (train -> True)
+        self._auto_unbind = True  # Unbind/index mode (train -> True)
         self._tracing = False     # Tracing mode (True while calling .trace())
 
         # Lis of operations used to contract the TN
@@ -2930,14 +2930,14 @@ class TensorNetwork(nn.Module):
         self._automemory = automem
 
     @property
-    def unbind_mode(self) -> bool:
-        """Returns boolean indicating whether ``unbind_mode`` is on/off."""
-        return self._unbind_mode
+    def auto_unbind(self) -> bool:
+        """Returns boolean indicating whether ``auto_unbind`` is on/off."""
+        return self._auto_unbind
 
-    @unbind_mode.setter
-    def unbind_mode(self, unbind: bool) -> None:
+    @auto_unbind.setter
+    def auto_unbind(self, unbind: bool) -> None:
         self.reset()
-        self._unbind_mode = unbind
+        self._auto_unbind = unbind
 
     # -------
     # Methods

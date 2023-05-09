@@ -2505,16 +2505,14 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
     # Invert structure of node.edges_lists
     edges_lists = []
     node1_lists = []
-    batch_idx = None
+    batch_ids = []
     for i, edge in enumerate(node._edges[1:]):
         if isinstance(edge, StackEdge):
             edges_lists.append(edge._edges)
             node1_lists.append(edge._node1_lists)
-            if edge._edges[0].is_batch() and \
-                    ('batch' in edge._edges[0].axis1._name):
+            if edge.is_batch() and ('batch' in edge.axis1._name):
                 # Save position of batch edge, whose dimension might change
-                # TODO: case more than one batch edge
-                batch_idx = i
+                batch_ids.append(i)
         else:
             edges_lists.append([edge] * len(tensors))
             node1_lists.append([True] * len(tensors))
@@ -2597,7 +2595,7 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
     # Create successor
     successor = Successor(kwargs={'node': node},
                           child=new_nodes,
-                          hints=batch_idx)
+                          hints=batch_ids)
 
     # Add successor to parent
     if 'unbind' in node._successors:
@@ -2627,19 +2625,20 @@ def _unbind_next(successor: Successor, node: AbstractStackNode) -> List[Node]:
         return children[:]
 
     else:  # index_mode
-        batch_idx = successor.hints
         children = successor.child
-
-        if batch_idx is None:
-            return children[:]
-
-        new_dim = node._shape[batch_idx + 1]
-        child_dim = children[0]._shape[batch_idx]
-
-        if new_dim == child_dim:
-            return children[:]
-
-        return successor.child[:]
+        batch_ids = successor.hints
+        diff_batches = []
+        
+        for i, j in enumerate(batch_ids):
+            if children[0]._shape[j] != node._shape[j + 1]:
+                batch_ids[j] = i
+                diff_batches.append((i, node._shape[i + 1]))
+        
+        for i, size in diff_batches:
+            for child in children:
+                child._shape[i] = size
+            
+        return children[:]
 
 
 unbind_op = Operation('unbind',

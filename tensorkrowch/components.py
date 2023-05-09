@@ -1112,12 +1112,17 @@ class AbstractNode(ABC):
             If the node is not a ``leaf`` node or the tensor network is in
             ``automemory`` mode.
         """
-        if self._leaf and not self._network._automemory:
-            self._unrestricted_set_tensor(
-                tensor=tensor, init_method=init_method, device=device, **kwargs)
+    def set_tensor_from(self, other: 'AbstractNode') -> None:
+        """Sets node's tensor as the tensor used by other node."""
+        del self._network._memory_nodes[self._tensor_info['address']]
+        
+        if other._tensor_info['address'] is not None:
+            self._tensor_info['address'] = None
+            self._tensor_info['node_ref'] = other
+            self._tensor_info['full'] = True
+            self._tensor_info['index'] = None
         else:
-            raise ValueError('Node\'s tensor can only be changed if it is a leaf'
-                             ' tensor and the network is not in automemory mode')
+            self._tensor_info = other._tensor_info
 
     def unset_tensor(self) -> None:
         """Replaces node's tensor with None."""

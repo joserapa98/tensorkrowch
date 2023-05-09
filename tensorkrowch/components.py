@@ -293,14 +293,14 @@ class AbstractNode(ABC):
 
         super().__init__()
 
-        # Check shape and tensor
+        # Check shape and tensor.shape
         if (shape is None) == (tensor is None):
             if shape is None:
                 raise ValueError('One of `shape` or `tensor` must be provided')
             elif tensor.shape == shape:
                 shape = None
             else:
-                raise ValueError('If both `shape` or `tensor` are given, '
+                raise ValueError('If both `shape` and `tensor` are given, '
                                  '`tensor`\'s shape should be equal to `shape`')
 
         # Check shape type
@@ -315,6 +315,11 @@ class AbstractNode(ABC):
             aux_shape = Size(shape)
         else:
             aux_shape = tensor.shape
+            
+        # Check tensor type
+        if tensor is not None:
+            if not isinstance(tensor, Tensor):
+                raise TypeError('`tensor` should be torch.Tensor type')
 
         # Check axes_names
         if axes_names is None:
@@ -380,7 +385,8 @@ class AbstractNode(ABC):
                     raise TypeError('`node1_list` should be list[bool] type')
                 axis._node1 = node1_list[i]
             self._edges = edges[:]
-            if self._leaf and not self._network._automemory:
+            # If node stores its own tensor
+            if not self.is_resultant():
                 self.reattach_edges(override=override_edges)
 
         # Add to network
@@ -717,7 +723,7 @@ class AbstractNode(ABC):
                 aux_shape = list(self._shape)
                 aux_shape[axis_num] = size
                 self._shape = Size(aux_shape)
-                self.tensor = tensor[index]
+                self._direct_set_tensor(tensor[index])
 
             elif size > self._shape[axis_num]:
                 # If new size is greater than current, tensor is expanded with
@@ -732,7 +738,7 @@ class AbstractNode(ABC):
                 aux_shape = list(self._shape)
                 aux_shape[axis_num] = size
                 self._shape = Size(aux_shape)
-                self.tensor = nn.functional.pad(tensor, pad)
+                self._direct_set_tensor(nn.functional.pad(tensor, pad))
 
     def get_axis(self, axis: Ax) -> 'Edge':
         """Returns :class:`Axis` given its ``name`` or ``num``."""
@@ -1010,6 +1016,16 @@ class AbstractNode(ABC):
         else:
             raise ValueError('`tensor` should have the same number of'
                              ' dimensions as node\'s tensor (same rank)')
+            
+    def _direct_set_tensor(self,
+                        tensor: Optional[Tensor],
+                        check_shape: bool = False) -> None:
+        if check_shape and not self._compatible_shape(tensor):
+            tensor = self._crop_tensor(tensor)
+        correct_format_tensor = self._set_tensor_format(tensor)
+
+        self._save_in_network(correct_format_tensor)
+        self._shape = tensor.shape
 
     def _unrestricted_set_tensor(self,
                                  tensor: Optional[Tensor] = None,
@@ -1062,15 +1078,6 @@ class AbstractNode(ABC):
         self._save_in_network(correct_format_tensor)
         self._shape = tensor.shape
 
-    def _unrestricted_set_tensor_ops(self,
-                                     tensor: Optional[Tensor],
-                                     check_shape: bool = False) -> None:
-        if check_shape and not self._compatible_shape(tensor):
-            tensor = self._crop_tensor(tensor)
-
-        self._save_in_network(tensor)
-        self._shape = tensor.shape
-
     def set_tensor(self,
                    tensor: Optional[Tensor] = None,
                    init_method: Optional[Text] = 'zeros',
@@ -1112,6 +1119,16 @@ class AbstractNode(ABC):
             If the node is not a ``leaf`` node or the tensor network is in
             ``automemory`` mode.
         """
+        # If node stores its own tensor
+        if not self.is_resultant() and (self._tensor_info['address'] is not None):
+            self._unrestricted_set_tensor(tensor=tensor,
+                                          init_method=init_method,
+                                          device=device,
+                                          **kwargs)
+        else:
+            raise ValueError('Node\'s tensor can only be changed if it is not'
+                             'resultant and if it stores its own tensor')
+            
     def set_tensor_from(self, other: 'AbstractNode') -> None:
         """Sets node's tensor as the tensor used by other node."""
         del self._network._memory_nodes[self._tensor_info['address']]
@@ -1126,7 +1143,8 @@ class AbstractNode(ABC):
 
     def unset_tensor(self) -> None:
         """Replaces node's tensor with None."""
-        if self._leaf and not self._network._automemory:
+        # If node stores its own tensor
+        if not self.is_resultant() and (self._tensor_info['address'] is not None):
             self._save_in_network(None)
 
     def _save_in_network(self, tensor: Union[Tensor, Parameter]) -> None:
@@ -3535,10 +3553,10 @@ class TensorNetwork(nn.Module):
         stack_node = self._virtual_nodes.get('stack_data_memory')
 
         if stack_node is not None:
-            stack_node._unrestricted_set_tensor(data)
+            stack_node.tensor = data
         elif self._data_nodes:
             for i, data_node in enumerate(list(self._data_nodes.values())):
-                data_node._unrestricted_set_tensor(data[i])
+                data_node.tensor = data[i]
         else:
             raise ValueError('Cannot add data if no data nodes are set')
 

@@ -168,7 +168,7 @@ def _permute_next(successor: Successor,
     # All arguments are mandatory though some might not be used
     new_tensor = node.tensor.permute(successor.hints)
     child = successor.child
-    child._unrestricted_set_tensor_ops(new_tensor)
+    child._direct_set_tensor(new_tensor)
 
     # Record in inverse_memory while contracting
     # (to delete memory if possible)
@@ -242,16 +242,16 @@ def permute_(node: AbstractNode, axes: Sequence[Ax]) -> Node:
         raise ValueError('The provided list of axis is not a permutation of the'
                          ' axes of the node')
     else:
-        new_node = Node._create_resultant(axes_names=permute_list(node.axes_names, axes_nums),
-                                          name=node._name,
-                                          override_node=True,
-                                          network=node._network,
-                                          override_edges=True,
-                                          tensor=node.tensor.permute(
-                                              axes_nums).detach(),
-                                          edges=permute_list(
-                                              node._edges, axes_nums),
-                                          node1_list=permute_list(node.is_node1(), axes_nums))
+        new_node = Node(axes_names=permute_list(node.axes_names, axes_nums),
+                        name=node._name,
+                        override_node=True,
+                        network=node._network,
+                        override_edges=True,
+                        tensor=node.tensor.permute(
+                            axes_nums).detach(),
+                        edges=permute_list(
+                            node._edges, axes_nums),
+                        node1_list=permute_list(node.is_node1(), axes_nums))
 
     return new_node
 
@@ -301,7 +301,6 @@ def _tprod_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     new_node = Node._create_resultant(axes_names=node1.axes_names + node2.axes_names,
                                       name='tprod',
                                       network=node1._network,
-                                      leaf=False,
                                       tensor=new_tensor,
                                       edges=node1._edges + node2._edges,
                                       node1_list=node1.is_node1() + node2.is_node1())
@@ -335,7 +334,7 @@ def _tprod_next(successor: Successor,
                              node2.tensor.flatten()).view(*(list(node1._shape) +
                                                             list(node2._shape)))
     child = successor.child
-    child._unrestricted_set_tensor_ops(new_tensor)
+    child._direct_set_tensor(new_tensor)
 
     # Record in inverse_memory while contracting
     # (to delete memory if possible)
@@ -409,7 +408,6 @@ def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     new_node = Node._create_resultant(axes_names=node1.axes_names,
                                       name='mul',
                                       network=node1._network,
-                                      leaf=False,
                                       tensor=new_tensor,
                                       edges=node1._edges,
                                       node1_list=node1.is_node1())
@@ -441,7 +439,7 @@ def _mul_next(successor: Successor,
               node2: AbstractNode) -> Node:
     new_tensor = node1.tensor * node2.tensor
     child = successor.child
-    child._unrestricted_set_tensor_ops(new_tensor)
+    child._direct_set_tensor(new_tensor)
 
     # Record in inverse_memory while contracting
     # (to delete memory if possible)
@@ -512,7 +510,6 @@ def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     new_node = Node._create_resultant(axes_names=node1.axes_names,
                                       name='add',
                                       network=node1._network,
-                                      leaf=False,
                                       tensor=new_tensor,
                                       edges=node1._edges,
                                       node1_list=node1.is_node1())
@@ -544,7 +541,7 @@ def _add_next(successor: Successor,
               node2: AbstractNode) -> Node:
     new_tensor = node1.tensor + node2.tensor
     child = successor.child
-    child._unrestricted_set_tensor_ops(new_tensor)
+    child._direct_set_tensor(new_tensor)
 
     # Record in inverse_memory while contracting
     # (to delete memory if possible)
@@ -615,7 +612,6 @@ def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     new_node = Node._create_resultant(axes_names=node1.axes_names,
                                       name='sub',
                                       network=node1._network,
-                                      leaf=False,
                                       tensor=new_tensor,
                                       edges=node1._edges,
                                       node1_list=node1.is_node1())
@@ -647,7 +643,7 @@ def _sub_next(successor: Successor,
               node2: AbstractNode) -> Node:
     new_tensor = node1.tensor - node2.tensor
     child = successor.child
-    child._unrestricted_set_tensor_ops(new_tensor)
+    child._direct_set_tensor(new_tensor)
 
     # Record in inverse_memory while contracting
     # (to delete memory if possible)
@@ -888,7 +884,6 @@ def _split_first(node: AbstractNode,
     node1 = Node._create_resultant(axes_names=node1_axes_names,
                                    name='split',
                                    network=net,
-                                   leaf=False,
                                    tensor=node1_tensor)
 
     node2_axes_names = permute_list(node.axes_names, batch_axes) + \
@@ -897,7 +892,6 @@ def _split_first(node: AbstractNode,
     node2 = Node._create_resultant(axes_names=node2_axes_names,
                                    name='split',
                                    network=net,
-                                   leaf=False,
                                    tensor=node2_tensor)
 
     n_batches = len(batch_axes)
@@ -1092,8 +1086,8 @@ def _split_next(successor: Successor,
         *(batch_shape + [rank] + node2_shape.tolist()))
 
     children = successor.child
-    children[0]._unrestricted_set_tensor_ops(node1_tensor)
-    children[1]._unrestricted_set_tensor_ops(node2_tensor)
+    children[0]._direct_set_tensor(node1_tensor)
+    children[1]._direct_set_tensor(node2_tensor)
 
     # Record in inverse_memory while contracting
     # (to delete memory if possible)
@@ -2015,7 +2009,6 @@ def _contract_edges_first(edges: List[Edge],
         new_node = Node._create_resultant(axes_names=new_axes_names,
                                           name='contract_edges',
                                           network=node1._network,
-                                          leaf=False,
                                           tensor=result,
                                           edges=new_edges,
                                           node1_list=new_node1_list)
@@ -2090,7 +2083,7 @@ def _contract_edges_next(successor: Successor,
         node2._record_in_inverse_memory()
 
     child = successor.child
-    child._unrestricted_set_tensor_ops(result)
+    child._direct_set_tensor(result)
 
     return child
 
@@ -2452,7 +2445,7 @@ def _stack_next(successor: Successor,
         return child
 
     stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])
-    child._unrestricted_set_tensor_ops(stack_tensor)
+    child._direct_set_tensor(stack_tensor)
 
     # Record in inverse_memory while contracting
     # (to delete memory if possible)
@@ -2522,7 +2515,6 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
         new_node = Node._create_resultant(axes_names=node.axes_names[1:],
                                           name='unbind',
                                           network=net,
-                                          leaf=False,
                                           tensor=tensor,
                                           edges=list(edges),
                                           node1_list=list(node1_list))
@@ -2615,7 +2607,7 @@ def _unbind_next(successor: Successor, node: AbstractStackNode) -> List[Node]:
         tensors = torch.unbind(node.tensor)
         children = successor.child
         for tensor, child in zip(tensors, children):
-            child._unrestricted_set_tensor_ops(tensor, True)
+            child._direct_set_tensor(tensor, True)
 
         # Record in inverse_memory while contracting
         # (to delete memory if possible)
@@ -2632,9 +2624,11 @@ def _unbind_next(successor: Successor, node: AbstractStackNode) -> List[Node]:
                 batch_ids[j] = i
                 diff_batches.append((i, node._shape[i + 1]))
         
-        for i, size in diff_batches:
-            for child in children:
-                child._shape[i] = size
+        for child in children:
+            shape = list(child._shape)
+            for i, size in diff_batches:
+                shape[i] = size
+            child._shape = Size(shape)
             
         return children[:]
 
@@ -2803,7 +2797,6 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
         new_node = Node._create_resultant(axes_names=list(axes_names.values()),
                                           name='einsum',
                                           network=nodes[0]._network,
-                                          leaf=False,
                                           tensor=new_tensor,
                                           edges=list(edges.values()),
                                           node1_list=list(node1_list.values()))
@@ -2842,7 +2835,7 @@ def _einsum_next(successor: Successor,
                                      optimize=hints['path'])
 
     child = successor.child
-    child._unrestricted_set_tensor_ops(new_tensor)
+    child._direct_set_tensor(new_tensor)
 
     # Record in inverse_memory while contracting
     # (to delete memory if possible)

@@ -533,7 +533,7 @@ class AbstractNode(ABC):
         pass
 
     @abstractmethod
-    def copy(self) -> 'AbstractNode':
+    def copy(self, share_tensor: bool = False) -> 'AbstractNode':
         pass
 
     # -------
@@ -1457,7 +1457,7 @@ class Node(AbstractNode):
         else:
             return self
 
-    def copy(self) -> 'Node':
+    def copy(self, share_tensor: bool = False) -> 'Node':
         """
         Returns a copy of the node. That is, returns a node whose tensor is a copy
         of the original, whose edges are directly inherited (these are not copies,
@@ -1468,13 +1468,22 @@ class Node(AbstractNode):
         -------
         Node
         """
-        new_node = Node(shape=self._shape,
+        if share_tensor:
+            new_node = Node(shape=self._shape,
                         axes_names=self.axes_names,
                         name=self._name + '_copy',
                         network=self._network,
-                        tensor=self.tensor,
                         edges=self._edges,
                         node1_list=self.is_node1())
+            new_node.set_tensor_from(self)
+        else:  
+            new_node = Node(shape=self._shape,
+                            axes_names=self.axes_names,
+                            name=self._name + '_copy',
+                            network=self._network,
+                            tensor=self.tensor,
+                            edges=self._edges,
+                            node1_list=self.is_node1())
         return new_node
 
 
@@ -1618,7 +1627,7 @@ class ParamNode(AbstractNode):
         else:
             return self
 
-    def copy(self) -> 'ParamNode':
+    def copy(self, share_tensor: bool = False) -> 'ParamNode':
         """
         Returns a copy of the param-node. That is, returns a param-node whose
         tensor is a copy of the original, whose edges are directly inherited
@@ -1629,13 +1638,22 @@ class ParamNode(AbstractNode):
         -------
         ParamNode
         """
-        new_node = ParamNode(shape=self.shape,
-                             axes_names=self.axes_names,
-                             name=self._name + '_copy',
-                             network=self._network,
-                             tensor=self.tensor,
-                             edges=self._edges,
-                             node1_list=self.is_node1())
+        if share_tensor:
+            new_node = ParamNode(shape=self._shape,
+                        axes_names=self.axes_names,
+                        name=self._name + '_copy',
+                        network=self._network,
+                        edges=self._edges,
+                        node1_list=self.is_node1())
+            new_node.set_tensor_from(self)
+        else:  
+            new_node = ParamNode(shape=self._shape,
+                            axes_names=self.axes_names,
+                            name=self._name + '_copy',
+                            network=self._network,
+                            tensor=self.tensor,
+                            edges=self._edges,
+                            node1_list=self.is_node1())
         return new_node
 
 

@@ -1189,6 +1189,14 @@ class AbstractNode(ABC):
                     if aux_dict['erase']:
                         self._network._memory_nodes[address] = None
                     net._inverse_memory[address]['re-accessed'] = 0
+                    
+    def tensor_address(self) -> Text:
+        """Returns address of the node's tensor in the network's memory."""
+        address = self._tensor_info['address']
+        if address is None:
+            node_ref = self._tensor_info['node_ref']
+            address = node_ref._tensor_info['address']
+        return address
 
     def move_to_network(self,
                         network: 'TensorNetwork',

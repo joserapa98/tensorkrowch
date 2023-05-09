@@ -44,21 +44,20 @@ from tensorkrowch.utils import (check_name_style, enum_repeated_names, erase_enu
 ###############################################################################
 class Axis:
     """
-    The axes are the objects that stick edges to nodes. Every :class:`node
-    <AbstractNode>` has a list of :math:`N` axes, each corresponding to one
-    edge; and every axis stores information that helps accessing that edge,
-    such as its :attr:`name` and :attr:`num` (index). Also, the axis keeps
-    track of the :meth:`batch <is_batch>` and :meth:`node1 <is_node1>`
-    attributes:
+    Axes are the objects that stick edges to nodes. Each instance of the
+    :class:`AbstractNode` class has a list of :math:`N` axes, each corresponding
+    to one edge. Each axis stores information that facilitates accessing that
+    edge, such as its :attr:`name` and :attr:`num` (index). Additionally, an axis
+    keeps track of its :meth:`batch <is_batch>` and :meth:`node1 <is_node1>`
+    attributes.
 
-    * **batch**: If axis name containes the word "`batch`", the edge attached
-      to this axis will be a batch edge, that is, that edge will not be able to
-      be connected to other nodes, but rather specify a dimension with which we
-      can perform batch operations (e.g. batch contraction). If the name of the
-      axis is changed and no longer contains the word "`batch`", the corresponding
-      edge will not be a batch edge any more. Also, :class:`StackNode` and
-      :class:`ParamStackNode` instances always have an axis with name "`stack`"
-      whose edge is a batch edge.
+    * **batch**: If the axis name contains the word "`batch`", the edge will be
+      a batch edge, which means that it cannot be connected to other nodes.
+      Instead, it specifies a dimension that allows for batch operations (e.g.,
+      batch contraction). If the name of the axis is changed and no longer contains
+      the word "`batch`", the corresponding edge will no longer be a batch edge.
+      Furthermore, instances of the :class:`StackNode` and :class:`ParamStackNode`
+      classes always have an axis with name "`stack`" whose edge is a batch edge.
 
     * **node1**: When two dangling edges are connected the result is a new
       edge linking two nodes, say ``nodeA`` and ``nodeB``. If the
@@ -66,27 +65,29 @@ class Axis:
 
         new_edge = nodeA[edgeA] ^ nodeB[edgeB]
 
-      Then ``nodeA`` will be the `node1` of ``new_edge`` and ``nodeB``, the `node2`.
-      Hence, to access one of the nodes from ``new_edge`` one needs to know if
-      it is `node1` or `node2`.
+      Then ``nodeA`` will be the ``node1`` of ``new_edge`` and ``nodeB``, the
+      ``node2``. Hence, to access one of the nodes from ``new_edge`` one needs
+      to know if it is ``node1`` or ``node2``.
 
-    Even though we can create Axis instances, that will not be usually the case,
-    since axes are automatically created when instantiating a new :class:`node
-    <AbstractNode>`.
+    Even though we can create ``Axis`` instances, that will not be usually the
+    case, since axes are automatically created when instantiating a new
+    :class:`node <AbstractNode>`.
 
     Parameters
     ----------
     num : int
-        Index in the node's axes list.
+        Index of the axis in the node's axes list.
     name : str
-        Axis name, should not contain blank spaces or special characters since
-        it is intended to be used as name of submodules.
+        Axis name, should not contain blank spaces or special characters. If it
+        contains the word "`batch`", the axis will correspond to a batch edge.
+        The word "`stack`" cannot be used in the name, since it is reserved for
+        stacks.
     node : AbstractNode, optional
-        Node to which the axis belongs
+        Node to which the axis belongs.
     node1 : bool
-        Boolean indicating whether `node1` of the edge attached to this axis is
-        the node that contains the axis (``True``). Otherwise, the node is `node2`
-        of the edge (``False``).
+        Boolean indicating whether ``node1`` of the edge attached to this axis
+        is the node that contains the axis (``True``). Otherwise, the node is
+        ``node2`` of the edge (``False``).
 
     Examples
     --------
@@ -110,8 +111,8 @@ class Axis:
     >>> axis.is_batch()
     True
 
-    Also, as explained before, knowing if a node is the `node1` or `node2` of an
-    edge enables users to access that node from the edge:
+    Also, as explained before, knowing if a node is the ``node1`` or ``node2``
+    of an edge enables users to access that node from the edge:
 
     >>> nodeA = tk.Node(shape=(2, 3), axes_names=['left', 'right'])
     >>> nodeB = tk.Node(shape=(3, 4), axes_names=['left', 'right'])
@@ -146,10 +147,10 @@ class Axis:
         # Check name
         if 'stack' in name:
             if not isinstance(node, (StackNode, ParamStackNode)):
-                raise ValueError('Axis cannot be named `stack` if the node is '
+                raise ValueError('Axis cannot be named "stack" if the node is '
                                  'not a StackNode or ParamStackNode')
             if num != 0:
-                raise ValueError('Axis `stack` in node should have index 0')
+                raise ValueError('Axis with name "stack" should have index 0')
 
         # Set attributes
         self._num = num
@@ -173,7 +174,9 @@ class Axis:
     def name(self) -> Text:
         """
         Axis name, used to access edges by name of the axis. It cannot contain
-        blank spaces or special characters.
+        blank spaces or special characters. If it contains the word "`batch`",
+        the axis will correspond to a batch edge. The word "`stack`" cannot be
+        used in the name, since it is reserved for stacks.
         """
         return self._name
 
@@ -181,7 +184,7 @@ class Axis:
     def name(self, name: Text) -> None:
         """
         Set axis name. The name should not contain blank spaces or special
-        characters since it is intended to be used as name of submodule.
+        characters.
         """
         if not isinstance(name, str):
             raise TypeError('`name` should be str type')
@@ -212,8 +215,8 @@ class Axis:
     # -------
     def is_node1(self) -> bool:
         """
-        Returns boolean indicating whether `node1` of the edge attached to this
-        axis is the node that contains the axis. Otherwise, the node is `node2`
+        Returns boolean indicating whether ``node1`` of the edge attached to this
+        axis is the node that contains the axis. Otherwise, the node is ``node2``
         of the edge.
         """
         return self._node1

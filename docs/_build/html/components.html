@@ -444,43 +444,46 @@ title="Print to PDF"
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.Axis">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Axis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#Axis"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Axis" title="Permalink to this definition">#</a></dt>
-<dd><p>The axes are the objects that stick edges to nodes. Every <a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">node</span></code></a> has a list of <span class="math notranslate nohighlight">\(N\)</span> axes, each corresponding to one
-edge; and every axis stores information that helps accessing that edge,
-such as its <a class="reference internal" href="#tensorkrowch.Axis.name" title="tensorkrowch.Axis.name"><code class="xref py py-attr docutils literal notranslate"><span class="pre">name</span></code></a> and <a class="reference internal" href="#tensorkrowch.Axis.num" title="tensorkrowch.Axis.num"><code class="xref py py-attr docutils literal notranslate"><span class="pre">num</span></code></a> (index). Also, the axis keeps
-track of the <a class="reference internal" href="#tensorkrowch.Axis.is_batch" title="tensorkrowch.Axis.is_batch"><code class="xref py py-meth docutils literal notranslate"><span class="pre">batch</span></code></a> and <a class="reference internal" href="#tensorkrowch.Axis.is_node1" title="tensorkrowch.Axis.is_node1"><code class="xref py py-meth docutils literal notranslate"><span class="pre">node1</span></code></a>
-attributes:</p>
+<dd><p>Axes are the objects that stick edges to nodes. Each instance of the
+<a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractNode</span></code></a> class has a list of <span class="math notranslate nohighlight">\(N\)</span> axes, each corresponding
+to one edge. Each axis stores information that facilitates accessing that
+edge, such as its <a class="reference internal" href="#tensorkrowch.Axis.name" title="tensorkrowch.Axis.name"><code class="xref py py-attr docutils literal notranslate"><span class="pre">name</span></code></a> and <a class="reference internal" href="#tensorkrowch.Axis.num" title="tensorkrowch.Axis.num"><code class="xref py py-attr docutils literal notranslate"><span class="pre">num</span></code></a> (index). Additionally, an axis
+keeps track of its <a class="reference internal" href="#tensorkrowch.Axis.is_batch" title="tensorkrowch.Axis.is_batch"><code class="xref py py-meth docutils literal notranslate"><span class="pre">batch</span></code></a> and <a class="reference internal" href="#tensorkrowch.Axis.is_node1" title="tensorkrowch.Axis.is_node1"><code class="xref py py-meth docutils literal notranslate"><span class="pre">node1</span></code></a>
+attributes.</p>
 <ul>
-<li><p><strong>batch</strong>: If axis name containes the word “<cite>batch</cite>”, the edge attached
-to this axis will be a batch edge, that is, that edge will not be able to
-be connected to other nodes, but rather specify a dimension with which we
-can perform batch operations (e.g. batch contraction). If the name of the
-axis is changed and no longer contains the word “<cite>batch</cite>”, the corresponding
-edge will not be a batch edge any more. Also, <a class="reference internal" href="#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">StackNode</span></code></a> and
-<a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a> instances always have an axis with name “<cite>stack</cite>”
-whose edge is a batch edge.</p></li>
+<li><p><strong>batch</strong>: If the axis name contains the word “<cite>batch</cite>”, the edge will be
+a batch edge, which means that it cannot be connected to other nodes.
+Instead, it specifies a dimension that allows for batch operations (e.g.,
+batch contraction). If the name of the axis is changed and no longer contains
+the word “<cite>batch</cite>”, the corresponding edge will no longer be a batch edge.
+Furthermore, instances of the <a class="reference internal" href="#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">StackNode</span></code></a> and <a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a>
+classes always have an axis with name “<cite>stack</cite>” whose edge is a batch edge.</p></li>
 <li><p><strong>node1</strong>: When two dangling edges are connected the result is a new
 edge linking two nodes, say <code class="docutils literal notranslate"><span class="pre">nodeA</span></code> and <code class="docutils literal notranslate"><span class="pre">nodeB</span></code>. If the
 connection is performed in the following order:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">new_edge</span> <span class="o">=</span> <span class="n">nodeA</span><span class="p">[</span><span class="n">edgeA</span><span class="p">]</span> <span class="o">^</span> <span class="n">nodeB</span><span class="p">[</span><span class="n">edgeB</span><span class="p">]</span>
 </pre></div>
 </div>
-<p>Then <code class="docutils literal notranslate"><span class="pre">nodeA</span></code> will be the <cite>node1</cite> of <code class="docutils literal notranslate"><span class="pre">new_edge</span></code> and <code class="docutils literal notranslate"><span class="pre">nodeB</span></code>, the <cite>node2</cite>.
-Hence, to access one of the nodes from <code class="docutils literal notranslate"><span class="pre">new_edge</span></code> one needs to know if
-it is <cite>node1</cite> or <cite>node2</cite>.</p>
+<p>Then <code class="docutils literal notranslate"><span class="pre">nodeA</span></code> will be the <code class="docutils literal notranslate"><span class="pre">node1</span></code> of <code class="docutils literal notranslate"><span class="pre">new_edge</span></code> and <code class="docutils literal notranslate"><span class="pre">nodeB</span></code>, the
+<code class="docutils literal notranslate"><span class="pre">node2</span></code>. Hence, to access one of the nodes from <code class="docutils literal notranslate"><span class="pre">new_edge</span></code> one needs
+to know if it is <code class="docutils literal notranslate"><span class="pre">node1</span></code> or <code class="docutils literal notranslate"><span class="pre">node2</span></code>.</p>
 </li>
 </ul>
-<p>Even though we can create Axis instances, that will not be usually the case,
-since axes are automatically created when instantiating a new <a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">node</span></code></a>.</p>
+<p>Even though we can create <code class="docutils literal notranslate"><span class="pre">Axis</span></code> instances, that will not be usually the
+case, since axes are automatically created when instantiating a new
+<a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">node</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>num</strong> (<em>int</em>) – Index in the node’s axes list.</p></li>
-<li><p><strong>name</strong> (<em>str</em>) – Axis name, should not contain blank spaces or special characters since
-it is intended to be used as name of submodules.</p></li>
-<li><p><strong>node</strong> (<a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>, </em><em>optional</em>) – Node to which the axis belongs</p></li>
-<li><p><strong>node1</strong> (<em>bool</em>) – Boolean indicating whether <cite>node1</cite> of the edge attached to this axis is
-the node that contains the axis (<code class="docutils literal notranslate"><span class="pre">True</span></code>). Otherwise, the node is <cite>node2</cite>
-of the edge (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+<li><p><strong>num</strong> (<em>int</em>) – Index of the axis in the node’s axes list.</p></li>
+<li><p><strong>name</strong> (<em>str</em>) – Axis name, should not contain blank spaces or special characters. If it
+contains the word “<cite>batch</cite>”, the axis will correspond to a batch edge.
+The word “<cite>stack</cite>” cannot be used in the name, since it is reserved for
+stacks.</p></li>
+<li><p><strong>node</strong> (<a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>, </em><em>optional</em>) – Node to which the axis belongs.</p></li>
+<li><p><strong>node1</strong> (<em>bool</em>) – Boolean indicating whether <code class="docutils literal notranslate"><span class="pre">node1</span></code> of the edge attached to this axis
+is the node that contains the axis (<code class="docutils literal notranslate"><span class="pre">True</span></code>). Otherwise, the node is
+<code class="docutils literal notranslate"><span class="pre">node2</span></code> of the edge (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
 </ul>
 </dd>
 </dl>
@@ -507,8 +510,8 @@ to a batch edge, but that can be changed:</p>
 <span class="go">True</span>
 </pre></div>
 </div>
-<p>Also, as explained before, knowing if a node is the <cite>node1</cite> or <cite>node2</cite> of an
-edge enables users to access that node from the edge:</p>
+<p>Also, as explained before, knowing if a node is the <code class="docutils literal notranslate"><span class="pre">node1</span></code> or <code class="docutils literal notranslate"><span class="pre">node2</span></code>
+of an edge enables users to access that node from the edge:</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">axes_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">nodeB</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">axes_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">new_edge</span> <span class="o">=</span> <span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">nodeB</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
@@ -530,7 +533,9 @@ edge enables users to access that node from the edge:</p>
 <dt class="sig sig-object py" id="tensorkrowch.Axis.name">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#tensorkrowch.Axis.name" title="Permalink to this definition">#</a></dt>
 <dd><p>Axis name, used to access edges by name of the axis. It cannot contain
-blank spaces or special characters.</p>
+blank spaces or special characters. If it contains the word “<cite>batch</cite>”,
+the axis will correspond to a batch edge. The word “<cite>stack</cite>” cannot be
+used in the name, since it is reserved for stacks.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -542,8 +547,8 @@ blank spaces or special characters.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.Axis.is_node1">
 <span class="sig-name descname"><span class="pre">is_node1</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#Axis.is_node1"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Axis.is_node1" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns boolean indicating whether <cite>node1</cite> of the edge attached to this
-axis is the node that contains the axis. Otherwise, the node is <cite>node2</cite>
+<dd><p>Returns boolean indicating whether <code class="docutils literal notranslate"><span class="pre">node1</span></code> of the edge attached to this
+axis is the node that contains the axis. Otherwise, the node is <code class="docutils literal notranslate"><span class="pre">node2</span></code>
 of the edge.</p>
 </dd></dl>
 

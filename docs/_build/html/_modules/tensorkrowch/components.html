@@ -356,21 +356,20 @@ title="Source repository"
 <span class="c1">###############################################################################</span>
 <div class="viewcode-block" id="Axis"><a class="viewcode-back" href="../../components.html#tensorkrowch.Axis">[docs]</a><span class="k">class</span> <span class="nc">Axis</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    The axes are the objects that stick edges to nodes. Every :class:`node</span>
-<span class="sd">    &lt;AbstractNode&gt;` has a list of :math:`N` axes, each corresponding to one</span>
-<span class="sd">    edge; and every axis stores information that helps accessing that edge,</span>
-<span class="sd">    such as its :attr:`name` and :attr:`num` (index). Also, the axis keeps</span>
-<span class="sd">    track of the :meth:`batch &lt;is_batch&gt;` and :meth:`node1 &lt;is_node1&gt;`</span>
-<span class="sd">    attributes:</span>
+<span class="sd">    Axes are the objects that stick edges to nodes. Each instance of the</span>
+<span class="sd">    :class:`AbstractNode` class has a list of :math:`N` axes, each corresponding</span>
+<span class="sd">    to one edge. Each axis stores information that facilitates accessing that</span>
+<span class="sd">    edge, such as its :attr:`name` and :attr:`num` (index). Additionally, an axis</span>
+<span class="sd">    keeps track of its :meth:`batch &lt;is_batch&gt;` and :meth:`node1 &lt;is_node1&gt;`</span>
+<span class="sd">    attributes.</span>
 
-<span class="sd">    * **batch**: If axis name containes the word &quot;`batch`&quot;, the edge attached</span>
-<span class="sd">      to this axis will be a batch edge, that is, that edge will not be able to</span>
-<span class="sd">      be connected to other nodes, but rather specify a dimension with which we</span>
-<span class="sd">      can perform batch operations (e.g. batch contraction). If the name of the</span>
-<span class="sd">      axis is changed and no longer contains the word &quot;`batch`&quot;, the corresponding</span>
-<span class="sd">      edge will not be a batch edge any more. Also, :class:`StackNode` and</span>
-<span class="sd">      :class:`ParamStackNode` instances always have an axis with name &quot;`stack`&quot;</span>
-<span class="sd">      whose edge is a batch edge.</span>
+<span class="sd">    * **batch**: If the axis name contains the word &quot;`batch`&quot;, the edge will be</span>
+<span class="sd">      a batch edge, which means that it cannot be connected to other nodes.</span>
+<span class="sd">      Instead, it specifies a dimension that allows for batch operations (e.g.,</span>
+<span class="sd">      batch contraction). If the name of the axis is changed and no longer contains</span>
+<span class="sd">      the word &quot;`batch`&quot;, the corresponding edge will no longer be a batch edge.</span>
+<span class="sd">      Furthermore, instances of the :class:`StackNode` and :class:`ParamStackNode`</span>
+<span class="sd">      classes always have an axis with name &quot;`stack`&quot; whose edge is a batch edge.</span>
 
 <span class="sd">    * **node1**: When two dangling edges are connected the result is a new</span>
 <span class="sd">      edge linking two nodes, say ``nodeA`` and ``nodeB``. If the</span>
@@ -378,27 +377,29 @@ title="Source repository"
 
 <span class="sd">        new_edge = nodeA[edgeA] ^ nodeB[edgeB]</span>
 
-<span class="sd">      Then ``nodeA`` will be the `node1` of ``new_edge`` and ``nodeB``, the `node2`.</span>
-<span class="sd">      Hence, to access one of the nodes from ``new_edge`` one needs to know if</span>
-<span class="sd">      it is `node1` or `node2`.</span>
+<span class="sd">      Then ``nodeA`` will be the ``node1`` of ``new_edge`` and ``nodeB``, the</span>
+<span class="sd">      ``node2``. Hence, to access one of the nodes from ``new_edge`` one needs</span>
+<span class="sd">      to know if it is ``node1`` or ``node2``.</span>
 
-<span class="sd">    Even though we can create Axis instances, that will not be usually the case,</span>
-<span class="sd">    since axes are automatically created when instantiating a new :class:`node</span>
-<span class="sd">    &lt;AbstractNode&gt;`.</span>
+<span class="sd">    Even though we can create ``Axis`` instances, that will not be usually the</span>
+<span class="sd">    case, since axes are automatically created when instantiating a new</span>
+<span class="sd">    :class:`node &lt;AbstractNode&gt;`.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    num : int</span>
-<span class="sd">        Index in the node&#39;s axes list.</span>
+<span class="sd">        Index of the axis in the node&#39;s axes list.</span>
 <span class="sd">    name : str</span>
-<span class="sd">        Axis name, should not contain blank spaces or special characters since</span>
-<span class="sd">        it is intended to be used as name of submodules.</span>
+<span class="sd">        Axis name, should not contain blank spaces or special characters. If it</span>
+<span class="sd">        contains the word &quot;`batch`&quot;, the axis will correspond to a batch edge.</span>
+<span class="sd">        The word &quot;`stack`&quot; cannot be used in the name, since it is reserved for</span>
+<span class="sd">        stacks.</span>
 <span class="sd">    node : AbstractNode, optional</span>
-<span class="sd">        Node to which the axis belongs</span>
+<span class="sd">        Node to which the axis belongs.</span>
 <span class="sd">    node1 : bool</span>
-<span class="sd">        Boolean indicating whether `node1` of the edge attached to this axis is</span>
-<span class="sd">        the node that contains the axis (``True``). Otherwise, the node is `node2`</span>
-<span class="sd">        of the edge (``False``).</span>
+<span class="sd">        Boolean indicating whether ``node1`` of the edge attached to this axis</span>
+<span class="sd">        is the node that contains the axis (``True``). Otherwise, the node is</span>
+<span class="sd">        ``node2`` of the edge (``False``).</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
@@ -422,8 +423,8 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; axis.is_batch()</span>
 <span class="sd">    True</span>
 
-<span class="sd">    Also, as explained before, knowing if a node is the `node1` or `node2` of an</span>
-<span class="sd">    edge enables users to access that node from the edge:</span>
+<span class="sd">    Also, as explained before, knowing if a node is the ``node1`` or ``node2``</span>
+<span class="sd">    of an edge enables users to access that node from the edge:</span>
 
 <span class="sd">    &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
 <span class="sd">    &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
@@ -458,10 +459,10 @@ title="Source repository"
         <span class="c1"># Check name</span>
         <span class="k">if</span> <span class="s1">&#39;stack&#39;</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="p">(</span><span class="n">StackNode</span><span class="p">,</span> <span class="n">ParamStackNode</span><span class="p">)):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Axis cannot be named `stack` if the node is &#39;</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Axis cannot be named &quot;stack&quot; if the node is &#39;</span>
                                  <span class="s1">&#39;not a StackNode or ParamStackNode&#39;</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">num</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Axis `stack` in node should have index 0&#39;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Axis with name &quot;stack&quot; should have index 0&#39;</span><span class="p">)</span>
 
         <span class="c1"># Set attributes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_num</span> <span class="o">=</span> <span class="n">num</span>
@@ -485,7 +486,9 @@ title="Source repository"
     <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Axis name, used to access edges by name of the axis. It cannot contain</span>
-<span class="sd">        blank spaces or special characters.</span>
+<span class="sd">        blank spaces or special characters. If it contains the word &quot;`batch`&quot;,</span>
+<span class="sd">        the axis will correspond to a batch edge. The word &quot;`stack`&quot; cannot be</span>
+<span class="sd">        used in the name, since it is reserved for stacks.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span>
 
@@ -493,7 +496,7 @@ title="Source repository"
     <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="n">Text</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set axis name. The name should not contain blank spaces or special</span>
-<span class="sd">        characters since it is intended to be used as name of submodule.</span>
+<span class="sd">        characters.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`name` should be str type&#39;</span><span class="p">)</span>
@@ -524,8 +527,8 @@ title="Source repository"
     <span class="c1"># -------</span>
 <div class="viewcode-block" id="Axis.is_node1"><a class="viewcode-back" href="../../components.html#tensorkrowch.Axis.is_node1">[docs]</a>    <span class="k">def</span> <span class="nf">is_node1</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns boolean indicating whether `node1` of the edge attached to this</span>
-<span class="sd">        axis is the node that contains the axis. Otherwise, the node is `node2`</span>
+<span class="sd">        Returns boolean indicating whether ``node1`` of the edge attached to this</span>
+<span class="sd">        axis is the node that contains the axis. Otherwise, the node is ``node2``</span>
 <span class="sd">        of the edge.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_node1</span></div>

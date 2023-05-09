@@ -1494,7 +1494,7 @@ File <span class="ansi-green-fg">~/VSCodeProjects/tensorkrowch/tensorkrowch/oper
 
 File <span class="ansi-green-fg">~/VSCodeProjects/tensorkrowch/tensorkrowch/operations.py:2604</span>, in <span class="ansi-cyan-fg">_stack_next</span><span class="ansi-blue-fg">(successor, nodes)</span>
 <span class="ansi-green-intense-fg ansi-bold">   2600</span> if successor.hints[&#39;all_same_ref&#39;] or \
-<span class="ansi-green-intense-fg ansi-bold">   2601</span>     (successor.hints[&#39;all_leaf&#39;] and successor.hints[&#39;auto_stack&#39;]):
+<span class="ansi-green-intense-fg ansi-bold">   2601</span>     (successor.hints[&#39;all_leaf&#39;] and successor.hints[&#39;automemory&#39;]):
 <span class="ansi-green-intense-fg ansi-bold">   2602</span>     return child
 <span class="ansi-green-fg">-&gt; 2604</span> stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])
 <span class="ansi-green-intense-fg ansi-bold">   2605</span> child._unrestricted_set_tensor(stack_tensor)

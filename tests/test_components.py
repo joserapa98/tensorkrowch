@@ -1,5 +1,8 @@
 """
-Tests for network_components
+This script contains tests for components:
+
+    * TestAxis
+    
 """
 
 import pytest
@@ -7,12 +10,6 @@ import pytest
 import torch
 import torch.nn as nn
 import tensorkrowch as tk
-
-import copy
-
-import time
-import opt_einsum
-import dis
 
 
 class TestAxis:
@@ -55,9 +52,13 @@ class TestAxis:
         assert stack.axes_names == ['stack', 'axis']
         assert stack['stack'].is_batch()
         assert not stack['axis'].is_batch()
-
+        
         with pytest.raises(ValueError):
             stack.get_axis('axis').name = 'other_stack'
+            
+        # Name of axis "stack" cannot be changed
+        with pytest.raises(ValueError):
+            stack.get_axis('stack').name = 'axis'
 
     def test_change_axis_name(self):
         node = tk.Node(shape=(3, 3),
@@ -79,8 +80,8 @@ class TestAxis:
         assert node.get_axis('batch').is_batch()
         assert not node.get_axis('axis').is_batch()
 
-        # batch attribute depends on the name,
-        # only axis with word `batch` or `stack`
+        # Batch attribute depends on the name,
+        # only axis with word "batch" or "stack"
         # in the name are batch axis
         node.get_axis('batch').name = 'new_axis'
         assert node.axes_names == ['new_axis', 'axis']

@@ -837,7 +837,7 @@ torch.Size([100])
 
 <span class="c1"># Modes to manage memory efficiently while training</span>
 <span class="n">mps</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="kc">True</span>
-<span class="n">mps</span><span class="o">.</span><span class="n">unbind_mode</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">auto_unbind</span> <span class="o">=</span> <span class="kc">True</span>
 
 <span class="c1"># Tracing computes all network operations with an input example</span>
 <span class="c1"># in order to set everything up before training, which helps to</span>
@@ -882,7 +882,7 @@ Time: 0.0093
 
 <span class="n">mps</span> <span class="o">=</span> <span class="n">mps</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 <span class="n">mps</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="kc">True</span>
-<span class="n">mps</span><span class="o">.</span><span class="n">unbind_mode</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">auto_unbind</span> <span class="o">=</span> <span class="kc">True</span>
 
 <span class="n">mps</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">10</span> <span class="o">*</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
 

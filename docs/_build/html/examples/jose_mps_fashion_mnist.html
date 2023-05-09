@@ -41,7 +41,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="SnakeSBS - FashionMNIST" href="cirac_snake_sbs_fashion_mnist.html" />
-    <link rel="prev" title="MPS and Canonical Form - MNIST" href="jose_mps_mnist.html" />
+    <link rel="prev" title="MPS and Canonical Form initializing also in canonical form - MNIST" href="jose_mps_canonical_mnist.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -132,6 +132,11 @@
    <li class="toctree-l2">
     <a class="reference internal" href="jose_mps_mnist.html">
      MPS and Canonical Form - MNIST
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="jose_mps_canonical_mnist.html">
+     MPS and Canonical Form initializing also in canonical form - MNIST
     </a>
    </li>
    <li class="toctree-l2 current active">
@@ -670,7 +675,7 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Before starting training, set memory modes to True, and trace</span>
 <span class="n">mps</span><span class="o">.</span><span class="n">automemory</span> <span class="o">=</span> <span class="kc">True</span>
-<span class="n">mps</span><span class="o">.</span><span class="n">unbind_mode</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">auto_unbind</span> <span class="o">=</span> <span class="kc">False</span>
 <span class="n">mps</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="n">d_phys</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
 </pre></div>
 </div>
@@ -983,11 +988,11 @@ Memory module: 0.3840 MB
                 
     <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-    <a class='left-prev' id="prev-link" href="jose_mps_mnist.html" title="previous page">
+    <a class='left-prev' id="prev-link" href="jose_mps_canonical_mnist.html" title="previous page">
         <i class="fas fa-angle-left"></i>
         <div class="prev-next-info">
             <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">MPS and Canonical Form - MNIST</p>
+            <p class="prev-next-title">MPS and Canonical Form initializing also in canonical form - MNIST</p>
         </div>
     </a>
     <a class='right-next' id="next-link" href="cirac_snake_sbs_fashion_mnist.html" title="next page">

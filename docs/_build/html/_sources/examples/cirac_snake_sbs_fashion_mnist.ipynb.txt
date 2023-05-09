@@ -114,7 +114,7 @@
     "# Before starting training, set memory modes to True, and trace\n",
     "for mps in snake.layers:\n",
     "    mps.automemory = True\n",
-    "    mps.unbind_mode = True\n",
+    "    mps.auto_unbind = False\n",
     "    mps.trace(torch.zeros(1, d_phys, image_size[0], image_size[1]).to(device))"
    ]
   },

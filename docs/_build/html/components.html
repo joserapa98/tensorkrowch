@@ -859,9 +859,21 @@ is set as node’s tensor.</p></li>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.AbstractNode.set_tensor_from">
+<span class="sig-name descname"><span class="pre">set_tensor_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.set_tensor_from"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.set_tensor_from" title="Permalink to this definition">#</a></dt>
+<dd><p>Sets node’s tensor as the tensor used by other node.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.unset_tensor">
 <span class="sig-name descname"><span class="pre">unset_tensor</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.unset_tensor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.unset_tensor" title="Permalink to this definition">#</a></dt>
 <dd><p>Replaces node’s tensor with None.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.AbstractNode.tensor_address">
+<span class="sig-name descname"><span class="pre">tensor_address</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.tensor_address"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.tensor_address" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns address of the node’s tensor in the network’s memory.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1160,7 +1172,7 @@ returned.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.Node.copy">
-<span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#Node.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Node.copy" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">share_tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#Node.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Node.copy" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns a copy of the node. That is, returns a node whose tensor is a copy
 of the original, whose edges are directly inherited (these are not copies,
 but the exact same edges) and whose name is extended with the prefix
@@ -1225,7 +1237,7 @@ the param-node will be de-parameterized.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.ParamNode.copy">
-<span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#ParamNode.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamNode.copy" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">share_tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#ParamNode.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamNode.copy" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns a copy of the param-node. That is, returns a param-node whose
 tensor is a copy of the original, whose edges are directly inherited
 (these are not copies, but the exact same edges) and whose name is
@@ -1884,12 +1896,12 @@ then those nodes will no longer store their own tensors, but rather a
 the computation of the first <a class="reference internal" href="operations.html#tensorkrowch.stack" title="tensorkrowch.stack"><code class="xref py py-func docutils literal notranslate"><span class="pre">stack()</span></code></a> in every contraction. This
 behaviour is not possible if <code class="docutils literal notranslate"><span class="pre">automemory</span></code> is set to <code class="docutils literal notranslate"><span class="pre">False</span></code>, in which
 case all nodes will always store their own tensors.</p></li>
-<li><p><strong>unbind_mode</strong> (<code class="docutils literal notranslate"><span class="pre">False</span></code> by default): This mode indicates whether the
+<li><p><strong>auto_unbind</strong> (<code class="docutils literal notranslate"><span class="pre">True</span></code> by default): This mode indicates whether the
 operation <a class="reference internal" href="operations.html#tensorkrowch.unbind" title="tensorkrowch.unbind"><code class="xref py py-func docutils literal notranslate"><span class="pre">unbind()</span></code></a> has to actually <cite>unbind</cite> the stacked tensor or
-just generate a collection of references. That is, if <code class="docutils literal notranslate"><span class="pre">unbind_mode</span></code> is
-set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, <a class="reference internal" href="operations.html#tensorkrowch.unbind" title="tensorkrowch.unbind"><code class="xref py py-func docutils literal notranslate"><span class="pre">unbind()</span></code></a> creates a collection of nodes, each of them
-storing the corresponding slice of the stacked tensor. If <code class="docutils literal notranslate"><span class="pre">unbind_mode</span></code>
-is set to <code class="docutils literal notranslate"><span class="pre">False</span></code> (called <code class="docutils literal notranslate"><span class="pre">index_mode</span></code>), <a class="reference internal" href="operations.html#tensorkrowch.unbind" title="tensorkrowch.unbind"><code class="xref py py-func docutils literal notranslate"><span class="pre">unbind()</span></code></a> just creates
+just generate a collection of references. That is, if <code class="docutils literal notranslate"><span class="pre">auto_unbind</span></code> is
+set to <code class="docutils literal notranslate"><span class="pre">False</span></code>, <a class="reference internal" href="operations.html#tensorkrowch.unbind" title="tensorkrowch.unbind"><code class="xref py py-func docutils literal notranslate"><span class="pre">unbind()</span></code></a> creates a collection of nodes, each of them
+storing the corresponding slice of the stacked tensor. If <code class="docutils literal notranslate"><span class="pre">auto_unbind</span></code>
+is set to <code class="docutils literal notranslate"><span class="pre">True</span></code> (called <code class="docutils literal notranslate"><span class="pre">index_mode</span></code>), <a class="reference internal" href="operations.html#tensorkrowch.unbind" title="tensorkrowch.unbind"><code class="xref py py-func docutils literal notranslate"><span class="pre">unbind()</span></code></a> just creates
 the nodes and gives each of them an index for the stacked tensor, so that
 each node’s tensor would be retrieved by indexing the stack. This avoids
 performing the operation, since these indices will be the same in consecutive
@@ -1920,11 +1932,11 @@ like permutations or combinations of <code class="docutils literal notranslate">
 <code class="docutils literal notranslate"><span class="pre">data</span></code> and <code class="docutils literal notranslate"><span class="pre">virtual</span></code> nodes that make up the network structure, each of
 them storing its own tensor. However, when the network is contracted, several
 <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes become new members of the network, even modifying its
-memory (depending on the <code class="docutils literal notranslate"><span class="pre">automemory</span></code> and <code class="docutils literal notranslate"><span class="pre">unbind_mode</span></code> modes). Therefore,
+memory (depending on the <code class="docutils literal notranslate"><span class="pre">automemory</span></code> and <code class="docutils literal notranslate"><span class="pre">auto_unbind</span></code> modes). Therefore,
 if one wants to <cite>reset</cite> the network to its initial state after performing
 some operations, all the <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes should be deleted, and all the
 tensors should return to its nodes. This is exactly what <a class="reference internal" href="#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> does.
-Besides, since <code class="docutils literal notranslate"><span class="pre">automemory</span></code> and <code class="docutils literal notranslate"><span class="pre">unbind_mode</span></code> can change how the tensors
+Besides, since <code class="docutils literal notranslate"><span class="pre">automemory</span></code> and <code class="docutils literal notranslate"><span class="pre">auto_unbind</span></code> can change how the tensors
 are stored, if one wants to change these modes, the network should be first
 reset (this is already done automatically when changing the modes).</p>
 <p class="rubric">Example</p>
@@ -2092,9 +2104,9 @@ reset (this is already done automatically when changing the modes).</p>
 </dd></dl>
 
 <dl class="py property">
-<dt class="sig sig-object py" id="tensorkrowch.TensorNetwork.unbind_mode">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">unbind_mode</span></span><a class="headerlink" href="#tensorkrowch.TensorNetwork.unbind_mode" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns boolean indicating whether <code class="docutils literal notranslate"><span class="pre">unbind_mode</span></code> is on/off.</p>
+<dt class="sig sig-object py" id="tensorkrowch.TensorNetwork.auto_unbind">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">auto_unbind</span></span><a class="headerlink" href="#tensorkrowch.TensorNetwork.auto_unbind" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns boolean indicating whether <code class="docutils literal notranslate"><span class="pre">auto_unbind</span></code> is on/off.</p>
 </dd></dl>
 
 <dl class="py method">

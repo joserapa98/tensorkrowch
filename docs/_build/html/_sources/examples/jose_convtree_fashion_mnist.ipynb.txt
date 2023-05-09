@@ -104,15 +104,15 @@
    "source": [
     "# Before starting training, set memory modes to True, and trace\n",
     "convtree.tree1.automemory = True\n",
-    "convtree.tree1.unbind_mode = True\n",
+    "convtree.tree1.auto_unbind = False\n",
     "convtree.tree1.trace(torch.zeros(1, d_phys, image_size[0], image_size[1]).to(device))\n",
     "\n",
     "convtree.tree2.automemory = True\n",
-    "convtree.tree2.unbind_mode = True\n",
+    "convtree.tree2.auto_unbind = False\n",
     "convtree.tree2.trace(torch.zeros(1, out_dim1, 14, 14).to(device))\n",
     "\n",
     "convtree.tree3.automemory = True\n",
-    "convtree.tree3.unbind_mode = True\n",
+    "convtree.tree3.auto_unbind = False\n",
     "convtree.tree3.trace(torch.zeros(49, 1, out_dim2).to(device))"
    ]
   },

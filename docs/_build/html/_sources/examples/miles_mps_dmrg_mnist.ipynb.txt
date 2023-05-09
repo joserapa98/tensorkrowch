@@ -274,7 +274,7 @@
    "source": [
     "# Before starting training, set memory modes to True, and trace\n",
     "mps.automemory = True\n",
-    "mps.unbind_mode = True"
+    "mps.auto_unbind = False"
    ]
   },
   {

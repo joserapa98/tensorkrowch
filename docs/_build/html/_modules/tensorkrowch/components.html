@@ -2251,6 +2251,9 @@ title="Source repository"
 <span class="sd">        but the exact same edges) and whose name is extended with the suffix</span>
 <span class="sd">        ``&quot;_copy&quot;``.</span>
 <span class="sd">        </span>
+<span class="sd">        To create a copy that has its own (non-inherited) edges, one can use</span>
+<span class="sd">        :meth:`reattach_edges` afterwards.</span>
+<span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        share_tensor : bool</span>
@@ -2376,7 +2379,7 @@ title="Source repository"
 <span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; node = tk.ParamNode(shape=(2, 5, 2),</span>
 <span class="sd">    ...                     axes_names=(&#39;left&#39;, &#39;input&#39;, &#39;right&#39;),</span>
-<span class="sd">    ...                     name=&#39;my_node&#39;,</span>
+<span class="sd">    ...                     name=&#39;my_paramnode&#39;,</span>
 <span class="sd">    ...                     init_method=&#39;randn&#39;,</span>
 <span class="sd">    ...                     mean=0.,</span>
 <span class="sd">    ...                     std=1.)</span>
@@ -2431,6 +2434,19 @@ title="Source repository"
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        torch.Tensor or None</span>
+<span class="sd">        </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; paramnode = tk.randn((2, 3), param_node=True)</span>
+<span class="sd">        &gt;&gt;&gt; paramnode.tensor</span>
+<span class="sd">        Parameter containing:</span>
+<span class="sd">        tensor([[-0.3340,  0.6811, -0.2866],</span>
+<span class="sd">                [ 1.3371,  1.4761,  0.6551]], requires_grad=True)</span>
+<span class="sd">            </span>
+<span class="sd">        &gt;&gt;&gt; paramnode.sum().backward()</span>
+<span class="sd">        &gt;&gt;&gt; paramnode.grad</span>
+<span class="sd">        tensor([[1., 1., 1.],</span>
+<span class="sd">                [1., 1., 1.]])</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">aux_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span>
@@ -2478,7 +2494,7 @@ title="Source repository"
 <span class="sd">        Replaces the param-node with a de-parameterized version of it, that is,</span>
 <span class="sd">        turns a :class:`ParamNode` into a non-trainable, fixed :class:`Node`.</span>
 
-<span class="sd">        Since the param-node is `replaced`, it will be completely removed from</span>
+<span class="sd">        Since the param-node is **replaced**, it will be completely removed from</span>
 <span class="sd">        the network, and its neighbours will point to the new node.</span>
 
 <span class="sd">        Parameters</span>
@@ -2492,6 +2508,27 @@ title="Source repository"
 <span class="sd">        -------</span>
 <span class="sd">        ParamNode or Node</span>
 <span class="sd">            The original node or a de-parameterized version of it.</span>
+<span class="sd">            </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; paramnodeA = tk.randn((2, 3), param_node=True)</span>
+<span class="sd">        &gt;&gt;&gt; paramnodeB = tk.randn((3, 4), param_node=True)</span>
+<span class="sd">        &gt;&gt;&gt; _ = paramnodeA[1] ^ paramnodeB[0]</span>
+<span class="sd">        &gt;&gt;&gt; nodeA = paramnodeA.parameterize(False)</span>
+<span class="sd">        &gt;&gt;&gt; paramnodeB.neighbours() == [nodeA]</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; isinstance(nodeA.tensor, torch.nn.Parameter)</span>
+<span class="sd">        False</span>
+<span class="sd">        </span>
+<span class="sd">        ``paramnodeA`` still exists and has an edge pointing to ``paramnodeB``,</span>
+<span class="sd">        but the latter does not &quot;see&quot; the former. It should be deleted.</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; del paramnodeA</span>
+<span class="sd">        </span>
+<span class="sd">        To overcome this issue, one should override ``paramnodeA``:</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; paramnodeA = paramnodeA.parameterize()</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">set_param</span><span class="p">:</span>
             <span class="n">new_node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
@@ -2512,11 +2549,40 @@ title="Source repository"
 <span class="sd">        Returns a copy of the param-node. That is, returns a param-node whose</span>
 <span class="sd">        tensor is a copy of the original, whose edges are directly inherited</span>
 <span class="sd">        (these are not copies, but the exact same edges) and whose name is</span>
-<span class="sd">        extended with the prefix ``&quot;copy_&quot;``.</span>
+<span class="sd">        extended with the suffix ``&quot;_copy&quot;``.</span>
+<span class="sd">        </span>
+<span class="sd">        To create a copy that has its own (non-inherited) edges, one can use</span>
+<span class="sd">        :meth:`reattach_edges` afterwards.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        share_tensor : bool</span>
+<span class="sd">            Boolean indicating whether the copied param-node should store its</span>
+<span class="sd">            own copy of the tensor (``False``) or share it with the original</span>
+<span class="sd">            param-node (``True``) storing a reference to it.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        ParamNode</span>
+<span class="sd">        </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; paramnode = tk.randn(shape=(2, 3), name=&#39;node&#39;, param_node=True)</span>
+<span class="sd">        &gt;&gt;&gt; copy = paramnode.copy()</span>
+<span class="sd">        &gt;&gt;&gt; paramnode.tensor_address() != copy.tensor_address()</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; torch.equal(paramnode.tensor, copy.tensor)</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        If tensor is shared:</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; copy = paramnode.copy(True)</span>
+<span class="sd">        &gt;&gt;&gt; paramnode.tensor_address() == copy.tensor_address()</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; torch.equal(paramnode.tensor, copy.tensor)</span>
+<span class="sd">        True</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">share_tensor</span><span class="p">:</span>
             <span class="n">new_node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_shape</span><span class="p">,</span>

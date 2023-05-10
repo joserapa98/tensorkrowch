@@ -1650,6 +1650,8 @@ latter does not “see” the former. It should be deleted.</p>
 of the original, whose edges are directly inherited (these are not copies,
 but the exact same edges) and whose name is extended with the suffix
 <code class="docutils literal notranslate"><span class="pre">&quot;_copy&quot;</span></code>.</p>
+<p>To create a copy that has its own (non-inherited) edges, one can use
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">reattach_edges()</span></code> afterwards.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>share_tensor</strong> (<em>bool</em>) – Boolean indicating whether the copied node should store its own
@@ -1749,7 +1751,7 @@ should also be provided.</p></li>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">node</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
 <span class="gp">... </span>                    <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
-<span class="gp">... </span>                    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;my_node&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;my_paramnode&#39;</span><span class="p">,</span>
 <span class="gp">... </span>                    <span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;randn&#39;</span><span class="p">,</span>
 <span class="gp">... </span>                    <span class="n">mean</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span>
 <span class="gp">... </span>                    <span class="n">std</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
@@ -1770,6 +1772,20 @@ should also be provided.</p></li>
 <dd class="field-odd"><p>torch.Tensor or None</p>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">paramnode</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">param_node</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">paramnode</span><span class="o">.</span><span class="n">tensor</span>
+<span class="go">Parameter containing:</span>
+<span class="go">tensor([[-0.3340,  0.6811, -0.2866],</span>
+<span class="go">        [ 1.3371,  1.4761,  0.6551]], requires_grad=True)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">paramnode</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">paramnode</span><span class="o">.</span><span class="n">grad</span>
+<span class="go">tensor([[1., 1., 1.],</span>
+<span class="go">        [1., 1., 1.]])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
@@ -1777,7 +1793,7 @@ should also be provided.</p></li>
 <span class="sig-name descname"><span class="pre">parameterize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#ParamNode.parameterize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamNode.parameterize" title="Permalink to this definition">#</a></dt>
 <dd><p>Replaces the param-node with a de-parameterized version of it, that is,
 turns a <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> into a non-trainable, fixed <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a>.</p>
-<p>Since the param-node is <cite>replaced</cite>, it will be completely removed from
+<p>Since the param-node is <strong>replaced</strong>, it will be completely removed from
 the network, and its neighbours will point to the new node.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1792,6 +1808,28 @@ the param-node will be de-parameterized.</p>
 <dd class="field-odd"><p><a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a> or <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">paramnodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">param_node</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">paramnodeB</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">param_node</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">paramnodeA</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">^</span> <span class="n">paramnodeB</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">paramnodeA</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">paramnodeB</span><span class="o">.</span><span class="n">neighbours</span><span class="p">()</span> <span class="o">==</span> <span class="p">[</span><span class="n">nodeA</span><span class="p">]</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">isinstance</span><span class="p">(</span><span class="n">nodeA</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">)</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">paramnodeA</span></code> still exists and has an edge pointing to <code class="docutils literal notranslate"><span class="pre">paramnodeB</span></code>,
+but the latter does not “see” the former. It should be deleted.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">del</span> <span class="n">paramnodeA</span>
+</pre></div>
+</div>
+<p>To overcome this issue, one should override <code class="docutils literal notranslate"><span class="pre">paramnodeA</span></code>:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">paramnodeA</span> <span class="o">=</span> <span class="n">paramnodeA</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
@@ -1800,12 +1838,40 @@ the param-node will be de-parameterized.</p>
 <dd><p>Returns a copy of the param-node. That is, returns a param-node whose
 tensor is a copy of the original, whose edges are directly inherited
 (these are not copies, but the exact same edges) and whose name is
-extended with the prefix <code class="docutils literal notranslate"><span class="pre">&quot;copy_&quot;</span></code>.</p>
+extended with the suffix <code class="docutils literal notranslate"><span class="pre">&quot;_copy&quot;</span></code>.</p>
+<p>To create a copy that has its own (non-inherited) edges, one can use
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">reattach_edges()</span></code> afterwards.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a></p>
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>share_tensor</strong> (<em>bool</em>) – Boolean indicating whether the copied param-node should store its
+own copy of the tensor (<code class="docutils literal notranslate"><span class="pre">False</span></code>) or share it with the original
+param-node (<code class="docutils literal notranslate"><span class="pre">True</span></code>) storing a reference to it.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a></p>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">paramnode</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;node&#39;</span><span class="p">,</span> <span class="n">param_node</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">copy</span> <span class="o">=</span> <span class="n">paramnode</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">paramnode</span><span class="o">.</span><span class="n">tensor_address</span><span class="p">()</span> <span class="o">!=</span> <span class="n">copy</span><span class="o">.</span><span class="n">tensor_address</span><span class="p">()</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">torch</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="n">paramnode</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span> <span class="n">copy</span><span class="o">.</span><span class="n">tensor</span><span class="p">)</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>If tensor is shared:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">copy</span> <span class="o">=</span> <span class="n">paramnode</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">paramnode</span><span class="o">.</span><span class="n">tensor_address</span><span class="p">()</span> <span class="o">==</span> <span class="n">copy</span><span class="o">.</span><span class="n">tensor_address</span><span class="p">()</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">torch</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="n">paramnode</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span> <span class="n">copy</span><span class="o">.</span><span class="n">tensor</span><span class="p">)</span>
+<span class="go">True</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </dd></dl>

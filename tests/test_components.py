@@ -4,6 +4,9 @@ This script contains tests for components:
     * TestAxis
     * TestInitNode
     * TestInitParamNode
+    * TestNodeName
+    * TestSetTensorNode
+    * TestSettensorparamNode
 """
 
 import pytest
@@ -627,7 +630,7 @@ class TestSetTensorNode:
         assert node2.tensor_address() == 'node1'  # But empty
         
         node1.tensor = torch.randn(node1.shape)
-        assert torch.equal(node1.tensor, node2.tensor) 
+        assert torch.equal(node1.tensor, node2.tensor)
     
     def test_set_tensor_from_other_type(self, setup):
         node1, node2, tensor = setup
@@ -683,7 +686,7 @@ class TestSetTensorNode:
         assert node1.tensor_address() == 'node2'
         assert node2.tensor_address() == 'node2'
         
-        node1.reset_tensor()
+        node1.reset_tensor_address()
         assert node1.tensor_address() == 'node1'
         assert node2.tensor_address() == 'node2'
         assert torch.equal(node1.tensor, node2.tensor)
@@ -952,13 +955,144 @@ class TestSetTensorParamNode:
         assert node1.tensor_address() == 'node2'
         assert node2.tensor_address() == 'node2'
         
-        node1.reset_tensor()
+        node1.reset_tensor_address()
         assert node1.tensor_address() == 'node1'
         assert node2.tensor_address() == 'node2'
         assert torch.equal(node1.tensor, node2.tensor)
         
         node1.tensor = torch.zeros(node1.shape)
         assert not torch.equal(node1.tensor, node2.tensor)
+
+
+class TestMoveToNetwork:
+    
+    def test_move_all(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 3),
+                        axes_names=('left', 'right'),
+                        name='node1',
+                        network=net)
+        node2 = tk.Node(shape=(3, 4),
+                        axes_names=('left', 'right'),
+                        name='node2',
+                        network=net)
+        node1['right'] ^ node2['left']
+        
+        assert node1.network == net
+        assert node2.network == net
+        
+        other_net = tk.TensorNetwork()
+        node1.network = other_net
+        
+        assert node1.network == other_net
+        assert node2.network == other_net
+        
+    def test_move_some_leave_other(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 3),
+                        axes_names=('left', 'right'),
+                        name='node1',
+                        network=net)
+        node2 = tk.Node(shape=(3, 4),
+                        axes_names=('left', 'right'),
+                        name='node2',
+                        network=net)
+        node3 = tk.Node(shape=(4, 5),
+                        axes_names=('left', 'right'),
+                        name='node3',
+                        network=net)
+        node1['right'] ^ node2['left']
+        
+        assert node1.network == net
+        assert node2.network == net
+        assert node3.network == net
+        
+        other_net = tk.TensorNetwork()
+        node1.network = other_net
+        
+        assert node1.network == other_net
+        assert node2.network == other_net
+        assert node3.network == net
+        
+    def test_move_some_leave_other_share_tensor(self):
+        net = tk.TensorNetwork()
+        node1 = tk.empty(shape=(2, 3),
+                         axes_names=('left', 'right'),
+                         name='node1',
+                         network=net)
+        node2 = tk.randn(shape=(3, 4),
+                         axes_names=('left', 'right'),
+                         name='node2',
+                         network=net)
+        node1.set_tensor_from(node2)
+        
+        assert node1.network == net
+        assert node2.network == net
+        
+        other_net = tk.TensorNetwork()
+        node1.network = other_net
+        
+        assert node1.network == other_net
+        assert node2.network == net
+        
+        # When node is moved to another network, its _tensor_info is set
+        # for the first time in that network. This automatically sets the
+        # address as the name of the node, so the node recovers the ownership
+        # of its tensor
+        assert node1.tensor_address() == 'node1'
+        assert node2.tensor_address() == 'node2'
+        assert torch.equal(node1.tensor, node2.tensor)      
+
+
+class TestMeasures:
+    
+    def test_sum(self):
+        tensor = torch.randn(2, 3)
+        node = tk.Node(axes_names=('left', 'right'),
+                       tensor=tensor)
+        
+        assert node.sum() == tensor.sum()
+        assert torch.equal(node.sum(0), tensor.sum(0))
+        assert torch.equal(node.sum(1), tensor.sum(1))
+        assert torch.equal(node.sum('left'), tensor.sum(0))
+        assert torch.equal(node.sum('right'), tensor.sum(1))
+        assert torch.equal(node.sum(['left', 'right']), tensor.sum([0, 1]))
+        
+    def test_mean(self):
+        tensor = torch.randn(2, 3)
+        node = tk.Node(axes_names=('left', 'right'),
+                       tensor=tensor)
+        
+        assert node.mean() == tensor.mean()
+        assert torch.equal(node.mean(0), tensor.mean(0))
+        assert torch.equal(node.mean(1), tensor.mean(1))
+        assert torch.equal(node.mean('left'), tensor.mean(0))
+        assert torch.equal(node.mean('right'), tensor.mean(1))
+        assert torch.equal(node.mean(['left', 'right']), tensor.mean([0, 1]))
+        
+    def test_std(self):
+        tensor = torch.randn(2, 3)
+        node = tk.Node(axes_names=('left', 'right'),
+                       tensor=tensor)
+        
+        assert node.std() == tensor.std()
+        assert torch.equal(node.std(0), tensor.std(0))
+        assert torch.equal(node.std(1), tensor.std(1))
+        assert torch.equal(node.std('left'), tensor.std(0))
+        assert torch.equal(node.std('right'), tensor.std(1))
+        assert torch.equal(node.std(['left', 'right']), tensor.std([0, 1]))
+        
+    def test_norm(self):
+        tensor = torch.randn(2, 3)
+        node = tk.Node(axes_names=('left', 'right'),
+                       tensor=tensor)
+        
+        assert node.norm() == tensor.norm()
+        assert torch.equal(node.norm(2, 0), tensor.norm(2, 0))
+        assert torch.equal(node.norm(2, 1), tensor.norm(2, 1))
+        assert torch.equal(node.norm(2, 'left'), tensor.norm(2, 0))
+        assert torch.equal(node.norm(2, 'right'), tensor.norm(2, 1))
+        assert torch.equal(node.norm(2, ['left', 'right']), tensor.norm(2, [0, 1]))
 
 
 class TestConnect:

@@ -114,8 +114,8 @@ class Axis:
     Also, as explained before, knowing if a node is the ``node1`` or ``node2``
     of an edge enables users to access that node from the edge:
 
-    >>> nodeA = tk.Node(shape=(2, 3), axes_names=['left', 'right'])
-    >>> nodeB = tk.Node(shape=(3, 4), axes_names=['left', 'right'])
+    >>> nodeA = tk.Node(shape=(2, 3), axes_names=('left', 'right'))
+    >>> nodeB = tk.Node(shape=(3, 4), axes_names=('left', 'right'))
     >>> new_edge = nodeA['right'] ^ nodeB['left']
     ...
     >>> # nodeA is node1 and nodeB is node2 of new_edge
@@ -128,9 +128,9 @@ class Axis:
     The ``node1`` attribute is extended to ``resultant`` nodes that inherit
     edges.
     
-    >>> nodeA = tk.randn(shape=(2, 3), axes_names=['left', 'right'])
-    >>> nodeB = tk.randn(shape=(3, 4), axes_names=['left', 'right'])
-    >>> nodeC = tk.randn(shape=(4, 5), axes_names=['left', 'right'])
+    >>> nodeA = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
+    >>> nodeB = tk.randn(shape=(3, 4), axes_names=('left', 'right'))
+    >>> nodeC = tk.randn(shape=(4, 5), axes_names=('left', 'right'))
     >>> edge1 = nodeA['right'] ^ nodeB['left']
     >>> edge2 = nodeB['right'] ^ nodeC['left']
     >>> result = nodeA @ nodeB
@@ -556,7 +556,7 @@ class AbstractNode(ABC):
         return len(self._shape)
 
     @property
-    def dtype(self):
+    def dtype(self) -> torch.dtype:
         """``torch.dtype`` of node's :attr:`tensor`."""
         tensor = self.tensor
         if tensor is None:
@@ -745,9 +745,9 @@ class AbstractNode(ABC):
         
         Examples
         --------
-        >>> nodeA = tk.randn(shape=(2, 3), axes_names=['left', 'right'])
-        >>> nodeB = tk.randn(shape=(3, 4), axes_names=['left', 'right'])
-        >>> nodeC = tk.randn(shape=(4, 5), axes_names=['left', 'right'])
+        >>> nodeA = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
+        >>> nodeB = tk.randn(shape=(3, 4), axes_names=('left', 'right'))
+        >>> nodeC = tk.randn(shape=(4, 5), axes_names=('left', 'right'))
         >>> _ = nodeA['right'] ^ nodeB['left']
         >>> _ = nodeB['right'] ^ nodeC['left']
         >>> set(nodeB.neighbours()) == set([nodeA, nodeC])
@@ -960,9 +960,9 @@ class AbstractNode(ABC):
             
         Examples
         --------
-        >>> nodeA = tk.randn(shape=(2, 3), axes_names=['left', 'right'])
-        >>> nodeB = tk.randn(shape=(3, 4), axes_names=['left', 'right'])
-        >>> nodeC = tk.randn(shape=(4, 5), axes_names=['left', 'right'])
+        >>> nodeA = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
+        >>> nodeB = tk.randn(shape=(3, 4), axes_names=('left', 'right'))
+        >>> nodeC = tk.randn(shape=(4, 5), axes_names=('left', 'right'))
         >>> _ = nodeA['right'] ^ nodeB['left']
         >>> _ = nodeB['right'] ^ nodeC['left']
         >>> result = nodeA @ nodeB
@@ -1025,9 +1025,9 @@ class AbstractNode(ABC):
             
         Examples
         --------
-        >>> nodeA = tk.Node(shape=(2, 3), axes_names=['left', 'right'])
-        >>> nodeB = tk.Node(shape=(3, 4), axes_names=['left', 'right'])
-        >>> nodeC = tk.Node(shape=(4, 5), axes_names=['left', 'right'])
+        >>> nodeA = tk.Node(shape=(2, 3), axes_names=('left', 'right'))
+        >>> nodeB = tk.Node(shape=(3, 4), axes_names=('left', 'right'))
+        >>> nodeC = tk.Node(shape=(4, 5), axes_names=('left', 'right'))
         >>> _ = nodeA['right'] ^ nodeB['left']
         >>> _ = nodeB['right'] ^ nodeC['left']
         >>> set(nodeB.neighbours()) == set([nodeA, nodeC])
@@ -1258,22 +1258,25 @@ class AbstractNode(ABC):
                    **kwargs: float) -> None:
         """
         Sets new node's tensor or creates one with :meth:`make_tensor` and sets
-        it. Before setting it, it is casted to the correct type, so that a
-        ``torch.Tensor`` can be turned into a ``torch.nn.Parameter`` when setting
-        it in :class:`ParamNodes <ParamNode>`.
+        it. Before setting it, it is casted to the correct type: ``torch.Tensor``
+        for :class:`Node` and ``torch.nn.Parameter`` for :class:`ParamNode`.
         
         When a tensor is **set** in the node, it means the node stores it, that
         is, the node has its own memory address for its tensor, rather than a
-        reference to other node's tensor.
+        reference to other node's tensor. Because of this, ``set_tensor`` cannot
+        be applied for nodes that have a reference to other node's tensor, since
+        that tensor would be changed also in the referenced node. To overcome
+        this issue, see :meth:`reset_tensor_address`.
         
-        This can only be used for **non** ``resultant``. For ``resultant`` nodes,
-        tensors are set automatically when computing :class:`Operations <Operation>`.
+        This can only be used for **non** ``resultant``nodes that store their
+        own tensors. For ``resultant`` nodes, tensors are set automatically when
+        computing :class:`Operations <Operation>`.
         
         Although this can also be used for ``data`` nodes, input data will be
         usually automatically set into nodes when calling the :meth:`TensorNetwork.forward`
-        method of :class:`tensor networks <TensorNetwork>` with a data tensor or
-        a sequence of tensors. This method calls :meth:`TensorNetwork.add_data`,
-        which can also be used to set data tensors into the ``data`` nodes.
+        method of :class:`TensorNetwork` with a data tensor or a sequence of
+        tensors. This method calls :meth:`TensorNetwork.add_data`, which can
+        also be used to set data tensors into the ``data`` nodes.
 
         Parameters
         ----------
@@ -1292,7 +1295,30 @@ class AbstractNode(ABC):
         Raises
         ------
         ValueError
-            If the node is a ``resultant`` node.
+            If the node is a ``resultant`` node or if it does not store its own
+            tensor.
+            
+        Examples
+        --------
+        >>> node = tk.Node(shape=(2, 3), axes_names=('left', 'right'))
+        ...
+        >>> # Call set_tensor without arguments uses the
+        >>> # default init_method ("zeros")
+        >>> node.set_tensor()
+        >>> torch.equal(node.tensor, torch.zeros(node.shape))
+        True
+        
+        >>> node.set_tensor(init_method='randn', mean=1., std=2., device='cuda')
+        >>> torch.equal(node.tensor, torch.zeros(node.shape, device='cuda'))
+        False
+        
+        >>> node.device
+        device(type='cuda', index=0)
+        
+        >>> tensor = torch.randn(2, 3)
+        >>> node.set_tensor(tensor)
+        >>> torch.equal(node.tensor, tensor)
+        True
         """
         # If node stores its own tensor
         if not self.is_resultant() and (self._tensor_info['address'] is not None):
@@ -1302,13 +1328,29 @@ class AbstractNode(ABC):
                                           **kwargs)
         else:
             raise ValueError('Node\'s tensor can only be changed if it is not'
-                             'resultant')
+                             ' resultant and stores its own tensor')
 
     def unset_tensor(self) -> None:
-        """Replaces node's tensor with None."""
+        """
+        Replaces node's tensor with ``None``. This can only be used for **non**
+        ``resultant`` nodes that store their own tensors.
+        
+        Examples
+        --------
+        >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
+        >>> node.tensor is None
+        False
+        
+        >>> node.unset_tensor()
+        >>> node.tensor is None
+        True
+        """
         # If node stores its own tensor
         if not self.is_resultant() and (self._tensor_info['address'] is not None):
             self._save_in_network(None)
+        else:
+            raise ValueError('Node\'s tensor can only be changed if it is not'
+                             ' resultant and stores its own tensor')
             
     def set_tensor_from(self, other: 'AbstractNode') -> None:
         """
@@ -1329,6 +1371,26 @@ class AbstractNode(ABC):
         TypeError
             If ``other`` is a different type than the current node, or if it is
             in a different network.
+            
+        Examples
+        --------
+        >>> nodeA = tk.randn(shape=(2, 3),
+        ...                  name='nodeA',
+        ...                  axes_names=('left', 'right'))
+        >>> nodeB = tk.empty(shape=(2, 3),
+        ...                  name='nodeB',
+        ...                  axes_names=('left', 'right'),
+        ...                  network=nodeA.network)
+        >>> nodeB.set_tensor_from(nodeA)
+        >>> nodeB.tensor_address() == 'nodeA'
+        True
+        
+        Since ``nodeB`` has a reference to ``nodeA``'s tensor, if this one is
+        changed, ``nodeB`` will reproduce all the changes.
+        
+        >>> nodeA.tensor = torch.randn(nodeA.shape)
+        >>> torch.equal(nodeA.tensor, nodeB.tensor)
+        True
         """
         if not isinstance(self, type(other)):
             raise TypeError('Both nodes should be the same type')
@@ -1345,6 +1407,13 @@ class AbstractNode(ABC):
         else:
             self._tensor_info = other._tensor_info
             
+    def tensor_address(self) -> Text:
+        """Returns address of the node's tensor in the network's memory."""
+        address = self._tensor_info['address']
+        if address is None:
+            node_ref = self._tensor_info['node_ref']
+            address = node_ref._tensor_info['address']
+        return address
             
     def reset_tensor_address(self):
         """
@@ -1380,17 +1449,17 @@ class AbstractNode(ABC):
             self._tensor_info['full'] = True
             self._tensor_info['index'] = None
 
-        if isinstance(self._temp_tensor, Parameter):
-            if hasattr(self._network, 'param_' + self._name):
-                delattr(self._network, 'param_' + self._name)
-                
-        if self._name not in self._network._memory_nodes:
-            self._network._memory_nodes[self._name] = None
+            if isinstance(self._temp_tensor, Parameter):
+                if hasattr(self._network, 'param_' + self._name):
+                    delattr(self._network, 'param_' + self._name)
+                    
+            if self._name not in self._network._memory_nodes:
+                self._network._memory_nodes[self._name] = None
 
-        # Set tensor and save it in ``memory_nodes``
-        if self._temp_tensor is not None:
-            self._unrestricted_set_tensor(self._temp_tensor)
-            self._temp_tensor = None
+            # Set tensor and save it in ``memory_nodes``
+            if self._temp_tensor is not None:
+                self._unrestricted_set_tensor(self._temp_tensor)
+                self._temp_tensor = None
 
     def _save_in_network(self, tensor: Union[Tensor, Parameter]) -> None:
         """Saves new node's tensor in the network's memory."""
@@ -1457,14 +1526,6 @@ class AbstractNode(ABC):
                     if aux_dict['erase']:
                         self._network._memory_nodes[address] = None
                     net._inverse_memory[address]['re-accessed'] = 0
-                    
-    def tensor_address(self) -> Text:
-        """Returns address of the node's tensor in the network's memory."""
-        address = self._tensor_info['address']
-        if address is None:
-            node_ref = self._tensor_info['node_ref']
-            address = node_ref._tensor_info['address']
-        return address
 
     def move_to_network(self,
                         network: 'TensorNetwork',
@@ -1472,6 +1533,9 @@ class AbstractNode(ABC):
         """
         Moves node to another network. All other nodes connected to it, or
         to a node connected to it, etc. are also moved to the new network.
+        
+        If a node does not store its own tensor, and is moved to other network,
+        it will recover the "ownership" of its tensor.
 
         Parameters
         ----------
@@ -1480,6 +1544,31 @@ class AbstractNode(ABC):
         visited : list[AbstractNode], optional
             List indicating the nodes that have been already moved to the new
             network, used by this DFS-like algorithm.
+            
+        Examples
+        --------
+        >>> net = tk.TensorNetwork()
+        >>> nodeA = tk.Node(shape=(2, 3),
+        ...                 axes_names=('left', 'right'),
+        ...                 network=net)
+        >>> nodeB = tk.Node(shape=(3, 4),
+        ...                 axes_names=('left', 'right'),
+        ...                 network=net)
+        >>> nodeC = tk.Node(shape=(5, 5),
+        ...                 axes_names=('left', 'right'),
+        ...                 network=net)
+        >>> _ = nodeA['right'] ^ nodeB['left']
+        
+        If ``nodeA`` is moved to other network, ``nodeB`` will also move, but
+        ``nodeC`` will not.
+        
+        >>> net2 = tk.TensorNetwork()
+        >>> nodeA.network = net2
+        >>> nodeA.network == nodeB.network
+        True
+        
+        >>> nodeA.network != nodeC.network
+        True
         """
         if network != self._network:
             if visited is None:
@@ -1528,11 +1617,27 @@ class AbstractNode(ABC):
         Returns
         -------
         torch.Tensor
+        
+        Examples
+        --------
+        >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
+        >>> node.tensor
+        tensor([[-0.2799, -0.4383, -0.8387],
+                [ 1.6225, -0.3370, -1.2316]])
+            
+        >>> node.sum()
+        tensor(-1.5029)
+        
+        >>> node.sum('left')
+        tensor([ 1.3427, -0.7752, -2.0704])
         """
         axis_num = []
         if axis is not None:
-            for ax in axis:
-                axis_num.append(self.get_axis_num(ax))
+            if isinstance(axis, (list, tuple)):
+                for ax in axis:
+                    axis_num.append(self.get_axis_num(ax))
+            else:
+                axis_num.append(self.get_axis_num(axis))
         return self.tensor.sum(dim=axis_num)
 
     def mean(self, axis: Optional[Union[Ax, Sequence[Ax]]] = None) -> Tensor:
@@ -1554,11 +1659,27 @@ class AbstractNode(ABC):
         Returns
         -------
         torch.Tensor
+        
+        Examples
+        --------
+        >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
+        >>> node.tensor
+        tensor([[ 1.4005, -0.0521, -1.2091],
+                [ 1.9844,  0.3513, -0.5920]])
+            
+        >>> node.mean()
+        tensor(0.3139)
+        
+        >>> node.mean('left')
+        tensor([ 1.6925,  0.1496, -0.9006])
         """
         axis_num = []
         if axis is not None:
-            for ax in axis:
-                axis_num.append(self.get_axis_num(ax))
+            if isinstance(axis, (list, tuple)):
+                for ax in axis:
+                    axis_num.append(self.get_axis_num(ax))
+            else:
+                axis_num.append(self.get_axis_num(axis))
         return self.tensor.mean(dim=axis_num)
 
     def std(self, axis: Optional[Union[Ax, Sequence[Ax]]] = None) -> Tensor:
@@ -1580,14 +1701,32 @@ class AbstractNode(ABC):
         Returns
         -------
         torch.Tensor
+        
+        Examples
+        --------
+        >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
+        >>> node.tensor
+        tensor([[ 0.2111, -0.9551, -0.7812],
+                [ 0.2254,  0.3381, -0.2461]])
+            
+        >>> node.std()
+        tensor(0.5567)
+        
+        >>> node.std('left')
+        tensor([0.0101, 0.9145, 0.3784])
         """
         axis_num = []
         if axis is not None:
-            for ax in axis:
-                axis_num.append(self.get_axis_num(ax))
+            if isinstance(axis, (list, tuple)):
+                for ax in axis:
+                    axis_num.append(self.get_axis_num(ax))
+            else:
+                axis_num.append(self.get_axis_num(axis))
         return self.tensor.std(dim=axis_num)
 
-    def norm(self, p=2, axis: Optional[Sequence[Ax]] = None) -> Tensor:
+    def norm(self,
+             p: Union[int, float] = 2,
+             axis: Optional[Sequence[Ax]] = None) -> Tensor:
         """
         Returns the norm of all elements in the node's tensor. If an ``axis`` is
         specified, the norm is over that axis. If ``axis`` is a sequence of axes,
@@ -1608,11 +1747,27 @@ class AbstractNode(ABC):
         Returns
         -------
         torch.Tensor
+        
+        Examples
+        --------
+        >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
+        >>> node.tensor
+        tensor([[ 1.5570,  1.8441, -0.0743],
+                [ 0.4572,  0.7592,  0.6356]])
+            
+        >>> node.norm()
+        tensor(2.6495)
+        
+        >>> node.norm(axis='left')
+        tensor([1.6227, 1.9942, 0.6399])
         """
         axis_num = []
         if axis is not None:
-            for ax in axis:
-                axis_num.append(self.get_axis_num(ax))
+            if isinstance(axis, (list, tuple)):
+                for ax in axis:
+                    axis_num.append(self.get_axis_num(ax))
+            else:
+                axis_num.append(self.get_axis_num(axis))
         return self.tensor.norm(p=p, dim=axis_num)
 
     def __str__(self) -> Text:

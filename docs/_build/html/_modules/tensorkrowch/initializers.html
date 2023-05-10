@@ -344,6 +344,44 @@ title="Source repository"
                          <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
 
+<span class="k">def</span> <span class="nf">empty</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
+          <span class="n">axes_names</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Text</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+          <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+          <span class="n">network</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">TensorNetwork</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+          <span class="n">param_node</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
+<span class="w">     </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">     Returns :class:`Node` or :class:`ParamNode` without tensor.</span>
+
+<span class="sd">     Parameters</span>
+<span class="sd">     ----------</span>
+<span class="sd">     shape : list[int], tuple[int], torch.Size</span>
+<span class="sd">          Node&#39;s shape, that is, the shape of its tensor.</span>
+<span class="sd">     axes_names : list[str], tuple[str], optional</span>
+<span class="sd">          Sequence of names for each of the node&#39;s axes. Names are used to access</span>
+<span class="sd">          the edge that is attached to the node in a certain axis. Hence they</span>
+<span class="sd">          should be all distinct.</span>
+<span class="sd">     name : str, optional</span>
+<span class="sd">          Node&#39;s name, used to access the node from de :class:`TensorNetwork`</span>
+<span class="sd">          where it belongs. It cannot contain blank spaces.</span>
+<span class="sd">     network : TensorNetwork, optional</span>
+<span class="sd">          Tensor network where the node should belong. If None, a new tensor</span>
+<span class="sd">          network, will be created to contain the node.</span>
+<span class="sd">     param_node : bool</span>
+<span class="sd">          Boolean indicating whether the node should be a :class:`ParamNode`</span>
+<span class="sd">          (``True``) or a :class:`Node` (``False``).</span>
+
+<span class="sd">     Returns</span>
+<span class="sd">     -------</span>
+<span class="sd">     Node or ParamNode</span>
+<span class="sd">     &quot;&quot;&quot;</span>
+     <span class="k">return</span> <span class="n">_initializer</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span>
+                         <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
+                         <span class="n">axes_names</span><span class="o">=</span><span class="n">axes_names</span><span class="p">,</span>
+                         <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+                         <span class="n">network</span><span class="o">=</span><span class="n">network</span><span class="p">,</span>
+                         <span class="n">param_node</span><span class="o">=</span><span class="n">param_node</span><span class="p">)</span>
+
+
 <div class="viewcode-block" id="zeros"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.zeros">[docs]</a><span class="k">def</span> <span class="nf">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
           <span class="n">axes_names</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Text</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
           <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -553,8 +591,6 @@ title="Source repository"
                          <span class="n">param_node</span><span class="o">=</span><span class="n">param_node</span><span class="p">,</span>
                          <span class="n">mean</span><span class="o">=</span><span class="n">mean</span><span class="p">,</span>
                          <span class="n">std</span><span class="o">=</span><span class="n">std</span><span class="p">)</span></div>
-
-<span class="c1"># TODO: empty</span>
 </pre></div>
 
               </div>

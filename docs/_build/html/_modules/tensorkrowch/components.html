@@ -426,8 +426,8 @@ title="Source repository"
 <span class="sd">    Also, as explained before, knowing if a node is the ``node1`` or ``node2``</span>
 <span class="sd">    of an edge enables users to access that node from the edge:</span>
 
-<span class="sd">    &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
-<span class="sd">    &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">    &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
 <span class="sd">    ...</span>
 <span class="sd">    &gt;&gt;&gt; # nodeA is node1 and nodeB is node2 of new_edge</span>
@@ -440,9 +440,9 @@ title="Source repository"
 <span class="sd">    The ``node1`` attribute is extended to ``resultant`` nodes that inherit</span>
 <span class="sd">    edges.</span>
 <span class="sd">    </span>
-<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(2, 3), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
-<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(3, 4), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
-<span class="sd">    &gt;&gt;&gt; nodeC = tk.randn(shape=(4, 5), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(3, 4), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">    &gt;&gt;&gt; nodeC = tk.randn(shape=(4, 5), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">    &gt;&gt;&gt; edge1 = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
 <span class="sd">    &gt;&gt;&gt; edge2 = nodeB[&#39;right&#39;] ^ nodeC[&#39;left&#39;]</span>
 <span class="sd">    &gt;&gt;&gt; result = nodeA @ nodeB</span>
@@ -786,7 +786,7 @@ title="Source repository"
                     <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`node1_list` should be list[bool] type&#39;</span><span class="p">)</span>
                 <span class="n">axis</span><span class="o">.</span><span class="n">_node1</span> <span class="o">=</span> <span class="n">node1_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span> <span class="o">=</span> <span class="n">edges</span><span class="p">[:]</span>
-            <span class="c1"># If node stores its own tensor</span>
+            
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_resultant</span><span class="p">():</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">override</span><span class="o">=</span><span class="n">override_edges</span><span class="p">)</span>
 
@@ -868,12 +868,20 @@ title="Source repository"
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_shape</span><span class="p">)</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">dtype</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;``torch.dtype`` of node&#39;s :attr:`tensor`.&quot;&quot;&quot;</span>
         <span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor</span>
         <span class="k">if</span> <span class="n">tensor</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span>
         <span class="k">return</span> <span class="n">tensor</span><span class="o">.</span><span class="n">dtype</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">device</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;``torch.device`` of node&#39;s :attr:`tensor`.&quot;&quot;&quot;</span>
+        <span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor</span>
+        <span class="k">if</span> <span class="n">tensor</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">return</span> <span class="n">tensor</span><span class="o">.</span><span class="n">device</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">axes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Axis</span><span class="p">]:</span>
@@ -1049,9 +1057,9 @@ title="Source repository"
 <span class="sd">        </span>
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; nodeA = tk.randn(shape=(2, 3), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
-<span class="sd">        &gt;&gt;&gt; nodeB = tk.randn(shape=(3, 4), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
-<span class="sd">        &gt;&gt;&gt; nodeC = tk.randn(shape=(4, 5), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.randn(shape=(3, 4), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">        &gt;&gt;&gt; nodeC = tk.randn(shape=(4, 5), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">        &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
 <span class="sd">        &gt;&gt;&gt; _ = nodeB[&#39;right&#39;] ^ nodeC[&#39;left&#39;]</span>
 <span class="sd">        &gt;&gt;&gt; set(nodeB.neighbours()) == set([nodeA, nodeC])</span>
@@ -1264,9 +1272,9 @@ title="Source repository"
 <span class="sd">            </span>
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; nodeA = tk.randn(shape=(2, 3), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
-<span class="sd">        &gt;&gt;&gt; nodeB = tk.randn(shape=(3, 4), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
-<span class="sd">        &gt;&gt;&gt; nodeC = tk.randn(shape=(4, 5), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.randn(shape=(3, 4), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">        &gt;&gt;&gt; nodeC = tk.randn(shape=(4, 5), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">        &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
 <span class="sd">        &gt;&gt;&gt; _ = nodeB[&#39;right&#39;] ^ nodeC[&#39;left&#39;]</span>
 <span class="sd">        &gt;&gt;&gt; result = nodeA @ nodeB</span>
@@ -1329,9 +1337,9 @@ title="Source repository"
 <span class="sd">            </span>
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
-<span class="sd">        &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
-<span class="sd">        &gt;&gt;&gt; nodeC = tk.Node(shape=(4, 5), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">        &gt;&gt;&gt; nodeC = tk.Node(shape=(4, 5), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">        &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
 <span class="sd">        &gt;&gt;&gt; _ = nodeB[&#39;right&#39;] ^ nodeC[&#39;left&#39;]</span>
 <span class="sd">        &gt;&gt;&gt; set(nodeB.neighbours()) == set([nodeA, nodeC])</span>
@@ -1401,7 +1409,7 @@ title="Source repository"
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        shape : list[int], tuple[int] or torch.Size, optional</span>
-<span class="sd">            Shape of the tensor. If None, node&#39;s shape will be used.</span>
+<span class="sd">            Shape of the tensor. If ``None``, node&#39;s shape will be used.</span>
 <span class="sd">        init_method : {&quot;zeros&quot;, &quot;ones&quot;, &quot;copy&quot;, &quot;rand&quot;, &quot;randn&quot;}, optional</span>
 <span class="sd">            Initialization method.</span>
 <span class="sd">        device : torch.device, optional</span>
@@ -1457,10 +1465,10 @@ title="Source repository"
     <span class="k">def</span> <span class="nf">_crop_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tensor</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Crops the tensor in case its shape is not compatible with the node&#39;s shape.</span>
-<span class="sd">        That is, if the tensor has a size that is smaller than the corresponding</span>
+<span class="sd">        That is, if the tensor has a size that is greater than the corresponding</span>
 <span class="sd">        size of the node for a certain axis, the tensor is cropped in that axis</span>
-<span class="sd">        (provided that the axis is not a batch axis). If that size is greater in</span>
-<span class="sd">        the tensor that in the node, raises a ``ValueError``.</span>
+<span class="sd">        (provided that the axis is not a batch axis). If that size is smaller in</span>
+<span class="sd">        the tensor than in the node, raises a ``ValueError``.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1490,8 +1498,12 @@ title="Source repository"
                              <span class="s1">&#39; dimensions as node</span><span class="se">\&#39;</span><span class="s1">s tensor (same rank)&#39;</span><span class="p">)</span>
             
     <span class="k">def</span> <span class="nf">_direct_set_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                        <span class="n">tensor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
-                        <span class="n">check_shape</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+                           <span class="n">tensor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
+                           <span class="n">check_shape</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets a new node&#39;s tensor without checking extra conditions. It just</span>
+<span class="sd">        can crop the tensor in case it is specified with ``check_shape``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">check_shape</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compatible_shape</span><span class="p">(</span><span class="n">tensor</span><span class="p">):</span>
             <span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crop_tensor</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
         <span class="n">correct_format_tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_tensor_format</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
@@ -1507,16 +1519,16 @@ title="Source repository"
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Sets a new node&#39;s tensor or creates one with :meth:`make_tensor` and sets</span>
 <span class="sd">        it. Before setting it, it is casted to the correct type, so that a</span>
-<span class="sd">        ``torch.Tensor`` can be turned into a ``nn.Parameter`` when setting it</span>
-<span class="sd">        in :class:`ParamNodes &lt;ParamNode`. This can be used in any node, even in</span>
-<span class="sd">        ``resultant`` nodes.</span>
+<span class="sd">        ``torch.Tensor`` can be turned into a ``torch.nn.Parameter`` when setting</span>
+<span class="sd">        it in :class:`ParamNodes &lt;ParamNode&gt;`. This is not restricted, can be</span>
+<span class="sd">        used in any node, even in ``resultant`` nodes.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        tensor : torch.Tensor, optional</span>
-<span class="sd">            Tensor to be set in the node. If None, and `init_method` is provided,</span>
-<span class="sd">            the tensor is created with :meth:`make_tensor`. Otherwise, a None is</span>
-<span class="sd">            set as node&#39;s tensor.</span>
+<span class="sd">            Tensor to be set in the node. If ``None``, and ``init_method`` is</span>
+<span class="sd">            provided, the tensor is created with :meth:`make_tensor`. Otherwise,</span>
+<span class="sd">            a ``None`` is set as node&#39;s tensor.</span>
 <span class="sd">        init_method : {&quot;zeros&quot;, &quot;ones&quot;, &quot;copy&quot;, &quot;rand&quot;, &quot;randn&quot;}, optional</span>
 <span class="sd">            Initialization method.</span>
 <span class="sd">        device : torch.device, optional</span>
@@ -1529,8 +1541,9 @@ title="Source repository"
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">Tensor</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`tensor` should be torch.Tensor type&#39;</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">device</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;`device` was specified but is being ignored. Provide &#39;</span>
-                              <span class="s1">&#39;a tensor that is already in the required device&#39;</span><span class="p">)</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;`device` was specified but is being ignored. &#39;</span>
+                              <span class="s1">&#39;Provide a tensor that is already in the required&#39;</span>
+                              <span class="s1">&#39; device&#39;</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compatible_shape</span><span class="p">(</span><span class="n">tensor</span><span class="p">):</span>
                 <span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crop_tensor</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
@@ -1556,27 +1569,33 @@ title="Source repository"
                    <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Sets a new node&#39;s tensor or creates one with :meth:`make_tensor` and sets</span>
-<span class="sd">        it. Before setting it, it is casted to the correct type, so that a</span>
-<span class="sd">        ``torch.Tensor`` can be turned into a ``nn.Parameter`` when setting it</span>
-<span class="sd">        in :class:`ParamNodes &lt;ParamNode&gt;`.</span>
-
-<span class="sd">        This way of setting tensors is only applicable to ``leaf`` nodes. For</span>
-<span class="sd">        ``resultant`` nodes, their tensors come from the result of operations on</span>
-<span class="sd">        ``leaf`` tensors; hence they should not be modified. For ``data`` nodes,</span>
-<span class="sd">        tensors are set into nodes when calling the :meth:`TensorNetwork.forward`</span>
-<span class="sd">        method of :class:`tensor networks &lt;TensorNetwork&gt;` with a data tensor or</span>
-<span class="sd">        a sequence of tensors.</span>
-
-<span class="sd">        Besides, this can only be used if the :class:`TensorNetwork` is not in</span>
-<span class="sd">        :attr:`~TensorNetwork.auto_stack` mode.</span>
+<span class="sd">        Sets new node&#39;s tensor or creates one with :meth:`make_tensor` and sets</span>
+<span class="sd">        it. Before setting it, it is casted to the correct type: ``torch.Tensor``</span>
+<span class="sd">        for :class:`Node` and ``torch.nn.Parameter`` for :class:`ParamNode`.</span>
+<span class="sd">        </span>
+<span class="sd">        When a tensor is **set** in the node, it means the node stores it, that</span>
+<span class="sd">        is, the node has its own memory address for its tensor, rather than a</span>
+<span class="sd">        reference to other node&#39;s tensor. Because of this, ``set_tensor`` cannot</span>
+<span class="sd">        be applied for nodes that have a reference to other node&#39;s tensor, since</span>
+<span class="sd">        that tensor would be changed also in the referenced node. To overcome</span>
+<span class="sd">        this issue, see :meth:`reset_tensor_address`.</span>
+<span class="sd">        </span>
+<span class="sd">        This can only be used for **non** ``resultant``nodes that store their</span>
+<span class="sd">        own tensors. For ``resultant`` nodes, tensors are set automatically when</span>
+<span class="sd">        computing :class:`Operations &lt;Operation&gt;`.</span>
+<span class="sd">        </span>
+<span class="sd">        Although this can also be used for ``data`` nodes, input data will be</span>
+<span class="sd">        usually automatically set into nodes when calling the :meth:`TensorNetwork.forward`</span>
+<span class="sd">        method of :class:`TensorNetwork` with a data tensor or a sequence of</span>
+<span class="sd">        tensors. This method calls :meth:`TensorNetwork.add_data`, which can</span>
+<span class="sd">        also be used to set data tensors into the ``data`` nodes.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        tensor : torch.Tensor, optional</span>
-<span class="sd">            Tensor to be set in the node. If None, and `init_method` is provided,</span>
-<span class="sd">            the tensor is created with :meth:`make_tensor`. Otherwise, a ``None``</span>
-<span class="sd">            is set as node&#39;s tensor.</span>
+<span class="sd">            Tensor to be set in the node. If ``None``, and ``init_method`` is</span>
+<span class="sd">            provided, the tensor is created with :meth:`make_tensor`. Otherwise,</span>
+<span class="sd">            a ``None`` is set as node&#39;s tensor.</span>
 <span class="sd">        init_method : {&quot;zeros&quot;, &quot;ones&quot;, &quot;copy&quot;, &quot;rand&quot;, &quot;randn&quot;}, optional</span>
 <span class="sd">            Initialization method.</span>
 <span class="sd">        device : torch.device, optional</span>
@@ -1588,8 +1607,30 @@ title="Source repository"
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
-<span class="sd">            If the node is not a ``leaf`` node or the tensor network is in</span>
-<span class="sd">            ``auto_stack`` mode.</span>
+<span class="sd">            If the node is a ``resultant`` node or if it does not store its own</span>
+<span class="sd">            tensor.</span>
+<span class="sd">            </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; node = tk.Node(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">        ...</span>
+<span class="sd">        &gt;&gt;&gt; # Call set_tensor without arguments uses the</span>
+<span class="sd">        &gt;&gt;&gt; # default init_method (&quot;zeros&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; node.set_tensor()</span>
+<span class="sd">        &gt;&gt;&gt; torch.equal(node.tensor, torch.zeros(node.shape))</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; node.set_tensor(init_method=&#39;randn&#39;, mean=1., std=2., device=&#39;cuda&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; torch.equal(node.tensor, torch.zeros(node.shape, device=&#39;cuda&#39;))</span>
+<span class="sd">        False</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; node.device</span>
+<span class="sd">        device(type=&#39;cuda&#39;, index=0)</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; tensor = torch.randn(2, 3)</span>
+<span class="sd">        &gt;&gt;&gt; node.set_tensor(tensor)</span>
+<span class="sd">        &gt;&gt;&gt; torch.equal(node.tensor, tensor)</span>
+<span class="sd">        True</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># If node stores its own tensor</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_resultant</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
@@ -1599,10 +1640,75 @@ title="Source repository"
                                           <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Node</span><span class="se">\&#39;</span><span class="s1">s tensor can only be changed if it is not&#39;</span>
-                             <span class="s1">&#39;resultant and if it stores its own tensor&#39;</span><span class="p">)</span></div>
+                             <span class="s1">&#39; resultant and stores its own tensor&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AbstractNode.unset_tensor"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.unset_tensor">[docs]</a>    <span class="k">def</span> <span class="nf">unset_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Replaces node&#39;s tensor with ``None``. This can only be used for **non**</span>
+<span class="sd">        ``resultant`` nodes that store their own tensors.</span>
+<span class="sd">        </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; node = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">        &gt;&gt;&gt; node.tensor is None</span>
+<span class="sd">        False</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; node.unset_tensor()</span>
+<span class="sd">        &gt;&gt;&gt; node.tensor is None</span>
+<span class="sd">        True</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># If node stores its own tensor</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_resultant</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save_in_network</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Node</span><span class="se">\&#39;</span><span class="s1">s tensor can only be changed if it is not&#39;</span>
+                             <span class="s1">&#39; resultant and stores its own tensor&#39;</span><span class="p">)</span></div>
             
 <div class="viewcode-block" id="AbstractNode.set_tensor_from"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.set_tensor_from">[docs]</a>    <span class="k">def</span> <span class="nf">set_tensor_from</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s1">&#39;AbstractNode&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sets node&#39;s tensor as the tensor used by other node.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets node&#39;s tensor as the tensor used by ``other`` node. That is, when</span>
+<span class="sd">        setting the tensor this way, the current node will store a reference to</span>
+<span class="sd">        the ``other`` node&#39;s tensor, instead of having its own tensor.</span>
+<span class="sd">        </span>
+<span class="sd">        The node and ``other`` should be both the same type (:class:`Node` or</span>
+<span class="sd">        :class:`ParamNode`). Also, they should be in the same :class:`TensorNetwork`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : Node or ParamNode</span>
+<span class="sd">            Node whose tensor is to be set in current node.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        TypeError</span>
+<span class="sd">            If ``other`` is a different type than the current node, or if it is</span>
+<span class="sd">            in a different network.</span>
+<span class="sd">            </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.randn(shape=(2, 3),</span>
+<span class="sd">        ...                  name=&#39;nodeA&#39;,</span>
+<span class="sd">        ...                  axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.empty(shape=(2, 3),</span>
+<span class="sd">        ...                  name=&#39;nodeB&#39;,</span>
+<span class="sd">        ...                  axes_names=(&#39;left&#39;, &#39;right&#39;),</span>
+<span class="sd">        ...                  network=nodeA.network)</span>
+<span class="sd">        &gt;&gt;&gt; nodeB.set_tensor_from(nodeA)</span>
+<span class="sd">        &gt;&gt;&gt; nodeB.tensor_address() == &#39;nodeA&#39;</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        Since ``nodeB`` has a reference to ``nodeA``&#39;s tensor, if this one is</span>
+<span class="sd">        changed, ``nodeB`` will reproduce all the changes.</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; nodeA.tensor = torch.randn(nodeA.shape)</span>
+<span class="sd">        &gt;&gt;&gt; torch.equal(nodeA.tensor, nodeB.tensor)</span>
+<span class="sd">        True</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Both nodes should be the same type&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">other</span><span class="o">.</span><span class="n">_network</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Both nodes should be in the same network&#39;</span><span class="p">)</span>
+        
         <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]]</span>
         
         <span class="k">if</span> <span class="n">other</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -1612,12 +1718,60 @@ title="Source repository"
             <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">_tensor_info</span></div>
+            
+<div class="viewcode-block" id="AbstractNode.tensor_address"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.tensor_address">[docs]</a>    <span class="k">def</span> <span class="nf">tensor_address</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns address of the node&#39;s tensor in the network&#39;s memory.&quot;&quot;&quot;</span>
+        <span class="n">address</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">address</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">node_ref</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span>
+            <span class="n">address</span> <span class="o">=</span> <span class="n">node_ref</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">address</span></div>
+            
+<div class="viewcode-block" id="AbstractNode.reset_tensor_address"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.reset_tensor_address">[docs]</a>    <span class="k">def</span> <span class="nf">reset_tensor_address</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Resets memory address of node&#39;s tensor to reference the node itself.</span>
+<span class="sd">        Thus the node will store its own tensor, instead of having a reference</span>
+<span class="sd">        to other node&#39;s tensor.</span>
+<span class="sd">        </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.randn(shape=(2, 3),</span>
+<span class="sd">        ...                  name=&#39;nodeA&#39;,</span>
+<span class="sd">        ...                  axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.empty(shape=(2, 3),</span>
+<span class="sd">        ...                  name=&#39;nodeB&#39;,</span>
+<span class="sd">        ...                  axes_names=(&#39;left&#39;, &#39;right&#39;),</span>
+<span class="sd">        ...                  network=nodeA.network)</span>
+<span class="sd">        &gt;&gt;&gt; nodeB.set_tensor_from(nodeA)</span>
+<span class="sd">        &gt;&gt;&gt; nodeB.tensor_address() == &#39;nodeA&#39;</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        Now one cannot set in ``nodeB`` a different tensor from the one in</span>
+<span class="sd">        ``nodeA``, unless tensor address is reset in ``nodeB``.</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; nodeB.reset_tensor_address()</span>
+<span class="sd">        &gt;&gt;&gt; nodeB.tensor = torch.randn(nodeB.shape)</span>
+<span class="sd">        &gt;&gt;&gt; torch.equal(nodeA.tensor, nodeB.tensor)</span>
+<span class="sd">        False</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_temp_tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;full&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 
-<div class="viewcode-block" id="AbstractNode.unset_tensor"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.unset_tensor">[docs]</a>    <span class="k">def</span> <span class="nf">unset_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Replaces node&#39;s tensor with None.&quot;&quot;&quot;</span>
-        <span class="c1"># If node stores its own tensor</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_resultant</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_save_in_network</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span></div>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_temp_tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="p">,</span> <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">):</span>
+                    <span class="nb">delattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="p">,</span> <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">)</span>
+                    
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="c1"># Set tensor and save it in ``memory_nodes``</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temp_tensor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_unrestricted_set_tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_temp_tensor</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_temp_tensor</span> <span class="o">=</span> <span class="kc">None</span></div>
 
     <span class="k">def</span> <span class="nf">_save_in_network</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tensor</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Saves new node&#39;s tensor in the network&#39;s memory.&quot;&quot;&quot;</span>
@@ -1684,14 +1838,6 @@ title="Source repository"
                     <span class="k">if</span> <span class="n">aux_dict</span><span class="p">[</span><span class="s1">&#39;erase&#39;</span><span class="p">]:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">address</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
                     <span class="n">net</span><span class="o">.</span><span class="n">_inverse_memory</span><span class="p">[</span><span class="n">address</span><span class="p">][</span><span class="s1">&#39;re-accessed&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-                    
-<div class="viewcode-block" id="AbstractNode.tensor_address"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.tensor_address">[docs]</a>    <span class="k">def</span> <span class="nf">tensor_address</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns address of the node&#39;s tensor in the network&#39;s memory.&quot;&quot;&quot;</span>
-        <span class="n">address</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">address</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">node_ref</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span>
-            <span class="n">address</span> <span class="o">=</span> <span class="n">node_ref</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span>
-        <span class="k">return</span> <span class="n">address</span></div>
 
 <div class="viewcode-block" id="AbstractNode.move_to_network"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.move_to_network">[docs]</a>    <span class="k">def</span> <span class="nf">move_to_network</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                         <span class="n">network</span><span class="p">:</span> <span class="s1">&#39;TensorNetwork&#39;</span><span class="p">,</span>
@@ -1699,6 +1845,9 @@ title="Source repository"
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Moves node to another network. All other nodes connected to it, or</span>
 <span class="sd">        to a node connected to it, etc. are also moved to the new network.</span>
+<span class="sd">        </span>
+<span class="sd">        If a node does not store its own tensor, and is moved to other network,</span>
+<span class="sd">        it will recover the &quot;ownership&quot; of its tensor.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1707,6 +1856,31 @@ title="Source repository"
 <span class="sd">        visited : list[AbstractNode], optional</span>
 <span class="sd">            List indicating the nodes that have been already moved to the new</span>
 <span class="sd">            network, used by this DFS-like algorithm.</span>
+<span class="sd">            </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; net = tk.TensorNetwork()</span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3),</span>
+<span class="sd">        ...                 axes_names=(&#39;left&#39;, &#39;right&#39;),</span>
+<span class="sd">        ...                 network=net)</span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4),</span>
+<span class="sd">        ...                 axes_names=(&#39;left&#39;, &#39;right&#39;),</span>
+<span class="sd">        ...                 network=net)</span>
+<span class="sd">        &gt;&gt;&gt; nodeC = tk.Node(shape=(5, 5),</span>
+<span class="sd">        ...                 axes_names=(&#39;left&#39;, &#39;right&#39;),</span>
+<span class="sd">        ...                 network=net)</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">        </span>
+<span class="sd">        If ``nodeA`` is moved to other network, ``nodeB`` will also move, but</span>
+<span class="sd">        ``nodeC`` will not.</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; net2 = tk.TensorNetwork()</span>
+<span class="sd">        &gt;&gt;&gt; nodeA.network = net2</span>
+<span class="sd">        &gt;&gt;&gt; nodeA.network == nodeB.network</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; nodeA.network != nodeC.network</span>
+<span class="sd">        True</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">network</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">visited</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -1755,11 +1929,27 @@ title="Source repository"
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        torch.Tensor</span>
+<span class="sd">        </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; node = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">        &gt;&gt;&gt; node.tensor</span>
+<span class="sd">        tensor([[-0.2799, -0.4383, -0.8387],</span>
+<span class="sd">                [ 1.6225, -0.3370, -1.2316]])</span>
+<span class="sd">            </span>
+<span class="sd">        &gt;&gt;&gt; node.sum()</span>
+<span class="sd">        tensor(-1.5029)</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; node.sum(&#39;left&#39;)</span>
+<span class="sd">        tensor([ 1.3427, -0.7752, -2.0704])</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">axis_num</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axis</span><span class="p">:</span>
-                <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">ax</span><span class="p">))</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+                <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axis</span><span class="p">:</span>
+                    <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">ax</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">axis_num</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="AbstractNode.mean"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.mean">[docs]</a>    <span class="k">def</span> <span class="nf">mean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Ax</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
@@ -1781,11 +1971,27 @@ title="Source repository"
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        torch.Tensor</span>
+<span class="sd">        </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; node = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">        &gt;&gt;&gt; node.tensor</span>
+<span class="sd">        tensor([[ 1.4005, -0.0521, -1.2091],</span>
+<span class="sd">                [ 1.9844,  0.3513, -0.5920]])</span>
+<span class="sd">            </span>
+<span class="sd">        &gt;&gt;&gt; node.mean()</span>
+<span class="sd">        tensor(0.3139)</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; node.mean(&#39;left&#39;)</span>
+<span class="sd">        tensor([ 1.6925,  0.1496, -0.9006])</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">axis_num</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axis</span><span class="p">:</span>
-                <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">ax</span><span class="p">))</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+                <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axis</span><span class="p">:</span>
+                    <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">ax</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">axis_num</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="AbstractNode.std"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.std">[docs]</a>    <span class="k">def</span> <span class="nf">std</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Ax</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
@@ -1807,14 +2013,32 @@ title="Source repository"
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        torch.Tensor</span>
+<span class="sd">        </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; node = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">        &gt;&gt;&gt; node.tensor</span>
+<span class="sd">        tensor([[ 0.2111, -0.9551, -0.7812],</span>
+<span class="sd">                [ 0.2254,  0.3381, -0.2461]])</span>
+<span class="sd">            </span>
+<span class="sd">        &gt;&gt;&gt; node.std()</span>
+<span class="sd">        tensor(0.5567)</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; node.std(&#39;left&#39;)</span>
+<span class="sd">        tensor([0.0101, 0.9145, 0.3784])</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">axis_num</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axis</span><span class="p">:</span>
-                <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">ax</span><span class="p">))</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+                <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axis</span><span class="p">:</span>
+                    <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">ax</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="n">axis_num</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="AbstractNode.norm"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.norm">[docs]</a>    <span class="k">def</span> <span class="nf">norm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.norm"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.norm">[docs]</a>    <span class="k">def</span> <span class="nf">norm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+             <span class="n">p</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+             <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the norm of all elements in the node&#39;s tensor. If an ``axis`` is</span>
 <span class="sd">        specified, the norm is over that axis. If ``axis`` is a sequence of axes,</span>
@@ -1835,11 +2059,27 @@ title="Source repository"
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        torch.Tensor</span>
+<span class="sd">        </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; node = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">        &gt;&gt;&gt; node.tensor</span>
+<span class="sd">        tensor([[ 1.5570,  1.8441, -0.0743],</span>
+<span class="sd">                [ 0.4572,  0.7592,  0.6356]])</span>
+<span class="sd">            </span>
+<span class="sd">        &gt;&gt;&gt; node.norm()</span>
+<span class="sd">        tensor(2.6495)</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; node.norm(axis=&#39;left&#39;)</span>
+<span class="sd">        tensor([1.6227, 1.9942, 0.6399])</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">axis_num</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axis</span><span class="p">:</span>
-                <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">ax</span><span class="p">))</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+                <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axis</span><span class="p">:</span>
+                    <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">ax</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis_num</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
@@ -2069,9 +2309,11 @@ title="Source repository"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">aux_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span>
-            <span class="n">tensor</span> <span class="o">=</span> <span class="n">aux_node</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">aux_node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]]</span>
+            <span class="n">tensor</span> <span class="o">=</span> <span class="n">aux_node</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span>
+                <span class="n">aux_node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]]</span>
+            <span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]]</span>
 
         <span class="k">if</span> <span class="n">tensor</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span>

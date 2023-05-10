@@ -1766,7 +1766,7 @@ should also be provided.</p></li>
 <dt class="sig sig-object py" id="tensorkrowch.ParamNode.grad">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">grad</span></span><a class="headerlink" href="#tensorkrowch.ParamNode.grad" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns gradient of the param-node’s tensor.</p>
-<p>See also <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.Tensor.grad.html">torch.Tensor.grad()</a></p>
+<p>See also <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.Tensor.grad.html">torch.Tensor.grad</a></p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p>torch.Tensor or None</p>
@@ -1888,14 +1888,15 @@ be instantiated directly. To do so, there are two options:</p>
 <ul class="simple">
 <li><p>Provide a sequence of nodes: if <code class="docutils literal notranslate"><span class="pre">nodes</span></code> are provided, their tensors will
 be stacked and stored in the <code class="docutils literal notranslate"><span class="pre">StackNode</span></code>. It is necessary that all nodes
-are of the same type (<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> or <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a>), have the same
+are of the same class (<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> or <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a>), have the same
 rank (although dimension of each leg can be different for different nodes;
 in which case smaller tensors are extended with 0’s to match the dimensions
 of the largest tensor in the stack), same axes names (to ensure only the
-<cite>same kind</cite> of nodes are stacked), belong to the same network and have edges
+“same kind” of nodes are stacked), belong to the same network and have edges
 with the same type in each axis (<a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edge</span></code></a> or <code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code>).</p></li>
 <li><p>Provide a stacked tensor: if the stacked <code class="docutils literal notranslate"><span class="pre">tensor</span></code> is provided, it is also
-necessary to specify the <code class="docutils literal notranslate"><span class="pre">axes_names</span></code>, <code class="docutils literal notranslate"><span class="pre">network</span></code>, <code class="docutils literal notranslate"><span class="pre">edges</span></code>, <code class="docutils literal notranslate"><span class="pre">node1_list</span></code>.</p></li>
+necessary to specify the <code class="docutils literal notranslate"><span class="pre">axes_names</span></code>, <code class="docutils literal notranslate"><span class="pre">network</span></code>, <code class="docutils literal notranslate"><span class="pre">edges</span></code> and
+<code class="docutils literal notranslate"><span class="pre">node1_list</span></code>.</p></li>
 </ul>
 <p><code class="docutils literal notranslate"><span class="pre">StackNodes</span></code> have an additional axis for the new <cite>stack</cite> dimension, which
 is a batch edge. This way, some contractions can be computed in parallel by
@@ -1908,7 +1909,10 @@ can be inferred to which nodes the unbinded nodes have to be connected.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>nodes</strong> (<em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>] or </em><em>tuple</em><em>[</em><a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>]</em><em>, </em><em>optional</em>) – Sequence of nodes that are to be stacked.</p></li>
+<li><p><strong>nodes</strong> (<em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>] or </em><em>tuple</em><em>[</em><a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>]</em><em>, </em><em>optional</em>) – Sequence of nodes that are to be stacked. They should all be of the same
+class (<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> or <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a>), have the same rank, same
+axes names and belong to the same network. They do not need to have equal
+shapes.</p></li>
 <li><p><strong>axes_names</strong> (<em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – Sequence of names for each of the node’s axes. Names are used to access
 the edge that is attached to the node in a certain axis. Hence they should
 be all distinct. Necessary if <code class="docutils literal notranslate"><span class="pre">nodes</span></code> are not provided.</p></li>
@@ -1918,8 +1922,8 @@ it belongs. It cannot contain blank spaces.</p></li>
 not provided.</p></li>
 <li><p><strong>override_node</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean indicating whether the node should override (<code class="docutils literal notranslate"><span class="pre">True</span></code>) another
 node in the network that has the same name (e.g. if a node is parameterized,
-it would be required that a new <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> replaces the non-parameterized
-node in the network).</p></li>
+it would be required that a new <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> replaces the
+non-parameterized node in the network).</p></li>
 <li><p><strong>tensor</strong> (<em>torch.Tensor</em><em>, </em><em>optional</em>) – Tensor that is to be stored in the node. Necessary if <code class="docutils literal notranslate"><span class="pre">nodes</span></code> are not
 provided.</p></li>
 <li><p><strong>edges</strong> (<em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a><em>]</em><em>, </em><em>optional</em>) – List of edges that are to be attached to the node. Necessary if <code class="docutils literal notranslate"><span class="pre">nodes</span></code>

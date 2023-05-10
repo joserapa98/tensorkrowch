@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 327.77">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #f05f42;
+      }
+
+      .cls-2 {
+        fill: #822de5;
+      }
+
+      .cls-3 {
+        fill: #b932cc;
+      }
+
+      .cls-4 {
+        fill: #cb2f90;
+      }
+
+      .cls-5 {
+        fill: #e12353;
+      }
+
+      .cls-6 {
+        fill: #fff;
+        font-family: ClearSans, 'Clear Sans';
+        font-size: 46px;
+      }
+
+      .cls-7 {
+        fill: none;
+        stroke: #fff;
+        stroke-miterlimit: 10;
+        stroke-width: 4px;
+      }
+    </style>
+  </defs>
+  <g id="Logo_Dark" data-name="Logo Dark">
+    <line class="cls-7" x1="125.25" y1="77.85" x2="125.25" y2="233.37"/>
+    <line class="cls-7" x1="413.42" y1="77.85" x2="413.42" y2="156.11"/>
+    <line class="cls-7" x1="485.46" y1="77.85" x2="485.46" y2="156.11"/>
+    <line class="cls-7" x1="557.5" y1="155.61" x2="557.5" y2="233.37"/>
+    <line class="cls-7" x1="629.55" y1="155.61" x2="629.55" y2="233.37"/>
+    <line class="cls-7" x1="701.59" y1="155.61" x2="701.59" y2="233.37"/>
+    <line class="cls-7" x1="773.63" y1="155.61" x2="773.63" y2="233.37"/>
+    <polyline class="cls-7" points="269.33 233.37 88.73 233.37 88.73 271.53 809.96 271.53 809.97 233.37 557.5 233.37"/>
+    <polyline class="cls-7" points="341.38 156.11 341.38 77.85 485.46 77.85 125.25 77.85 197.29 77.85 197.29 233.37 269.33 233.37 269.33 77.85"/>
+    <rect class="cls-5" x="94.92" y="113.43" width="60.66" height="85.36"/>
+    <circle class="cls-3" cx="125.07" cy="77.85" r="25.22"/>
+    <circle class="cls-2" cx="125.25" cy="233.37" r="25.22"/>
+    <rect class="cls-1" x="166.96" y="113.43" width="60.66" height="85.36"/>
+    <circle class="cls-3" cx="197.11" cy="77.85" r="25.22"/>
+    <circle class="cls-2" cx="197.29" cy="233.37" r="25.22"/>
+    <rect class="cls-5" x="239" y="113.43" width="60.66" height="85.36"/>
+    <circle class="cls-3" cx="269.15" cy="77.85" r="25.22"/>
+    <circle class="cls-2" cx="269.33" cy="233.37" r="25.22"/>
+    <rect class="cls-1" x="311.04" y="113.43" width="60.66" height="85.36"/>
+    <circle class="cls-3" cx="341.19" cy="77.85" r="25.22"/>
+    <rect class="cls-5" x="383.09" y="113.43" width="60.66" height="85.36"/>
+    <circle class="cls-3" cx="413.24" cy="77.85" r="25.22"/>
+    <rect class="cls-1" x="455.13" y="113.43" width="60.66" height="85.36"/>
+    <circle class="cls-3" cx="485.28" cy="77.85" r="25.22"/>
+    <rect class="cls-5" x="527.17" y="113.43" width="60.66" height="85.36"/>
+    <circle class="cls-2" cx="557.5" cy="233.37" r="25.22"/>
+    <rect class="cls-1" x="599.22" y="113.43" width="60.66" height="85.36"/>
+    <circle class="cls-2" cx="629.55" cy="233.37" r="25.22"/>
+    <rect class="cls-5" x="671.26" y="113.43" width="60.66" height="85.36"/>
+    <circle class="cls-2" cx="701.59" cy="233.37" r="25.22"/>
+    <rect class="cls-1" x="743.3" y="113.43" width="60.66" height="85.36"/>
+    <circle class="cls-2" cx="773.63" cy="233.37" r="25.22"/>
+    <rect class="cls-4" x="815.35" y="113.43" width="60.66" height="85.36"/>
+    <rect class="cls-4" x="887.39" y="113.43" width="60.66" height="85.36"/>
+    <g>
+      <text class="cls-6" transform="translate(111.95 172.83)"><tspan x="0" y="0">T</tspan></text>
+      <text class="cls-6" transform="translate(184.97 172.83)"><tspan x="0" y="0">e</tspan></text>
+      <text class="cls-6" transform="translate(256.09 172.83)"><tspan x="0" y="0">n</tspan></text>
+      <text class="cls-6" transform="translate(330.25 172.83)"><tspan x="0" y="0">s</tspan></text>
+      <text class="cls-6" transform="translate(400.24 172.83)"><tspan x="0" y="0">o</tspan></text>
+      <text class="cls-6" transform="translate(476.35 172.83)"><tspan x="0" y="0">r</tspan></text>
+      <text class="cls-6" transform="translate(543.31 172.83)"><tspan x="0" y="0">K</tspan></text>
+      <text class="cls-6" transform="translate(620.44 172.83)"><tspan x="0" y="0">r</tspan></text>
+      <text class="cls-6" transform="translate(688.6 172.83)"><tspan x="0" y="0">o</tspan></text>
+      <text class="cls-6" transform="translate(757.07 172.83)"><tspan x="0" y="0">w</tspan></text>
+      <text class="cls-6" transform="translate(834.11 172.83)"><tspan x="0" y="0">c</tspan></text>
+      <text class="cls-6" transform="translate(904.66 172.83)"><tspan x="0" y="0">h</tspan></text>
+    </g>
+  </g>
+</svg>

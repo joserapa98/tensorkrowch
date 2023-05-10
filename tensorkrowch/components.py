@@ -2116,7 +2116,7 @@ class ParamNode(AbstractNode):
         """
         Returns gradient of the param-node's tensor.
 
-        See also `torch.Tensor.grad()
+        See also `torch.Tensor.grad
         <https://pytorch.org/docs/stable/generated/torch.Tensor.grad.html>`_
 
         Returns
@@ -2302,15 +2302,16 @@ class StackNode(Node):
 
     * Provide a sequence of nodes: if ``nodes`` are provided, their tensors will
       be stacked and stored in the ``StackNode``. It is necessary that all nodes
-      are of the same type (:class:`Node` or :class:`ParamNode`), have the same
+      are of the same class (:class:`Node` or :class:`ParamNode`), have the same
       rank (although dimension of each leg can be different for different nodes;
       in which case smaller tensors are extended with 0's to match the dimensions
       of the largest tensor in the stack), same axes names (to ensure only the
-      `same kind` of nodes are stacked), belong to the same network and have edges
+      "same kind" of nodes are stacked), belong to the same network and have edges
       with the same type in each axis (:class:`Edge` or :class:`ParamEdge`).
 
     * Provide a stacked tensor: if the stacked ``tensor`` is provided, it is also
-      necessary to specify the ``axes_names``, ``network``, ``edges``, ``node1_list``.
+      necessary to specify the ``axes_names``, ``network``, ``edges`` and
+      ``node1_list``.
 
     ``StackNodes`` have an additional axis for the new `stack` dimension, which
     is a batch edge. This way, some contractions can be computed in parallel by
@@ -2325,7 +2326,10 @@ class StackNode(Node):
     Parameters
     ----------
     nodes : list[AbstractNode] or tuple[AbstractNode], optional
-        Sequence of nodes that are to be stacked.
+        Sequence of nodes that are to be stacked. They should all be of the same
+        class (:class:`Node` or :class:`ParamNode`), have the same rank, same
+        axes names and belong to the same network. They do not need to have equal
+        shapes.
     axes_names : list[str], tuple[str], optional
         Sequence of names for each of the node's axes. Names are used to access
         the edge that is attached to the node in a certain axis. Hence they should
@@ -2339,8 +2343,8 @@ class StackNode(Node):
     override_node : bool, optional
         Boolean indicating whether the node should override (``True``) another
         node in the network that has the same name (e.g. if a node is parameterized,
-        it would be required that a new :class:`ParamNode` replaces the non-parameterized
-        node in the network).
+        it would be required that a new :class:`ParamNode` replaces the
+        non-parameterized node in the network).
     tensor : torch.Tensor, optional
         Tensor that is to be stored in the node. Necessary if ``nodes`` are not
         provided.

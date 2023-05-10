@@ -34,7 +34,7 @@
     <script src="../../_static/copybutton.js"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <link rel="shortcut icon" href="../../_static/tensorkrowch_favicon_light.png"/>
+    <link rel="shortcut icon" href="../../_static/tensorkrowch_favicon_light.svg"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -77,7 +77,7 @@
         
       
       
-      <img src="../../_static/tensorkrowch_logo_light.png" class="logo" alt="logo">
+      <img src="../../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
       
       
     </a>
@@ -2428,7 +2428,7 @@ title="Source repository"
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns gradient of the param-node&#39;s tensor.</span>
 
-<span class="sd">        See also `torch.Tensor.grad()</span>
+<span class="sd">        See also `torch.Tensor.grad</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.Tensor.grad.html&gt;`_</span>
 
 <span class="sd">        Returns</span>
@@ -2614,15 +2614,16 @@ title="Source repository"
 
 <span class="sd">    * Provide a sequence of nodes: if ``nodes`` are provided, their tensors will</span>
 <span class="sd">      be stacked and stored in the ``StackNode``. It is necessary that all nodes</span>
-<span class="sd">      are of the same type (:class:`Node` or :class:`ParamNode`), have the same</span>
+<span class="sd">      are of the same class (:class:`Node` or :class:`ParamNode`), have the same</span>
 <span class="sd">      rank (although dimension of each leg can be different for different nodes;</span>
 <span class="sd">      in which case smaller tensors are extended with 0&#39;s to match the dimensions</span>
 <span class="sd">      of the largest tensor in the stack), same axes names (to ensure only the</span>
-<span class="sd">      `same kind` of nodes are stacked), belong to the same network and have edges</span>
+<span class="sd">      &quot;same kind&quot; of nodes are stacked), belong to the same network and have edges</span>
 <span class="sd">      with the same type in each axis (:class:`Edge` or :class:`ParamEdge`).</span>
 
 <span class="sd">    * Provide a stacked tensor: if the stacked ``tensor`` is provided, it is also</span>
-<span class="sd">      necessary to specify the ``axes_names``, ``network``, ``edges``, ``node1_list``.</span>
+<span class="sd">      necessary to specify the ``axes_names``, ``network``, ``edges`` and</span>
+<span class="sd">      ``node1_list``.</span>
 
 <span class="sd">    ``StackNodes`` have an additional axis for the new `stack` dimension, which</span>
 <span class="sd">    is a batch edge. This way, some contractions can be computed in parallel by</span>
@@ -2637,7 +2638,10 @@ title="Source repository"
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    nodes : list[AbstractNode] or tuple[AbstractNode], optional</span>
-<span class="sd">        Sequence of nodes that are to be stacked.</span>
+<span class="sd">        Sequence of nodes that are to be stacked. They should all be of the same</span>
+<span class="sd">        class (:class:`Node` or :class:`ParamNode`), have the same rank, same</span>
+<span class="sd">        axes names and belong to the same network. They do not need to have equal</span>
+<span class="sd">        shapes.</span>
 <span class="sd">    axes_names : list[str], tuple[str], optional</span>
 <span class="sd">        Sequence of names for each of the node&#39;s axes. Names are used to access</span>
 <span class="sd">        the edge that is attached to the node in a certain axis. Hence they should</span>
@@ -2651,8 +2655,8 @@ title="Source repository"
 <span class="sd">    override_node : bool, optional</span>
 <span class="sd">        Boolean indicating whether the node should override (``True``) another</span>
 <span class="sd">        node in the network that has the same name (e.g. if a node is parameterized,</span>
-<span class="sd">        it would be required that a new :class:`ParamNode` replaces the non-parameterized</span>
-<span class="sd">        node in the network).</span>
+<span class="sd">        it would be required that a new :class:`ParamNode` replaces the</span>
+<span class="sd">        non-parameterized node in the network).</span>
 <span class="sd">    tensor : torch.Tensor, optional</span>
 <span class="sd">        Tensor that is to be stored in the node. Necessary if ``nodes`` are not</span>
 <span class="sd">        provided.</span>

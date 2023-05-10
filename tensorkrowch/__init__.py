@@ -10,7 +10,7 @@ from tensorkrowch.components import Edge, StackEdge
 from tensorkrowch.components import Successor, TensorNetwork
 
 # Initializers
-from tensorkrowch.initializers import zeros, ones, copy, rand, randn
+from tensorkrowch.initializers import empty, zeros, ones, copy, rand, randn
 
 # Embeddings
 from tensorkrowch.embeddings import unit, add_ones

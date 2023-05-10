@@ -32,6 +32,44 @@ def _initializer(init_method,
                          **kwargs)
 
 
+def empty(shape: Shape,
+          axes_names: Optional[Sequence[Text]] = None,
+          name: Optional[Text] = None,
+          network: Optional[TensorNetwork] = None,
+          param_node: bool = False) -> AbstractNode:
+     """
+     Returns :class:`Node` or :class:`ParamNode` without tensor.
+
+     Parameters
+     ----------
+     shape : list[int], tuple[int], torch.Size
+          Node's shape, that is, the shape of its tensor.
+     axes_names : list[str], tuple[str], optional
+          Sequence of names for each of the node's axes. Names are used to access
+          the edge that is attached to the node in a certain axis. Hence they
+          should be all distinct.
+     name : str, optional
+          Node's name, used to access the node from de :class:`TensorNetwork`
+          where it belongs. It cannot contain blank spaces.
+     network : TensorNetwork, optional
+          Tensor network where the node should belong. If None, a new tensor
+          network, will be created to contain the node.
+     param_node : bool
+          Boolean indicating whether the node should be a :class:`ParamNode`
+          (``True``) or a :class:`Node` (``False``).
+
+     Returns
+     -------
+     Node or ParamNode
+     """
+     return _initializer(None,
+                         shape=shape,
+                         axes_names=axes_names,
+                         name=name,
+                         network=network,
+                         param_node=param_node)
+
+
 def zeros(shape: Shape,
           axes_names: Optional[Sequence[Text]] = None,
           name: Optional[Text] = None,
@@ -241,5 +279,3 @@ def randn(shape: Optional[Shape] = None,
                          param_node=param_node,
                          mean=mean,
                          std=std)
-
-# TODO: empty

@@ -429,10 +429,33 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
 <span class="sd">    &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
 <span class="sd">    &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; # nodeA is node1 and nodeB is node2 of new_edge</span>
 <span class="sd">    &gt;&gt;&gt; nodeA == new_edge.nodes[1 - nodeA.get_axis(&#39;right&#39;).is_node1()]</span>
 <span class="sd">    True</span>
 
 <span class="sd">    &gt;&gt;&gt; nodeB == new_edge.nodes[nodeA.get_axis(&#39;right&#39;).is_node1()]</span>
+<span class="sd">    True</span>
+<span class="sd">    </span>
+<span class="sd">    The ``node1`` attribute is extended to ``resultant`` nodes that inherit</span>
+<span class="sd">    edges.</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(2, 3), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(3, 4), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">    &gt;&gt;&gt; nodeC = tk.randn(shape=(4, 5), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">    &gt;&gt;&gt; edge1 = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; edge2 = nodeB[&#39;right&#39;] ^ nodeC[&#39;left&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA @ nodeB</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; # result inherits the edges nodeA[&#39;left&#39;] and edge2</span>
+<span class="sd">    &gt;&gt;&gt; result[&#39;left&#39;] == nodeA[&#39;left&#39;]</span>
+<span class="sd">    True</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; result[&#39;right&#39;] == edge2</span>
+<span class="sd">    True</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; # result is still node1 of edge2, since nodeA was</span>
+<span class="sd">    &gt;&gt;&gt; result.is_node1(&#39;right&#39;)</span>
 <span class="sd">    True</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -616,8 +639,8 @@ title="Source repository"
 <span class="sd">      See :meth:`TensorNetwork.trace`.</span>
 <span class="sd">      </span>
 <span class="sd">      </span>
-<span class="sd">    Also, there are 4 excluding types of nodes that will have different roles</span>
-<span class="sd">    in the :class:`TensorNetwork`:</span>
+<span class="sd">    Also, there are **4 excluding types** of nodes that will have different</span>
+<span class="sd">    roles in the :class:`TensorNetwork`:</span>
 <span class="sd">    </span>
 <span class="sd">    * **leaf**: These are the nodes that form the :class:`TensorNetwork`</span>
 <span class="sd">      (together with the ``data`` nodes). Usually, these will be the `trainable`</span>
@@ -627,7 +650,7 @@ title="Source repository"
 <span class="sd">      and are used to store the temporary tensors coming from input data. These</span>
 <span class="sd">      nodes can store their own tensors or use other node&#39;s tensor.</span>
 <span class="sd">      </span>
-<span class="sd">    * **virtual**: These nodes are a sort of ancillay, `hidden` nodes that</span>
+<span class="sd">    * **virtual**: These nodes are a sort of ancillary, `hidden` nodes that</span>
 <span class="sd">      accomplish some useful task (e.g. in uniform tensor networks a virtual</span>
 <span class="sd">      node can store the shared tensor, while all the other nodes in the</span>
 <span class="sd">      network just have a reference to it). These nodes always store their own</span>
@@ -948,7 +971,7 @@ title="Source repository"
 <div class="viewcode-block" id="AbstractNode.is_virtual"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.is_virtual">[docs]</a>    <span class="k">def</span> <span class="nf">is_virtual</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a boolean indicating if the node is a ``virtual`` node. These</span>
-<span class="sd">        nodes are a sort of ancillay, `hidden` nodes that accomplish some useful</span>
+<span class="sd">        nodes are a sort of ancillary, `hidden` nodes that accomplish some useful</span>
 <span class="sd">        task (e.g. in uniform tensor networks a virtual node can store the shared</span>
 <span class="sd">        tensor, while all the other nodes in the network just have a reference</span>
 <span class="sd">        to it). These nodes always store their own tensors.</span>
@@ -970,7 +993,6 @@ title="Source repository"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_leaf</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_virtual</span><span class="p">)</span></div>
 
-    <span class="c1"># TODO: por aqui</span>
 <div class="viewcode-block" id="AbstractNode.size"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.size">[docs]</a>    <span class="k">def</span> <span class="nf">size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Ax</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Size</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the size of the node&#39;s tensor. If ``axis`` is specified, returns</span>
@@ -993,8 +1015,8 @@ title="Source repository"
 
 <div class="viewcode-block" id="AbstractNode.is_node1"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.is_node1">[docs]</a>    <span class="k">def</span> <span class="nf">is_node1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Ax</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">bool</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns :meth:`node &lt;Axis.is_node1&gt;` attribute of axes of the node. If</span>
-<span class="sd">        ``axis`` is specified, returns only the ``node`` of that axis; otherwise</span>
+<span class="sd">        Returns :meth:`node1 &lt;Axis.is_node1&gt;` attribute of axes of the node. If</span>
+<span class="sd">        ``axis`` is specified, returns only the ``node1`` of that axis; otherwise</span>
 <span class="sd">        returns the ``node1`` of all axes of the node.</span>
 
 <span class="sd">        Parameters</span>
@@ -1024,6 +1046,26 @@ title="Source repository"
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        AbstractNode or list[AbstractNode]</span>
+<span class="sd">        </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.randn(shape=(2, 3), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.randn(shape=(3, 4), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; nodeC = tk.randn(shape=(4, 5), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeB[&#39;right&#39;] ^ nodeC[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; set(nodeB.neighbours()) == set([nodeA, nodeC])</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; nodeB.neighbours(&#39;right&#39;) == nodeC</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        Nodes ``resultant`` from operations are still connected to original</span>
+<span class="sd">        neighbours.</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; result = nodeA @ nodeB</span>
+<span class="sd">        &gt;&gt;&gt; result.neighbours(&#39;right&#39;) == nodeC</span>
+<span class="sd">        True</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">node1_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_node1</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -1071,8 +1113,8 @@ title="Source repository"
 
     <span class="k">def</span> <span class="nf">_change_axis_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Ax</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Changes axis size, that is, changes size of node&#39;s tensor and corresponding</span>
-<span class="sd">        edges at a certain axis.</span>
+<span class="sd">        Changes axis size, that is, changes size of node&#39;s tensor at a certain</span>
+<span class="sd">        axis.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1167,8 +1209,8 @@ title="Source repository"
 <span class="sd">        axis : int, str or Axis</span>
 <span class="sd">            Axes where the edge will be attached.</span>
 <span class="sd">        node1 : bool, optional</span>
-<span class="sd">            Boolean indicating whether the node is the `node1` (``True``) or</span>
-<span class="sd">            `node2` (``False``) of the edge.</span>
+<span class="sd">            Boolean indicating whether the node is the ``node1`` (``True``) or</span>
+<span class="sd">            ``node2`` (``False``) of the edge.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">axis_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]</span><span class="o">.</span><span class="n">_node1</span> <span class="o">=</span> <span class="n">node1</span>
@@ -1206,7 +1248,7 @@ title="Source repository"
 <span class="sd">        It can happen that an edge is not attached to the node if it is the result</span>
 <span class="sd">        of an :class:`Operation` and, hence, it inherits edges from the operands.</span>
 <span class="sd">        In that case, the new copied edges will be attached to the resultant node,</span>
-<span class="sd">        replacing each previous `node1` or `node2` with it (according to the</span>
+<span class="sd">        replacing each previous ``node1`` or ``node2`` with it (according to the</span>
 <span class="sd">        ``node1`` attribute of each axis).</span>
 
 <span class="sd">        Used for in-place operations like :func:`permute_` or :func:`split_` and</span>
@@ -1219,6 +1261,36 @@ title="Source repository"
 <span class="sd">            the corresponding edges in the node&#39;s neighbours (``True``). Otherwise,</span>
 <span class="sd">            the neighbours&#39; edges will be pointing to the original nodes from which</span>
 <span class="sd">            the current node inherits its edges (``False``).</span>
+<span class="sd">            </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.randn(shape=(2, 3), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.randn(shape=(3, 4), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; nodeC = tk.randn(shape=(4, 5), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeB[&#39;right&#39;] ^ nodeC[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; result = nodeA @ nodeB</span>
+<span class="sd">        </span>
+<span class="sd">        Node ``result`` inherits its ``right`` edge from ``nodeB``.</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; result[&#39;right&#39;] == nodeB[&#39;right&#39;]</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        However, ``nodeB[&#39;right&#39;]`` still connects ``nodeB`` and ``nodeC``.</span>
+<span class="sd">        There is no reference to ``result``.</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; result in result[&#39;right&#39;].nodes</span>
+<span class="sd">        False</span>
+<span class="sd">        </span>
+<span class="sd">        One can reattach its edges so that ``result``&#39;s edges do have references</span>
+<span class="sd">        to it.</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; result.reattach_edges()</span>
+<span class="sd">        &gt;&gt;&gt; result in result[&#39;right&#39;].nodes</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        If ``override`` is ``True``, ``nodeB[&#39;right&#39;]`` would be replaced by the</span>
+<span class="sd">        new ``result[&#39;right&#39;]``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">node1</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_node1</span><span class="p">())):</span>
             <span class="n">node</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="mi">1</span> <span class="o">-</span> <span class="n">node1</span><span class="p">]</span>
@@ -1254,6 +1326,20 @@ title="Source repository"
 <span class="sd">        ----------</span>
 <span class="sd">        axis : int, str or Axis, optional</span>
 <span class="sd">            Axis whose edge will be disconnected.</span>
+<span class="sd">            </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; nodeC = tk.Node(shape=(4, 5), axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeB[&#39;right&#39;] ^ nodeC[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; set(nodeB.neighbours()) == set([nodeA, nodeC])</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; nodeB.disconnect()</span>
+<span class="sd">        &gt;&gt;&gt; nodeB.neighbours() == []</span>
+<span class="sd">        True</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">edges</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="p">[</span><span class="n">axis</span><span class="p">]]</span>

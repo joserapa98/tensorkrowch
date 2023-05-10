@@ -1327,6 +1327,7 @@ class AbstractNode(ABC):
         elif self._network is not other._network:
             raise ValueError('Both nodes should be in the same network')
         
+        del self._network._memory_nodes[self._tensor_info['address']]
         
         if other._tensor_info['address'] is not None:
             self._tensor_info['address'] = None
@@ -1335,12 +1336,26 @@ class AbstractNode(ABC):
             self._tensor_info['index'] = None
         else:
             self._tensor_info = other._tensor_info
+            
+    def reset_tensor(self):
+        """Resets memory of node to reference itself, saving in it its tensor."""
+        self._temp_tensor = self.tensor
+        self._tensor_info['address'] = self._name
+        self._tensor_info['node_ref'] = None
+        self._tensor_info['full'] = True
+        self._tensor_info['index'] = None
 
-    def unset_tensor(self) -> None:
-        """Replaces node's tensor with None."""
-        # If node stores its own tensor
-        if not self.is_resultant() and (self._tensor_info['address'] is not None):
-            self._save_in_network(None)
+        if isinstance(self._temp_tensor, Parameter):
+            if hasattr(self._network, 'param_' + self._name):
+                delattr(self._network, 'param_' + self._name)
+                
+        if self._name not in self._network._memory_nodes:
+            self._network._memory_nodes[self._name] = None
+
+        # Set tensor and save it in ``memory_nodes``
+        if self._temp_tensor is not None:
+            self._unrestricted_set_tensor(self._temp_tensor)
+            self._temp_tensor = None
 
     def _save_in_network(self, tensor: Union[Tensor, Parameter]) -> None:
         """Saves new node's tensor in the network's memory."""

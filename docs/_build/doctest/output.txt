@@ -1,0 +1,164 @@
+Results of doctest builder run on 2023-05-10 17:58:25
+=====================================================
+
+Document: models
+----------------
+1 items passed all tests:
+  40 tests in default
+40 tests in 1 items.
+40 passed and 0 failed.
+Test passed.
+
+Document: components
+--------------------
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.tensor
+Expected:
+    tensor([[-0.2799, -0.4383, -0.8387],
+            [ 1.6225, -0.3370, -1.2316]])
+Got:
+    tensor([[ 1.1280,  1.3006, -0.1686],
+            [-0.3975, -0.1349, -0.9374]])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.sum()
+Expected:
+    tensor(-1.5029)
+Got:
+    tensor(0.7902)
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.sum('left')
+Expected:
+    tensor([ 1.3427, -0.7752, -2.0704])
+Got:
+    tensor([ 0.7305,  1.1657, -1.1060])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.tensor
+Expected:
+    tensor([[ 1.4005, -0.0521, -1.2091],
+            [ 1.9844,  0.3513, -0.5920]])
+Got:
+    tensor([[-0.3875, -0.1706,  2.0444],
+            [ 1.2322, -0.8236,  1.0724]])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.mean()
+Expected:
+    tensor(0.3139)
+Got:
+    tensor(0.4946)
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.mean('left')
+Expected:
+    tensor([ 1.6925,  0.1496, -0.9006])
+Got:
+    tensor([ 0.4224, -0.4971,  1.5584])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.tensor
+Expected:
+    tensor([[ 0.2111, -0.9551, -0.7812],
+            [ 0.2254,  0.3381, -0.2461]])
+Got:
+    tensor([[-1.0013, -0.2029,  2.0452],
+            [-0.9582,  0.8043, -0.0879]])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.std()
+Expected:
+    tensor(0.5567)
+Got:
+    tensor(1.1610)
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.std('left')
+Expected:
+    tensor([0.0101, 0.9145, 0.3784])
+Got:
+    tensor([0.0305, 0.7122, 1.5083])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.tensor
+Expected:
+    tensor([[ 1.5570,  1.8441, -0.0743],
+            [ 0.4572,  0.7592,  0.6356]])
+Got:
+    tensor([[-0.7073,  0.4670, -1.7407],
+            [ 0.0276, -1.4308,  0.1965]])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.norm()
+Expected:
+    tensor(2.6495)
+Got:
+    tensor(2.4156)
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.norm(axis='left')
+Expected:
+    tensor([1.6227, 1.9942, 0.6399])
+Got:
+    tensor([0.7079, 1.5051, 1.7518])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    nodeA = nodeA.parameterize()
+Exception raised:
+    Traceback (most recent call last):
+      File "/home/jose/anaconda3/envs/pytorch/lib/python3.8/doctest.py", line 1336, in __run
+        exec(compile(example.source, filename, "single",
+      File "<doctest default[0]>", line 1, in <module>
+        nodeA = nodeA.parameterize()
+    NameError: name 'nodeA' is not defined
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    paramnode.tensor
+Expected:
+    Parameter containing:
+    tensor([[-0.3340,  0.6811, -0.2866],
+            [ 1.3371,  1.4761,  0.6551]], requires_grad=True)
+Got:
+    Parameter containing:
+    tensor([[ 0.6834,  0.1649,  0.7766],
+            [ 1.6239, -0.4233, -0.2604]], requires_grad=True)
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    paramnodeA = paramnodeA.parameterize()
+Exception raised:
+    Traceback (most recent call last):
+      File "/home/jose/anaconda3/envs/pytorch/lib/python3.8/doctest.py", line 1336, in __run
+        exec(compile(example.source, filename, "single",
+      File "<doctest default[0]>", line 1, in <module>
+        paramnodeA = paramnodeA.parameterize()
+    NameError: name 'paramnodeA' is not defined
+**********************************************************************
+1 items had failures:
+  15 of 190 in default
+190 tests in 1 items.
+175 passed and 15 failed.
+***Test Failed*** 15 failures.
+
+Doctest summary
+===============
+  230 tests
+   15 failures in tests
+    0 failures in setup code
+    0 failures in cleanup code

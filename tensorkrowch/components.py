@@ -1790,9 +1790,9 @@ class Node(AbstractNode):
     nodes that are resultant from an :class:`Operation` between nodes.
     
     All **4 types of nodes** (``leaf``, ``data``, ``virtual`` and ``resultant``)
-    can be :class:`Node`. In fact, ``data`` and ``resultant`` nodes can **only**
-    be of class :class:`Node`, since they are not intended to be trainable. To
-    learn more about these 4 types of nodes, see :class:`AbstractNode`.
+    can be ``Node``. In fact, ``data`` and ``resultant`` nodes can **only** be
+    of class ``Node``, since they are not intended to be trainable. To learn
+    more about these 4 types of nodes, see :class:`AbstractNode`.
 
     For a complete list of properties and methods, see also :class:`AbstractNode`.
 
@@ -1806,9 +1806,12 @@ class Node(AbstractNode):
         Sequence of names for each of the node's axes. Names are used to access
         the edge that is attached to the node in a certain axis. Hence they should
         be all distinct. They cannot contain blank spaces or special characters.
+        By default, axes names will be ``"axis_0"``, ..., ``"axis_n"``, being
+        ``n`` the nummber of axes.
     name : str, optional
         Node's name, used to access the node from de :class:`TensorNetwork` where
-        it belongs. It cannot contain blank spaces.
+        it belongs. It cannot contain blank spaces. By default, it is the name
+        of the class (e.g. ``"node"``, ``"paramnode"``).
     network : TensorNetwork, optional
         Tensor network where the node should belong. If ``None``, a new tensor
         network will be created to contain the node.
@@ -1843,6 +1846,19 @@ class Node(AbstractNode):
     kwargs : float
         Keyword arguments for the different initialization methods. See
         :meth:`AbstractNode.make_tensor`.
+        
+    Examples
+    --------
+    >>> node = tk.Node(shape=(2, 5, 2),
+    ...                axes_names=('left', 'input', 'right'),
+    ...                name='my_node',
+    ...                init_method='randn',
+    ...                mean=0.,
+    ...                std=1.)
+    
+    Also, one can use one of the :ref:`Initializers` to simplify:
+    
+    >>> node = tk.randn((2, 5, 2))
     """
 
     # -------
@@ -1923,6 +1939,9 @@ class Node(AbstractNode):
         but the exact same edges) and whose name is extended with the suffix
         ``"_copy"``.
         
+        To create a copy that has its own (non-inherited) edges, one can use
+        :meth:`reattach_edges` afterwards.
+        
         Parameters
         ----------
         share_tensor : bool
@@ -1982,14 +2001,81 @@ class ParamNode(AbstractNode):
     nodes will be non-parameterized (e.g. :class:`Node`, :class:`StackNode`).
 
     The main difference with :class:`Nodes <Node>` is that ``ParamNodes`` have
-    ``nn.Parameter`` tensors instead of ``torch.Tensor``. Therefore, a ``ParamNode``
-    is a sort of `parameter` that is attached to the :class:`TensorNetwork` (which
-    is itself a ``nn.Module``). That is, the list of parameters of the tensor
-    network module contains the tensors of all ``ParamNodes``. 
-
-    To see how to initialize ``ParamNodes``, see :class:`Node`.
+    ``torch.nn.Parameter`` tensors instead of ``torch.Tensor``. Therefore, a
+    ``ParamNode`` is a sort of `parameter` that is attached to the
+    :class:`TensorNetwork` (which is itself a ``torch.nn.Module``). That is,
+    the list of parameters of the tensor network module contains the tensors
+    of all ``ParamNodes``.
+    
+    ``ParamNodes`` can only be ``leaf`` and ``virtual`` (e.g. a ``virtual`` node
+    used in a uniform :class:`TensorNetwork` to store the tensor that is shared
+    by all the trainable nodes must also be a ``ParamNode``, since it stores
+    a ``torch.nn.Parameter``.
 
     For a complete list of properties and methods, see also :class:`AbstractNode`.
+    
+    Parameters
+    ----------
+    shape : list[int], tuple[int], torch.Size, optional
+        Node's shape, that is, the shape of its tensor. If ``shape`` and
+        ``init_method`` are provided, a tensor will be made for the node. Otherwise,
+        ``tensor`` would be required.
+    axes_names : list[str], tuple[str], optional
+        Sequence of names for each of the node's axes. Names are used to access
+        the edge that is attached to the node in a certain axis. Hence they should
+        be all distinct. They cannot contain blank spaces or special characters.
+        By default, axes names will be ``"axis_0"``, ..., ``"axis_n"``, being
+        ``n`` the nummber of axes.
+    name : str, optional
+        Node's name, used to access the node from de :class:`TensorNetwork` where
+        it belongs. It cannot contain blank spaces. By default, it is the name
+        of the class (e.g. ``"node"``, ``"paramnode"``).
+    network : TensorNetwork, optional
+        Tensor network where the node should belong. If ``None``, a new tensor
+        network will be created to contain the node.
+    virtual : bool
+        Boolean indicating if the node is a ``virtual`` node.
+    override_node : bool
+        Boolean indicating whether the node should override (``True``) another
+        node in the network that has the same name (e.g. if a node is parameterized,
+        it would be required that a new :class:`ParamNode` replaces the
+        non-parameterized node in the network).
+    tensor : torch.Tensor, optional
+        Tensor that is to be stored in the node. If ``None``, ``shape`` and
+        ``init_method`` will be required.
+    edges : list[Edge], optional
+        List of edges that are to be attached to the node. This can be used in
+        case the node inherits the edges from other node(s), like results from
+        :class:`Operations <Operation>`.
+    override_edges : bool
+        Boolean indicating whether the provided ``edges`` should be overriden
+        (``True``) when reattached (e.g. if a node is parameterized, it would
+        be required that the new :class:`ParamNode`'s edges are indeed connected
+        to it, instead of to the original non-parameterized node).
+    node1_list : list[bool], optional
+        If ``edges`` are provided, the list of ``node1`` attributes of each edge
+        should also be provided.
+    init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
+        Initialization method.
+    device : torch.device, optional
+        Device where to initialize the tensor if ``init_method`` is provided.
+    kwargs : float
+        Keyword arguments for the different initialization methods. See
+        :meth:`AbstractNode.make_tensor`.
+        
+    Examples
+    --------
+    >>> node = tk.ParamNode(shape=(2, 5, 2),
+    ...                     axes_names=('left', 'input', 'right'),
+    ...                     name='my_paramnode',
+    ...                     init_method='randn',
+    ...                     mean=0.,
+    ...                     std=1.)
+    
+    Also, one can use one of the :ref:`Initializers` to simplify:
+    
+    >>> node = tk.randn((2, 5, 2),
+    ...                 param_node=True)
     """
 
     def __init__(self,
@@ -1997,7 +2083,6 @@ class ParamNode(AbstractNode):
                  axes_names: Optional[Sequence[Text]] = None,
                  name: Optional[Text] = None,
                  network: Optional['TensorNetwork'] = None,
-                 data: bool = False,
                  virtual: bool = False,
                  override_node: bool = False,
                  tensor: Optional[Tensor] = None,
@@ -2008,20 +2093,11 @@ class ParamNode(AbstractNode):
                  device: Optional[torch.device] = None,
                  **kwargs: float) -> None:
 
-        # Check data
-        if data:
-            raise ValueError('ParamNode cannot be a data node')
-
-        # Check leaf
-        if hasattr(self, '_leaf'):
-            # Case _create_resultant, _leaf = False
-            raise ValueError('ParamNode cannot be a resultant node')
-
         super().__init__(shape=shape,
                          axes_names=axes_names,
                          name=name,
                          network=network,
-                         data=data,
+                         data=False,
                          virtual=virtual,
                          override_node=override_node,
                          tensor=tensor,
@@ -2046,6 +2122,19 @@ class ParamNode(AbstractNode):
         Returns
         -------
         torch.Tensor or None
+        
+        Examples
+        --------
+        >>> paramnode = tk.randn((2, 3), param_node=True)
+        >>> paramnode.tensor
+        Parameter containing:
+        tensor([[-0.3340,  0.6811, -0.2866],
+                [ 1.3371,  1.4761,  0.6551]], requires_grad=True)
+            
+        >>> paramnode.sum().backward()
+        >>> paramnode.grad
+        tensor([[1., 1., 1.],
+                [1., 1., 1.]])
         """
         if self._tensor_info['address'] is None:
             aux_node = self._tensor_info['node_ref']
@@ -2069,6 +2158,14 @@ class ParamNode(AbstractNode):
     # -------
     # Methods
     # -------
+    @classmethod
+    def _create_resultant(cls, *args, **kwargs) -> None:
+        """
+        Private constructor to create resultant nodes. Called from
+        :class:`Operations <Operation>`.
+        """
+        raise NotImplementedError('ParamNodes can not be resultant nodes')
+    
     def _make_edge(self, axis: Axis) -> 'Edge':
         """Makes ``Edges`` that will be attached to each axis."""
         return Edge(node1=self, axis1=axis)
@@ -2085,7 +2182,7 @@ class ParamNode(AbstractNode):
         Replaces the param-node with a de-parameterized version of it, that is,
         turns a :class:`ParamNode` into a non-trainable, fixed :class:`Node`.
 
-        Since the param-node is `replaced`, it will be completely removed from
+        Since the param-node is **replaced**, it will be completely removed from
         the network, and its neighbours will point to the new node.
 
         Parameters
@@ -2099,6 +2196,27 @@ class ParamNode(AbstractNode):
         -------
         ParamNode or Node
             The original node or a de-parameterized version of it.
+            
+        Examples
+        --------
+        >>> paramnodeA = tk.randn((2, 3), param_node=True)
+        >>> paramnodeB = tk.randn((3, 4), param_node=True)
+        >>> _ = paramnodeA[1] ^ paramnodeB[0]
+        >>> nodeA = paramnodeA.parameterize(False)
+        >>> paramnodeB.neighbours() == [nodeA]
+        True
+        
+        >>> isinstance(nodeA.tensor, torch.nn.Parameter)
+        False
+        
+        ``paramnodeA`` still exists and has an edge pointing to ``paramnodeB``,
+        but the latter does not "see" the former. It should be deleted.
+        
+        >>> del paramnodeA
+        
+        To overcome this issue, one should override ``paramnodeA``:
+        
+        >>> paramnodeA = paramnodeA.parameterize()
         """
         if not set_param:
             new_node = Node(shape=self.shape,
@@ -2119,11 +2237,40 @@ class ParamNode(AbstractNode):
         Returns a copy of the param-node. That is, returns a param-node whose
         tensor is a copy of the original, whose edges are directly inherited
         (these are not copies, but the exact same edges) and whose name is
-        extended with the prefix ``"copy_"``.
+        extended with the suffix ``"_copy"``.
+        
+        To create a copy that has its own (non-inherited) edges, one can use
+        :meth:`reattach_edges` afterwards.
+        
+        Parameters
+        ----------
+        share_tensor : bool
+            Boolean indicating whether the copied param-node should store its
+            own copy of the tensor (``False``) or share it with the original
+            param-node (``True``) storing a reference to it.
 
         Returns
         -------
         ParamNode
+        
+        Examples
+        --------
+        >>> paramnode = tk.randn(shape=(2, 3), name='node', param_node=True)
+        >>> copy = paramnode.copy()
+        >>> paramnode.tensor_address() != copy.tensor_address()
+        True
+        
+        >>> torch.equal(paramnode.tensor, copy.tensor)
+        True
+        
+        If tensor is shared:
+        
+        >>> copy = paramnode.copy(True)
+        >>> paramnode.tensor_address() == copy.tensor_address()
+        True
+        
+        >>> torch.equal(paramnode.tensor, copy.tensor)
+        True
         """
         if share_tensor:
             new_node = ParamNode(shape=self._shape,

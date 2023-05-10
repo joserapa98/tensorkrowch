@@ -276,14 +276,6 @@ class TestInitParamNode:
         assert not node.is_data()
         assert node.successors == dict()
 
-    def test_init_paramnode_data(self):
-        # ParamNodes cannot be data nodes
-        with pytest.raises(ValueError):
-            node = tk.ParamNode(shape=(2, 5, 2),
-                                axes_names=('left', 'input', 'right'),
-                                network=tk.TensorNetwork('my_net'),
-                                data=True)
-
     def test_init_paramnode_virtual(self):
         # ParamNodes can be virtual, to store memory of ParamNodes
         # (e.g. in ParamStackNodes or in Uniform TN)
@@ -324,13 +316,8 @@ class TestInitParamNode:
         assert node.successors == dict()
 
     def test_init_paramnode_errors(self):
-        # ParamNodes cannot be data nodes
-        with pytest.raises(ValueError):
-            node = tk.ParamNode(shape=(2, 5, 2),
-                                data=True)
-
         # ParamNodes are always leaf nodes (or virtual)
-        with pytest.raises(ValueError):
+        with pytest.raises(NotImplementedError):
             node = tk.ParamNode._create_resultant(shape=(2, 5, 2))
 
         # Shape and tensor.shape must be equal if both are provided

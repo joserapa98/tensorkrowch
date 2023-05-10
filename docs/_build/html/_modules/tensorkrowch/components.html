@@ -2102,9 +2102,9 @@ title="Source repository"
 <span class="sd">    nodes that are resultant from an :class:`Operation` between nodes.</span>
 <span class="sd">    </span>
 <span class="sd">    All **4 types of nodes** (``leaf``, ``data``, ``virtual`` and ``resultant``)</span>
-<span class="sd">    can be :class:`Node`. In fact, ``data`` and ``resultant`` nodes can **only**</span>
-<span class="sd">    be of class :class:`Node`, since they are not intended to be trainable. To</span>
-<span class="sd">    learn more about these 4 types of nodes, see :class:`AbstractNode`.</span>
+<span class="sd">    can be ``Node``. In fact, ``data`` and ``resultant`` nodes can **only** be</span>
+<span class="sd">    of class ``Node``, since they are not intended to be trainable. To learn</span>
+<span class="sd">    more about these 4 types of nodes, see :class:`AbstractNode`.</span>
 
 <span class="sd">    For a complete list of properties and methods, see also :class:`AbstractNode`.</span>
 
@@ -2118,9 +2118,12 @@ title="Source repository"
 <span class="sd">        Sequence of names for each of the node&#39;s axes. Names are used to access</span>
 <span class="sd">        the edge that is attached to the node in a certain axis. Hence they should</span>
 <span class="sd">        be all distinct. They cannot contain blank spaces or special characters.</span>
+<span class="sd">        By default, axes names will be ``&quot;axis_0&quot;``, ..., ``&quot;axis_n&quot;``, being</span>
+<span class="sd">        ``n`` the nummber of axes.</span>
 <span class="sd">    name : str, optional</span>
 <span class="sd">        Node&#39;s name, used to access the node from de :class:`TensorNetwork` where</span>
-<span class="sd">        it belongs. It cannot contain blank spaces.</span>
+<span class="sd">        it belongs. It cannot contain blank spaces. By default, it is the name</span>
+<span class="sd">        of the class (e.g. ``&quot;node&quot;``, ``&quot;paramnode&quot;``).</span>
 <span class="sd">    network : TensorNetwork, optional</span>
 <span class="sd">        Tensor network where the node should belong. If ``None``, a new tensor</span>
 <span class="sd">        network will be created to contain the node.</span>
@@ -2155,6 +2158,19 @@ title="Source repository"
 <span class="sd">    kwargs : float</span>
 <span class="sd">        Keyword arguments for the different initialization methods. See</span>
 <span class="sd">        :meth:`AbstractNode.make_tensor`.</span>
+<span class="sd">        </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; node = tk.Node(shape=(2, 5, 2),</span>
+<span class="sd">    ...                axes_names=(&#39;left&#39;, &#39;input&#39;, &#39;right&#39;),</span>
+<span class="sd">    ...                name=&#39;my_node&#39;,</span>
+<span class="sd">    ...                init_method=&#39;randn&#39;,</span>
+<span class="sd">    ...                mean=0.,</span>
+<span class="sd">    ...                std=1.)</span>
+<span class="sd">    </span>
+<span class="sd">    Also, one can use one of the :ref:`Initializers` to simplify:</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; node = tk.randn((2, 5, 2))</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># -------</span>
@@ -2294,14 +2310,81 @@ title="Source repository"
 <span class="sd">    nodes will be non-parameterized (e.g. :class:`Node`, :class:`StackNode`).</span>
 
 <span class="sd">    The main difference with :class:`Nodes &lt;Node&gt;` is that ``ParamNodes`` have</span>
-<span class="sd">    ``nn.Parameter`` tensors instead of ``torch.Tensor``. Therefore, a ``ParamNode``</span>
-<span class="sd">    is a sort of `parameter` that is attached to the :class:`TensorNetwork` (which</span>
-<span class="sd">    is itself a ``nn.Module``). That is, the list of parameters of the tensor</span>
-<span class="sd">    network module contains the tensors of all ``ParamNodes``. </span>
-
-<span class="sd">    To see how to initialize ``ParamNodes``, see :class:`Node`.</span>
+<span class="sd">    ``torch.nn.Parameter`` tensors instead of ``torch.Tensor``. Therefore, a</span>
+<span class="sd">    ``ParamNode`` is a sort of `parameter` that is attached to the</span>
+<span class="sd">    :class:`TensorNetwork` (which is itself a ``torch.nn.Module``). That is,</span>
+<span class="sd">    the list of parameters of the tensor network module contains the tensors</span>
+<span class="sd">    of all ``ParamNodes``.</span>
+<span class="sd">    </span>
+<span class="sd">    ``ParamNodes`` can only be ``leaf`` and ``virtual`` (e.g. a ``virtual`` node</span>
+<span class="sd">    used in a uniform :class:`TensorNetwork` to store the tensor that is shared</span>
+<span class="sd">    by all the trainable nodes must also be a ``ParamNode``, since it stores</span>
+<span class="sd">    a ``torch.nn.Parameter``.</span>
 
 <span class="sd">    For a complete list of properties and methods, see also :class:`AbstractNode`.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    shape : list[int], tuple[int], torch.Size, optional</span>
+<span class="sd">        Node&#39;s shape, that is, the shape of its tensor. If ``shape`` and</span>
+<span class="sd">        ``init_method`` are provided, a tensor will be made for the node. Otherwise,</span>
+<span class="sd">        ``tensor`` would be required.</span>
+<span class="sd">    axes_names : list[str], tuple[str], optional</span>
+<span class="sd">        Sequence of names for each of the node&#39;s axes. Names are used to access</span>
+<span class="sd">        the edge that is attached to the node in a certain axis. Hence they should</span>
+<span class="sd">        be all distinct. They cannot contain blank spaces or special characters.</span>
+<span class="sd">        By default, axes names will be ``&quot;axis_0&quot;``, ..., ``&quot;axis_n&quot;``, being</span>
+<span class="sd">        ``n`` the nummber of axes.</span>
+<span class="sd">    name : str, optional</span>
+<span class="sd">        Node&#39;s name, used to access the node from de :class:`TensorNetwork` where</span>
+<span class="sd">        it belongs. It cannot contain blank spaces. By default, it is the name</span>
+<span class="sd">        of the class (e.g. ``&quot;node&quot;``, ``&quot;paramnode&quot;``).</span>
+<span class="sd">    network : TensorNetwork, optional</span>
+<span class="sd">        Tensor network where the node should belong. If ``None``, a new tensor</span>
+<span class="sd">        network will be created to contain the node.</span>
+<span class="sd">    virtual : bool</span>
+<span class="sd">        Boolean indicating if the node is a ``virtual`` node.</span>
+<span class="sd">    override_node : bool</span>
+<span class="sd">        Boolean indicating whether the node should override (``True``) another</span>
+<span class="sd">        node in the network that has the same name (e.g. if a node is parameterized,</span>
+<span class="sd">        it would be required that a new :class:`ParamNode` replaces the</span>
+<span class="sd">        non-parameterized node in the network).</span>
+<span class="sd">    tensor : torch.Tensor, optional</span>
+<span class="sd">        Tensor that is to be stored in the node. If ``None``, ``shape`` and</span>
+<span class="sd">        ``init_method`` will be required.</span>
+<span class="sd">    edges : list[Edge], optional</span>
+<span class="sd">        List of edges that are to be attached to the node. This can be used in</span>
+<span class="sd">        case the node inherits the edges from other node(s), like results from</span>
+<span class="sd">        :class:`Operations &lt;Operation&gt;`.</span>
+<span class="sd">    override_edges : bool</span>
+<span class="sd">        Boolean indicating whether the provided ``edges`` should be overriden</span>
+<span class="sd">        (``True``) when reattached (e.g. if a node is parameterized, it would</span>
+<span class="sd">        be required that the new :class:`ParamNode`&#39;s edges are indeed connected</span>
+<span class="sd">        to it, instead of to the original non-parameterized node).</span>
+<span class="sd">    node1_list : list[bool], optional</span>
+<span class="sd">        If ``edges`` are provided, the list of ``node1`` attributes of each edge</span>
+<span class="sd">        should also be provided.</span>
+<span class="sd">    init_method : {&quot;zeros&quot;, &quot;ones&quot;, &quot;copy&quot;, &quot;rand&quot;, &quot;randn&quot;}, optional</span>
+<span class="sd">        Initialization method.</span>
+<span class="sd">    device : torch.device, optional</span>
+<span class="sd">        Device where to initialize the tensor if ``init_method`` is provided.</span>
+<span class="sd">    kwargs : float</span>
+<span class="sd">        Keyword arguments for the different initialization methods. See</span>
+<span class="sd">        :meth:`AbstractNode.make_tensor`.</span>
+<span class="sd">        </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; node = tk.ParamNode(shape=(2, 5, 2),</span>
+<span class="sd">    ...                     axes_names=(&#39;left&#39;, &#39;input&#39;, &#39;right&#39;),</span>
+<span class="sd">    ...                     name=&#39;my_node&#39;,</span>
+<span class="sd">    ...                     init_method=&#39;randn&#39;,</span>
+<span class="sd">    ...                     mean=0.,</span>
+<span class="sd">    ...                     std=1.)</span>
+<span class="sd">    </span>
+<span class="sd">    Also, one can use one of the :ref:`Initializers` to simplify:</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; node = tk.randn((2, 5, 2),</span>
+<span class="sd">    ...                 param_node=True)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -2309,7 +2392,6 @@ title="Source repository"
                  <span class="n">axes_names</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Text</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">network</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s1">&#39;TensorNetwork&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="n">data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">virtual</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">override_node</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">tensor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -2320,20 +2402,11 @@ title="Source repository"
                  <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
-        <span class="c1"># Check data</span>
-        <span class="k">if</span> <span class="n">data</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;ParamNode cannot be a data node&#39;</span><span class="p">)</span>
-
-        <span class="c1"># Check leaf</span>
-        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_leaf&#39;</span><span class="p">):</span>
-            <span class="c1"># Case _create_resultant, _leaf = False</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;ParamNode cannot be a resultant node&#39;</span><span class="p">)</span>
-
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
                          <span class="n">axes_names</span><span class="o">=</span><span class="n">axes_names</span><span class="p">,</span>
                          <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
                          <span class="n">network</span><span class="o">=</span><span class="n">network</span><span class="p">,</span>
-                         <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                         <span class="n">data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                          <span class="n">virtual</span><span class="o">=</span><span class="n">virtual</span><span class="p">,</span>
                          <span class="n">override_node</span><span class="o">=</span><span class="n">override_node</span><span class="p">,</span>
                          <span class="n">tensor</span><span class="o">=</span><span class="n">tensor</span><span class="p">,</span>
@@ -2381,6 +2454,14 @@ title="Source repository"
     <span class="c1"># -------</span>
     <span class="c1"># Methods</span>
     <span class="c1"># -------</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_create_resultant</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Private constructor to create resultant nodes. Called from</span>
+<span class="sd">        :class:`Operations &lt;Operation&gt;`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;ParamNodes can not be resultant nodes&#39;</span><span class="p">)</span>
+    
     <span class="k">def</span> <span class="nf">_make_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Axis</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Edge&#39;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Makes ``Edges`` that will be attached to each axis.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">Edge</span><span class="p">(</span><span class="n">node1</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>

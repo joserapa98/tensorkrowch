@@ -681,7 +681,7 @@ not all of them being part of the graph, but being used for different
 purposes.</p></li>
 <li><p><strong>Successors</strong>: A dictionary with information about the nodes that result
 from <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operations</span></code></a> in which the current node was involved.
-These are the <a class="reference internal" href="#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successors</span></code></a>.</p></li>
+See <a class="reference internal" href="#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a>.</p></li>
 </ul>
 <p>Carrying this information with the node is what makes it easy to:</p>
 <ul class="simple">
@@ -700,9 +700,9 @@ in the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="t
 (together with the <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes). Usually, these will be the <cite>trainable</cite>
 nodes. These nodes can store their own tensors or use other node’s tensor.</p></li>
 <li><p><strong>data</strong>: These are similar to <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes, but they are never <cite>trainable</cite>,
-and are used to store the tensors coming from input data. These nodes can
-store their own tensors or use other node’s tensor.</p></li>
-<li><p><strong>virtual</strong>: These nodes are a sort of ancillay, hidden nodes that
+and are used to store the temporary tensors coming from input data. These
+nodes can store their own tensors or use other node’s tensor.</p></li>
+<li><p><strong>virtual</strong>: These nodes are a sort of ancillay, <cite>hidden</cite> nodes that
 accomplish some useful task (e.g. in uniform tensor networks a virtual
 node can store the shared tensor, while all the other nodes in the
 network just have a reference to it). These nodes always store their own
@@ -790,39 +790,42 @@ where it belongs. It cannot contain blank spaces.</p>
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.is_leaf">
 <span class="sig-name descname"><span class="pre">is_leaf</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.is_leaf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.is_leaf" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns a boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">leaf</span></code> node. These are
-the nodes that form the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>. Usually, these will be
-the <cite>trainable</cite> nodes. These nodes can hold their own tensors or use
-other node’s tensor.</p>
+the nodes that form the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> (together with the
+<code class="docutils literal notranslate"><span class="pre">data</span></code> nodes). Usually, these will be the <cite>trainable</cite> nodes. These
+nodes can store their own tensors or use other node’s tensor.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.is_data">
 <span class="sig-name descname"><span class="pre">is_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.is_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.is_data" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns a boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">data</span></code> node. These are
-the nodes where input data tensors will be put. Essentially these are
-also leaf nodes, but they only store temporary data tensors that will
-be replaced in each training epoch.</p>
+<dd><p>Returns a boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">data</span></code> node. These nodes
+are similar to <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes, but they are never <cite>trainable</cite>, and are
+used to store the temporary tensors coming from input data. These nodes
+can store their own tensors or use other node’s tensor.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.is_virtual">
 <span class="sig-name descname"><span class="pre">is_virtual</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.is_virtual"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.is_virtual" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns a boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">virtual</span></code> node. These
-are a sort of <cite>hidden</cite> nodes that can be used, for instance, to store
-the information of other <code class="docutils literal notranslate"><span class="pre">leaf</span></code> or <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes more efficiently
-(e.g. <a class="reference internal" href="models.html#tensorkrowch.UMPS" title="tensorkrowch.UMPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">Uniform</span> <span class="pre">MPS</span></code></a> uses a unique <code class="docutils literal notranslate"><span class="pre">virtual</span></code> node to
-store the tensor used by all the nodes in the network).</p>
-<p>There is a special case of virtual nodes one can create: the ones
-used as memory for uniform (traslationally invariant) tensor networks.
-In this case, it is recommended to use the string “virtual_uniform” in
-the node’s name (e.g. “virtual_uniform_mps”).</p>
+nodes are a sort of ancillay, <cite>hidden</cite> nodes that accomplish some useful
+task (e.g. in uniform tensor networks a virtual node can store the shared
+tensor, while all the other nodes in the network just have a reference
+to it). These nodes always store their own tensors.</p>
+<p>If a <code class="docutils literal notranslate"><span class="pre">virtual</span></code> node is used as the node storing the shared tensor in
+a uniform (translationally invariant) <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>, it is
+recommended to use the string <strong>“virtual_uniform”</strong> in the node’s name
+(e.g. “virtual_uniform_mps”).</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.is_resultant">
 <span class="sig-name descname"><span class="pre">is_resultant</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.is_resultant"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.is_resultant" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns a boolean indicating if the node is a <code class="docutils literal notranslate"><span class="pre">resultant</span></code> node. These
-are the nodes that result from an operation on any type of nodes.</p>
+are nodes that result from an <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operation</span></code></a>. They are intermediate
+nodes that (almost always) inherit edges from <code class="docutils literal notranslate"><span class="pre">leaf</span></code> and <code class="docutils literal notranslate"><span class="pre">data</span></code>
+nodes, the ones that really form the network. These nodes can store
+their own tensors or use other node’s tensor.</p>
 </dd></dl>
 
 <dl class="py method">

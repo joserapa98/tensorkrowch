@@ -58,7 +58,7 @@ def check_name_style(name: Text, type: Text = 'axis') -> bool:
             if char == ' ':
                 return False
         else:
-            raise ValueError('`type` can only be \'axis\' or \'node\'')
+            raise ValueError('`type` can only be "axis" or "node"')
     return True
 
 

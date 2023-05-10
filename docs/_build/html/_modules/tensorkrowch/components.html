@@ -560,24 +560,87 @@ title="Source repository"
 <div class="viewcode-block" id="AbstractNode"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode">[docs]</a><span class="k">class</span> <span class="nc">AbstractNode</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Abstract class for all types of nodes. Defines what a node is and most of its</span>
-<span class="sd">    properties and methods. Since it is an abstract class, cannot be instantiated.</span>
-
-<span class="sd">    A node is the minimum element in a :class:`TensorNetwork`. At its most basic</span>
-<span class="sd">    level, it is just a container for a tensor that stores information about its</span>
-<span class="sd">    neighbours (with what other nodes it is connected), edges (names to access</span>
-<span class="sd">    each of them, whether they are batch edges or not, etc.) or successors (nodes</span>
-<span class="sd">    that result from operating the node). Besides, and what is more important,</span>
-<span class="sd">    this information is useful to:</span>
-
+<span class="sd">    properties and methods. Since it is an abstract class, cannot be instantiated. </span>
+<span class="sd">      </span>
+<span class="sd">    Nodes are the elements that make up a :class:`TensorNetwork`. At its most</span>
+<span class="sd">    basic level, a node is a container for a ``torch.Tensor`` that stores other</span>
+<span class="sd">    relevant information which enables to build any network and operate nodes</span>
+<span class="sd">    to contract it (and train it!). Some of the information that is carried by</span>
+<span class="sd">    the nodes includes:</span>
+<span class="sd">    </span>
+<span class="sd">    * **Shape**: Every node needs a shape to know if connections with other</span>
+<span class="sd">      nodes are possible. Even if the tensor is not specified, an empty node</span>
+<span class="sd">      needs a shape.</span>
+<span class="sd">      </span>
+<span class="sd">    * **Tensor**: The key ingredient of the node. Although the node acts as a</span>
+<span class="sd">      `container` for the tensor, the node does not `contain` it. Actually,</span>
+<span class="sd">      for efficiency purposes, the tensors are stored in a sort of memory that</span>
+<span class="sd">      is shared by all the nodes of the :class:`TensorNetwork`. Therefore, all</span>
+<span class="sd">      that nodes `contain` is a memory address. Furthermore, some nodes can share</span>
+<span class="sd">      the same (or a part of the same) tensor, thus containing the same address.</span>
+<span class="sd">      Sometimes, to maintain consistency, when two nodes share a tensor, one</span>
+<span class="sd">      stores its memory address, and the other one stores a reference to the</span>
+<span class="sd">      former.</span>
+<span class="sd">    </span>
+<span class="sd">    * **Axes**: A list of :class:`Axes &lt;Axis&gt;` that make it easy to access edges</span>
+<span class="sd">      just using a name or an index.</span>
+<span class="sd">      </span>
+<span class="sd">    * **Edges**: A list of :class:`Edges &lt;Edge&gt;`, one for each dimension of the</span>
+<span class="sd">      node. Each edge is attached to the node via an :class:`Axis`. Edges are</span>
+<span class="sd">      useful to connect several nodes, creating a :class:`TensorNetwork`.</span>
+<span class="sd">      </span>
+<span class="sd">    * **Network**: The :class:`TensorNetwork` to which the node belongs. If</span>
+<span class="sd">      the network is not specified when creating the node, a new ``TensorNetwork``</span>
+<span class="sd">      is created to contain the node. Although the network can be thought of</span>
+<span class="sd">      as a graph, it is a ``torch.nn.Module``, so it is much more than that.</span>
+<span class="sd">      Actually, the ``TensorNetwork`` can contain different types of nodes,</span>
+<span class="sd">      not all of them being part of the graph, but being used for different</span>
+<span class="sd">      purposes.</span>
+<span class="sd">      </span>
+<span class="sd">    * **Successors**: A dictionary with information about the nodes that result</span>
+<span class="sd">      from :class:`Operations &lt;Operation&gt;` in which the current node was involved.</span>
+<span class="sd">      These are the :class:`Successors &lt;Successor&gt;`.</span>
+<span class="sd">      </span>
+<span class="sd">      </span>
+<span class="sd">    Carrying this information with the node is what makes it easy to:</span>
+<span class="sd">    </span>
 <span class="sd">    * Perform tensor network :class:`Operations &lt;Operation&gt;` such as :func:`contraction</span>
-<span class="sd">      &lt;contract_between&gt;` of two neighbouring nodes without having to worry about</span>
+<span class="sd">      &lt;contract_between&gt;` of two neighbouring nodes, without having to worry about</span>
 <span class="sd">      tensor&#39;s shapes, order of axes, etc.</span>
 
 <span class="sd">    * Perform more advanced operations such as :func:`stack` or :func:`unbind`</span>
 <span class="sd">      saving memory and time.</span>
 
 <span class="sd">    * Keep track of operations in which a node has taken place, so that several</span>
-<span class="sd">      steps can be skipped in further training iterations. See :meth:`TensorNetwork.trace`.</span>
+<span class="sd">      steps can be skipped in further training iterations.</span>
+<span class="sd">      See :meth:`TensorNetwork.trace`.</span>
+<span class="sd">      </span>
+<span class="sd">      </span>
+<span class="sd">    Also, there are 4 excluding types of nodes that will have different roles</span>
+<span class="sd">    in the :class:`TensorNetwork`:</span>
+<span class="sd">    </span>
+<span class="sd">    * **leaf**: These are the nodes that form the :class:`TensorNetwork`</span>
+<span class="sd">      (together with the ``data`` nodes). Usually, these will be the `trainable`</span>
+<span class="sd">      nodes. These nodes can store their own tensors or use other node&#39;s tensor.</span>
+<span class="sd">      </span>
+<span class="sd">    * **data**: These are similar to ``leaf`` nodes, but they are never `trainable`,</span>
+<span class="sd">      and are used to store the tensors coming from input data. These nodes can</span>
+<span class="sd">      store their own tensors or use other node&#39;s tensor.</span>
+<span class="sd">      </span>
+<span class="sd">    * **virtual**: These nodes are a sort of ancillay, hidden nodes that</span>
+<span class="sd">      accomplish some useful task (e.g. in uniform tensor networks a virtual</span>
+<span class="sd">      node can store the shared tensor, while all the other nodes in the</span>
+<span class="sd">      network just have a reference to it). These nodes always store their own</span>
+<span class="sd">      tensors.</span>
+<span class="sd">      </span>
+<span class="sd">    * **resultant**: These are nodes that result from an :class:`Operation`.</span>
+<span class="sd">      They are intermediate nodes that (almost always) inherit edges from ``leaf``</span>
+<span class="sd">      and ``data`` nodes, the ones that really form the network. These nodes can</span>
+<span class="sd">      store their own tensors or use other node&#39;s tensor.</span>
+<span class="sd">      </span>
+<span class="sd">    See :class:`TensorNetwork` to learn more about the importance of these 4</span>
+<span class="sd">    types of nodes.</span>
+<span class="sd">    </span>
 
 <span class="sd">    Refer to the subclasses of ``AbstractNode`` to see how to instantiate nodes:</span>
 
@@ -643,7 +706,7 @@ title="Source repository"
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axes_names</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
                 <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                    <span class="s1">&#39;`axes_names` should be tuple[str, ...] or list[str, ...] type&#39;</span><span class="p">)</span>
+                    <span class="s1">&#39;`axes_names` should be tuple[str] or list[str] type&#39;</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">axes_names</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">aux_shape</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                     <span class="s1">&#39;`axes_names` length should match `shape` length&#39;</span><span class="p">)</span>
@@ -685,8 +748,8 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">_virtual</span> <span class="o">=</span> <span class="n">virtual</span>
 
         <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_leaf</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_virtual</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The node can only be one of `leaf`, `data`, `virtual`&#39;</span>
-                             <span class="s1">&#39; and `resultant`&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The node can only be one of `leaf`, `data`, &#39;</span>
+                             <span class="s1">&#39;`virtual` and `resultant`&#39;</span><span class="p">)</span>
 
         <span class="c1"># Add edges</span>
         <span class="k">if</span> <span class="n">edges</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -722,6 +785,10 @@ title="Source repository"
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">_create_resultant</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Private constructor to create resultant nodes. Called from</span>
+<span class="sd">        :class:`Operations &lt;Operation&gt;`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">obj</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
         <span class="c1"># Only way to set _leaf to False</span>
@@ -769,7 +836,7 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">shape</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Size</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Shape of node&#39;s :attr:`tensor`. It is a ``torch.Size``.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Shape of node&#39;s :attr:`tensor`. It is of type ``torch.Size``.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shape</span>
 
     <span class="nd">@property</span>
@@ -792,7 +859,7 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">axes_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Text</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;List of names of node&#39;s axes.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List of names of node&#39;s :class:`axes &lt;Axis&gt;`.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">axis</span><span class="p">:</span> <span class="n">axis</span><span class="o">.</span><span class="n">_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">))</span>
 
     <span class="nd">@property</span>
@@ -1705,6 +1772,8 @@ title="Source repository"
 <span class="sd">    nodes that are resultant from an :class:`Operation` between nodes.</span>
 
 <span class="sd">    For a complete list of properties and methods, see also :class:`AbstractNode`.</span>
+<span class="sd">    </span>
+<span class="sd">    # TODO: describe types of nodes (leaf, resultant, data, virtual)</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -3000,6 +3069,8 @@ title="Source repository"
 <span class="sd">    often at least), since changing them entails first resetting the whole</span>
 <span class="sd">    network (see :meth:`reset`), which is a costly method. To understand what</span>
 <span class="sd">    reset means, check the different types of nodes a network might have:</span>
+<span class="sd">    </span>
+<span class="sd">    # TODO: reference to AbstarctNode</span>
 
 <span class="sd">    * **leaf**: These are the nodes that make up the graph of the Tensor Network,</span>
 <span class="sd">      except for the nodes containing data. These can be either type :class:`Node`</span>
@@ -3488,6 +3559,7 @@ title="Source repository"
         <span class="n">non_enum_prev_name</span> <span class="o">=</span> <span class="n">erase_enum</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">is_resultant</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">non_enum_prev_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">operations</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_assign_node_name</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">)</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Node</span><span class="se">\&#39;</span><span class="s1">s name cannot be an operation name: &#39;</span>
                              <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">operations</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 

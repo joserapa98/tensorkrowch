@@ -248,24 +248,87 @@ Shape = Union[Sequence[int], Size]
 class AbstractNode(ABC):
     """
     Abstract class for all types of nodes. Defines what a node is and most of its
-    properties and methods. Since it is an abstract class, cannot be instantiated.
-
-    A node is the minimum element in a :class:`TensorNetwork`. At its most basic
-    level, it is just a container for a tensor that stores information about its
-    neighbours (with what other nodes it is connected), edges (names to access
-    each of them, whether they are batch edges or not, etc.) or successors (nodes
-    that result from operating the node). Besides, and what is more important,
-    this information is useful to:
-
+    properties and methods. Since it is an abstract class, cannot be instantiated. 
+      
+    Nodes are the elements that make up a :class:`TensorNetwork`. At its most
+    basic level, a node is a container for a ``torch.Tensor`` that stores other
+    relevant information which enables to build any network and operate nodes
+    to contract it (and train it!). Some of the information that is carried by
+    the nodes includes:
+    
+    * **Shape**: Every node needs a shape to know if connections with other
+      nodes are possible. Even if the tensor is not specified, an empty node
+      needs a shape.
+      
+    * **Tensor**: The key ingredient of the node. Although the node acts as a
+      `container` for the tensor, the node does not `contain` it. Actually,
+      for efficiency purposes, the tensors are stored in a sort of memory that
+      is shared by all the nodes of the :class:`TensorNetwork`. Therefore, all
+      that nodes `contain` is a memory address. Furthermore, some nodes can share
+      the same (or a part of the same) tensor, thus containing the same address.
+      Sometimes, to maintain consistency, when two nodes share a tensor, one
+      stores its memory address, and the other one stores a reference to the
+      former.
+    
+    * **Axes**: A list of :class:`Axes <Axis>` that make it easy to access edges
+      just using a name or an index.
+      
+    * **Edges**: A list of :class:`Edges <Edge>`, one for each dimension of the
+      node. Each edge is attached to the node via an :class:`Axis`. Edges are
+      useful to connect several nodes, creating a :class:`TensorNetwork`.
+      
+    * **Network**: The :class:`TensorNetwork` to which the node belongs. If
+      the network is not specified when creating the node, a new ``TensorNetwork``
+      is created to contain the node. Although the network can be thought of
+      as a graph, it is a ``torch.nn.Module``, so it is much more than that.
+      Actually, the ``TensorNetwork`` can contain different types of nodes,
+      not all of them being part of the graph, but being used for different
+      purposes.
+      
+    * **Successors**: A dictionary with information about the nodes that result
+      from :class:`Operations <Operation>` in which the current node was involved.
+      See :class:`Successor`.
+      
+      
+    Carrying this information with the node is what makes it easy to:
+    
     * Perform tensor network :class:`Operations <Operation>` such as :func:`contraction
-      <contract_between>` of two neighbouring nodes without having to worry about
+      <contract_between>` of two neighbouring nodes, without having to worry about
       tensor's shapes, order of axes, etc.
 
     * Perform more advanced operations such as :func:`stack` or :func:`unbind`
       saving memory and time.
 
     * Keep track of operations in which a node has taken place, so that several
-      steps can be skipped in further training iterations. See :meth:`TensorNetwork.trace`.
+      steps can be skipped in further training iterations.
+      See :meth:`TensorNetwork.trace`.
+      
+      
+    Also, there are 4 excluding types of nodes that will have different roles
+    in the :class:`TensorNetwork`:
+    
+    * **leaf**: These are the nodes that form the :class:`TensorNetwork`
+      (together with the ``data`` nodes). Usually, these will be the `trainable`
+      nodes. These nodes can store their own tensors or use other node's tensor.
+      
+    * **data**: These are similar to ``leaf`` nodes, but they are never `trainable`,
+      and are used to store the temporary tensors coming from input data. These
+      nodes can store their own tensors or use other node's tensor.
+      
+    * **virtual**: These nodes are a sort of ancillay, `hidden` nodes that
+      accomplish some useful task (e.g. in uniform tensor networks a virtual
+      node can store the shared tensor, while all the other nodes in the
+      network just have a reference to it). These nodes always store their own
+      tensors.
+      
+    * **resultant**: These are nodes that result from an :class:`Operation`.
+      They are intermediate nodes that (almost always) inherit edges from ``leaf``
+      and ``data`` nodes, the ones that really form the network. These nodes can
+      store their own tensors or use other node's tensor.
+      
+    See :class:`TensorNetwork` to learn more about the importance of these 4
+    types of nodes.
+    
 
     Refer to the subclasses of ``AbstractNode`` to see how to instantiate nodes:
 
@@ -331,7 +394,7 @@ class AbstractNode(ABC):
         else:
             if not isinstance(axes_names, (tuple, list)):
                 raise TypeError(
-                    '`axes_names` should be tuple[str, ...] or list[str, ...] type')
+                    '`axes_names` should be tuple[str] or list[str] type')
             if len(axes_names) != len(aux_shape):
                 raise ValueError(
                     '`axes_names` length should match `shape` length')
@@ -373,8 +436,8 @@ class AbstractNode(ABC):
         self._virtual = virtual
 
         if (self._leaf + self._data + self._virtual) > 1:
-            raise ValueError('The node can only be one of `leaf`, `data`, `virtual`'
-                             ' and `resultant`')
+            raise ValueError('The node can only be one of `leaf`, `data`, '
+                             '`virtual` and `resultant`')
 
         # Add edges
         if edges is None:
@@ -410,6 +473,10 @@ class AbstractNode(ABC):
 
     @classmethod
     def _create_resultant(cls, *args, **kwargs) -> None:
+        """
+        Private constructor to create resultant nodes. Called from
+        :class:`Operations <Operation>`.
+        """
         obj = super().__new__(cls, *args, **kwargs)
 
         # Only way to set _leaf to False
@@ -457,7 +524,7 @@ class AbstractNode(ABC):
 
     @property
     def shape(self) -> Size:
-        """Shape of node's :attr:`tensor`. It is a ``torch.Size``."""
+        """Shape of node's :attr:`tensor`. It is of type ``torch.Size``."""
         return self._shape
 
     @property
@@ -480,7 +547,7 @@ class AbstractNode(ABC):
 
     @property
     def axes_names(self) -> List[Text]:
-        """List of names of node's axes."""
+        """List of names of node's :class:`axes <Axis>`."""
         return list(map(lambda axis: axis._name, self._axes))
 
     @property
@@ -551,43 +618,47 @@ class AbstractNode(ABC):
     def is_leaf(self) -> bool:
         """
         Returns a boolean indicating if the node is a ``leaf`` node. These are
-        the nodes that form the :class:`TensorNetwork`. Usually, these will be
-        the `trainable` nodes. These nodes can hold their own tensors or use
-        other node's tensor.
+        the nodes that form the :class:`TensorNetwork` (together with the
+        ``data`` nodes). Usually, these will be the `trainable` nodes. These
+        nodes can store their own tensors or use other node's tensor.
         """
         return self._leaf
 
     def is_data(self) -> bool:
         """
-        Returns a boolean indicating if the node is a ``data`` node. These are
-        the nodes where input data tensors will be put. Essentially these are
-        also leaf nodes, but they only store temporary data tensors that will
-        be replaced in each training epoch.
+        Returns a boolean indicating if the node is a ``data`` node. These nodes
+        are similar to ``leaf`` nodes, but they are never `trainable`, and are
+        used to store the temporary tensors coming from input data. These nodes
+        can store their own tensors or use other node's tensor.
         """
         return self._data
 
     def is_virtual(self) -> bool:
         """
         Returns a boolean indicating if the node is a ``virtual`` node. These
-        are a sort of `hidden` nodes that can be used, for instance, to store
-        the information of other ``leaf`` or ``data`` nodes more efficiently
-        (e.g. :class:`Uniform MPS <UMPS>` uses a unique ``virtual`` node to
-        store the tensor used by all the nodes in the network).
-
-        There is a special case of virtual nodes one can create: the ones
-        used as memory for uniform (traslationally invariant) tensor networks.
-        In this case, it is recommended to use the string "virtual_uniform" in
-        the node's name (e.g. "virtual_uniform_mps").
+        nodes are a sort of ancillay, `hidden` nodes that accomplish some useful
+        task (e.g. in uniform tensor networks a virtual node can store the shared
+        tensor, while all the other nodes in the network just have a reference
+        to it). These nodes always store their own tensors.
+        
+        If a ``virtual`` node is used as the node storing the shared tensor in
+        a uniform (translationally invariant) :class:`TensorNetwork`, it is
+        recommended to use the string **"virtual_uniform"** in the node's name
+        (e.g. "virtual_uniform_mps").
         """
         return self._virtual
 
     def is_resultant(self) -> bool:
         """
         Returns a boolean indicating if the node is a ``resultant`` node. These
-        are the nodes that result from an operation on any type of nodes.
+        are nodes that result from an :class:`Operation`. They are intermediate
+        nodes that (almost always) inherit edges from ``leaf`` and ``data``
+        nodes, the ones that really form the network. These nodes can store
+        their own tensors or use other node's tensor.
         """
         return not (self._leaf or self._data or self._virtual)
 
+    # TODO: por aqui
     def size(self, axis: Optional[Ax] = None) -> Union[Size, int]:
         """
         Returns the size of the node's tensor. If ``axis`` is specified, returns
@@ -1393,6 +1464,8 @@ class Node(AbstractNode):
     nodes that are resultant from an :class:`Operation` between nodes.
 
     For a complete list of properties and methods, see also :class:`AbstractNode`.
+    
+    # TODO: describe types of nodes (leaf, resultant, data, virtual)
 
     Parameters
     ----------
@@ -2688,6 +2761,8 @@ class TensorNetwork(nn.Module):
     often at least), since changing them entails first resetting the whole
     network (see :meth:`reset`), which is a costly method. To understand what
     reset means, check the different types of nodes a network might have:
+    
+    # TODO: reference to AbstarctNode
 
     * **leaf**: These are the nodes that make up the graph of the Tensor Network,
       except for the nodes containing data. These can be either type :class:`Node`
@@ -3176,6 +3251,7 @@ class TensorNetwork(nn.Module):
         non_enum_prev_name = erase_enum(name)
 
         if not node.is_resultant() and (non_enum_prev_name in self.operations):
+            self._assign_node_name(node, node._name)
             raise ValueError(f'Node\'s name cannot be an operation name: '
                              f'{list(self.operations.keys())}')
 

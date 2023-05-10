@@ -367,11 +367,50 @@ title="Print to PDF"
   <a class="reference internal nav-link" href="#nodes">
    Nodes
   </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#abstractnode">
+     AbstractNode
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#node">
+     Node
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#paramnode">
+     ParamNode
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#stacknode">
+     StackNode
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#paramstacknode">
+     ParamStackNode
+    </a>
+   </li>
+  </ul>
  </li>
  <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#edges">
    Edges
   </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#edge">
+     Edge
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#stackedge">
+     StackEdge
+    </a>
+   </li>
+  </ul>
  </li>
  <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#successor">
@@ -411,11 +450,50 @@ title="Print to PDF"
   <a class="reference internal nav-link" href="#nodes">
    Nodes
   </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#abstractnode">
+     AbstractNode
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#node">
+     Node
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#paramnode">
+     ParamNode
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#stacknode">
+     StackNode
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#paramstacknode">
+     ParamStackNode
+    </a>
+   </li>
+  </ul>
  </li>
  <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#edges">
    Edges
   </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#edge">
+     Edge
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#stackedge">
+     StackEdge
+    </a>
+   </li>
+  </ul>
  </li>
  <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#successor">
@@ -564,25 +642,78 @@ batch edge.</p>
 </section>
 <section id="nodes">
 <h2>Nodes<a class="headerlink" href="#nodes" title="Permalink to this headline">#</a></h2>
+<section id="abstractnode">
+<h3>AbstractNode<a class="headerlink" href="#abstractnode" title="Permalink to this headline">#</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">AbstractNode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">virtual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1_list</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode" title="Permalink to this definition">#</a></dt>
 <dd><p>Abstract class for all types of nodes. Defines what a node is and most of its
 properties and methods. Since it is an abstract class, cannot be instantiated.</p>
-<p>A node is the minimum element in a <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>. At its most basic
-level, it is just a container for a tensor that stores information about its
-neighbours (with what other nodes it is connected), edges (names to access
-each of them, whether they are batch edges or not, etc.) or successors (nodes
-that result from operating the node). Besides, and what is more important,
-this information is useful to:</p>
+<p>Nodes are the elements that make up a <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>. At its most
+basic level, a node is a container for a <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code> that stores other
+relevant information which enables to build any network and operate nodes
+to contract it (and train it!). Some of the information that is carried by
+the nodes includes:</p>
 <ul class="simple">
-<li><p>Perform tensor network <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operations</span></code></a> such as <a class="reference internal" href="operations.html#tensorkrowch.contract_between" title="tensorkrowch.contract_between"><code class="xref py py-func docutils literal notranslate"><span class="pre">contraction</span></code></a> of two neighbouring nodes without having to worry about
+<li><p><strong>Shape</strong>: Every node needs a shape to know if connections with other
+nodes are possible. Even if the tensor is not specified, an empty node
+needs a shape.</p></li>
+<li><p><strong>Tensor</strong>: The key ingredient of the node. Although the node acts as a
+<cite>container</cite> for the tensor, the node does not <cite>contain</cite> it. Actually,
+for efficiency purposes, the tensors are stored in a sort of memory that
+is shared by all the nodes of the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>. Therefore, all
+that nodes <cite>contain</cite> is a memory address. Furthermore, some nodes can share
+the same (or a part of the same) tensor, thus containing the same address.
+Sometimes, to maintain consistency, when two nodes share a tensor, one
+stores its memory address, and the other one stores a reference to the
+former.</p></li>
+<li><p><strong>Axes</strong>: A list of <a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><code class="xref py py-class docutils literal notranslate"><span class="pre">Axes</span></code></a> that make it easy to access edges
+just using a name or an index.</p></li>
+<li><p><strong>Edges</strong>: A list of <a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edges</span></code></a>, one for each dimension of the
+node. Each edge is attached to the node via an <a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><code class="xref py py-class docutils literal notranslate"><span class="pre">Axis</span></code></a>. Edges are
+useful to connect several nodes, creating a <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>.</p></li>
+<li><p><strong>Network</strong>: The <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> to which the node belongs. If
+the network is not specified when creating the node, a new <code class="docutils literal notranslate"><span class="pre">TensorNetwork</span></code>
+is created to contain the node. Although the network can be thought of
+as a graph, it is a <code class="docutils literal notranslate"><span class="pre">torch.nn.Module</span></code>, so it is much more than that.
+Actually, the <code class="docutils literal notranslate"><span class="pre">TensorNetwork</span></code> can contain different types of nodes,
+not all of them being part of the graph, but being used for different
+purposes.</p></li>
+<li><p><strong>Successors</strong>: A dictionary with information about the nodes that result
+from <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operations</span></code></a> in which the current node was involved.
+These are the <a class="reference internal" href="#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successors</span></code></a>.</p></li>
+</ul>
+<p>Carrying this information with the node is what makes it easy to:</p>
+<ul class="simple">
+<li><p>Perform tensor network <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operations</span></code></a> such as <a class="reference internal" href="operations.html#tensorkrowch.contract_between" title="tensorkrowch.contract_between"><code class="xref py py-func docutils literal notranslate"><span class="pre">contraction</span></code></a> of two neighbouring nodes, without having to worry about
 tensor’s shapes, order of axes, etc.</p></li>
 <li><p>Perform more advanced operations such as <a class="reference internal" href="operations.html#tensorkrowch.stack" title="tensorkrowch.stack"><code class="xref py py-func docutils literal notranslate"><span class="pre">stack()</span></code></a> or <a class="reference internal" href="operations.html#tensorkrowch.unbind" title="tensorkrowch.unbind"><code class="xref py py-func docutils literal notranslate"><span class="pre">unbind()</span></code></a>
 saving memory and time.</p></li>
 <li><p>Keep track of operations in which a node has taken place, so that several
-steps can be skipped in further training iterations. See <a class="reference internal" href="#tensorkrowch.TensorNetwork.trace" title="tensorkrowch.TensorNetwork.trace"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TensorNetwork.trace()</span></code></a>.</p></li>
+steps can be skipped in further training iterations.
+See <a class="reference internal" href="#tensorkrowch.TensorNetwork.trace" title="tensorkrowch.TensorNetwork.trace"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TensorNetwork.trace()</span></code></a>.</p></li>
 </ul>
+<p>Also, there are 4 excluding types of nodes that will have different roles
+in the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>:</p>
+<ul class="simple">
+<li><p><strong>leaf</strong>: These are the nodes that form the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>
+(together with the <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes). Usually, these will be the <cite>trainable</cite>
+nodes. These nodes can store their own tensors or use other node’s tensor.</p></li>
+<li><p><strong>data</strong>: These are similar to <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes, but they are never <cite>trainable</cite>,
+and are used to store the tensors coming from input data. These nodes can
+store their own tensors or use other node’s tensor.</p></li>
+<li><p><strong>virtual</strong>: These nodes are a sort of ancillay, hidden nodes that
+accomplish some useful task (e.g. in uniform tensor networks a virtual
+node can store the shared tensor, while all the other nodes in the
+network just have a reference to it). These nodes always store their own
+tensors.</p></li>
+<li><p><strong>resultant</strong>: These are nodes that result from an <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operation</span></code></a>.
+They are intermediate nodes that (almost always) inherit edges from <code class="docutils literal notranslate"><span class="pre">leaf</span></code>
+and <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes, the ones that really form the network. These nodes can
+store their own tensors or use other node’s tensor.</p></li>
+</ul>
+<p>See <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> to learn more about the importance of these 4
+types of nodes.</p>
 <p>Refer to the subclasses of <code class="docutils literal notranslate"><span class="pre">AbstractNode</span></code> to see how to instantiate nodes:</p>
 <ul class="simple">
 <li><p><a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a></p></li>
@@ -600,7 +731,7 @@ steps can be skipped in further training iterations. See <a class="reference int
 <dl class="py property">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.shape">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">shape</span></span><a class="headerlink" href="#tensorkrowch.AbstractNode.shape" title="Permalink to this definition">#</a></dt>
-<dd><p>Shape of node’s <a class="reference internal" href="#tensorkrowch.AbstractNode.tensor" title="tensorkrowch.AbstractNode.tensor"><code class="xref py py-attr docutils literal notranslate"><span class="pre">tensor</span></code></a>. It is a <code class="docutils literal notranslate"><span class="pre">torch.Size</span></code>.</p>
+<dd><p>Shape of node’s <a class="reference internal" href="#tensorkrowch.AbstractNode.tensor" title="tensorkrowch.AbstractNode.tensor"><code class="xref py py-attr docutils literal notranslate"><span class="pre">tensor</span></code></a>. It is of type <code class="docutils literal notranslate"><span class="pre">torch.Size</span></code>.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -624,7 +755,7 @@ steps can be skipped in further training iterations. See <a class="reference int
 <dl class="py property">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.axes_names">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">axes_names</span></span><a class="headerlink" href="#tensorkrowch.AbstractNode.axes_names" title="Permalink to this definition">#</a></dt>
-<dd><p>List of names of node’s axes.</p>
+<dd><p>List of names of node’s <a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><code class="xref py py-class docutils literal notranslate"><span class="pre">axes</span></code></a>.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -1109,6 +1240,9 @@ cum\_percentage\]</div>
 
 </dd></dl>
 
+</section>
+<section id="node">
+<h3>Node<a class="headerlink" href="#node" title="Permalink to this headline">#</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.Node">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">virtual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1_list</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#Node"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Node" title="Permalink to this definition">#</a></dt>
@@ -1117,6 +1251,7 @@ that are not intended to be trained (e.g. <a class="reference internal" href="#t
 <p>Can be used for fixed nodes of the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>, or intermediate
 nodes that are resultant from an <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operation</span></code></a> between nodes.</p>
 <p>For a complete list of properties and methods, see also <a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractNode</span></code></a>.</p>
+<p># TODO: describe types of nodes (leaf, resultant, data, virtual)</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -1191,6 +1326,9 @@ but the exact same edges) and whose name is extended with the prefix
 
 </dd></dl>
 
+</section>
+<section id="paramnode">
+<h3>ParamNode<a class="headerlink" href="#paramnode" title="Permalink to this headline">#</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.ParamNode">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ParamNode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">virtual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1_list</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#ParamNode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamNode" title="Permalink to this definition">#</a></dt>
@@ -1256,6 +1394,9 @@ extended with the prefix <code class="docutils literal notranslate"><span class=
 
 </dd></dl>
 
+</section>
+<section id="stacknode">
+<h3>StackNode<a class="headerlink" href="#stacknode" title="Permalink to this headline">#</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.StackNode">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">StackNode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nodes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1_list</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#StackNode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.StackNode" title="Permalink to this definition">#</a></dt>
@@ -1352,6 +1493,9 @@ should also be provided. Necessary if <code class="docutils literal notranslate"
 
 </dd></dl>
 
+</section>
+<section id="paramstacknode">
+<h3>ParamStackNode<a class="headerlink" href="#paramstacknode" title="Permalink to this headline">#</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.ParamStackNode">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">ParamStackNode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nodes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">virtual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#ParamStackNode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamStackNode" title="Permalink to this definition">#</a></dt>
@@ -1437,8 +1581,11 @@ node in the network).</p></li>
 </dd></dl>
 
 </section>
+</section>
 <section id="edges">
 <h2>Edges<a class="headerlink" href="#edges" title="Permalink to this headline">#</a></h2>
+<section id="edge">
+<h3>Edge<a class="headerlink" href="#edge" title="Permalink to this headline">#</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.Edge">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Edge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#Edge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Edge" title="Permalink to this definition">#</a></dt>
@@ -1726,6 +1873,9 @@ cum\_percentage\]</div>
 
 </dd></dl>
 
+</section>
+<section id="stackedge">
+<h3>StackEdge<a class="headerlink" href="#stackedge" title="Permalink to this headline">#</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.StackEdge">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">StackEdge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edges</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1_lists</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#StackEdge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.StackEdge" title="Permalink to this definition">#</a></dt>
@@ -1804,6 +1954,7 @@ of nodes independently it cannot be inferred that the resultant
 
 </dd></dl>
 
+</section>
 </section>
 <section id="successor">
 <h2>Successor<a class="headerlink" href="#successor" title="Permalink to this headline">#</a></h2>
@@ -1917,6 +2068,7 @@ a certain control of the memory management of the network.</p></li>
 often at least), since changing them entails first resetting the whole
 network (see <a class="reference internal" href="#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>), which is a costly method. To understand what
 reset means, check the different types of nodes a network might have:</p>
+<p># TODO: reference to AbstarctNode</p>
 <ul class="simple">
 <li><p><strong>leaf</strong>: These are the nodes that make up the graph of the Tensor Network,
 except for the nodes containing data. These can be either type <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a>

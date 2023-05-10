@@ -293,8 +293,8 @@
     "image = image.view(500, 2, 10 * 10).permute(2, 0, 1)\n",
     "\n",
     "# Modes to manage memory efficiently while training\n",
-    "mps.auto_stack = True\n",
-    "mps.auto_unbind = True\n",
+    "mps.automemory = True\n",
+    "mps.unbind_mode = True\n",
     "\n",
     "# Tracing computes all network operations with an input example\n",
     "# in order to set everything up before training, which helps to\n",
@@ -328,7 +328,7 @@
      "traceback": [
       "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
       "\u001b[0;31mTypeError\u001b[0m                                 Traceback (most recent call last)",
-      "Cell \u001b[0;32mIn[7], line 2\u001b[0m\n\u001b[1;32m      1\u001b[0m \u001b[39m# MPSLayer has output node, MPS doesn't\u001b[39;00m\n\u001b[0;32m----> 2\u001b[0m mps \u001b[39m=\u001b[39m tk\u001b[39m.\u001b[39;49mMPSLayer(n_sites\u001b[39m=\u001b[39;49m\u001b[39m10\u001b[39;49m \u001b[39m*\u001b[39;49m \u001b[39m10\u001b[39;49m \u001b[39m+\u001b[39;49m \u001b[39m1\u001b[39;49m, \u001b[39m# Number of sites\u001b[39;49;00m\n\u001b[1;32m      3\u001b[0m                   d_phys\u001b[39m=\u001b[39;49m\u001b[39m2\u001b[39;49m,            \u001b[39m# Physical dimension\u001b[39;49;00m\n\u001b[1;32m      4\u001b[0m                   n_labels\u001b[39m=\u001b[39;49m\u001b[39m10\u001b[39;49m,         \u001b[39m# Output physical dimension (num. labels)\u001b[39;49;00m\n\u001b[1;32m      5\u001b[0m                   d_bond\u001b[39m=\u001b[39;49m\u001b[39m10\u001b[39;49m,           \u001b[39m# Bond dimension\u001b[39;49;00m\n\u001b[1;32m      6\u001b[0m                   boundary\u001b[39m=\u001b[39;49m\u001b[39m'\u001b[39;49m\u001b[39mpbc\u001b[39;49m\u001b[39m'\u001b[39;49m,      \u001b[39m# Periodic boundary conditions\u001b[39;49;00m\n\u001b[1;32m      7\u001b[0m                   param_bond\u001b[39m=\u001b[39;49m\u001b[39mFalse\u001b[39;49;00m,    \u001b[39m# Trainable edges\u001b[39;49;00m\n\u001b[1;32m      8\u001b[0m                   num_batches\u001b[39m=\u001b[39;49m\u001b[39m1\u001b[39;49m,       \u001b[39m# Number of batch edges in data nodes\u001b[39;49;00m\n\u001b[1;32m      9\u001b[0m                   inline_input\u001b[39m=\u001b[39;49m\u001b[39mFalse\u001b[39;49;00m,  \u001b[39m# Contract input data nodes inline or in parallel\u001b[39;49;00m\n\u001b[1;32m     10\u001b[0m                   inline_mats\u001b[39m=\u001b[39;49m\u001b[39mFalse\u001b[39;49;00m)   \u001b[39m# Contract final matrices inline or pairwise\u001b[39;00m\n\u001b[1;32m     12\u001b[0m mps \u001b[39m=\u001b[39m mps\u001b[39m.\u001b[39mto(device)\n\u001b[1;32m     13\u001b[0m mps\u001b[39m.\u001b[39mauto_stack \u001b[39m=\u001b[39m \u001b[39mTrue\u001b[39;00m\n",
+      "Cell \u001b[0;32mIn[7], line 2\u001b[0m\n\u001b[1;32m      1\u001b[0m \u001b[39m# MPSLayer has output node, MPS doesn't\u001b[39;00m\n\u001b[0;32m----> 2\u001b[0m mps \u001b[39m=\u001b[39m tk\u001b[39m.\u001b[39;49mMPSLayer(n_sites\u001b[39m=\u001b[39;49m\u001b[39m10\u001b[39;49m \u001b[39m*\u001b[39;49m \u001b[39m10\u001b[39;49m \u001b[39m+\u001b[39;49m \u001b[39m1\u001b[39;49m, \u001b[39m# Number of sites\u001b[39;49;00m\n\u001b[1;32m      3\u001b[0m                   d_phys\u001b[39m=\u001b[39;49m\u001b[39m2\u001b[39;49m,            \u001b[39m# Physical dimension\u001b[39;49;00m\n\u001b[1;32m      4\u001b[0m                   n_labels\u001b[39m=\u001b[39;49m\u001b[39m10\u001b[39;49m,         \u001b[39m# Output physical dimension (num. labels)\u001b[39;49;00m\n\u001b[1;32m      5\u001b[0m                   d_bond\u001b[39m=\u001b[39;49m\u001b[39m10\u001b[39;49m,           \u001b[39m# Bond dimension\u001b[39;49;00m\n\u001b[1;32m      6\u001b[0m                   boundary\u001b[39m=\u001b[39;49m\u001b[39m'\u001b[39;49m\u001b[39mpbc\u001b[39;49m\u001b[39m'\u001b[39;49m,      \u001b[39m# Periodic boundary conditions\u001b[39;49;00m\n\u001b[1;32m      7\u001b[0m                   param_bond\u001b[39m=\u001b[39;49m\u001b[39mFalse\u001b[39;49;00m,    \u001b[39m# Trainable edges\u001b[39;49;00m\n\u001b[1;32m      8\u001b[0m                   num_batches\u001b[39m=\u001b[39;49m\u001b[39m1\u001b[39;49m,       \u001b[39m# Number of batch edges in data nodes\u001b[39;49;00m\n\u001b[1;32m      9\u001b[0m                   inline_input\u001b[39m=\u001b[39;49m\u001b[39mFalse\u001b[39;49;00m,  \u001b[39m# Contract input data nodes inline or in parallel\u001b[39;49;00m\n\u001b[1;32m     10\u001b[0m                   inline_mats\u001b[39m=\u001b[39;49m\u001b[39mFalse\u001b[39;49;00m)   \u001b[39m# Contract final matrices inline or pairwise\u001b[39;00m\n\u001b[1;32m     12\u001b[0m mps \u001b[39m=\u001b[39m mps\u001b[39m.\u001b[39mto(device)\n\u001b[1;32m     13\u001b[0m mps\u001b[39m.\u001b[39mautomemory \u001b[39m=\u001b[39m \u001b[39mTrue\u001b[39;00m\n",
       "\u001b[0;31mTypeError\u001b[0m: __init__() got an unexpected keyword argument 'inline_input'"
      ]
     }
@@ -346,8 +346,8 @@
     "                  inline_mats=False)   # Contract final matrices inline or pairwise\n",
     "\n",
     "mps = mps.to(device)\n",
-    "mps.auto_stack = True\n",
-    "mps.auto_unbind = True\n",
+    "mps.automemory = True\n",
+    "mps.unbind_mode = True\n",
     "\n",
     "mps.trace(torch.zeros(10 * 10, 1, 2).to(device))\n",
     "\n",

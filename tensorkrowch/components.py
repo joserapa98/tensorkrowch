@@ -89,8 +89,8 @@ class Axis:
         is the node that contains the axis (``True``). Otherwise, the node is
         ``node2`` of the edge (``False``).
 
-    Examples
-    --------
+    Example
+    -------
     Although Axis will not be usually explicitly instantiated, it can be done
     like so:
 
@@ -743,8 +743,8 @@ class AbstractNode(ABC):
         -------
         AbstractNode or list[AbstractNode]
         
-        Examples
-        --------
+        Example
+        -------
         >>> nodeA = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
         >>> nodeB = tk.randn(shape=(3, 4), axes_names=('left', 'right'))
         >>> nodeC = tk.randn(shape=(4, 5), axes_names=('left', 'right'))
@@ -958,8 +958,8 @@ class AbstractNode(ABC):
             the neighbours' edges will be pointing to the original nodes from which
             the current node inherits its edges (``False``).
             
-        Examples
-        --------
+        Example
+        -------
         >>> nodeA = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
         >>> nodeB = tk.randn(shape=(3, 4), axes_names=('left', 'right'))
         >>> nodeC = tk.randn(shape=(4, 5), axes_names=('left', 'right'))
@@ -1023,8 +1023,8 @@ class AbstractNode(ABC):
         axis : int, str or Axis, optional
             Axis whose edge will be disconnected.
             
-        Examples
-        --------
+        Example
+        -------
         >>> nodeA = tk.Node(shape=(2, 3), axes_names=('left', 'right'))
         >>> nodeB = tk.Node(shape=(3, 4), axes_names=('left', 'right'))
         >>> nodeC = tk.Node(shape=(4, 5), axes_names=('left', 'right'))
@@ -1298,8 +1298,8 @@ class AbstractNode(ABC):
             If the node is a ``resultant`` node or if it does not store its own
             tensor.
             
-        Examples
-        --------
+        Example
+        -------
         >>> node = tk.Node(shape=(2, 3), axes_names=('left', 'right'))
         ...
         >>> # Call set_tensor without arguments uses the
@@ -1335,8 +1335,8 @@ class AbstractNode(ABC):
         Replaces node's tensor with ``None``. This can only be used for **non**
         ``resultant`` nodes that store their own tensors.
         
-        Examples
-        --------
+        Example
+        -------
         >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
         >>> node.tensor is None
         False
@@ -1372,8 +1372,8 @@ class AbstractNode(ABC):
             If ``other`` is a different type than the current node, or if it is
             in a different network.
             
-        Examples
-        --------
+        Example
+        -------
         >>> nodeA = tk.randn(shape=(2, 3),
         ...                  name='nodeA',
         ...                  axes_names=('left', 'right'))
@@ -1421,8 +1421,8 @@ class AbstractNode(ABC):
         Thus the node will store its own tensor, instead of having a reference
         to other node's tensor.
         
-        Examples
-        --------
+        Example
+        -------
         >>> nodeA = tk.randn(shape=(2, 3),
         ...                  name='nodeA',
         ...                  axes_names=('left', 'right'))
@@ -1545,8 +1545,8 @@ class AbstractNode(ABC):
             List indicating the nodes that have been already moved to the new
             network, used by this DFS-like algorithm.
             
-        Examples
-        --------
+        Example
+        -------
         >>> net = tk.TensorNetwork()
         >>> nodeA = tk.Node(shape=(2, 3),
         ...                 axes_names=('left', 'right'),
@@ -1618,8 +1618,8 @@ class AbstractNode(ABC):
         -------
         torch.Tensor
         
-        Examples
-        --------
+        Example
+        -------
         >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
         >>> node.tensor
         tensor([[-0.2799, -0.4383, -0.8387],
@@ -1660,8 +1660,8 @@ class AbstractNode(ABC):
         -------
         torch.Tensor
         
-        Examples
-        --------
+        Example
+        -------
         >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
         >>> node.tensor
         tensor([[ 1.4005, -0.0521, -1.2091],
@@ -1702,8 +1702,8 @@ class AbstractNode(ABC):
         -------
         torch.Tensor
         
-        Examples
-        --------
+        Example
+        -------
         >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
         >>> node.tensor
         tensor([[ 0.2111, -0.9551, -0.7812],
@@ -1748,8 +1748,8 @@ class AbstractNode(ABC):
         -------
         torch.Tensor
         
-        Examples
-        --------
+        Example
+        -------
         >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
         >>> node.tensor
         tensor([[ 1.5570,  1.8441, -0.0743],
@@ -1849,8 +1849,8 @@ class Node(AbstractNode):
         Keyword arguments for the different initialization methods. See
         :meth:`AbstractNode.make_tensor`.
         
-    Examples
-    --------
+    Example
+    -------
     >>> node = tk.Node(shape=(2, 5, 2),
     ...                axes_names=('left', 'input', 'right'),
     ...                name='my_node',
@@ -1899,8 +1899,8 @@ class Node(AbstractNode):
         Node or ParamNode
             The original node or a parameterized version of it.
             
-        Examples
-        --------
+        Example
+        -------
         >>> nodeA = tk.randn((2, 3))
         >>> nodeB = tk.randn((3, 4))
         >>> nodeA[1] ^ nodeB[0]
@@ -1955,8 +1955,8 @@ class Node(AbstractNode):
         -------
         Node
             
-        Examples
-        --------
+        Example
+        -------
         >>> node = tk.randn(shape=(2, 3), name='node')
         >>> copy = node.copy()
         >>> node.tensor_address() != copy.tensor_address()
@@ -2067,8 +2067,8 @@ class ParamNode(AbstractNode):
         Keyword arguments for the different initialization methods. See
         :meth:`AbstractNode.make_tensor`.
         
-    Examples
-    --------
+    Example
+    -------
     >>> node = tk.ParamNode(shape=(2, 5, 2),
     ...                     axes_names=('left', 'input', 'right'),
     ...                     name='my_paramnode',
@@ -2127,8 +2127,8 @@ class ParamNode(AbstractNode):
         -------
         torch.Tensor or None
         
-        Examples
-        --------
+        Example
+        -------
         >>> paramnode = tk.randn((2, 3), param_node=True)
         >>> paramnode.tensor
         Parameter containing:
@@ -2201,8 +2201,8 @@ class ParamNode(AbstractNode):
         ParamNode or Node
             The original node or a de-parameterized version of it.
             
-        Examples
-        --------
+        Example
+        -------
         >>> paramnodeA = tk.randn((2, 3), param_node=True)
         >>> paramnodeB = tk.randn((3, 4), param_node=True)
         >>> paramnodeA[1] ^ paramnodeB[0]
@@ -2257,8 +2257,8 @@ class ParamNode(AbstractNode):
         -------
         ParamNode
         
-        Examples
-        --------
+        Example
+        -------
         >>> paramnode = tk.randn(shape=(2, 3), name='node', param_node=True)
         >>> copy = paramnode.copy()
         >>> paramnode.tensor_address() != copy.tensor_address()
@@ -2851,8 +2851,8 @@ class Edge:
         size : int
             New size of the edge.
             
-        Examples
-        --------
+        Example
+        -------
         >>> nodeA = tk.ones((2, 3))
         >>> nodeB = tk.ones((3, 4))
         >>> edge = nodeA[1] ^ nodeB[0]
@@ -2896,8 +2896,8 @@ class Edge:
         Returns a copy of the edge, that is, a new edge referencing the same
         nodes at the same axes.
         
-        Examples
-        --------
+        Example
+        -------
         >>> nodeA = tk.randn((2, 3))
         >>> nodeB = tk.randn((3, 4))
         >>> edge = nodeA[1] ^ nodeB[0]
@@ -2917,10 +2917,13 @@ class Edge:
 
     def connect(self, other: 'Edge') -> 'Edge':
         """
-        Connects dangling edge to another dangling edge.
-
-        It is necessary that both edges have the same size so that contractions
-        along that edge can be computed.
+        Connects dangling edge to another dangling edge. It is necessary that
+        both edges have the same size so that contractions along that edge can
+        be computed.
+        
+        If the nodes that are being connected come from different networks, the
+        ``node2`` (and its connected component) will be movec to ``node1``'s
+        network. See also ~:meth:`AbstractNode.move_to_network`.
 
         Parameters
         ----------
@@ -3058,11 +3061,10 @@ class StackEdge(Edge):
         Same as :meth:`~Edge.connect` but it is first verified that all stacked
         :meth:`edges` corresponding to both ``StackEdges`` are the same.
         
-        That is, this connection is actually a redundant operation to
-        **re-connect** a list of edges that should be already connected.
-        However, this is mandatory, since when stacking two sequences of nodes
-        independently it cannot be inferred that the resultant ``StackNodes``
-        had to be connected.
+        That is, this is a redundant operation to **re-connect** a list of edges
+        that should be already connected. However, this is mandatory, since when
+        stacking two sequences of nodes independently it cannot be inferred that
+        the resultant ``StackNodes`` had to be connected.
 
         Parameters
         ----------
@@ -3106,17 +3108,15 @@ class StackEdge(Edge):
 #                               EDGE OPERATIONS                               #
 ###############################################################################
 def connect(edge1: Edge, edge2: Edge) -> Edge:
-    # TODO: change docstring
     """
-    Connects two dangling edges. If both are :class:`Edges <Edge>`, the result
-    will be also an ``Edge``. Otherwise, the result will be a :class:`ParamEdge`.
+    Connects two dangling edges. It is necessary that both edges have the same
+    size so that contractions along that edge can be computed.
+    
+    If the nodes that are being connected come from different networks, the
+    ``node2`` (and its connected component) will be movec to ``node1``'s network.
+    See also ~:meth:`AbstractNode.move_to_network`.
 
-    It is necessary that both edges have the same dimension so that contractions
-    along that edge can be computed. Note that for ``ParamEdges`` the sizes could
-    be different. In this case the resultant param-edge will have the minimum
-    size between them.
-
-    This operation is the same as :meth:`Edge.connect` and :meth:`ParamEdge.connect`.
+    This operation is the same as :meth:`Edge.connect`.
 
     Parameters
     ----------
@@ -3130,6 +3130,18 @@ def connect(edge1: Edge, edge2: Edge) -> Edge:
     Returns
     -------
     Edge
+    
+    Example
+    -------
+    >>> nodeA = tk.Node(shape=(2, 3),
+    ...                 name='nodeA',
+    ...                 axes_names=('left', 'right'))
+    >>> nodeB = tk.Node(shape=(3, 4),
+    ...                 name='nodeB',
+    ...                 axes_names=('left', 'right'))
+    >>> new_edge = tk.connect(nodeA['right'], nodeB['left'])
+    >>> print(new_edge.name)
+    nodeA[right] <-> nodeB[left]
     """
     # Case edge is already connected
     if edge1 == edge2:
@@ -3157,7 +3169,6 @@ def connect(edge1: Edge, edge2: Edge) -> Edge:
         node2.move_to_network(net1)
     net1._remove_edge(edge1)
     net1._remove_edge(edge2)
-    net = net1
 
     if isinstance(edge1, StackEdge):
         new_edge = StackEdge(edges=edge1._edges,
@@ -3174,24 +3185,22 @@ def connect(edge1: Edge, edge2: Edge) -> Edge:
 
 
 def connect_stack(edge1: StackEdge, edge2: StackEdge) -> StackEdge:
-    # TODO: change docstring
     """
-    Same as :func:`connect` but it is verified that all stacked edges corresponding
-    to both ``(Param)StackEdges`` are the same. That is, this is a redundant
-    operation to re-connect a list of edges that should be already connected.
-    However, this is mandatory, since when stacking two sequences of nodes
-    independently it cannot be inferred that the resultant ``(Param)StackNodes``
+    Same as :func:`connect` but it is first verified that all stacked edges
+    corresponding to both ``StackEdges`` are the same. That is, this is a
+    redundant operation to **re-connect** a list of edges that should be already
+    connected. However, this is mandatory, since when stacking two sequences of
+    nodes independently it cannot be inferred that the resultant ``StackNodes``
     had to be connected.
 
-    This operation is the same as :meth:`StackEdge.connect` and
-    :meth:`ParamStackEdge.connect`.
+    This operation is the same as :meth:`StackEdge.connect`.
 
     Parameters
     ----------
-    edge1 : StackEdge or ParamStackEdge
+    edge1 : StackEdge
         The first edge that will be connected. Its node will become the ``node1``
         of the resultant edge.
-    edge2 : StackEdge or ParamStackEdge
+    edge2 : StackEdge
         The second edge that will be connected. Its node will become the ``node2``
         of the resultant edge.
     """
@@ -3206,7 +3215,8 @@ def connect_stack(edge1: StackEdge, edge2: StackEdge) -> StackEdge:
     return connect(edge1=edge1, edge2=edge2)
 
 
-def disconnect(edge: Edge) -> Tuple[Edge, Edge]:
+def disconnect(edge: Union[Edge, StackEdge]) -> Union[Tuple[Edge, Edge],
+                                                      Tuple[StackEdge, StackEdge]]:
     """
     Disconnects connected edge, that is, the connected edge is splitted into
     two dangling edges, one for each node.
@@ -3215,12 +3225,12 @@ def disconnect(edge: Edge) -> Tuple[Edge, Edge]:
 
     Parameters
     ----------
-    edge : Edge
+    edge : Edge or StackEdge
         Edge that is going to be disconnected (splitted in two).
 
     Returns
     -------
-    tuple[Edge, Edge]
+    tuple[Edge, Edge] or tuple[StackEdge, StackEdge]
     """
     if edge.is_dangling():
         raise ValueError('Cannot disconnect a dangling edge')
@@ -3263,7 +3273,7 @@ def disconnect(edge: Edge) -> Tuple[Edge, Edge]:
 ###############################################################################
 class Successor:
     """
-    Class for successors. This is a sort of cache memory for :class:`operations
+    Class for successors. This is a sort of cache memory for :class:`Operations
     <Operation>` that have been already computed.
 
     For instance, when contracting two nodes, the result gives a new node that
@@ -3278,8 +3288,11 @@ class Successor:
     and some hints that might help accelerating the computations the next time
     the operation is performed.
 
-    These three properties can be accessed via ``successor.kwargs``, ``successor.child``
-    and ``successor.hints``.
+    These three properties can be accessed via ``successor.kwargs``,
+    ``successor.child`` and ``successor.hints``.
+    
+    See the different :class:`operations <Operation>` to learn which resultant
+    node keeps the ``Successor`` information.
 
     Parameters
     ----------
@@ -3298,16 +3311,15 @@ class Successor:
 
     >>> nodeA = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
     >>> nodeB = tk.randn(shape=(3, 4), axes_names=('left', 'right'))
-    ...
-    >>> # Connect nodes
     >>> nodeA['right'] ^ nodeB['left']
     ...
     >>> # Contract nodes
     >>> result = nodeA @ nodeB
-    >>> result.name = 'my_result'
-    ...
-    >>> print(result.name, nodeA.successors['contract_edges'][0].child.name)
-    my_result my_result
+    >>> print(result.name)
+    contract_edges
+    
+    >>> nodeA.successors['contract_edges'][0].child == result
+    True
     """
 
     def __init__(self,

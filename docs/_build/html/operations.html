@@ -678,13 +678,12 @@ title="Print to PDF"
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.connect">
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edge1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.connect" title="Permalink to this definition">#</a></dt>
-<dd><p>Connects two dangling edges. If both are <a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edges</span></code></a>, the result
-will be also an <code class="docutils literal notranslate"><span class="pre">Edge</span></code>. Otherwise, the result will be a <code class="xref py py-class docutils literal notranslate"><span class="pre">ParamEdge</span></code>.</p>
-<p>It is necessary that both edges have the same dimension so that contractions
-along that edge can be computed. Note that for <code class="docutils literal notranslate"><span class="pre">ParamEdges</span></code> the sizes could
-be different. In this case the resultant param-edge will have the minimum
-size between them.</p>
-<p>This operation is the same as <a class="reference internal" href="components.html#tensorkrowch.Edge.connect" title="tensorkrowch.Edge.connect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Edge.connect()</span></code></a> and <code class="xref py py-meth docutils literal notranslate"><span class="pre">ParamEdge.connect()</span></code>.</p>
+<dd><p>Connects two dangling edges. It is necessary that both edges have the same
+size so that contractions along that edge can be computed.</p>
+<p>If the nodes that are being connected come from different networks, the
+<code class="docutils literal notranslate"><span class="pre">node2</span></code> (and its connected component) will be movec to <code class="docutils literal notranslate"><span class="pre">node1</span></code>’s network.
+See also ~:meth:<cite>AbstractNode.move_to_network</cite>.</p>
+<p>This operation is the same as <a class="reference internal" href="components.html#tensorkrowch.Edge.connect" title="tensorkrowch.Edge.connect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Edge.connect()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -698,6 +697,18 @@ of the resultant edge.</p></li>
 <dd class="field-even"><p><a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a></p>
 </dd>
 </dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+<span class="gp">... </span>                <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeA&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodeB</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+<span class="gp">... </span>                <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeB&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_edge</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">],</span> <span class="n">nodeB</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">new_edge</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="go">nodeA[right] &lt;-&gt; nodeB[left]</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>
@@ -706,20 +717,19 @@ of the resultant edge.</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.connect_stack">
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">connect_stack</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edge1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#connect_stack"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.connect_stack" title="Permalink to this definition">#</a></dt>
-<dd><p>Same as <a class="reference internal" href="#tensorkrowch.connect" title="tensorkrowch.connect"><code class="xref py py-func docutils literal notranslate"><span class="pre">connect()</span></code></a> but it is verified that all stacked edges corresponding
-to both <code class="docutils literal notranslate"><span class="pre">(Param)StackEdges</span></code> are the same. That is, this is a redundant
-operation to re-connect a list of edges that should be already connected.
-However, this is mandatory, since when stacking two sequences of nodes
-independently it cannot be inferred that the resultant <code class="docutils literal notranslate"><span class="pre">(Param)StackNodes</span></code>
+<dd><p>Same as <a class="reference internal" href="#tensorkrowch.connect" title="tensorkrowch.connect"><code class="xref py py-func docutils literal notranslate"><span class="pre">connect()</span></code></a> but it is first verified that all stacked edges
+corresponding to both <code class="docutils literal notranslate"><span class="pre">StackEdges</span></code> are the same. That is, this is a
+redundant operation to <strong>re-connect</strong> a list of edges that should be already
+connected. However, this is mandatory, since when stacking two sequences of
+nodes independently it cannot be inferred that the resultant <code class="docutils literal notranslate"><span class="pre">StackNodes</span></code>
 had to be connected.</p>
-<p>This operation is the same as <a class="reference internal" href="components.html#tensorkrowch.StackEdge.connect" title="tensorkrowch.StackEdge.connect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">StackEdge.connect()</span></code></a> and
-<code class="xref py py-meth docutils literal notranslate"><span class="pre">ParamStackEdge.connect()</span></code>.</p>
+<p>This operation is the same as <a class="reference internal" href="components.html#tensorkrowch.StackEdge.connect" title="tensorkrowch.StackEdge.connect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">StackEdge.connect()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>edge1</strong> (<a class="reference internal" href="components.html#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge"><em>StackEdge</em></a><em> or </em><em>ParamStackEdge</em>) – The first edge that will be connected. Its node will become the <code class="docutils literal notranslate"><span class="pre">node1</span></code>
+<li><p><strong>edge1</strong> (<a class="reference internal" href="components.html#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge"><em>StackEdge</em></a>) – The first edge that will be connected. Its node will become the <code class="docutils literal notranslate"><span class="pre">node1</span></code>
 of the resultant edge.</p></li>
-<li><p><strong>edge2</strong> (<a class="reference internal" href="components.html#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge"><em>StackEdge</em></a><em> or </em><em>ParamStackEdge</em>) – The second edge that will be connected. Its node will become the <code class="docutils literal notranslate"><span class="pre">node2</span></code>
+<li><p><strong>edge2</strong> (<a class="reference internal" href="components.html#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge"><em>StackEdge</em></a>) – The second edge that will be connected. Its node will become the <code class="docutils literal notranslate"><span class="pre">node2</span></code>
 of the resultant edge.</p></li>
 </ul>
 </dd>
@@ -737,10 +747,10 @@ two dangling edges, one for each node.</p>
 <p>This operation is the same as <a class="reference internal" href="components.html#tensorkrowch.Edge.disconnect" title="tensorkrowch.Edge.disconnect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Edge.disconnect()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – Edge that is going to be disconnected (splitted in two).</p>
+<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge"><em>StackEdge</em></a>) – Edge that is going to be disconnected (splitted in two).</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p>tuple[<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a>, <a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a>]</p>
+<dd class="field-even"><p>tuple[<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a>, <a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a>] or tuple[<a class="reference internal" href="components.html#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge">StackEdge</a>, <a class="reference internal" href="components.html#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge">StackEdge</a>]</p>
 </dd>
 </dl>
 </dd></dl>

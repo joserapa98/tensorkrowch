@@ -1345,13 +1345,40 @@ class AbstractNode(ABC):
         else:
             self._tensor_info = other._tensor_info
             
-    def reset_tensor(self):
-        """Resets memory of node to reference itself, saving in it its tensor."""
-        self._temp_tensor = self.tensor
-        self._tensor_info['address'] = self._name
-        self._tensor_info['node_ref'] = None
-        self._tensor_info['full'] = True
-        self._tensor_info['index'] = None
+            
+    def reset_tensor_address(self):
+        """
+        Resets memory address of node's tensor to reference the node itself.
+        Thus the node will store its own tensor, instead of having a reference
+        to other node's tensor.
+        
+        Examples
+        --------
+        >>> nodeA = tk.randn(shape=(2, 3),
+        ...                  name='nodeA',
+        ...                  axes_names=('left', 'right'))
+        >>> nodeB = tk.empty(shape=(2, 3),
+        ...                  name='nodeB',
+        ...                  axes_names=('left', 'right'),
+        ...                  network=nodeA.network)
+        >>> nodeB.set_tensor_from(nodeA)
+        >>> nodeB.tensor_address() == 'nodeA'
+        True
+        
+        Now one cannot set in ``nodeB`` a different tensor from the one in
+        ``nodeA``, unless tensor address is reset in ``nodeB``.
+        
+        >>> nodeB.reset_tensor_address()
+        >>> nodeB.tensor = torch.randn(nodeB.shape)
+        >>> torch.equal(nodeA.tensor, nodeB.tensor)
+        False
+        """
+        if self._tensor_info['address'] is None:
+            self._temp_tensor = self.tensor
+            self._tensor_info['address'] = self._name
+            self._tensor_info['node_ref'] = None
+            self._tensor_info['full'] = True
+            self._tensor_info['index'] = None
 
         if isinstance(self._temp_tensor, Parameter):
             if hasattr(self._network, 'param_' + self._name):

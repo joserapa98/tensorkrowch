@@ -562,6 +562,14 @@ class AbstractNode(ABC):
         if tensor is None:
             return
         return tensor.dtype
+    
+    @property
+    def device(self) -> torch.device:
+        """``torch.device`` of node's :attr:`tensor`."""
+        tensor = self.tensor
+        if tensor is None:
+            return
+        return tensor.device
 
     @property
     def axes(self) -> List[Axis]:

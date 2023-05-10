@@ -1382,8 +1382,8 @@ class AbstractNode(ABC):
         ...                  axes_names=('left', 'right'),
         ...                  network=nodeA.network)
         >>> nodeB.set_tensor_from(nodeA)
-        >>> nodeB.tensor_address() == 'nodeA'
-        True
+        >>> print(nodeB.tensor_address())
+        nodeA
         
         Since ``nodeB`` has a reference to ``nodeA``'s tensor, if this one is
         changed, ``nodeB`` will reproduce all the changes.
@@ -1431,8 +1431,8 @@ class AbstractNode(ABC):
         ...                  axes_names=('left', 'right'),
         ...                  network=nodeA.network)
         >>> nodeB.set_tensor_from(nodeA)
-        >>> nodeB.tensor_address() == 'nodeA'
-        True
+        >>> print(nodeB.tensor_address())
+        nodeA
         
         Now one cannot set in ``nodeB`` a different tensor from the one in
         ``nodeA``, unless tensor address is reset in ``nodeB``.
@@ -2466,8 +2466,8 @@ class StackNode(Node):
             edges_dict = dict()
             node1_lists_dict = dict()
             for axis_name, edge in zip(axes_names[1:], edges[1:]):
-                edges_dict[axis_name] = edge.edges
-                node1_lists_dict[axis_name] = edge.node1_lists
+                edges_dict[axis_name] = edge._edges
+                node1_lists_dict[axis_name] = edge._node1_lists
 
             self._edges_dict = edges_dict
             self._node1_lists_dict = node1_lists_dict
@@ -2490,7 +2490,10 @@ class StackNode(Node):
 
     @property
     def node1_lists_dict(self) -> Dict[Text, List[bool]]:
-        """Returns a dictionary with list of ``node1_list`` attribute of each axis."""
+        """
+        Returns a dictionary with list of ``node1`` attribute for all edges in
+        each axis.
+        """
         return self._node1_lists_dict
 
     # -------
@@ -2513,34 +2516,38 @@ class StackNode(Node):
 class ParamStackNode(ParamNode):
     """
     Class for parametric stacked nodes. They are essentially the same as
-    :class:`StackNodes <StackNode>` but they are also :class:`ParamNodes <ParamNode>`.
+    :class:`StackNodes <StackNode>` but they are :class:`ParamNodes <ParamNode>`.
+    
     They are used to optimize memory usage and save some time when the first
     operation that occurs to param-nodes in a contraction (that might be
     computed several times during training) is :func:`stack`. If this is the case,
     the param-nodes no longer store their own tensors, but rather they make
-    reference to a slide of a greater ``ParamStackNode`` (if ``auto_stack`` attribute
-    of the :class:`TensorNetwork` is set to ``True``). Hence, that first :func:`stack`
-    is never computed.
+    reference to a slide of a greater ``ParamStackNode`` (if ``auto_stack``
+    attribute of the :class:`TensorNetwork` is set to ``True``). Hence, that
+    first :func:`stack` is never actually computed.
 
     ``ParamStackNodes`` can only be instantiated by providing a sequence of nodes.
 
     Parameters
     ----------
     nodes : list[AbstractNode] or tuple[AbstractNode]
-        Sequence of nodes that are to be stacked.
+        Sequence of nodes that are to be stacked. They should all be of the same
+        class (:class:`Node` or :class:`ParamNode`), have the same rank, same
+        axes names and belong to the same network. They do not need to have equal
+        shapes.
     name : str, optional
         Node's name, used to access the node from de :class:`TensorNetwork` where
         it belongs. It cannot contain blank spaces.
     virtual : bool, optional
         Boolean indicating if the node is a ``virtual`` node. Since it will be
         used mainly for the case described :class:`here <ParamStackNode>`, the
-        node will be virtual, since it will not be an `effective` part of the
-        tensor network, but rather a `virtual` node used just to store tensors.
+        node will be ``virtual``, it will not be an `effective` part of the
+        tensor network.
     override_node : bool, optional
         Boolean indicating whether the node should override (``True``) another
         node in the network that has the same name (e.g. if a node is parameterized,
-        it would be required that a new :class:`ParamNode` replaces the non-parameterized
-        node in the network).
+        it would be required that a new :class:`ParamNode` replaces the
+        non-parameterized node in the network).
 
     Example
     -------
@@ -2561,8 +2568,7 @@ class ParamStackNode(ParamNode):
     ...
     >>> stack_nodes = tk.stack(nodes)
     >>> stack_nodes.name = 'my_stack'
-    >>> # ._tensor_info has info regarding where the node's tensor is stored
-    >>> print(nodes[0]._tensor_info['node_ref'].name)
+    >>> print(nodes[0].tensor_address())
     my_stack
 
     >>> stack_data = tk.stack(data)
@@ -2642,7 +2648,10 @@ class ParamStackNode(ParamNode):
 
     @property
     def node1_lists_dict(self) -> Dict[Text, List[bool]]:
-        """Returns a dictionary with list of ``node1_list`` attribute of each axis."""
+        """
+        Returns a dictionary with list of ``node1`` attribute for all edges in
+        each axis.
+        """
         return self._node1_lists_dict
 
     # -------

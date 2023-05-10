@@ -748,8 +748,8 @@ class AbstractNode(ABC):
         >>> nodeA = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
         >>> nodeB = tk.randn(shape=(3, 4), axes_names=('left', 'right'))
         >>> nodeC = tk.randn(shape=(4, 5), axes_names=('left', 'right'))
-        >>> _ = nodeA['right'] ^ nodeB['left']
-        >>> _ = nodeB['right'] ^ nodeC['left']
+        >>> nodeA['right'] ^ nodeB['left']
+        >>> nodeB['right'] ^ nodeC['left']
         >>> set(nodeB.neighbours()) == set([nodeA, nodeC])
         True
         
@@ -963,8 +963,8 @@ class AbstractNode(ABC):
         >>> nodeA = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
         >>> nodeB = tk.randn(shape=(3, 4), axes_names=('left', 'right'))
         >>> nodeC = tk.randn(shape=(4, 5), axes_names=('left', 'right'))
-        >>> _ = nodeA['right'] ^ nodeB['left']
-        >>> _ = nodeB['right'] ^ nodeC['left']
+        >>> nodeA['right'] ^ nodeB['left']
+        >>> nodeB['right'] ^ nodeC['left']
         >>> result = nodeA @ nodeB
         
         Node ``result`` inherits its ``right`` edge from ``nodeB``.
@@ -1028,8 +1028,8 @@ class AbstractNode(ABC):
         >>> nodeA = tk.Node(shape=(2, 3), axes_names=('left', 'right'))
         >>> nodeB = tk.Node(shape=(3, 4), axes_names=('left', 'right'))
         >>> nodeC = tk.Node(shape=(4, 5), axes_names=('left', 'right'))
-        >>> _ = nodeA['right'] ^ nodeB['left']
-        >>> _ = nodeB['right'] ^ nodeC['left']
+        >>> nodeA['right'] ^ nodeB['left']
+        >>> nodeB['right'] ^ nodeC['left']
         >>> set(nodeB.neighbours()) == set([nodeA, nodeC])
         True
         
@@ -1557,7 +1557,7 @@ class AbstractNode(ABC):
         >>> nodeC = tk.Node(shape=(5, 5),
         ...                 axes_names=('left', 'right'),
         ...                 network=net)
-        >>> _ = nodeA['right'] ^ nodeB['left']
+        >>> nodeA['right'] ^ nodeB['left']
         
         If ``nodeA`` is moved to other network, ``nodeB`` will also move, but
         ``nodeC`` will not.
@@ -1807,7 +1807,9 @@ class Node(AbstractNode):
         the edge that is attached to the node in a certain axis. Hence they should
         be all distinct. They cannot contain blank spaces or special characters.
         By default, axes names will be ``"axis_0"``, ..., ``"axis_n"``, being
-        ``n`` the nummber of axes.
+        ``n`` the nummber of axes. If an axis' name contains the word ``"batch"``,
+        it will define a batch edge. The word ``"stack"`` cannot be used, since
+        it is reserved for the stack edge of :class:`StackNode`.
     name : str, optional
         Node's name, used to access the node from de :class:`TensorNetwork` where
         it belongs. It cannot contain blank spaces. By default, it is the name
@@ -1901,7 +1903,7 @@ class Node(AbstractNode):
         --------
         >>> nodeA = tk.randn((2, 3))
         >>> nodeB = tk.randn((3, 4))
-        >>> _ = nodeA[1] ^ nodeB[0]
+        >>> nodeA[1] ^ nodeB[0]
         >>> paramnodeA = nodeA.parameterize()
         >>> nodeB.neighbours() == [paramnodeA]
         True
@@ -2025,7 +2027,9 @@ class ParamNode(AbstractNode):
         the edge that is attached to the node in a certain axis. Hence they should
         be all distinct. They cannot contain blank spaces or special characters.
         By default, axes names will be ``"axis_0"``, ..., ``"axis_n"``, being
-        ``n`` the nummber of axes.
+        ``n`` the nummber of axes. If an axis' name contains the word ``"batch"``,
+        it will define a batch edge. The word ``"stack"`` cannot be used, since
+        it is reserved for the stack edge of :class:`StackNode`.
     name : str, optional
         Node's name, used to access the node from de :class:`TensorNetwork` where
         it belongs. It cannot contain blank spaces. By default, it is the name
@@ -2201,7 +2205,7 @@ class ParamNode(AbstractNode):
         --------
         >>> paramnodeA = tk.randn((2, 3), param_node=True)
         >>> paramnodeB = tk.randn((3, 4), param_node=True)
-        >>> _ = paramnodeA[1] ^ paramnodeB[0]
+        >>> paramnodeA[1] ^ paramnodeB[0]
         >>> nodeA = paramnodeA.parameterize(False)
         >>> paramnodeB.neighbours() == [nodeA]
         True
@@ -2368,13 +2372,13 @@ class StackNode(Node):
     ...         for _ in range(10)]
     ...
     >>> for i in range(10):
-    ...     _ = nodes[i]['input'] ^ data[i]['feature']
+    ...     nodes[i]['input'] ^ data[i]['feature']
     ...
     >>> stack_nodes = tk.stack(nodes)
     >>> stack_data = tk.stack(data)
     ...
     >>> # It is necessary to re-connect stacks
-    >>> _ = stack_nodes['input'] ^ stack_data['feature']
+    >>> stack_nodes['input'] ^ stack_data['feature']
     >>> result = tk.unbind(stack_nodes @ stack_data)
     >>> print(result[0].name)
     unbind_0
@@ -2467,7 +2471,7 @@ class StackNode(Node):
             node1_lists_dict = dict()
             for axis_name, edge in zip(axes_names[1:], edges[1:]):
                 edges_dict[axis_name] = edge._edges
-                node1_lists_dict[axis_name] = edge._node1_lists
+                node1_lists_dict[axis_name] = edge._node1_list
 
             self._edges_dict = edges_dict
             self._node1_lists_dict = node1_lists_dict
@@ -2485,14 +2489,18 @@ class StackNode(Node):
     # ----------
     @property
     def edges_dict(self) -> Dict[Text, List['Edge']]:
-        """Returns dictionary with list of edges of each axis."""
+        """
+        Returns dictionary where the keys are the axes. For each axis, the value
+        is the list of all the edges (one from each node) that correspond to
+        that axis.
+        """
         return self._edges_dict
 
     @property
     def node1_lists_dict(self) -> Dict[Text, List[bool]]:
         """
-        Returns a dictionary with list of ``node1`` attribute for all edges in
-        each axis.
+        Returns dictionary where the keys are the axes. For each axis, the value
+        is the list with the ``node1`` attribute of that axis for all nodes.
         """
         return self._node1_lists_dict
 
@@ -2509,7 +2517,7 @@ class StackNode(Node):
             return Edge(node1=self, axis1=axis)
         else:
             return StackEdge(edges=self._edges_dict[axis._name],
-                             node1_lists=self._node1_lists_dict[axis._name],
+                             node1_list=self._node1_lists_dict[axis._name],
                              node1=self, axis1=axis)
 
 
@@ -2564,7 +2572,7 @@ class ParamStackNode(ParamNode):
     ...         for _ in range(10)]
     ...
     >>> for i in range(10):
-    ...     _ = nodes[i]['input'] ^ data[i]['feature']
+    ...     nodes[i]['input'] ^ data[i]['feature']
     ...
     >>> stack_nodes = tk.stack(nodes)
     >>> stack_nodes.name = 'my_stack'
@@ -2574,7 +2582,7 @@ class ParamStackNode(ParamNode):
     >>> stack_data = tk.stack(data)
     ...
     >>> # It is necessary to re-connect stacks
-    >>> _ = stack_nodes['input'] ^ stack_data['feature']
+    >>> stack_nodes['input'] ^ stack_data['feature']
     >>> result = tk.unbind(stack_nodes @ stack_data)
     >>> print(result[0].name)
     unbind_0
@@ -2643,14 +2651,18 @@ class ParamStackNode(ParamNode):
     # ----------
     @property
     def edges_dict(self) -> Dict[Text, List['Edge']]:
-        """Returns dictionary with list of edges of each axis."""
+        """
+        Returns dictionary where the keys are the axes. For each axis, the value
+        is the list of all the edges (one from each node) that correspond to
+        that axis.
+        """
         return self._edges_dict
 
     @property
     def node1_lists_dict(self) -> Dict[Text, List[bool]]:
         """
-        Returns a dictionary with list of ``node1`` attribute for all edges in
-        each axis.
+        Returns dictionary where the keys are the axes. For each axis, the value
+        is the list with the ``node1`` attribute of that axis for all nodes.
         """
         return self._node1_lists_dict
 
@@ -2667,7 +2679,7 @@ class ParamStackNode(ParamNode):
             return Edge(node1=self, axis1=axis)
         else:
             return StackEdge(edges=self._edges_dict[axis._name],
-                             node1_lists=self._node1_lists_dict[axis._name],
+                             node1_list=self._node1_lists_dict[axis._name],
                              node1=self, axis1=axis)
 
 
@@ -2679,15 +2691,17 @@ class Edge:
     Base class for edges. Should be subclassed by any new class of edges.
 
     An edge is nothing more than an object that wraps references to the nodes it
-    connects. Thus it stores information like the nodes it connects, the corresponding
-    nodes' axes it is attached to, whether it is dangling or batch, its size, etc.
+    connects. Thus it stores information like the nodes it connects, the
+    corresponding nodes' axes it is attached to, whether it is dangling or
+    batch, its size, etc.
 
     Above all, its importance lies in that edges enable to connect nodes, forming
     any possible graph, and to perform easily :class:`Operations <Operation>` like
     contracting and splitting nodes.
 
-    Furthermore, edges have specific operations like :meth:`contract_` or :meth:`svd_`
-    (and its variations) that allow in-place modification of the :class:`TensorNetwork`.
+    Furthermore, edges have specific operations like :meth:`contract_` or
+    :meth:`svd_` (and its variations) that allow in-place modification of the
+    :class:`TensorNetwork`.
 
     Parameters
     ----------
@@ -2696,8 +2710,8 @@ class Edge:
     axis1: int, str or Axis
         Axis of ``node1`` where the edge is attached.
     node2 : AbstractNode, optional
-        Second node to which the edge is connected. If None, the edge will be
-        dangling.
+        Second node to which the edge is connected. If ``None,`` the edge will
+        be dangling.
     axis2 : int, str, Axis, optional
         Axis of ``node2`` where the edge is attached.
     """
@@ -2744,37 +2758,37 @@ class Edge:
     # ----------
     @property
     def node1(self) -> AbstractNode:
-        """Returns `node1` of the edge."""
+        """Returns ``node1`` of the edge."""
         return self._nodes[0]
 
     @property
     def node2(self) -> AbstractNode:
-        """Returns `node2` of the edge. If the edge is dangling, it is None."""
+        """Returns ``node2`` of the edge. If the edge is dangling, it is ``None``."""
         return self._nodes[1]
 
     @property
     def nodes(self) -> List[AbstractNode]:
-        """Returns a list with `node1` and `node2`."""
+        """Returns a list with ``node1`` and ``node2``."""
         return self._nodes
 
     @property
     def axis1(self) -> Axis:
-        """Returns axis where the edge is attached to `node1`."""
+        """Returns axis where the edge is attached to ``node1``."""
         return self._axes[0]
 
     @property
     def axis2(self) -> Axis:
         """
-        Returns axis where the edge is attached to `node2`. If the edge is dangling,
-        it is None.
+        Returns axis where the edge is attached to ``node2``. If the edge is
+        dangling, it is ``None``.
         """
         return self._axes[1]
 
     @property
     def axes(self) -> List[Axis]:
         """
-        Returns a list of axes where the edge is attached to `node1` and `node2`,
-        respectively.
+        Returns a list of axes where the edge is attached to ``node1`` and
+        ``node2``, respectively.
         """
         return self._axes
 
@@ -2786,12 +2800,16 @@ class Edge:
 
         Example
         -------
-        >>> nodeA = tk.Node(shape=(2, 3), name='nodeA', axes_names=['left', 'right'])
+        >>> nodeA = tk.Node(shape=(2, 3),
+        ...                 name='nodeA',
+        ...                 axes_names=['left', 'right'])
         >>> edge = nodeA['right']
         >>> print(edge.name)
         nodeA[right] <-> None
 
-        >>> nodeB = tk.Node(shape=(3, 4), name='nodeB', axes_names=['left', 'right'])
+        >>> nodeB = tk.Node(shape=(3, 4),
+        ...                 name='nodeB',
+        ...                 axes_names=['left', 'right'])
         >>> new_edge = nodeA['right'] ^ nodeB['left']
         >>> print(new_edge.name)
         nodeA[right] <-> nodeB[left]
@@ -2817,16 +2835,55 @@ class Edge:
         return (self.node1 == node) or (self.node2 == node)
 
     def size(self) -> int:
-        """Returns edge's size."""
+        """Returns edge's size. Equivalent to node's shape in that axis."""
         return self._nodes[0]._shape[self._axes[0]._num]
 
     def change_size(self, size: int) -> None:
         """
-        Changes size of the edge, thus changing the size of tensors of `node1`
-        and `node2` at the corresponding axes. If new size is smaller, the tensor
-        will be cropped; if larger, the tensor will be expanded with zeros. In
-        both cases, the process (cropping/expanding) occurs at the "left", "top",
-        "front", etc. of each dimension.
+        Changes size of the edge, thus changing the size of tensors of ``node1``
+        and ``node2`` at the corresponding axes. If new size is smaller, the
+        tensor will be cropped; if larger, the tensor will be expanded with zeros.
+        In both cases, the process (cropping/expanding) occurs at the "left",
+        "top", "front", etc. of each dimension.
+        
+        Parameters
+        ----------
+        size : int
+            New size of the edge.
+            
+        Examples
+        --------
+        >>> nodeA = tk.ones((2, 3))
+        >>> nodeB = tk.ones((3, 4))
+        >>> edge = nodeA[1] ^ nodeB[0]
+        >>> edge.size()
+        3
+        
+        >>> edge.change_size(4)
+        >>> nodeA.tensor
+        tensor([[0., 1., 1., 1.],
+                [0., 1., 1., 1.]])
+        
+        >>> nodeB.tensor
+        tensor([[0., 0., 0., 0.],
+                [1., 1., 1., 1.],
+                [1., 1., 1., 1.],
+                [1., 1., 1., 1.]])
+                
+        >>> edge.size()
+        4
+        
+        >>> edge.change_size(2)
+        >>> nodeA.tensor
+        tensor([[1., 1.],
+                [1., 1.]])
+        
+        >>> nodeB.tensor
+        tensor([[1., 1., 1., 1.],
+                [1., 1., 1., 1.]])
+                
+        >>> edge.size()
+        2
         """
         if not isinstance(size, int):
             TypeError('`size` should be int type')
@@ -2838,6 +2895,21 @@ class Edge:
         """
         Returns a copy of the edge, that is, a new edge referencing the same
         nodes at the same axes.
+        
+        Examples
+        --------
+        >>> nodeA = tk.randn((2, 3))
+        >>> nodeB = tk.randn((3, 4))
+        >>> edge = nodeA[1] ^ nodeB[0]
+        >>> copy = edge.copy()
+        >>> copy != edge
+        True
+        
+        >>> copy.is_attached_to(nodeA)
+        True
+        
+        >>> copy.is_attached_to(nodeB)
+        True
         """
         new_edge = Edge(node1=self.node1, axis1=self.axis1,
                         node2=self.node2, axis2=self.axis2)
@@ -2847,7 +2919,7 @@ class Edge:
         """
         Connects dangling edge to another dangling edge.
 
-        It is necessary that both edges have the same dimension so that contractions
+        It is necessary that both edges have the same size so that contractions
         along that edge can be computed.
 
         Parameters
@@ -2863,8 +2935,12 @@ class Edge:
         -------
         To connect two edges, the overloaded operator ``^`` can also be used.
 
-        >>> nodeA = tk.Node(shape=(2, 3), name='nodeA', axes_names=['left', 'right'])
-        >>> nodeB = tk.Node(shape=(3, 4), name='nodeB', axes_names=['left', 'right'])
+        >>> nodeA = tk.Node(shape=(2, 3),
+        ...                 name='nodeA',
+        ...                 axes_names=('left', 'right'))
+        >>> nodeB = tk.Node(shape=(3, 4),
+        ...                 name='nodeB',
+        ...                 axes_names=('left', 'right'))
         >>> new_edge = nodeA['right'] ^ nodeB['left']  # Same as .connect()
         >>> print(new_edge.name)
         nodeA[right] <-> nodeB[left]
@@ -2884,8 +2960,12 @@ class Edge:
         -------
         To disconnect an edge, the overloaded operator ``|`` can also be used.
 
-        >>> nodeA = tk.Node(shape=(2, 3), name='nodeA', axes_names=['left', 'right'])
-        >>> nodeB = tk.Node(shape=(3, 4), name='nodeB', axes_names=['left', 'right'])
+        >>> nodeA = tk.Node(shape=(2, 3),
+        ...                 name='nodeA',
+        ...                 axes_names=('left', 'right'))
+        >>> nodeB = tk.Node(shape=(3, 4),
+        ...                 name='nodeB',
+        ...                 axes_names=('left', 'right'))
         >>> new_edge = nodeA['right'] ^ nodeB['left']
         >>> new_edgeA, new_edgeB = new_edge | new_edge  # Same as .disconnect()
         >>> print(new_edgeA.name)
@@ -2930,36 +3010,36 @@ class StackEdge(Edge):
     when stacking a collection of nodes into a :class:`StackNode`. When doing
     this, all edges of the stacked nodes must be kept, since they have the
     information regarding the nodes' neighbours, which will be used when :func:
-    `unbinding <unbind>` the stack. Thus, ``StackEdges`` have two additional
-    properties, ``edges`` and ``node1_lists``, that is, the edges of all stacked
-    nodes corresponding to a certain axis, and their ``node1_list``'s.
+    `unbinding <unbind>` the stack.
 
     Parameters
     ----------
     edges : list[Edge]
-        List of non-trainable edges that will be stacked.
-    node1_lists : list[bool]
-        List of ``node1_list``'s corresponding to each edge in ``edges``.
+        List of edges (one from each node that is being stacked) that are
+        attached to the equivalent of ``axis1`` in each node.
+    node1_list : list[bool]
+        List of ``axis1`` attributes (one from each node that is being stacked)
+        of the equivalent of ``axis1`` in each node.
     node1 : StackNode or ParamStackNode
         First node to which the edge is connected.
     axis1: int, str or Axis
         Axis of ``node1`` where the edge is attached.
     node2 : StackNode or ParamStackNode, optional
-        Second node to which the edge is connected. If None, the edge will be
-        dangling.
+        Second node to which the edge is connected. If ``None``, the edge will
+        be dangling.
     axis2 : int, str, Axis, optional
         Axis of ``node2`` where the edge is attached.
     """
 
     def __init__(self,
                  edges: List[Edge],
-                 node1_lists: List[bool],
+                 node1_list: List[bool],
                  node1: AbstractStackNode,
                  axis1: Axis,
                  node2: Optional[AbstractStackNode] = None,
                  axis2: Optional[Axis] = None) -> None:
         self._edges = edges
-        self._node1_lists = node1_lists
+        self._node1_list = node1_list
         super().__init__(node1=node1, axis1=axis1,
                          node2=node2, axis2=axis2)
 
@@ -2969,18 +3049,20 @@ class StackEdge(Edge):
         return self._edges
 
     @property
-    def node1_lists(self) -> List[bool]:
-        """Returns list of ``node1_list``'s corresponding to this axis."""
-        return self._node1_lists
+    def node1_list(self) -> List[bool]:
+        """Returns list of ``node1``'s corresponding to this axis."""
+        return self._node1_list
 
     def connect(self, other: 'StackEdge') -> 'StackEdge':
         """
-        Same as :meth:`~Edge.connect` but it is verified that all stacked edges
-        corresponding to both ``StackEdges`` are the same. That is, this is a
-        redundant operation to re-connect a list of edges that should be already
-        connected. However, this is mandatory, since when stacking two sequences
-        of nodes independently it cannot be inferred that the resultant
-        ``StackNodes`` had to be connected.
+        Same as :meth:`~Edge.connect` but it is first verified that all stacked
+        :meth:`edges` corresponding to both ``StackEdges`` are the same.
+        
+        That is, this connection is actually a redundant operation to
+        **re-connect** a list of edges that should be already connected.
+        However, this is mandatory, since when stacking two sequences of nodes
+        independently it cannot be inferred that the resultant ``StackNodes``
+        had to be connected.
 
         Parameters
         ----------
@@ -2993,7 +3075,8 @@ class StackEdge(Edge):
 
         Example
         -------
-        To connect two stack-edges, the overloaded operator ``^`` can also be used.
+        To connect two stack-edges, the overloaded operator ``^`` can also be
+        used.
 
         >>> net = tk.TensorNetwork()
         >>> nodes = [tk.randn(shape=(2, 4, 2),
@@ -3006,13 +3089,15 @@ class StackEdge(Edge):
         ...         for _ in range(10)]
         ...
         >>> for i in range(10):
-        ...     _ = nodes[i]['input'] ^ data[i]['feature']
+        ...     nodes[i]['input'] ^ data[i]['feature']
         ...
         >>> stack_nodes = tk.stack(nodes)
         >>> stack_data = tk.stack(data)
         ...
         >>> # It is necessary to re-connect stacks to be able to contract
-        >>> _ = stack_nodes['input'] ^ stack_data['feature']
+        >>> new_edge = stack_nodes['input'] ^ stack_data['feature']
+        >>> print(new_edge.name)
+        stack_0[input] <-> stack_1[feature]
         """
         return connect_stack(self, other)
 
@@ -3076,7 +3161,7 @@ def connect(edge1: Edge, edge2: Edge) -> Edge:
 
     if isinstance(edge1, StackEdge):
         new_edge = StackEdge(edges=edge1._edges,
-                             node1_lists=edge1._node1_lists,
+                             node1_list=edge1._node1_list,
                              node1=node1, axis1=axis1,
                              node2=node2, axis2=axis2)
     else:
@@ -3155,7 +3240,7 @@ def disconnect(edge: Edge) -> Tuple[Edge, Edge]:
     for axis, node in zip(axes, nodes):
         if isinstance(edge, StackEdge):
             new_edge = StackEdge(edges=edge._edges,
-                                 node1_lists=edge._node1_lists,
+                                 node1_list=edge._node1_list,
                                  node1=node,
                                  axis1=axis)
             new_edges.append(new_edge)
@@ -3215,7 +3300,7 @@ class Successor:
     >>> nodeB = tk.randn(shape=(3, 4), axes_names=('left', 'right'))
     ...
     >>> # Connect nodes
-    >>> _ = nodeA['right'] ^ nodeB['left']
+    >>> nodeA['right'] ^ nodeB['left']
     ...
     >>> # Contract nodes
     >>> result = nodeA @ nodeB

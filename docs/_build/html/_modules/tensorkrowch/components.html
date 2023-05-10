@@ -2100,10 +2100,13 @@ title="Source repository"
 
 <span class="sd">    Can be used for fixed nodes of the :class:`TensorNetwork`, or intermediate</span>
 <span class="sd">    nodes that are resultant from an :class:`Operation` between nodes.</span>
+<span class="sd">    </span>
+<span class="sd">    All **4 types of nodes** (``leaf``, ``data``, ``virtual`` and ``resultant``)</span>
+<span class="sd">    can be :class:`Node`. In fact, ``data`` and ``resultant`` nodes can **only**</span>
+<span class="sd">    be of class :class:`Node`, since they are not intended to be trainable. To</span>
+<span class="sd">    learn more about these 4 types of nodes, see :class:`AbstractNode`.</span>
 
 <span class="sd">    For a complete list of properties and methods, see also :class:`AbstractNode`.</span>
-<span class="sd">    </span>
-<span class="sd">    # TODO: describe types of nodes (leaf, resultant, data, virtual)</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2114,13 +2117,13 @@ title="Source repository"
 <span class="sd">    axes_names : list[str], tuple[str], optional</span>
 <span class="sd">        Sequence of names for each of the node&#39;s axes. Names are used to access</span>
 <span class="sd">        the edge that is attached to the node in a certain axis. Hence they should</span>
-<span class="sd">        be all distinct.</span>
+<span class="sd">        be all distinct. They cannot contain blank spaces or special characters.</span>
 <span class="sd">    name : str, optional</span>
 <span class="sd">        Node&#39;s name, used to access the node from de :class:`TensorNetwork` where</span>
 <span class="sd">        it belongs. It cannot contain blank spaces.</span>
 <span class="sd">    network : TensorNetwork, optional</span>
-<span class="sd">        Tensor network where the node should belong. If None, a new tensor network,</span>
-<span class="sd">        will be created to contain the node.</span>
+<span class="sd">        Tensor network where the node should belong. If ``None``, a new tensor</span>
+<span class="sd">        network will be created to contain the node.</span>
 <span class="sd">    data : bool</span>
 <span class="sd">        Boolean indicating if the node is a ``data`` node.</span>
 <span class="sd">    virtual : bool</span>
@@ -2128,15 +2131,15 @@ title="Source repository"
 <span class="sd">    override_node : bool</span>
 <span class="sd">        Boolean indicating whether the node should override (``True``) another</span>
 <span class="sd">        node in the network that has the same name (e.g. if a node is parameterized,</span>
-<span class="sd">        it would be required that a new :class:`ParamNode` replaces the non-parameterized</span>
-<span class="sd">        node in the network).</span>
+<span class="sd">        it would be required that a new :class:`ParamNode` replaces the</span>
+<span class="sd">        non-parameterized node in the network).</span>
 <span class="sd">    tensor : torch.Tensor, optional</span>
-<span class="sd">        Tensor that is to be stored in the node. If None, ``shape`` and ``init_method``</span>
-<span class="sd">        will be required.</span>
+<span class="sd">        Tensor that is to be stored in the node. If ``None``, ``shape`` and</span>
+<span class="sd">        ``init_method`` will be required.</span>
 <span class="sd">    edges : list[Edge], optional</span>
 <span class="sd">        List of edges that are to be attached to the node. This can be used in</span>
-<span class="sd">        case the node inherits the edges from other node(s), like in :class:`Operations</span>
-<span class="sd">        &lt;Operation&gt;`.</span>
+<span class="sd">        case the node inherits the edges from other node(s), like results from</span>
+<span class="sd">        :class:`Operations &lt;Operation&gt;`.</span>
 <span class="sd">    override_edges : bool</span>
 <span class="sd">        Boolean indicating whether the provided ``edges`` should be overriden</span>
 <span class="sd">        (``True``) when reattached (e.g. if a node is parameterized, it would</span>
@@ -2148,7 +2151,7 @@ title="Source repository"
 <span class="sd">    init_method : {&quot;zeros&quot;, &quot;ones&quot;, &quot;copy&quot;, &quot;rand&quot;, &quot;randn&quot;}, optional</span>
 <span class="sd">        Initialization method.</span>
 <span class="sd">    device : torch.device, optional</span>
-<span class="sd">        Device where to initialize the tensor.</span>
+<span class="sd">        Device where to initialize the tensor if ``init_method`` is provided.</span>
 <span class="sd">    kwargs : float</span>
 <span class="sd">        Keyword arguments for the different initialization methods. See</span>
 <span class="sd">        :meth:`AbstractNode.make_tensor`.</span>
@@ -2158,12 +2161,14 @@ title="Source repository"
     <span class="c1"># Methods</span>
     <span class="c1"># -------</span>
     <span class="k">def</span> <span class="nf">_make_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Axis</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Edge&#39;</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Makes ``Edges`` that will be attached to each axis.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Makes :class:`Edges &lt;Edge&gt;` that will be attached to each axis.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">Edge</span><span class="p">(</span><span class="n">node1</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">_set_tensor_format</span><span class="p">(</span><span class="n">tensor</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns a torch.Tensor if input tensor is given as nn.Parameter.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a ``torch.Tensor`` if input tensor is given as ``torch.nn.Parameter``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">tensor</span>
@@ -2173,8 +2178,8 @@ title="Source repository"
 <span class="sd">        Replaces the node with a parameterized version of it, that is, turns a</span>
 <span class="sd">        fixed :class:`Node` into a trainable :class:`ParamNode`.</span>
 
-<span class="sd">        Since the node is `replaced`, it will be completely removed from the network,</span>
-<span class="sd">        and its neighbours will point to the new parameterized node.</span>
+<span class="sd">        Since the node is **replaced**, it will be completely removed from the</span>
+<span class="sd">        network, and its neighbours will point to the new parameterized node.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -2187,6 +2192,27 @@ title="Source repository"
 <span class="sd">        -------</span>
 <span class="sd">        Node or ParamNode</span>
 <span class="sd">            The original node or a parameterized version of it.</span>
+<span class="sd">            </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.randn((2, 3))</span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.randn((3, 4))</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeA[1] ^ nodeB[0]</span>
+<span class="sd">        &gt;&gt;&gt; paramnodeA = nodeA.parameterize()</span>
+<span class="sd">        &gt;&gt;&gt; nodeB.neighbours() == [paramnodeA]</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; isinstance(paramnodeA.tensor, torch.nn.Parameter)</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        ``nodeA`` still exists and has an edge pointing to ``nodeB``, but the</span>
+<span class="sd">        latter does not &quot;see&quot; the former. It should be deleted.</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; del nodeA</span>
+<span class="sd">        </span>
+<span class="sd">        To overcome this issue, one should override ``nodeA``:</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; nodeA = nodeA.parameterize()</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">set_param</span><span class="p">:</span>
             <span class="n">new_node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
@@ -2206,12 +2232,38 @@ title="Source repository"
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a copy of the node. That is, returns a node whose tensor is a copy</span>
 <span class="sd">        of the original, whose edges are directly inherited (these are not copies,</span>
-<span class="sd">        but the exact same edges) and whose name is extended with the prefix</span>
-<span class="sd">        ``&quot;copy_&quot;``.</span>
+<span class="sd">        but the exact same edges) and whose name is extended with the suffix</span>
+<span class="sd">        ``&quot;_copy&quot;``.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        share_tensor : bool</span>
+<span class="sd">            Boolean indicating whether the copied node should store its own</span>
+<span class="sd">            copy of the tensor (``False``) or share it with the original node</span>
+<span class="sd">            (``True``) storing a reference to it.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        Node</span>
+<span class="sd">            </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; node = tk.randn(shape=(2, 3), name=&#39;node&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; copy = node.copy()</span>
+<span class="sd">        &gt;&gt;&gt; node.tensor_address() != copy.tensor_address()</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; torch.equal(node.tensor, copy.tensor)</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        If tensor is shared:</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; copy = node.copy(True)</span>
+<span class="sd">        &gt;&gt;&gt; node.tensor_address() == copy.tensor_address()</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; torch.equal(node.tensor, copy.tensor)</span>
+<span class="sd">        True</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">share_tensor</span><span class="p">:</span>
             <span class="n">new_node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_shape</span><span class="p">,</span>

@@ -1,4 +1,4 @@
-.. image:: /docs/figures/svg/tensorkrowch_logo_dark.svg
+.. image:: /docs/figures/svg/tensorkrowch_logo_with_background_light.svg
 
 **Tensor Networks with PyTorch**
 

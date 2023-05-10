@@ -117,10 +117,33 @@ class Axis:
     >>> nodeA = tk.Node(shape=(2, 3), axes_names=['left', 'right'])
     >>> nodeB = tk.Node(shape=(3, 4), axes_names=['left', 'right'])
     >>> new_edge = nodeA['right'] ^ nodeB['left']
+    ...
+    >>> # nodeA is node1 and nodeB is node2 of new_edge
     >>> nodeA == new_edge.nodes[1 - nodeA.get_axis('right').is_node1()]
     True
 
     >>> nodeB == new_edge.nodes[nodeA.get_axis('right').is_node1()]
+    True
+    
+    The ``node1`` attribute is extended to ``resultant`` nodes that inherit
+    edges.
+    
+    >>> nodeA = tk.randn(shape=(2, 3), axes_names=['left', 'right'])
+    >>> nodeB = tk.randn(shape=(3, 4), axes_names=['left', 'right'])
+    >>> nodeC = tk.randn(shape=(4, 5), axes_names=['left', 'right'])
+    >>> edge1 = nodeA['right'] ^ nodeB['left']
+    >>> edge2 = nodeB['right'] ^ nodeC['left']
+    >>> result = nodeA @ nodeB
+    ...
+    >>> # result inherits the edges nodeA['left'] and edge2
+    >>> result['left'] == nodeA['left']
+    True
+    
+    >>> result['right'] == edge2
+    True
+    
+    >>> # result is still node1 of edge2, since nodeA was
+    >>> result.is_node1('right')
     True
     """
 
@@ -304,8 +327,8 @@ class AbstractNode(ABC):
       See :meth:`TensorNetwork.trace`.
       
       
-    Also, there are 4 excluding types of nodes that will have different roles
-    in the :class:`TensorNetwork`:
+    Also, there are **4 excluding types** of nodes that will have different
+    roles in the :class:`TensorNetwork`:
     
     * **leaf**: These are the nodes that form the :class:`TensorNetwork`
       (together with the ``data`` nodes). Usually, these will be the `trainable`
@@ -315,7 +338,7 @@ class AbstractNode(ABC):
       and are used to store the temporary tensors coming from input data. These
       nodes can store their own tensors or use other node's tensor.
       
-    * **virtual**: These nodes are a sort of ancillay, `hidden` nodes that
+    * **virtual**: These nodes are a sort of ancillary, `hidden` nodes that
       accomplish some useful task (e.g. in uniform tensor networks a virtual
       node can store the shared tensor, while all the other nodes in the
       network just have a reference to it). These nodes always store their own
@@ -451,7 +474,7 @@ class AbstractNode(ABC):
                     raise TypeError('`node1_list` should be list[bool] type')
                 axis._node1 = node1_list[i]
             self._edges = edges[:]
-            # If node stores its own tensor
+            
             if not self.is_resultant():
                 self.reattach_edges(override=override_edges)
 
@@ -636,7 +659,7 @@ class AbstractNode(ABC):
     def is_virtual(self) -> bool:
         """
         Returns a boolean indicating if the node is a ``virtual`` node. These
-        nodes are a sort of ancillay, `hidden` nodes that accomplish some useful
+        nodes are a sort of ancillary, `hidden` nodes that accomplish some useful
         task (e.g. in uniform tensor networks a virtual node can store the shared
         tensor, while all the other nodes in the network just have a reference
         to it). These nodes always store their own tensors.
@@ -658,7 +681,6 @@ class AbstractNode(ABC):
         """
         return not (self._leaf or self._data or self._virtual)
 
-    # TODO: por aqui
     def size(self, axis: Optional[Ax] = None) -> Union[Size, int]:
         """
         Returns the size of the node's tensor. If ``axis`` is specified, returns
@@ -681,8 +703,8 @@ class AbstractNode(ABC):
 
     def is_node1(self, axis: Optional[Ax] = None) -> Union[bool, List[bool]]:
         """
-        Returns :meth:`node <Axis.is_node1>` attribute of axes of the node. If
-        ``axis`` is specified, returns only the ``node`` of that axis; otherwise
+        Returns :meth:`node1 <Axis.is_node1>` attribute of axes of the node. If
+        ``axis`` is specified, returns only the ``node1`` of that axis; otherwise
         returns the ``node1`` of all axes of the node.
 
         Parameters
@@ -712,6 +734,26 @@ class AbstractNode(ABC):
         Returns
         -------
         AbstractNode or list[AbstractNode]
+        
+        Examples
+        --------
+        >>> nodeA = tk.randn(shape=(2, 3), axes_names=['left', 'right'])
+        >>> nodeB = tk.randn(shape=(3, 4), axes_names=['left', 'right'])
+        >>> nodeC = tk.randn(shape=(4, 5), axes_names=['left', 'right'])
+        >>> _ = nodeA['right'] ^ nodeB['left']
+        >>> _ = nodeB['right'] ^ nodeC['left']
+        >>> set(nodeB.neighbours()) == set([nodeA, nodeC])
+        True
+        
+        >>> nodeB.neighbours('right') == nodeC
+        True
+        
+        Nodes ``resultant`` from operations are still connected to original
+        neighbours.
+        
+        >>> result = nodeA @ nodeB
+        >>> result.neighbours('right') == nodeC
+        True
         """
         node1_list = self.is_node1()
         if axis is not None:
@@ -759,8 +801,8 @@ class AbstractNode(ABC):
 
     def _change_axis_size(self, axis: Ax, size: int) -> None:
         """
-        Changes axis size, that is, changes size of node's tensor and corresponding
-        edges at a certain axis.
+        Changes axis size, that is, changes size of node's tensor at a certain
+        axis.
 
         Parameters
         ----------
@@ -855,8 +897,8 @@ class AbstractNode(ABC):
         axis : int, str or Axis
             Axes where the edge will be attached.
         node1 : bool, optional
-            Boolean indicating whether the node is the `node1` (``True``) or
-            `node2` (``False``) of the edge.
+            Boolean indicating whether the node is the ``node1`` (``True``) or
+            ``node2`` (``False``) of the edge.
         """
         axis_num = self.get_axis_num(axis)
         self._axes[axis_num]._node1 = node1
@@ -894,7 +936,7 @@ class AbstractNode(ABC):
         It can happen that an edge is not attached to the node if it is the result
         of an :class:`Operation` and, hence, it inherits edges from the operands.
         In that case, the new copied edges will be attached to the resultant node,
-        replacing each previous `node1` or `node2` with it (according to the
+        replacing each previous ``node1`` or ``node2`` with it (according to the
         ``node1`` attribute of each axis).
 
         Used for in-place operations like :func:`permute_` or :func:`split_` and
@@ -907,6 +949,36 @@ class AbstractNode(ABC):
             the corresponding edges in the node's neighbours (``True``). Otherwise,
             the neighbours' edges will be pointing to the original nodes from which
             the current node inherits its edges (``False``).
+            
+        Examples
+        --------
+        >>> nodeA = tk.randn(shape=(2, 3), axes_names=['left', 'right'])
+        >>> nodeB = tk.randn(shape=(3, 4), axes_names=['left', 'right'])
+        >>> nodeC = tk.randn(shape=(4, 5), axes_names=['left', 'right'])
+        >>> _ = nodeA['right'] ^ nodeB['left']
+        >>> _ = nodeB['right'] ^ nodeC['left']
+        >>> result = nodeA @ nodeB
+        
+        Node ``result`` inherits its ``right`` edge from ``nodeB``.
+        
+        >>> result['right'] == nodeB['right']
+        True
+        
+        However, ``nodeB['right']`` still connects ``nodeB`` and ``nodeC``.
+        There is no reference to ``result``.
+        
+        >>> result in result['right'].nodes
+        False
+        
+        One can reattach its edges so that ``result``'s edges do have references
+        to it.
+        
+        >>> result.reattach_edges()
+        >>> result in result['right'].nodes
+        True
+        
+        If ``override`` is ``True``, ``nodeB['right']`` would be replaced by the
+        new ``result['right']``.
         """
         for i, (edge, node1) in enumerate(zip(self._edges, self.is_node1())):
             node = edge._nodes[1 - node1]
@@ -942,6 +1014,20 @@ class AbstractNode(ABC):
         ----------
         axis : int, str or Axis, optional
             Axis whose edge will be disconnected.
+            
+        Examples
+        --------
+        >>> nodeA = tk.Node(shape=(2, 3), axes_names=['left', 'right'])
+        >>> nodeB = tk.Node(shape=(3, 4), axes_names=['left', 'right'])
+        >>> nodeC = tk.Node(shape=(4, 5), axes_names=['left', 'right'])
+        >>> _ = nodeA['right'] ^ nodeB['left']
+        >>> _ = nodeB['right'] ^ nodeC['left']
+        >>> set(nodeB.neighbours()) == set([nodeA, nodeC])
+        True
+        
+        >>> nodeB.disconnect()
+        >>> nodeB.neighbours() == []
+        True
         """
         if axis is not None:
             edges = [self[axis]]
@@ -1003,7 +1089,7 @@ class AbstractNode(ABC):
         Parameters
         ----------
         shape : list[int], tuple[int] or torch.Size, optional
-            Shape of the tensor. If None, node's shape will be used.
+            Shape of the tensor. If ``None``, node's shape will be used.
         init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
             Initialization method.
         device : torch.device, optional
@@ -1059,10 +1145,10 @@ class AbstractNode(ABC):
     def _crop_tensor(self, tensor: Tensor) -> Tensor:
         """
         Crops the tensor in case its shape is not compatible with the node's shape.
-        That is, if the tensor has a size that is smaller than the corresponding
+        That is, if the tensor has a size that is greater than the corresponding
         size of the node for a certain axis, the tensor is cropped in that axis
-        (provided that the axis is not a batch axis). If that size is greater in
-        the tensor that in the node, raises a ``ValueError``.
+        (provided that the axis is not a batch axis). If that size is smaller in
+        the tensor than in the node, raises a ``ValueError``.
 
         Parameters
         ----------
@@ -1092,8 +1178,12 @@ class AbstractNode(ABC):
                              ' dimensions as node\'s tensor (same rank)')
             
     def _direct_set_tensor(self,
-                        tensor: Optional[Tensor],
-                        check_shape: bool = False) -> None:
+                           tensor: Optional[Tensor],
+                           check_shape: bool = False) -> None:
+        """
+        Sets a new node's tensor without checking extra conditions. It just
+        can crop the tensor in case it is specified with ``check_shape``.
+        """
         if check_shape and not self._compatible_shape(tensor):
             tensor = self._crop_tensor(tensor)
         correct_format_tensor = self._set_tensor_format(tensor)
@@ -1109,16 +1199,16 @@ class AbstractNode(ABC):
         """
         Sets a new node's tensor or creates one with :meth:`make_tensor` and sets
         it. Before setting it, it is casted to the correct type, so that a
-        ``torch.Tensor`` can be turned into a ``nn.Parameter`` when setting it
-        in :class:`ParamNodes <ParamNode`. This can be used in any node, even in
-        ``resultant`` nodes.
+        ``torch.Tensor`` can be turned into a ``torch.nn.Parameter`` when setting
+        it in :class:`ParamNodes <ParamNode>`. This is not restricted, can be
+        used in any node, even in ``resultant`` nodes.
 
         Parameters
         ----------
         tensor : torch.Tensor, optional
-            Tensor to be set in the node. If None, and `init_method` is provided,
-            the tensor is created with :meth:`make_tensor`. Otherwise, a None is
-            set as node's tensor.
+            Tensor to be set in the node. If ``None``, and ``init_method`` is
+            provided, the tensor is created with :meth:`make_tensor`. Otherwise,
+            a ``None`` is set as node's tensor.
         init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
             Initialization method.
         device : torch.device, optional
@@ -1131,8 +1221,9 @@ class AbstractNode(ABC):
             if not isinstance(tensor, Tensor):
                 raise TypeError('`tensor` should be torch.Tensor type')
             elif device is not None:
-                warnings.warn('`device` was specified but is being ignored. Provide '
-                              'a tensor that is already in the required device')
+                warnings.warn('`device` was specified but is being ignored. '
+                              'Provide a tensor that is already in the required'
+                              ' device')
 
             if not self._compatible_shape(tensor):
                 tensor = self._crop_tensor(tensor)
@@ -1158,27 +1249,30 @@ class AbstractNode(ABC):
                    device: Optional[torch.device] = None,
                    **kwargs: float) -> None:
         """
-        Sets a new node's tensor or creates one with :meth:`make_tensor` and sets
+        Sets new node's tensor or creates one with :meth:`make_tensor` and sets
         it. Before setting it, it is casted to the correct type, so that a
-        ``torch.Tensor`` can be turned into a ``nn.Parameter`` when setting it
-        in :class:`ParamNodes <ParamNode>`.
-
-        This way of setting tensors is only applicable to ``leaf`` nodes. For
-        ``resultant`` nodes, their tensors come from the result of operations on
-        ``leaf`` tensors; hence they should not be modified. For ``data`` nodes,
-        tensors are set into nodes when calling the :meth:`TensorNetwork.forward`
+        ``torch.Tensor`` can be turned into a ``torch.nn.Parameter`` when setting
+        it in :class:`ParamNodes <ParamNode>`.
+        
+        When a tensor is **set** in the node, it means the node stores it, that
+        is, the node has its own memory address for its tensor, rather than a
+        reference to other node's tensor.
+        
+        This can only be used for **non** ``resultant``. For ``resultant`` nodes,
+        tensors are set automatically when computing :class:`Operations <Operation>`.
+        
+        Although this can also be used for ``data`` nodes, input data will be
+        usually automatically set into nodes when calling the :meth:`TensorNetwork.forward`
         method of :class:`tensor networks <TensorNetwork>` with a data tensor or
-        a sequence of tensors.
-
-        Besides, this can only be used if the :class:`TensorNetwork` is not in
-        :attr:`~TensorNetwork.auto_stack` mode.
+        a sequence of tensors. This method calls :meth:`TensorNetwork.add_data`,
+        which can also be used to set data tensors into the ``data`` nodes.
 
         Parameters
         ----------
         tensor : torch.Tensor, optional
-            Tensor to be set in the node. If None, and `init_method` is provided,
-            the tensor is created with :meth:`make_tensor`. Otherwise, a ``None``
-            is set as node's tensor.
+            Tensor to be set in the node. If ``None``, and ``init_method`` is
+            provided, the tensor is created with :meth:`make_tensor`. Otherwise,
+            a ``None`` is set as node's tensor.
         init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
             Initialization method.
         device : torch.device, optional
@@ -1190,8 +1284,7 @@ class AbstractNode(ABC):
         Raises
         ------
         ValueError
-            If the node is not a ``leaf`` node or the tensor network is in
-            ``auto_stack`` mode.
+            If the node is a ``resultant`` node.
         """
         # If node stores its own tensor
         if not self.is_resultant() and (self._tensor_info['address'] is not None):
@@ -1201,11 +1294,39 @@ class AbstractNode(ABC):
                                           **kwargs)
         else:
             raise ValueError('Node\'s tensor can only be changed if it is not'
-                             'resultant and if it stores its own tensor')
+                             'resultant')
+
+    def unset_tensor(self) -> None:
+        """Replaces node's tensor with None."""
+        # If node stores its own tensor
+        if not self.is_resultant() and (self._tensor_info['address'] is not None):
+            self._save_in_network(None)
             
     def set_tensor_from(self, other: 'AbstractNode') -> None:
-        """Sets node's tensor as the tensor used by other node."""
-        del self._network._memory_nodes[self._tensor_info['address']]
+        """
+        Sets node's tensor as the tensor used by ``other`` node. That is, when
+        setting the tensor this way, the current node will store a reference to
+        the ``other`` node's tensor, instead of having its own tensor.
+        
+        The node and ``other`` should be both the same type (:class:`Node` or
+        :class:`ParamNode`). Also, they should be in the same :class:`TensorNetwork`.
+
+        Parameters
+        ----------
+        other : Node or ParamNode
+            Node whose tensor is to be set in current node.
+
+        Raises
+        ------
+        TypeError
+            If ``other`` is a different type than the current node, or if it is
+            in a different network.
+        """
+        if not isinstance(self, type(other)):
+            raise TypeError('Both nodes should be the same type')
+        elif self._network is not other._network:
+            raise ValueError('Both nodes should be in the same network')
+        
         
         if other._tensor_info['address'] is not None:
             self._tensor_info['address'] = None
@@ -1671,9 +1792,11 @@ class ParamNode(AbstractNode):
         """
         if self._tensor_info['address'] is None:
             aux_node = self._tensor_info['node_ref']
-            tensor = aux_node._network._memory_nodes[aux_node._tensor_info['address']]
+            tensor = aux_node._network._memory_nodes[
+                aux_node._tensor_info['address']]
         else:
-            tensor = self._network._memory_nodes[self._tensor_info['address']]
+            tensor = self._network._memory_nodes[
+                self._tensor_info['address']]
 
         if tensor is None:
             return

@@ -445,14 +445,17 @@ class TestSetTensorNode:
 
     @pytest.fixture
     def setup(self):
+        net = tk.TensorNetwork()
         node1 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'batch', 'right'),
-                        name='node1')
+                        name='node1',
+                        network=net)
 
         tensor = torch.randn(2, 5, 2)
         node2 = tk.Node(axes_names=('left', 'batch', 'right'),
                         name='node2',
-                        tensor=tensor)
+                        tensor=tensor,
+                        network=net)
         return node1, node2, tensor
 
     def test_set_tensor(self, setup):
@@ -460,10 +463,16 @@ class TestSetTensorNode:
 
         assert node1.tensor is None
         assert node1.shape == (2, 5, 2)
+        
+        assert node1.tensor_address() == 'node1'  # But empty
+        assert node2.tensor_address() == 'node2'
 
         node1.tensor = tensor
         assert torch.equal(node1.tensor, node2.tensor)
         assert node1.shape == (2, 5, 2)
+        
+        assert node1.tensor_address() == 'node1'
+        assert node2.tensor_address() == 'node2'
 
     def test_set_tensor_zeros(self, setup):
         node1, node2, tensor = setup
@@ -581,21 +590,124 @@ class TestSetTensorNode:
         # Changing node1's tensor changes node2's tensor
         node1.tensor[0, 0, 0] = 1000
         assert node2.tensor[0, 0, 0] == 1000
+    
+    def test_set_tensor_from(self, setup):
+        node1, node2, tensor = setup
+        
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        
+        assert node1.tensor_address() == 'node1'  # But empty
+        assert node2.tensor_address() == 'node2'
+
+        node1.set_tensor_from(node2)
+        assert torch.equal(node1.tensor, node2.tensor)
+        assert node1.shape == (2, 5, 2)
+        
+        assert node1.tensor_address() == 'node2'
+        assert node2.tensor_address() == 'node2'
+        
+        node2.tensor = torch.randn(node2.shape)
+        assert torch.equal(node1.tensor, node2.tensor)
+    
+    def test_set_tensor_from_empty(self, setup):
+        node1, node2, tensor = setup
+        
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        
+        assert node1.tensor_address() == 'node1'  # But empty
+        assert node2.tensor_address() == 'node2'
+
+        node2.set_tensor_from(node1)
+        assert node1.tensor is None
+        assert node2.tensor is None
+        
+        assert node1.tensor_address() == 'node1'  # But empty
+        assert node2.tensor_address() == 'node1'  # But empty
+        
+        node1.tensor = torch.randn(node1.shape)
+        assert torch.equal(node1.tensor, node2.tensor) 
+    
+    def test_set_tensor_from_other_type(self, setup):
+        node1, node2, tensor = setup
+        
+        node1 = node1.parameterize()
+        with pytest.raises(TypeError):
+            # Node and ParamNode cannot share tensor
+            node1.set_tensor_from(node2)
+            
+    def test_set_tensor_from_other_network(self, setup):
+        node1, node2, tensor = setup
+        
+        node1.network = tk.TensorNetwork()
+        with pytest.raises(ValueError):
+            # Cannot share tensor if they are in different networks
+            node1.set_tensor_from(node2)
+    
+    def test_set_node_with_reference(self, setup):
+        node1, node2, tensor = setup
+        
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        
+        assert node1.tensor_address() == 'node1'  # But empty
+        assert node2.tensor_address() == 'node2'
+
+        node1.set_tensor_from(node2)
+        assert torch.equal(node1.tensor, node2.tensor)
+        assert node1.shape == (2, 5, 2)
+        
+        # Now node1 just has a reference to node2's tensor
+        assert node1.tensor_address() == 'node2'
+        assert node2.tensor_address() == 'node2'
+        
+        with pytest.raises(ValueError):
+            # Cannot set tensor in node1 if it has a reference to node2
+            node1.tensor = torch.zeros(node1.shape)
+            
+    def test_set_node_with_reference_reset(self, setup):
+        node1, node2, tensor = setup
+        
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        
+        assert node1.tensor_address() == 'node1'  # But empty
+        assert node2.tensor_address() == 'node2'
+
+        node1.set_tensor_from(node2)
+        assert torch.equal(node1.tensor, node2.tensor)
+        assert node1.shape == (2, 5, 2)
+        
+        # Now node1 just has a reference to node2's tensor
+        assert node1.tensor_address() == 'node2'
+        assert node2.tensor_address() == 'node2'
+        
+        node1.reset_tensor()
+        assert node1.tensor_address() == 'node1'
+        assert node2.tensor_address() == 'node2'
+        assert torch.equal(node1.tensor, node2.tensor)
+        
+        node1.tensor = torch.zeros(node1.shape)
+        assert not torch.equal(node1.tensor, node2.tensor)
 
 
 class TestSetTensorParamNode:
 
     @pytest.fixture
     def setup(self):
+        net = tk.TensorNetwork()
         node1 = tk.ParamNode(shape=(2, 5, 2),
                              axes_names=('left', 'batch', 'right'),
-                             name='node1')
+                             name='node1',
+                             network=net)
 
         tensor = torch.randn(2, 5, 2)
         node2 = tk.ParamNode(shape=(2, 5, 2),
                              axes_names=('left', 'batch', 'right'),
-                             name='node1',
-                             tensor=tensor)
+                             name='node2',
+                             tensor=tensor,
+                             network=net)
         return node1, node2, tensor
 
     def test_set_tensor(self, setup):
@@ -603,10 +715,16 @@ class TestSetTensorParamNode:
 
         assert node1.tensor is None
         assert node1.shape == (2, 5, 2)
+        
+        assert node1.tensor_address() == 'node1'  # But empty
+        assert node2.tensor_address() == 'node2'
 
         node1.tensor = tensor
         assert torch.equal(node1.tensor, node2.tensor)
         assert node1.shape == (2, 5, 2)
+        
+        assert node1.tensor_address() == 'node1'
+        assert node2.tensor_address() == 'node2'
 
         assert isinstance(node1.tensor, nn.Parameter)
         assert isinstance(node2.tensor, nn.Parameter)
@@ -741,6 +859,106 @@ class TestSetTensorParamNode:
         node3.tensor = None
         assert node3.tensor is None
         assert node3.grad is None
+        
+    def test_set_tensor_from(self, setup):
+        node1, node2, tensor = setup
+        
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        
+        assert node1.tensor_address() == 'node1'  # But empty
+        assert node2.tensor_address() == 'node2'
+
+        node1.set_tensor_from(node2)
+        assert torch.equal(node1.tensor, node2.tensor)
+        assert node1.shape == (2, 5, 2)
+        
+        assert node1.tensor_address() == 'node2'
+        assert node2.tensor_address() == 'node2'
+        
+        node2.tensor = torch.randn(node2.shape)
+        assert torch.equal(node1.tensor, node2.tensor)
+    
+    def test_set_tensor_from_empty(self, setup):
+        node1, node2, tensor = setup
+        
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        
+        assert node1.tensor_address() == 'node1'  # But empty
+        assert node2.tensor_address() == 'node2'
+
+        node2.set_tensor_from(node1)
+        assert node1.tensor is None
+        assert node2.tensor is None
+        
+        assert node1.tensor_address() == 'node1'  # But empty
+        assert node2.tensor_address() == 'node1'  # But empty
+        
+        node1.tensor = torch.randn(node1.shape)
+        assert torch.equal(node1.tensor, node2.tensor) 
+    
+    def test_set_tensor_from_other_type(self, setup):
+        node1, node2, tensor = setup
+        
+        node1 = node1.parameterize(False)
+        with pytest.raises(TypeError):
+            # Node and ParamNode cannot share tensor
+            node1.set_tensor_from(node2)
+            
+    def test_set_tensor_from_other_network(self, setup):
+        node1, node2, tensor = setup
+        
+        node1.network = tk.TensorNetwork()
+        with pytest.raises(ValueError):
+            # Cannot share tensor if they are in different networks
+            node1.set_tensor_from(node2)
+    
+    def test_set_node_with_reference(self, setup):
+        node1, node2, tensor = setup
+        
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        
+        assert node1.tensor_address() == 'node1'  # But empty
+        assert node2.tensor_address() == 'node2'
+
+        node1.set_tensor_from(node2)
+        assert torch.equal(node1.tensor, node2.tensor)
+        assert node1.shape == (2, 5, 2)
+        
+        # Now node1 just has a reference to node2's tensor
+        assert node1.tensor_address() == 'node2'
+        assert node2.tensor_address() == 'node2'
+        
+        with pytest.raises(ValueError):
+            # Cannot set tensor in node1 if it has a reference to node2
+            node1.tensor = torch.zeros(node1.shape)
+            
+    def test_set_node_with_reference_reset(self, setup):
+        node1, node2, tensor = setup
+        
+        assert node1.tensor is None
+        assert node1.shape == (2, 5, 2)
+        
+        assert node1.tensor_address() == 'node1'  # But empty
+        assert node2.tensor_address() == 'node2'
+
+        node1.set_tensor_from(node2)
+        assert torch.equal(node1.tensor, node2.tensor)
+        assert node1.shape == (2, 5, 2)
+        
+        # Now node1 just has a reference to node2's tensor
+        assert node1.tensor_address() == 'node2'
+        assert node2.tensor_address() == 'node2'
+        
+        node1.reset_tensor()
+        assert node1.tensor_address() == 'node1'
+        assert node2.tensor_address() == 'node2'
+        assert torch.equal(node1.tensor, node2.tensor)
+        
+        node1.tensor = torch.zeros(node1.shape)
+        assert not torch.equal(node1.tensor, node2.tensor)
 
 
 class TestConnect:

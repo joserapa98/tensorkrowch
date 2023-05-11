@@ -132,14 +132,15 @@ def _permute_first(node: AbstractNode, axes: Sequence[Ax]) -> Node:
         raise ValueError('The provided list of axis is not a permutation of the'
                          ' axes of the node')
     else:
-        new_node = Node._create_resultant(axes_names=permute_list(node.axes_names, axes_nums),
-                                          name='permute',
-                                          network=node._network,
-                                          tensor=node.tensor.permute(
-                                              axes_nums),
-                                          edges=permute_list(
-                                              node._edges, axes_nums),
-                                          node1_list=permute_list(node.is_node1(), axes_nums))
+        new_node = Node._create_resultant(
+            axes_names=permute_list(node.axes_names, axes_nums),
+            name='permute',
+            network=node._network,
+            tensor=node.tensor.permute(
+                axes_nums),
+            edges=permute_list(
+                node._edges, axes_nums),
+            node1_list=permute_list(node.is_node1(), axes_nums))
 
     # Create successor
     net = node._network
@@ -184,12 +185,15 @@ permute_op = Operation('permute',
                        _permute_next)
 
 
-def permute(node: AbstractNode, axes: Sequence[Ax]):
+def permute(node: AbstractNode, axes: Sequence[Ax]) -> Node:
     """
     Permutes the nodes' tensor, as well as its axes and edges to match the new
     shape.
 
     See `permute <https://pytorch.org/docs/stable/generated/torch.permute.html>`_.
+    
+    Nodes ``resultant`` from this operation are called ``"permute"``. The node
+    that keeps information about the :class:`Successor` is ``node``.
 
     Parameters
     ----------
@@ -197,6 +201,17 @@ def permute(node: AbstractNode, axes: Sequence[Ax]):
         Node whose tensor is to be permuted.
     axes: list[int, str or Axis]
         List of axes in the permuted order.
+        
+    Returns
+    -------
+    Node
+    
+    Examples
+    --------
+    >>> node = tk.randn((2, 5, 7))
+    >>> result = tk.permute(node, (2, 0, 1))
+    >>> result.shape
+    torch.Size([7, 2, 5])
     """
     return permute_op(node, axes)
 
@@ -209,10 +224,24 @@ permute_node.__doc__ = \
     
     See `permute <https://pytorch.org/docs/stable/generated/torch.permute.html>`_.
     
+    Nodes ``resultant`` from this operation are called ``"permute"``. The node
+    that keeps information about the :class:`Successor` is ``self``.
+    
     Parameters
     ----------
     axes: list[int, str or Axis]
         List of axes in the permuted order.
+        
+    Returns
+    -------
+    Node
+        
+    Examples
+    --------
+    >>> node = tk.randn((2, 5, 7))
+    >>> result = node.permute((2, 0, 1))
+    >>> result.shape
+    torch.Size([7, 2, 5])
     """
 
 AbstractNode.permute = permute_node
@@ -227,6 +256,8 @@ def permute_(node: AbstractNode, axes: Sequence[Ax]) -> Node:
     underscore indicate **in-place** operations.
 
     See `permute <https://pytorch.org/docs/stable/generated/torch.permute.html>`_.
+    
+    Nodes ``resultant`` from this operation use the same name as ``node``.
 
     Parameters
     ----------
@@ -234,6 +265,17 @@ def permute_(node: AbstractNode, axes: Sequence[Ax]) -> Node:
         Node whose tensor is to be permuted.
     axes: list[int, str or Axis]
         List of axes in the permuted order.
+        
+    Returns
+    -------
+    Node
+    
+    Examples
+    --------
+    >>> node = tk.randn((2, 5, 7))
+    >>> node = tk.permute_(node, (2, 0, 1))
+    >>> node.shape
+    torch.Size([7, 2, 5])
     """
     axes_nums = []
     for axis in axes:
@@ -267,11 +309,22 @@ permute_node_.__doc__ = \
     underscore indicate **in-place** operations.
 
     See `permute <https://pytorch.org/docs/stable/generated/torch.permute.html>`_.
+    
+    Nodes ``resultant`` from this operation use the same name as ``node``.
 
     Parameters
     ----------
     axes: list[int, str or Axis]
         List of axes in the permuted order.
+        
+    Returns
+    -------
+    Node
+        
+    >>> node = tk.randn((2, 5, 7))
+    >>> node = node.permute_((2, 0, 1))
+    >>> node.shape
+    torch.Size([7, 2, 5])
     """
 
 AbstractNode.permute_ = permute_node_
@@ -299,12 +352,13 @@ def _tprod_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     new_tensor = torch.outer(node1.tensor.flatten(),
                              node2.tensor.flatten()).view(*(list(node1._shape) +
                                                             list(node2._shape)))
-    new_node = Node._create_resultant(axes_names=node1.axes_names + node2.axes_names,
-                                      name='tprod',
-                                      network=node1._network,
-                                      tensor=new_tensor,
-                                      edges=node1._edges + node2._edges,
-                                      node1_list=node1.is_node1() + node2.is_node1())
+    new_node = Node._create_resultant(
+        axes_names=node1.axes_names + node2.axes_names,
+        name='tprod',
+        network=node1._network,
+        tensor=new_tensor,
+        edges=node1._edges + node2._edges,
+        node1_list=node1.is_node1() + node2.is_node1())
 
     # Create successor
     net = node1._network
@@ -352,6 +406,9 @@ def tprod(node1: AbstractNode, node2: AbstractNode) -> Node:
     """
     Tensor product between two nodes. It can also be performed using the
     operator ``%``.
+    
+    Nodes ``resultant`` from this operation are called ``"tprod"``. The node
+    that keeps information about the :class:`Successor` is ``node1``.
 
     Parameters
     ----------
@@ -365,6 +422,15 @@ def tprod(node1: AbstractNode, node2: AbstractNode) -> Node:
     Returns
     -------
     Node
+    
+    Examples
+    --------
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> nodeB = tk.randn((4, 5), network=net)
+    >>> result = nodeA % nodeB
+    >>> result.shape
+    torch.Size([2, 3, 4, 5])
     """
     return tprod_op(node1, node2)
 
@@ -374,6 +440,9 @@ tprod_node.__doc__ = \
     """
     Tensor product between two nodes. It can also be performed using the
     operator ``%``.
+    
+    Nodes ``resultant`` from this operation are called ``"tprod"``. The node
+    that keeps information about the :class:`Successor` is ``self``.
 
     Parameters
     ----------
@@ -384,6 +453,15 @@ tprod_node.__doc__ = \
     Returns
     -------
     Node
+    
+    Examples
+    --------
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> nodeB = tk.randn((4, 5), network=net)
+    >>> result = nodeA.tprod(nodeB)
+    >>> result.shape
+    torch.Size([2, 3, 4, 5])
     """
 
 AbstractNode.__mod__ = tprod_node
@@ -457,6 +535,9 @@ def mul(node1: AbstractNode, node2: AbstractNode) -> Node:
     """
     Element-wise product between two nodes. It can also be performed using the
     operator ``*``.
+    
+    Nodes ``resultant`` from this operation are called ``"mul"``. The node
+    that keeps information about the :class:`Successor` is ``node1``.
 
     Parameters
     ----------
@@ -468,6 +549,15 @@ def mul(node1: AbstractNode, node2: AbstractNode) -> Node:
     Returns
     -------
     Node
+    
+    Examples
+    --------
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = nodeA * nodeB
+    >>> result.shape
+    torch.Size([2, 3])
     """
     return mul_op(node1, node2)
 
@@ -477,6 +567,9 @@ mul_node.__doc__ = \
     """
     Element-wise product between two nodes. It can also be performed using the
     operator ``*``.
+    
+    Nodes ``resultant`` from this operation are called ``"mul"``. The node
+    that keeps information about the :class:`Successor` is ``self``.
 
     Parameters
     ----------
@@ -486,6 +579,15 @@ mul_node.__doc__ = \
     Returns
     -------
     Node
+    
+    Examples
+    --------
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = nodeA.mul(nodeB)
+    >>> result.shape
+    torch.Size([2, 3])
     """
 
 AbstractNode.__mul__ = mul_node
@@ -559,6 +661,9 @@ def add(node1: AbstractNode, node2: AbstractNode) -> Node:
     """
     Element-wise addition between two nodes. It can also be performed using the
     operator ``+``.
+    
+    Nodes ``resultant`` from this operation are called ``"add"``. The node
+    that keeps information about the :class:`Successor` is ``node1``.
 
     Parameters
     ----------
@@ -570,6 +675,15 @@ def add(node1: AbstractNode, node2: AbstractNode) -> Node:
     Returns
     -------
     Node
+    
+    Examples
+    --------
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = nodeA + nodeB
+    >>> result.shape
+    torch.Size([2, 3])
     """
     return add_op(node1, node2)
 
@@ -579,6 +693,9 @@ add_node.__doc__ = \
     """
     Element-wise addition between two nodes. It can also be performed using the
     operator ``+``.
+    
+    Nodes ``resultant`` from this operation are called ``"add"``. The node
+    that keeps information about the :class:`Successor` is ``self``.
 
     Parameters
     ----------
@@ -588,6 +705,15 @@ add_node.__doc__ = \
     Returns
     -------
     Node
+    
+    Examples
+    --------
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = nodeA.add(nodeB)
+    >>> result.shape
+    torch.Size([2, 3])
     """
 
 AbstractNode.__add__ = add_node
@@ -661,6 +787,9 @@ def sub(node1: AbstractNode, node2: AbstractNode) -> Node:
     """
     Element-wise subtraction between two nodes. It can also be performed using
     the operator ``-``.
+    
+    Nodes ``resultant`` from this operation are called ``"sub"``. The node
+    that keeps information about the :class:`Successor` is ``node1``.
 
     Parameters
     ----------
@@ -672,6 +801,15 @@ def sub(node1: AbstractNode, node2: AbstractNode) -> Node:
     Returns
     -------
     Node
+    
+    Examples
+    --------
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = nodeA - nodeB
+    >>> result.shape
+    torch.Size([2, 3])
     """
     return sub_op(node1, node2)
 
@@ -681,6 +819,9 @@ sub_node.__doc__ = \
     """
     Element-wise subtraction between two nodes. It can also be performed using
     the operator ``-``.
+    
+    Nodes ``resultant`` from this operation are called ``"sub"``. The node
+    that keeps information about the :class:`Successor` is ``self``.
 
     Parameters
     ----------
@@ -690,6 +831,15 @@ sub_node.__doc__ = \
     Returns
     -------
     Node
+    
+    Examples
+    --------
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = nodeA.sub(nodeB)
+    >>> result.shape
+    torch.Size([2, 3])
     """
 
 AbstractNode.__sub__ = sub_node
@@ -951,8 +1101,7 @@ def _split_first(node: AbstractNode,
                           hints={'batch_axes': batch_axes,
                                  'node1_axes': node1_axes,
                                  'node2_axes': node2_axes,
-                                 'permutation_dims': permutation_dims,
-                                 'splitted_edge': splitted_edge})
+                                 'permutation_dims': permutation_dims})
 
     # Add successor to parent
     if 'split' in node._successors:
@@ -983,7 +1132,6 @@ def _split_next(successor: Successor,
     node1_axes = successor.hints['node1_axes']
     node2_axes = successor.hints['node2_axes']
     permutation_dims = successor.hints['permutation_dims']
-    splitted_edge = successor.hints['splitted_edge']
 
     batch_shape = torch.tensor(node.shape)[batch_axes].tolist()
     node1_shape = torch.tensor(node.shape)[node1_axes]
@@ -1009,8 +1157,8 @@ def _split_next(successor: Successor,
                 raise ValueError('Only one of `rank`, `cum_percentage` and '
                                  '`cutoff` should be provided')
 
-            percentages = s.cumsum(-1) / s.sum(-1).view(*
-                                                        s.shape[:-1], 1).expand(s.shape)
+            percentages = s.cumsum(-1) / s.sum(-1)\
+                .view(*s.shape[:-1], 1).expand(s.shape)
             cum_percentage_tensor = torch.tensor(
                 cum_percentage).repeat(percentages.shape[:-1])
             rank = 0
@@ -1111,8 +1259,10 @@ def split(node: AbstractNode,
     r"""
     Splits one node in two via the decomposition specified in ``mode``. To
     perform this operation the set of edges has to be split in two sets,
-    corresponding to the edges of the first and second resultant nodes. Batch
-    edges that don't appear in any of the lists will be repeated in both nodes.
+    corresponding to the edges of the first and second ``resultant nodes``.
+    Batch edges that don't appear in any of the lists will be repeated in both
+    nodes, and will appear as the first edges of the ``resultant`` nodes, in
+    the order they appeared in ``node``.
 
     Having specified the two sets of edges, the node's tensor is reshaped as a
     batch matrix, with batch dimensions first, a single input dimension
@@ -1128,7 +1278,7 @@ def split(node: AbstractNode,
 
       where :math:`U` and :math:`V` are unitary, and :math:`S` is diagonal.
 
-    * **"svdr"**: Singular Value Decomposition adding a Random phases (square
+    * **"svdr"**: Singular Value Decomposition adding Random phases (square
       diagonal matrices with random 1's and -1's)
 
       .. math::
@@ -1157,6 +1307,12 @@ def split(node: AbstractNode,
 
     If ``mode`` is "svd" or "svdr", ``side`` must be provided. Besides, one
     (and only one) of ``rank``, ``cum_percentage`` and ``cutoff`` is required.
+    
+    Since the node is `splitted` in two, a new edge appears connecting both
+    nodes. The axis that corresponds to this edge has the name ``"splitted"``.
+    
+    Nodes ``resultant`` from this operation are called ``"split"``. The node
+    that keeps information about the :class:`Successor` is ``node``.
 
     Parameters
     ----------
@@ -1192,6 +1348,23 @@ def split(node: AbstractNode,
     Returns
     -------
     tuple[Node, Node]
+    
+    Examples
+    --------
+    >>> node = tk.randn(shape=(10, 15, 100),
+    ...                 axes_names=('left', 'right', 'batch'))
+    >>> node_left, node_right = tk.split(node,
+    ...                                  ['left'], ['right'],
+    ...                                  mode='svd',
+    ...                                  rank=5)
+    >>> node_left.shape
+    torch.Size([100, 10, 5])
+    
+    >>> node_right.shape
+    torch.Size([100, 5, 15])
+    
+    >>> node_left['splitted']
+    Edge( split_0[splitted] <-> split_1[splitted] )
     """
     return split_op(node, node1_axes, node2_axes,
                     mode, side, rank, cum_percentage, cutoff)
@@ -1202,6 +1375,12 @@ split_node.__doc__ = \
     r"""
     Splits one node in two via the decomposition specified in ``mode``. See
     :func:`split` for a more complete explanation.
+    
+    Since the node is `splitted` in two, a new edge appears connecting both
+    nodes. The axis that corresponds to this edge has the name ``"splitted"``.
+    
+    Nodes ``resultant`` from this operation are called ``"split"``. The node
+    that keeps information about the :class:`Successor` is ``self``.
 
     Parameters
     ----------
@@ -1235,6 +1414,22 @@ split_node.__doc__ = \
     Returns
     -------
     tuple[Node, Node]
+    
+    Examples
+    --------
+    >>> node = tk.randn(shape=(10, 15, 100),
+    ...                 axes_names=('left', 'right', 'batch'))
+    >>> node_left, node_right = node.split(['left'], ['right'],
+    ...                                    mode='svd',
+    ...                                    rank=5)
+    >>> node_left.shape
+    torch.Size([100, 10, 5])
+    
+    >>> node_right.shape
+    torch.Size([100, 5, 15])
+    
+    >>> node_left['splitted']
+    Edge( split_0[splitted] <-> split_1[splitted] )
     """
 
 AbstractNode.split = split_node
@@ -1253,6 +1448,11 @@ def split_(node: AbstractNode,
 
     Following the **PyTorch** convention, names of functions ended with an
     underscore indicate **in-place** operations.
+    
+    Since the node is `splitted` in two, a new edge appears connecting both
+    nodes. The axis that corresponds to this edge has the name ``"splitted"``.
+    
+    Nodes ``resultant`` from this operation are called ``"split_ip"``.
 
     Parameters
     ----------
@@ -1288,6 +1488,31 @@ def split_(node: AbstractNode,
     Returns
     -------
     tuple[Node, Node]
+    
+    Examples
+    --------
+    >>> node = tk.randn(shape=(10, 15, 100),
+    ...                 axes_names=('left', 'right', 'batch'))
+    >>> node_left, node_right = tk.split_(node,
+    ...                                   ['left'], ['right'],
+    ...                                   mode='svd',
+    ...                                   rank=5)
+    >>> node_left.shape
+    torch.Size([100, 10, 5])
+    
+    >>> node_right.shape
+    torch.Size([100, 5, 15])
+    
+    >>> node_left['splitted']
+    Edge( split_ip_0[splitted] <-> split_ip_1[splitted] )
+    
+    ``node`` has been deleted (removed from the network), but it still exists
+    until is deleted.
+    
+    >>> node.network is None
+    True
+    
+    >>> del node
     """
     node1, node2 = split(node, node1_axes, node2_axes,
                          mode, side, rank, cum_percentage, cutoff)
@@ -1330,6 +1555,11 @@ split_node_.__doc__ = \
     
     Following the **PyTorch** convention, names of functions ended with an
     underscore indicate **in-place** operations.
+    
+    Since the node is `splitted` in two, a new edge appears connecting both
+    nodes. The axis that corresponds to this edge has the name ``"splitted"``.
+    
+    Nodes ``resultant`` from this operation are called ``"split_ip"``.
 
     Parameters
     ----------
@@ -1363,6 +1593,31 @@ split_node_.__doc__ = \
     Returns
     -------
     tuple[Node, Node]
+    
+    Examples
+    --------
+    >>> node = tk.randn(shape=(10, 15, 100),
+    ...                 axes_names=('left', 'right', 'batch'))
+    >>> node_left, node_right = tk.split_(node,
+    ...                                   ['left'], ['right'],
+    ...                                   mode='svd',
+    ...                                   rank=5)
+    >>> node_left.shape
+    torch.Size([100, 10, 5])
+    
+    >>> node_right.shape
+    torch.Size([100, 5, 15])
+    
+    >>> node_left['splitted']
+    Edge( split_ip_0[splitted] <-> split_ip_1[splitted] )
+    
+    ``node`` has been deleted (removed from the network), but it still exists
+    until is deleted.
+    
+    >>> node.network is None
+    True
+    
+    >>> del node
     """
 
 AbstractNode.split_ = split_node_
@@ -1380,6 +1635,9 @@ def svd_(edge: Edge,
 
     Following the **PyTorch** convention, names of functions ended with an
     underscore indicate **in-place** operations.
+    
+    Nodes ``resultant`` from this operation use the same names as the original
+    nodes connected by ``edge``.
 
     Parameters
     ----------
@@ -1407,6 +1665,30 @@ def svd_(edge: Edge,
     Returns
     -------
     tuple[Node, Node]
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(10, 15, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(15, 20, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeB')
+    ...
+    >>> new_edge = nodeA['right'] ^ nodeB['left']
+    >>> nodeA, nodeB = tk.svd_(new_edge, rank=7)
+    ...
+    >>> nodeA.shape
+    torch.Size([10, 7, 100])
+    
+    >>> nodeB.shape
+    torch.Size([7, 20, 100])
+    
+    >>> print(nodeA.axes_names)
+    ['left', 'right', 'batch']
+    
+    >>> print(nodeB.axes_names)
+    ['left', 'right', 'batch']
     """
     if edge.is_dangling():
         raise ValueError('Edge should be connected to perform SVD')
@@ -1450,8 +1732,8 @@ def svd_(edge: Edge,
         new_node1 = new_node1.permute_(permutation)
 
     # new_node2
-    prev_nums = [node2.in_which_axis(node1[ax])._num for ax in batch_axes] + \
-        [axis2._num]
+    prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
+                 for ax in batch_axes] + [axis2._num]
     for i in range(new_node2.rank):
         if i not in prev_nums:
             prev_nums.append(i)
@@ -1469,8 +1751,8 @@ def svd_(edge: Edge,
     return new_node1, new_node2
 
 
-svd_node_ = copy_func(svd_)
-svd_node_.__doc__ = \
+svd_edge_ = copy_func(svd_)
+svd_edge_.__doc__ = \
     r"""
     Contracts an edge in-place via :func:`~Edge.contract_` and splits
     it in-place via :func:`~AbstractNode.split_` using ``mode = "svd"``. See
@@ -1478,6 +1760,9 @@ svd_node_.__doc__ = \
     
     Following the **PyTorch** convention, names of functions ended with an
     underscore indicate **in-place** operations.
+    
+    Nodes ``resultant`` from this operation use the same names as the original
+    nodes connected by ``self``.
 
     Parameters
     ----------
@@ -1503,9 +1788,33 @@ svd_node_.__doc__ = \
     Returns
     -------
     tuple[Node, Node]
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(10, 15, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(15, 20, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeB')
+    ...
+    >>> new_edge = nodeA['right'] ^ nodeB['left']
+    >>> nodeA, nodeB = new_edge.svd_(rank=7)
+    ...
+    >>> nodeA.shape
+    torch.Size([10, 7, 100])
+    
+    >>> nodeB.shape
+    torch.Size([7, 20, 100])
+    
+    >>> print(nodeA.axes_names)
+    ['left', 'right', 'batch']
+    
+    >>> print(nodeB.axes_names)
+    ['left', 'right', 'batch']
     """
 
-Edge.svd_ = svd_node_
+Edge.svd_ = svd_edge_
 
 
 def svdr_(edge: Edge,
@@ -1520,6 +1829,9 @@ def svdr_(edge: Edge,
 
     Following the **PyTorch** convention, names of functions ended with an
     underscore indicate **in-place** operations.
+    
+    Nodes ``resultant`` from this operation use the same names as the original
+    nodes connected by ``edge``.
 
     Parameters
     ----------
@@ -1547,6 +1859,30 @@ def svdr_(edge: Edge,
     Returns
     -------
     tuple[Node, Node]
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(10, 15, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(15, 20, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeB')
+    ...
+    >>> new_edge = nodeA['right'] ^ nodeB['left']
+    >>> nodeA, nodeB = tk.svdr_(new_edge, rank=7)
+    ...
+    >>> nodeA.shape
+    torch.Size([10, 7, 100])
+    
+    >>> nodeB.shape
+    torch.Size([7, 20, 100])
+    
+    >>> print(nodeA.axes_names)
+    ['left', 'right', 'batch']
+    
+    >>> print(nodeB.axes_names)
+    ['left', 'right', 'batch']
     """
     if edge.is_dangling():
         raise ValueError('Edge should be connected to perform SVD')
@@ -1590,8 +1926,8 @@ def svdr_(edge: Edge,
         new_node1 = new_node1.permute_(permutation)
 
     # new_node2
-    prev_nums = [node2.in_which_axis(node1[ax])._num for ax in batch_axes] + \
-        [axis2._num]
+    prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
+                 for ax in batch_axes] + [axis2._num]
     for i in range(new_node2.rank):
         if i not in prev_nums:
             prev_nums.append(i)
@@ -1609,8 +1945,8 @@ def svdr_(edge: Edge,
     return new_node1, new_node2
 
 
-svdr_node_ = copy_func(svdr_)
-svdr_node_.__doc__ = \
+svdr_edge_ = copy_func(svdr_)
+svdr_edge_.__doc__ = \
     r"""
     Contracts an edge in-place via :func:`~Edge.contract_` and splits
     it in-place via :func:`~AbstractNode.split_` using ``mode = "svdr"``. See
@@ -1618,6 +1954,9 @@ svdr_node_.__doc__ = \
     
     Following the **PyTorch** convention, names of functions ended with an
     underscore indicate **in-place** operations.
+    
+    Nodes ``resultant`` from this operation use the same names as the original
+    nodes connected by ``self``.
 
     Parameters
     ----------
@@ -1643,9 +1982,33 @@ svdr_node_.__doc__ = \
     Returns
     -------
     tuple[Node, Node]
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(10, 15, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(15, 20, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeB')
+    ...
+    >>> new_edge = nodeA['right'] ^ nodeB['left']
+    >>> nodeA, nodeB = new_edge.svdr_(rank=7)
+    ...
+    >>> nodeA.shape
+    torch.Size([10, 7, 100])
+    
+    >>> nodeB.shape
+    torch.Size([7, 20, 100])
+    
+    >>> print(nodeA.axes_names)
+    ['left', 'right', 'batch']
+    
+    >>> print(nodeB.axes_names)
+    ['left', 'right', 'batch']
     """
 
-Edge.svdr_ = svdr_node_
+Edge.svdr_ = svdr_edge_
 
 
 def qr_(edge) -> Tuple[Node, Node]:
@@ -1656,6 +2019,9 @@ def qr_(edge) -> Tuple[Node, Node]:
 
     Following the **PyTorch** convention, names of functions ended with an
     underscore indicate **in-place** operations.
+    
+    Nodes ``resultant`` from this operation use the same names as the original
+    nodes connected by ``edge``.
 
     Parameters
     ----------
@@ -1665,6 +2031,30 @@ def qr_(edge) -> Tuple[Node, Node]:
     Returns
     -------
     tuple[Node, Node]
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(10, 15, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(15, 20, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeB')
+    ...
+    >>> new_edge = nodeA['right'] ^ nodeB['left']
+    >>> nodeA, nodeB = tk.qr_(new_edge)
+    ...
+    >>> nodeA.shape
+    torch.Size([10, 10, 100])
+    
+    >>> nodeB.shape
+    torch.Size([10, 20, 100])
+    
+    >>> print(nodeA.axes_names)
+    ['left', 'right', 'batch']
+    
+    >>> print(nodeB.axes_names)
+    ['left', 'right', 'batch']
     """
     if edge.is_dangling():
         raise ValueError('Edge should be connected to perform SVD')
@@ -1704,8 +2094,8 @@ def qr_(edge) -> Tuple[Node, Node]:
         new_node1 = new_node1.permute_(permutation)
 
     # new_node2
-    prev_nums = [node2.in_which_axis(node1[ax])._num for ax in batch_axes] + \
-        [axis2._num]
+    prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
+                 for ax in batch_axes] + [axis2._num]
     for i in range(new_node2.rank):
         if i not in prev_nums:
             prev_nums.append(i)
@@ -1723,8 +2113,8 @@ def qr_(edge) -> Tuple[Node, Node]:
     return new_node1, new_node2
 
 
-qr_node_ = copy_func(qr_)
-qr_node_.__doc__ = \
+qr_edge_ = copy_func(qr_)
+qr_edge_.__doc__ = \
     r"""
     Contracts an edge in-place via :func:`~Edge.contract_` and splits
     it in-place via :func:`~AbstractNode.split_` using ``mode = "qr"``. See
@@ -1732,13 +2122,40 @@ qr_node_.__doc__ = \
     
     Following the **PyTorch** convention, names of functions ended with an
     underscore indicate **in-place** operations.
+    
+    Nodes ``resultant`` from this operation use the same names as the original
+    nodes connected by ``self``.
 
     Returns
     -------
     tuple[Node, Node]
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(10, 15, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(15, 20, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeB')
+    ...
+    >>> new_edge = nodeA['right'] ^ nodeB['left']
+    >>> nodeA, nodeB = new_edge.qr_()
+    ...
+    >>> nodeA.shape
+    torch.Size([10, 10, 100])
+    
+    >>> nodeB.shape
+    torch.Size([10, 20, 100])
+    
+    >>> print(nodeA.axes_names)
+    ['left', 'right', 'batch']
+    
+    >>> print(nodeB.axes_names)
+    ['left', 'right', 'batch']
     """
 
-Edge.qr_ = qr_node_
+Edge.qr_ = qr_edge_
 
 
 def rq_(edge) -> Tuple[Node, Node]:
@@ -1749,6 +2166,9 @@ def rq_(edge) -> Tuple[Node, Node]:
 
     Following the **PyTorch** convention, names of functions ended with an
     underscore indicate **in-place** operations.
+    
+    Nodes ``resultant`` from this operation use the same names as the original
+    nodes connected by ``edge``.
 
     Parameters
     ----------
@@ -1758,6 +2178,30 @@ def rq_(edge) -> Tuple[Node, Node]:
     Returns
     -------
     tuple[Node, Node]
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(10, 15, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(15, 20, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeB')
+    ...
+    >>> new_edge = nodeA['right'] ^ nodeB['left']
+    >>> nodeA, nodeB = tk.rq_(new_edge)
+    ...
+    >>> nodeA.shape
+    torch.Size([10, 10, 100])
+    
+    >>> nodeB.shape
+    torch.Size([10, 20, 100])
+    
+    >>> print(nodeA.axes_names)
+    ['left', 'right', 'batch']
+    
+    >>> print(nodeB.axes_names)
+    ['left', 'right', 'batch']
     """
     if edge.is_dangling():
         raise ValueError('Edge should be connected to perform SVD')
@@ -1797,8 +2241,8 @@ def rq_(edge) -> Tuple[Node, Node]:
         new_node1 = new_node1.permute_(permutation)
 
     # new_node2
-    prev_nums = [node2.in_which_axis(node1[ax])._num for ax in batch_axes] + \
-        [axis2._num]
+    prev_nums = [node2.get_axis_num(node1.get_axis(ax)._name)
+                 for ax in batch_axes] + [axis2._num]
     for i in range(new_node2.rank):
         if i not in prev_nums:
             prev_nums.append(i)
@@ -1816,8 +2260,8 @@ def rq_(edge) -> Tuple[Node, Node]:
     return new_node1, new_node2
 
 
-rq_node_ = copy_func(rq_)
-rq_node_.__doc__ = \
+rq_edge_ = copy_func(rq_)
+rq_edge_.__doc__ = \
     r"""
     Contracts an edge in-place via :func:`~Edge.contract_` and splits
     it in-place via :func:`~AbstractNode.split_` using ``mode = "qr"``. See
@@ -1826,12 +2270,39 @@ rq_node_.__doc__ = \
     Following the **PyTorch** convention, names of functions ended with an
     underscore indicate **in-place** operations.
     
+    Nodes ``resultant`` from this operation use the same names as the original
+    nodes connected by ``self``.
+    
     Returns
     -------
     tuple[Node, Node]
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(10, 15, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(15, 20, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeB')
+    ...
+    >>> new_edge = nodeA['right'] ^ nodeB['left']
+    >>> nodeA, nodeB = tk.rq_(new_edge)
+    ...
+    >>> nodeA.shape
+    torch.Size([10, 10, 100])
+    
+    >>> nodeB.shape
+    torch.Size([10, 20, 100])
+    
+    >>> print(nodeA.axes_names)
+    ['left', 'right', 'batch']
+    
+    >>> print(nodeB.axes_names)
+    ['left', 'right', 'batch']
     """
 
-Edge.rq_ = rq_node_
+Edge.rq_ = rq_edge_
 
 
 ################################   CONTRACT    ################################
@@ -2100,6 +2571,9 @@ def contract_edges(edges: List[Edge],
                    node2: AbstractNode) -> Node:
     """
     Contracts all selected edges between two nodes.
+    
+    Nodes ``resultant`` from this operation are called ``"contract_edges"``.
+    The node that keeps information about the :class:`Successor` is ``node1``.
 
     Parameters
     ----------
@@ -2117,6 +2591,29 @@ def contract_edges(edges: List[Edge],
     Returns
     -------
     Node
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(10, 15, 20),
+    ...                  axes_names=('one', 'two', 'three'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(10, 15, 20),
+    ...                  axes_names=('one', 'two', 'three'),
+    ...                  name='nodeB')
+    ...
+    >>> _ = nodeA['one'] ^ nodeB['one']
+    >>> _ = nodeA['two'] ^ nodeB['two']
+    >>> _ = nodeA['three'] ^ nodeB['three']
+    >>> result = tk.contract_edges([nodeA['one'], nodeA['three']],
+    ...                            nodeA, nodeB)
+    >>> result.shape
+    torch.Size([15, 15])
+    
+    If ``node1`` and ``node2`` are the same node, the contraction is a trace.
+    
+    >>> result2 = tk.contract_edges([result['two_0']], result, result)
+    >>> result2.shape
+    torch.Size([])
     """
     return contract_edges_op(edges, node1, node2)
 
@@ -2128,6 +2625,8 @@ def contract_(edge: Edge) -> Node:
 
     Following the **PyTorch** convention, names of functions ended with an
     underscore indicate **in-place** operations.
+    
+    Nodes ``resultant`` from this operation are called ``"contract_edges_ip"``.
 
     Parameters
     ----------
@@ -2138,6 +2637,33 @@ def contract_(edge: Edge) -> Node:
     Returns
     -------
     Node
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(10, 15, 20),
+    ...                  axes_names=('one', 'two', 'three'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(10, 15, 20),
+    ...                  axes_names=('one', 'two', 'three'),
+    ...                  name='nodeB')
+    ...
+    >>> _ = nodeA['one'] ^ nodeB['one']
+    >>> _ = nodeA['two'] ^ nodeB['two']
+    >>> _ = nodeA['three'] ^ nodeB['three']
+    >>> result = tk.contract_(nodeA['one'])
+    >>> result.shape
+    torch.Size([15, 20, 15, 20])
+    
+    ``nodeA`` and ``nodeB`` have been removed from the network.
+    
+    >>> nodeA.network is None
+    True
+    
+    >>> nodeB.network is None
+    True
+    
+    >>> del nodeA
+    >>> del nodeB
     """
     result = contract_edges([edge], edge.node1, edge.node2)
     result.reattach_edges(True)
@@ -2172,9 +2698,7 @@ Edge.contract_ = contract_
 
 def get_shared_edges(node1: AbstractNode,
                      node2: AbstractNode) -> List[Edge]:
-    """
-    Returns list of edges shared between two nodes
-    """
+    """Returns list of edges shared between two nodes."""
     edges = set()
     for i1, edge1 in enumerate(node1._edges):
         for i2, edge2 in enumerate(node2._edges):
@@ -2191,6 +2715,9 @@ def contract_between(node1: AbstractNode,
     Contracts all edges shared between two nodes. Batch contraction is
     automatically performed when both nodes have batch edges with the same
     names.
+    
+    Nodes ``resultant`` from this operation are called ``"contract_edges"``.
+    The node that keeps information about the :class:`Successor` is ``node1``.
 
     Parameters
     ----------
@@ -2204,6 +2731,20 @@ def contract_between(node1: AbstractNode,
     Returns
     -------
     Node
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(10, 15, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(15, 7, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeB')
+    ...
+    >>> _ = nodeA['right'] ^ nodeB['left']
+    >>> result = tk.contract_between(nodeA, nodeB)
+    >>> result.shape
+    torch.Size([100, 10, 7])
     """
     return contract_edges(None, node1, node2)
 
@@ -2214,6 +2755,9 @@ contract_between_node.__doc__ = \
     Contracts all edges shared between two nodes. Batch contraction is
     automatically performed when both nodes have batch edges with the same
     names. It can also be performed using the operator ``@``.
+    
+    Nodes ``resultant`` from this operation are called ``"contract_edges"``.
+    The node that keeps information about the :class:`Successor` is ``self``.
 
     Parameters
     ----------
@@ -2224,6 +2768,20 @@ contract_between_node.__doc__ = \
     Returns
     -------
     Node
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(10, 15, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(15, 7, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeB')
+    ...
+    >>> _ = nodeA['right'] ^ nodeB['left']
+    >>> result = nodeA @ nodeB
+    >>> result.shape
+    torch.Size([100, 10, 7])
     """
 
 AbstractNode.__matmul__ = contract_between_node
@@ -2237,6 +2795,8 @@ def contract_between_(node1: AbstractNode,
 
     Following the **PyTorch** convention, names of functions ended with an
     underscore indicate **in-place** operations.
+    
+    Nodes ``resultant`` from this operation are called ``"contract_edges_ip"``.
 
     Parameters
     ----------
@@ -2250,6 +2810,31 @@ def contract_between_(node1: AbstractNode,
     Returns
     -------
     Node
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(10, 15, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(15, 7, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeB')
+    ...
+    >>> _ = nodeA['right'] ^ nodeB['left']
+    >>> result = tk.contract_between_(nodeA, nodeB)
+    >>> result.shape
+    torch.Size([100, 10, 7])
+    
+    ``nodeA`` and ``nodeB`` have been removed from the network.
+    
+    >>> nodeA.network is None
+    True
+    
+    >>> nodeB.network is None
+    True
+    
+    >>> del nodeA
+    >>> del nodeB
     """
     result = contract_between(node1, node2)
     result.reattach_edges(True)
@@ -2286,6 +2871,8 @@ contract_between_node_.__doc__ = \
     
     Following the **PyTorch** convention, names of functions ended with an
     underscore indicate **in-place** operations.
+    
+    Nodes ``resultant`` from this operation are called ``"contract_edges_ip"``.
 
     Parameters
     ----------
@@ -2296,6 +2883,31 @@ contract_between_node_.__doc__ = \
     Returns
     -------
     Node
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(10, 15, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(15, 7, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeB')
+    ...
+    >>> _ = nodeA['right'] ^ nodeB['left']
+    >>> result = nodeA.contract_between_(nodeB)
+    >>> result.shape
+    torch.Size([100, 10, 7])
+    
+    ``nodeA`` and ``nodeB`` have been removed from the network.
+    
+    >>> nodeA.network is None
+    True
+    
+    >>> nodeB.network is None
+    True
+    
+    >>> del nodeA
+    >>> del nodeB
     """
 
 AbstractNode.contract_between_ = contract_between_node_
@@ -2326,8 +2938,9 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
     stack_indices = []       # In the case above, stack indices of each node in
     # the reference node's memory
 
-    if not isinstance(nodes, (list, tuple)):
-        raise TypeError('`nodes` should be a list or tuple of nodes')
+    if not (isinstance(nodes, (list, tuple)) and \
+        isinstance(nodes[0], AbstractNode)):
+        raise TypeError('`nodes` should be a list or tuple of AbstractNodes')
 
     net = nodes[0]._network
     for node in nodes:
@@ -2461,11 +3074,22 @@ stack_op = Operation('stack', _check_first_stack, _stack_first, _stack_next)
 
 def stack(nodes: Sequence[AbstractNode]):
     """
-    Creates a StackNode or ParamStackNode by stacking a collection of Nodes or
-    ParamNodes, respectively. Restrictions that are applied to the nodes in
-    order to be `stackable` are the same as in :class:`StackNode`.
+    Creates a :class:`StackNode` or :class:`ParamStackNode` by stacking a
+    collection of :class:`Nodes <Nodes>` or :class:`ParamNodes <ParamNode>`,
+    respectively. Restrictions that are applied to the nodes in order to be
+    `stackable` are the same as in :class:`StackNode`.
 
-    The stack dimension will be the first one in the resultant node.
+    The stack dimension will be the first one in the ``resultant`` node.
+    
+    See :class:`ParamStackNode` and :class:`TensorNetwork` to learn how the
+    :meth:`~TensorNetwork.auto_unbind` mode affects the computation of
+    :func:`stack`.
+    
+    Nodes ``resultant`` from this operation are called ``"stack"``. If this
+    operation returns a ``virtual`` :class:`ParamStackNode`, it will be called
+    ``"virtual_stack"``. See :class:AbstractNode` to learn about this **reserved
+    name**.  The node that keeps information about the :class:`Successor` is
+    ``nodes[0]``, the first stacked node.
 
     Parameters
     ----------
@@ -2473,6 +3097,17 @@ def stack(nodes: Sequence[AbstractNode]):
         Sequence of nodes that are to be stacked. They must be of the same type,
         have the same rank and axes names, be in the same tensor network, and
         have edges with the same types.
+        
+    Examples
+    --------
+    >>> net = tk.TensorNetwork()
+    >>> nodes = [tk.randn(shape=(2, 4, 2),
+    ...                   axes_names=('left', 'input', 'right'),
+    ...                   network=net)
+    ...          for _ in range(10)]
+    >>> stack_node = tk.stack(nodes)
+    >>> stack_node.shape
+    torch.Size([10, 2, 4, 2])
     """
     return stack_op(nodes)
 
@@ -2648,6 +3283,12 @@ def unbind(node: AbstractStackNode) -> List[Node]:
     If :meth:`~TensorNetwork.auto_unbind` is set to ``False``, each resultant
     node will store its own tensor. Otherwise, they will have only a reference
     to the corresponding slice of the ``(Param)StackNode``.
+    
+    See :class:`TensorNetwork` to learn how the ``auto_unbind`` mode affects
+    the computation of :func:`unbind`.
+    
+    Nodes ``resultant`` from this operation are called ``"unbind"``. The node
+    that keeps information about the :class:`Successor` is ``node``.
 
     Parameters
     ----------
@@ -2657,6 +3298,36 @@ def unbind(node: AbstractStackNode) -> List[Node]:
     Returns
     -------
     list[Node]
+    
+    Examples
+    --------
+    >>> net = tk.TensorNetwork()
+    >>> nodes = [tk.randn(shape=(2, 4, 2),
+    ...                   axes_names=('left', 'input', 'right'),
+    ...                   network=net)
+    ...          for _ in range(10)]
+    >>> data = [tk.randn(shape=(4,),
+    ...                  axes_names=('feature',),
+    ...                  network=net)
+    ...         for _ in range(10)]
+    ...
+    >>> for i in range(10):
+    ...     _ = nodes[i]['input'] ^ data[i]['feature']
+    ...
+    >>> stack_nodes = tk.stack(nodes)
+    >>> stack_data = tk.stack(data)
+    ...
+    >>> # It is necessary to re-connect stacks
+    >>> _ = stack_nodes['input'] ^ stack_data['feature']
+    >>> result = tk.unbind(stack_nodes @ stack_data)
+    >>> print(result[0].name)
+    unbind_0
+
+    >>> result[0].axes
+    [Axis( left (0) ), Axis( right (1) )]
+
+    >>> result[0].shape
+    torch.Size([2, 2])
     """
     return unbind_op(node)
 
@@ -2864,6 +3535,10 @@ def einsum(string: Text, *nodes: AbstractNode) -> Node:
     first checked. Thus, it verifies that all edges are correctly connected and
     all nodes are in the same network. It also performs batch contraction
     whenever corresponding edges are batch edges.
+    
+    Nodes ``resultant`` from this operation are called ``"einsum"``. The node
+    that keeps information about the :class:`Successor` is ``nodes[0]``, the
+    first node involved in the operation.
 
     Parameters
     ----------
@@ -2887,6 +3562,26 @@ def einsum(string: Text, *nodes: AbstractNode) -> Node:
     Returns
     -------
     Node
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(10, 15, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(15, 7, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeB')
+    >>> nodeC = tk.randn(shape=(7, 10, 100),
+    ...                  axes_names=('left', 'right', 'batch'),
+    ...                  name='nodeC')
+    ...
+    >>> _ = nodeA['right'] ^ nodeB['left']
+    >>> _ = nodeB['right'] ^ nodeC['left']
+    >>> _ = nodeC['right'] ^ nodeA['left']
+    ...
+    >>> result = tk.einsum('ijb,jkb,kib->b', nodeA, nodeB, nodeC)
+    >>> result.shape
+    torch.Size([100])
     """
     return einsum_op(string, *nodes)
 
@@ -2898,7 +3593,7 @@ def stacked_einsum(string: Text,
     Applies the same :func:`einsum` operation (same ``string``) to a sequence
     of groups of nodes (all groups having the same amount of nodes, with the
     same properties, etc.). That is, it stacks these groups of nodes into a
-    siongle collection of nodes that is then contracte via ``einsum``, and
+    single collection of nodes that is then contracted via :func:`einsum`, and
     :func:`unbinded <unbind>` afterwards.
 
     Parameters
@@ -2922,6 +3617,37 @@ def stacked_einsum(string: Text,
     Returns
     -------
     list[Node]
+    
+    Examples
+    --------
+    >>> net = tk.TensorNetwork()
+    >>> nodesA = [tk.randn(shape=(10, 15, 100),
+    ...                    axes_names=('left', 'right', 'batch'),
+    ...                    name='nodeA',
+    ...                    network=net)
+    ...           for _ in range(10)]
+    >>> nodesB = [tk.randn(shape=(15, 7, 100),
+    ...                    axes_names=('left', 'right', 'batch'),
+    ...                    name='nodeB',
+    ...                    network=net)
+    ...           for _ in range(10)]
+    >>> nodesC = [tk.randn(shape=(7, 10, 100),
+    ...                    axes_names=('left', 'right', 'batch'),
+    ...                    name='nodeC',
+    ...                    network=net)
+    ...           for _ in range(10)]
+    ...
+    >>> for i in range(10):
+    ...     _ = nodesA[i]['right'] ^ nodesB[i]['left']
+    ...     _ = nodesB[i]['right'] ^ nodesC[i]['left']
+    ...     _ = nodesC[i]['right'] ^ nodesA[i]['left']
+    ...
+    >>> result = tk.stacked_einsum('ijb,jkb,kib->b', nodesA, nodesB, nodesC)
+    >>> len(result)
+    10
+    
+    >>> result[0].shape
+    torch.Size([100])
     """
     stacks_list = []
     for nodes_list in nodes_lists:

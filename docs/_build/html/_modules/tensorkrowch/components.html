@@ -403,8 +403,8 @@ title="Source repository"
 <span class="sd">        is the node that contains the axis (``True``). Otherwise, the node is</span>
 <span class="sd">        ``node2`` of the edge (``False``).</span>
 
-<span class="sd">    Example</span>
-<span class="sd">    -------</span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
 <span class="sd">    Although Axis will not be usually explicitly instantiated, it can be done</span>
 <span class="sd">    like so:</span>
 
@@ -665,7 +665,9 @@ title="Source repository"
 <span class="sd">    * **resultant**: These are nodes that result from an :class:`Operation`.</span>
 <span class="sd">      They are intermediate nodes that (almost always) inherit edges from ``leaf``</span>
 <span class="sd">      and ``data`` nodes, the ones that really form the network. These nodes can</span>
-<span class="sd">      store their own tensors or use other node&#39;s tensor.</span>
+<span class="sd">      store their own tensors or use other node&#39;s tensor. The names of the</span>
+<span class="sd">      ``resultant`` nodes are the name of the :class:`Operation` that originated</span>
+<span class="sd">      it.</span>
 <span class="sd">      </span>
 <span class="sd">    See :class:`TensorNetwork` and :meth:`~TensorNetwork.reset` to learn more</span>
 <span class="sd">    about the importance of these 4 types of nodes.</span>
@@ -1094,13 +1096,13 @@ title="Source repository"
 <span class="sd">        -------</span>
 <span class="sd">        AbstractNode or list[AbstractNode]</span>
 <span class="sd">        </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; nodeA = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">        &gt;&gt;&gt; nodeB = tk.randn(shape=(3, 4), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">        &gt;&gt;&gt; nodeC = tk.randn(shape=(4, 5), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
-<span class="sd">        &gt;&gt;&gt; nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
-<span class="sd">        &gt;&gt;&gt; nodeB[&#39;right&#39;] ^ nodeC[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeB[&#39;right&#39;] ^ nodeC[&#39;left&#39;]</span>
 <span class="sd">        &gt;&gt;&gt; set(nodeB.neighbours()) == set([nodeA, nodeC])</span>
 <span class="sd">        True</span>
 <span class="sd">        </span>
@@ -1309,13 +1311,13 @@ title="Source repository"
 <span class="sd">            the neighbours&#39; edges will be pointing to the original nodes from which</span>
 <span class="sd">            the current node inherits its edges (``False``).</span>
 <span class="sd">            </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; nodeA = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">        &gt;&gt;&gt; nodeB = tk.randn(shape=(3, 4), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">        &gt;&gt;&gt; nodeC = tk.randn(shape=(4, 5), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
-<span class="sd">        &gt;&gt;&gt; nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
-<span class="sd">        &gt;&gt;&gt; nodeB[&#39;right&#39;] ^ nodeC[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeB[&#39;right&#39;] ^ nodeC[&#39;left&#39;]</span>
 <span class="sd">        &gt;&gt;&gt; result = nodeA @ nodeB</span>
 <span class="sd">        </span>
 <span class="sd">        Node ``result`` inherits its ``right`` edge from ``nodeB``.</span>
@@ -1374,13 +1376,13 @@ title="Source repository"
 <span class="sd">        axis : int, str or Axis, optional</span>
 <span class="sd">            Axis whose edge will be disconnected.</span>
 <span class="sd">            </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">        &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">        &gt;&gt;&gt; nodeC = tk.Node(shape=(4, 5), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
-<span class="sd">        &gt;&gt;&gt; nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
-<span class="sd">        &gt;&gt;&gt; nodeB[&#39;right&#39;] ^ nodeC[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeB[&#39;right&#39;] ^ nodeC[&#39;left&#39;]</span>
 <span class="sd">        &gt;&gt;&gt; set(nodeB.neighbours()) == set([nodeA, nodeC])</span>
 <span class="sd">        True</span>
 <span class="sd">        </span>
@@ -1649,8 +1651,8 @@ title="Source repository"
 <span class="sd">            If the node is a ``resultant`` node or if it does not store its own</span>
 <span class="sd">            tensor.</span>
 <span class="sd">            </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; node = tk.Node(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">        ...</span>
 <span class="sd">        &gt;&gt;&gt; # Call set_tensor without arguments uses the</span>
@@ -1686,8 +1688,8 @@ title="Source repository"
 <span class="sd">        Replaces node&#39;s tensor with ``None``. This can only be used for **non**</span>
 <span class="sd">        ``resultant`` nodes that store their own tensors.</span>
 <span class="sd">        </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; node = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">        &gt;&gt;&gt; node.tensor is None</span>
 <span class="sd">        False</span>
@@ -1723,8 +1725,8 @@ title="Source repository"
 <span class="sd">            If ``other`` is a different type than the current node, or if it is</span>
 <span class="sd">            in a different network.</span>
 <span class="sd">            </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; nodeA = tk.randn(shape=(2, 3),</span>
 <span class="sd">        ...                  name=&#39;nodeA&#39;,</span>
 <span class="sd">        ...                  axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
@@ -1772,8 +1774,8 @@ title="Source repository"
 <span class="sd">        Thus the node will store its own tensor, instead of having a reference</span>
 <span class="sd">        to other node&#39;s tensor.</span>
 <span class="sd">        </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; nodeA = tk.randn(shape=(2, 3),</span>
 <span class="sd">        ...                  name=&#39;nodeA&#39;,</span>
 <span class="sd">        ...                  axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
@@ -1896,8 +1898,8 @@ title="Source repository"
 <span class="sd">            List indicating the nodes that have been already moved to the new</span>
 <span class="sd">            network, used by this DFS-like algorithm.</span>
 <span class="sd">            </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; net = tk.TensorNetwork()</span>
 <span class="sd">        &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3),</span>
 <span class="sd">        ...                 axes_names=(&#39;left&#39;, &#39;right&#39;),</span>
@@ -1908,7 +1910,7 @@ title="Source repository"
 <span class="sd">        &gt;&gt;&gt; nodeC = tk.Node(shape=(5, 5),</span>
 <span class="sd">        ...                 axes_names=(&#39;left&#39;, &#39;right&#39;),</span>
 <span class="sd">        ...                 network=net)</span>
-<span class="sd">        &gt;&gt;&gt; nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
 <span class="sd">        </span>
 <span class="sd">        If ``nodeA`` is moved to other network, ``nodeB`` will also move, but</span>
 <span class="sd">        ``nodeC`` will not.</span>
@@ -1969,8 +1971,8 @@ title="Source repository"
 <span class="sd">        -------</span>
 <span class="sd">        torch.Tensor</span>
 <span class="sd">        </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; node = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">        &gt;&gt;&gt; node.tensor</span>
 <span class="sd">        tensor([[-0.2799, -0.4383, -0.8387],</span>
@@ -2011,8 +2013,8 @@ title="Source repository"
 <span class="sd">        -------</span>
 <span class="sd">        torch.Tensor</span>
 <span class="sd">        </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; node = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">        &gt;&gt;&gt; node.tensor</span>
 <span class="sd">        tensor([[ 1.4005, -0.0521, -1.2091],</span>
@@ -2053,8 +2055,8 @@ title="Source repository"
 <span class="sd">        -------</span>
 <span class="sd">        torch.Tensor</span>
 <span class="sd">        </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; node = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">        &gt;&gt;&gt; node.tensor</span>
 <span class="sd">        tensor([[ 0.2111, -0.9551, -0.7812],</span>
@@ -2099,8 +2101,8 @@ title="Source repository"
 <span class="sd">        -------</span>
 <span class="sd">        torch.Tensor</span>
 <span class="sd">        </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; node = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">        &gt;&gt;&gt; node.tensor</span>
 <span class="sd">        tensor([[ 1.5570,  1.8441, -0.0743],</span>
@@ -2204,8 +2206,8 @@ title="Source repository"
 <span class="sd">        Keyword arguments for the different initialization methods. See</span>
 <span class="sd">        :meth:`AbstractNode.make_tensor`.</span>
 <span class="sd">        </span>
-<span class="sd">    Example</span>
-<span class="sd">    -------</span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; node = tk.Node(shape=(2, 5, 2),</span>
 <span class="sd">    ...                axes_names=(&#39;left&#39;, &#39;input&#39;, &#39;right&#39;),</span>
 <span class="sd">    ...                name=&#39;my_node&#39;,</span>
@@ -2301,11 +2303,11 @@ title="Source repository"
 <span class="sd">        Node or ParamNode</span>
 <span class="sd">            The original node or a parameterized version of it.</span>
 <span class="sd">            </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; nodeA = tk.randn((2, 3))</span>
 <span class="sd">        &gt;&gt;&gt; nodeB = tk.randn((3, 4))</span>
-<span class="sd">        &gt;&gt;&gt; nodeA[1] ^ nodeB[0]</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeA[1] ^ nodeB[0]</span>
 <span class="sd">        &gt;&gt;&gt; paramnodeA = nodeA.parameterize()</span>
 <span class="sd">        &gt;&gt;&gt; nodeB.neighbours() == [paramnodeA]</span>
 <span class="sd">        True</span>
@@ -2357,8 +2359,8 @@ title="Source repository"
 <span class="sd">        -------</span>
 <span class="sd">        Node</span>
 <span class="sd">            </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; node = tk.randn(shape=(2, 3), name=&#39;node&#39;)</span>
 <span class="sd">        &gt;&gt;&gt; copy = node.copy()</span>
 <span class="sd">        &gt;&gt;&gt; node.tensor_address() != copy.tensor_address()</span>
@@ -2473,8 +2475,8 @@ title="Source repository"
 <span class="sd">        Keyword arguments for the different initialization methods. See</span>
 <span class="sd">        :meth:`AbstractNode.make_tensor`.</span>
 <span class="sd">        </span>
-<span class="sd">    Example</span>
-<span class="sd">    -------</span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; node = tk.ParamNode(shape=(2, 5, 2),</span>
 <span class="sd">    ...                     axes_names=(&#39;left&#39;, &#39;input&#39;, &#39;right&#39;),</span>
 <span class="sd">    ...                     name=&#39;my_paramnode&#39;,</span>
@@ -2582,8 +2584,8 @@ title="Source repository"
 <span class="sd">        -------</span>
 <span class="sd">        torch.Tensor or None</span>
 <span class="sd">        </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; paramnode = tk.randn((2, 3), param_node=True)</span>
 <span class="sd">        &gt;&gt;&gt; paramnode.tensor</span>
 <span class="sd">        Parameter containing:</span>
@@ -2656,11 +2658,11 @@ title="Source repository"
 <span class="sd">        ParamNode or Node</span>
 <span class="sd">            The original node or a de-parameterized version of it.</span>
 <span class="sd">            </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; paramnodeA = tk.randn((2, 3), param_node=True)</span>
 <span class="sd">        &gt;&gt;&gt; paramnodeB = tk.randn((3, 4), param_node=True)</span>
-<span class="sd">        &gt;&gt;&gt; paramnodeA[1] ^ paramnodeB[0]</span>
+<span class="sd">        &gt;&gt;&gt; _ = paramnodeA[1] ^ paramnodeB[0]</span>
 <span class="sd">        &gt;&gt;&gt; nodeA = paramnodeA.parameterize(False)</span>
 <span class="sd">        &gt;&gt;&gt; paramnodeB.neighbours() == [nodeA]</span>
 <span class="sd">        True</span>
@@ -2712,8 +2714,8 @@ title="Source repository"
 <span class="sd">        -------</span>
 <span class="sd">        ParamNode</span>
 <span class="sd">        </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; paramnode = tk.randn(shape=(2, 3), name=&#39;node&#39;, param_node=True)</span>
 <span class="sd">        &gt;&gt;&gt; copy = paramnode.copy()</span>
 <span class="sd">        &gt;&gt;&gt; paramnode.tensor_address() != copy.tensor_address()</span>
@@ -2816,8 +2818,8 @@ title="Source repository"
 <span class="sd">        If ``edges`` are provided, the list of ``node1`` attributes of each edge</span>
 <span class="sd">        should also be provided. Necessary if ``nodes`` are not provided.</span>
 
-<span class="sd">    Example</span>
-<span class="sd">    -------</span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
 <span class="sd">    &gt;&gt;&gt; nodes = [tk.randn(shape=(2, 4, 2),</span>
 <span class="sd">    ...                   axes_names=(&#39;left&#39;, &#39;input&#39;, &#39;right&#39;),</span>
@@ -2829,21 +2831,21 @@ title="Source repository"
 <span class="sd">    ...         for _ in range(10)]</span>
 <span class="sd">    ...</span>
 <span class="sd">    &gt;&gt;&gt; for i in range(10):</span>
-<span class="sd">    ...     nodes[i][&#39;input&#39;] ^ data[i][&#39;feature&#39;]</span>
+<span class="sd">    ...     _ = nodes[i][&#39;input&#39;] ^ data[i][&#39;feature&#39;]</span>
 <span class="sd">    ...</span>
 <span class="sd">    &gt;&gt;&gt; stack_nodes = tk.stack(nodes)</span>
 <span class="sd">    &gt;&gt;&gt; stack_data = tk.stack(data)</span>
 <span class="sd">    ...</span>
 <span class="sd">    &gt;&gt;&gt; # It is necessary to re-connect stacks</span>
-<span class="sd">    &gt;&gt;&gt; stack_nodes[&#39;input&#39;] ^ stack_data[&#39;feature&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; _ = stack_nodes[&#39;input&#39;] ^ stack_data[&#39;feature&#39;]</span>
 <span class="sd">    &gt;&gt;&gt; result = tk.unbind(stack_nodes @ stack_data)</span>
 <span class="sd">    &gt;&gt;&gt; print(result[0].name)</span>
 <span class="sd">    unbind_0</span>
 
-<span class="sd">    &gt;&gt;&gt; print(result[0].axes)</span>
+<span class="sd">    &gt;&gt;&gt; result[0].axes</span>
 <span class="sd">    [Axis( left (0) ), Axis( right (1) )]</span>
 
-<span class="sd">    &gt;&gt;&gt; print(result[0].shape)</span>
+<span class="sd">    &gt;&gt;&gt; result[0].shape</span>
 <span class="sd">    torch.Size([2, 2])</span>
 <span class="sd">    </span>
 <span class="sd">    </span>
@@ -2879,6 +2881,8 @@ title="Source repository"
                 <span class="k">if</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">rank</span> <span class="o">!=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rank</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                         <span class="s1">&#39;Cannot stack nodes with different number of edges&#39;</span><span class="p">)</span>
+                
+                <span class="c1"># NOTE: If this condition is removed, ensure batch attr is equal</span>
                 <span class="k">if</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">axes_names</span> <span class="o">!=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                         <span class="s1">&#39;Stacked nodes must have the same name for each axis&#39;</span><span class="p">)</span>
@@ -3027,8 +3031,8 @@ title="Source repository"
 <span class="sd">        it would be required that a new :class:`ParamNode` replaces the</span>
 <span class="sd">        non-parameterized node in the network).</span>
 
-<span class="sd">    Example</span>
-<span class="sd">    -------</span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
 <span class="sd">    &gt;&gt;&gt; net.auto_stack = True</span>
 <span class="sd">    &gt;&gt;&gt; nodes = [tk.randn(shape=(2, 4, 2),</span>
@@ -3042,7 +3046,7 @@ title="Source repository"
 <span class="sd">    ...         for _ in range(10)]</span>
 <span class="sd">    ...</span>
 <span class="sd">    &gt;&gt;&gt; for i in range(10):</span>
-<span class="sd">    ...     nodes[i][&#39;input&#39;] ^ data[i][&#39;feature&#39;]</span>
+<span class="sd">    ...     _ = nodes[i][&#39;input&#39;] ^ data[i][&#39;feature&#39;]</span>
 <span class="sd">    ...</span>
 <span class="sd">    &gt;&gt;&gt; stack_nodes = tk.stack(nodes)</span>
 <span class="sd">    &gt;&gt;&gt; stack_nodes.name = &#39;my_stack&#39;</span>
@@ -3052,7 +3056,7 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; stack_data = tk.stack(data)</span>
 <span class="sd">    ...</span>
 <span class="sd">    &gt;&gt;&gt; # It is necessary to re-connect stacks</span>
-<span class="sd">    &gt;&gt;&gt; stack_nodes[&#39;input&#39;] ^ stack_data[&#39;feature&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; _ = stack_nodes[&#39;input&#39;] ^ stack_data[&#39;feature&#39;]</span>
 <span class="sd">    &gt;&gt;&gt; result = tk.unbind(stack_nodes @ stack_data)</span>
 <span class="sd">    &gt;&gt;&gt; print(result[0].name)</span>
 <span class="sd">    unbind_0</span>
@@ -3088,6 +3092,8 @@ title="Source repository"
             <span class="k">if</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">rank</span> <span class="o">!=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rank</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                     <span class="s1">&#39;Cannot stack nodes with different number of edges&#39;</span><span class="p">)</span>
+                
+            <span class="c1"># NOTE: If this condition is removed, ensure batch attr is equal</span>
             <span class="k">if</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">axes_names</span> <span class="o">!=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                     <span class="s1">&#39;Stacked nodes must have the same name for each axis&#39;</span><span class="p">)</span>
@@ -3190,11 +3196,11 @@ title="Source repository"
 <span class="sd">    axis2 : int, str, Axis, optional</span>
 <span class="sd">        Axis of ``node2`` where the edge is attached.</span>
 <span class="sd">    </span>
-<span class="sd">    Example</span>
-<span class="sd">    -------</span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((2, 3))</span>
 <span class="sd">    &gt;&gt;&gt; nodeB = tk.randn((3, 4))</span>
-<span class="sd">    &gt;&gt;&gt; nodeA[1] ^ nodeB[0]</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[1] ^ nodeB[0]</span>
 <span class="sd">    &gt;&gt;&gt; nodeA[0]</span>
 <span class="sd">    Edge( node_0[axis_0] &lt;-&gt; None )  (Dangling Edge)</span>
 <span class="sd">    </span>
@@ -3290,8 +3296,8 @@ title="Source repository"
 <span class="sd">        Returns edge&#39;s name. It is formed with the corresponding nodes&#39; and axes&#39;</span>
 <span class="sd">        names.</span>
 
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3),</span>
 <span class="sd">        ...                 name=&#39;nodeA&#39;,</span>
 <span class="sd">        ...                 axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
@@ -3302,7 +3308,7 @@ title="Source repository"
 <span class="sd">        &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4),</span>
 <span class="sd">        ...                 name=&#39;nodeB&#39;,</span>
 <span class="sd">        ...                 axes_names=[&#39;left&#39;, &#39;right&#39;])</span>
-<span class="sd">        &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; _ = new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
 <span class="sd">        &gt;&gt;&gt; print(new_edge.name)</span>
 <span class="sd">        nodeA[right] &lt;-&gt; nodeB[left]</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -3343,11 +3349,11 @@ title="Source repository"
 <span class="sd">        size : int</span>
 <span class="sd">            New size of the edge.</span>
 <span class="sd">            </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; nodeA = tk.ones((2, 3))</span>
 <span class="sd">        &gt;&gt;&gt; nodeB = tk.ones((3, 4))</span>
-<span class="sd">        &gt;&gt;&gt; edge = nodeA[1] ^ nodeB[0]</span>
+<span class="sd">        &gt;&gt;&gt; _ = edge = nodeA[1] ^ nodeB[0]</span>
 <span class="sd">        &gt;&gt;&gt; edge.size()</span>
 <span class="sd">        3</span>
 <span class="sd">        </span>
@@ -3388,11 +3394,11 @@ title="Source repository"
 <span class="sd">        Returns a copy of the edge, that is, a new edge referencing the same</span>
 <span class="sd">        nodes at the same axes.</span>
 <span class="sd">        </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; nodeA = tk.randn((2, 3))</span>
 <span class="sd">        &gt;&gt;&gt; nodeB = tk.randn((3, 4))</span>
-<span class="sd">        &gt;&gt;&gt; edge = nodeA[1] ^ nodeB[0]</span>
+<span class="sd">        &gt;&gt;&gt; _ = edge = nodeA[1] ^ nodeB[0]</span>
 <span class="sd">        &gt;&gt;&gt; copy = edge.copy()</span>
 <span class="sd">        &gt;&gt;&gt; copy != edge</span>
 <span class="sd">        True</span>
@@ -3434,8 +3440,8 @@ title="Source repository"
 <span class="sd">        -------</span>
 <span class="sd">        Edge</span>
 
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        To connect two edges, the overloaded operator ``^`` can also be used.</span>
 
 <span class="sd">        &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3),</span>
@@ -3444,7 +3450,7 @@ title="Source repository"
 <span class="sd">        &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4),</span>
 <span class="sd">        ...                 name=&#39;nodeB&#39;,</span>
 <span class="sd">        ...                 axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
-<span class="sd">        &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]  # Same as .connect()</span>
+<span class="sd">        &gt;&gt;&gt; _ = new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]  # Same as .connect()</span>
 <span class="sd">        &gt;&gt;&gt; print(new_edge.name)</span>
 <span class="sd">        nodeA[right] &lt;-&gt; nodeB[left]</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -3459,8 +3465,8 @@ title="Source repository"
 <span class="sd">        -------</span>
 <span class="sd">        tuple[Edge, Edge]</span>
 
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        To disconnect an edge, the overloaded operator ``|`` can also be used.</span>
 
 <span class="sd">        &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3),</span>
@@ -3469,7 +3475,7 @@ title="Source repository"
 <span class="sd">        &gt;&gt;&gt; nodeB = tk.Node(shape=(3, 4),</span>
 <span class="sd">        ...                 name=&#39;nodeB&#39;,</span>
 <span class="sd">        ...                 axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
-<span class="sd">        &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; _ = new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
 <span class="sd">        &gt;&gt;&gt; new_edgeA, new_edgeB = new_edge | new_edge  # Same as .disconnect()</span>
 <span class="sd">        &gt;&gt;&gt; print(new_edgeA.name)</span>
 <span class="sd">        nodeA[right] &lt;-&gt; None</span>
@@ -3578,8 +3584,8 @@ title="Source repository"
 <span class="sd">        -------</span>
 <span class="sd">        StackEdge</span>
 
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        To connect two stack-edges, the overloaded operator ``^`` can also be</span>
 <span class="sd">        used.</span>
 
@@ -3594,13 +3600,13 @@ title="Source repository"
 <span class="sd">        ...         for _ in range(10)]</span>
 <span class="sd">        ...</span>
 <span class="sd">        &gt;&gt;&gt; for i in range(10):</span>
-<span class="sd">        ...     nodes[i][&#39;input&#39;] ^ data[i][&#39;feature&#39;]</span>
+<span class="sd">        ...     _ = nodes[i][&#39;input&#39;] ^ data[i][&#39;feature&#39;]</span>
 <span class="sd">        ...</span>
 <span class="sd">        &gt;&gt;&gt; stack_nodes = tk.stack(nodes)</span>
 <span class="sd">        &gt;&gt;&gt; stack_data = tk.stack(data)</span>
 <span class="sd">        ...</span>
 <span class="sd">        &gt;&gt;&gt; # It is necessary to re-connect stacks to be able to contract</span>
-<span class="sd">        &gt;&gt;&gt; new_edge = stack_nodes[&#39;input&#39;] ^ stack_data[&#39;feature&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; _ = new_edge = stack_nodes[&#39;input&#39;] ^ stack_data[&#39;feature&#39;]</span>
 <span class="sd">        &gt;&gt;&gt; print(new_edge.name)</span>
 <span class="sd">        stack_0[input] &lt;-&gt; stack_1[feature]</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -3641,8 +3647,8 @@ title="Source repository"
 <span class="sd">    -------</span>
 <span class="sd">    Edge</span>
 <span class="sd">    </span>
-<span class="sd">    Example</span>
-<span class="sd">    -------</span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 3),</span>
 <span class="sd">    ...                 name=&#39;nodeA&#39;,</span>
 <span class="sd">    ...                 axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
@@ -3818,14 +3824,14 @@ title="Source repository"
 <span class="sd">        A dictionary of hints created the first time an operation is computed in</span>
 <span class="sd">        order to save some computation in the next calls of the operation.</span>
 
-<span class="sd">    Example</span>
-<span class="sd">    -------</span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
 <span class="sd">    When contracting two nodes, a ``Successor`` is created and added to the list</span>
 <span class="sd">    of successors of the first node (left operand).</span>
 
 <span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
 <span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(3, 4), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
-<span class="sd">    &gt;&gt;&gt; nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
 <span class="sd">    ...</span>
 <span class="sd">    &gt;&gt;&gt; # Contract nodes</span>
 <span class="sd">    &gt;&gt;&gt; result = nodeA @ nodeB</span>
@@ -4256,11 +4262,11 @@ title="Source repository"
 <span class="sd">            each resultant node has the same enumeration as the corresponding</span>
 <span class="sd">            original node.</span>
 <span class="sd">            </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; nodeA = tk.randn((2, 3))</span>
 <span class="sd">        &gt;&gt;&gt; nodeB = tk.randn((3, 4))</span>
-<span class="sd">        &gt;&gt;&gt; nodeA[1] ^ nodeB[0]</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeA[1] ^ nodeB[0]</span>
 <span class="sd">        &gt;&gt;&gt; print(nodeA.name, nodeB.name)</span>
 <span class="sd">        node_0 node_1</span>
 <span class="sd">        </span>
@@ -4277,7 +4283,7 @@ title="Source repository"
 <span class="sd">        </span>
 <span class="sd">        &gt;&gt;&gt; nodeA = tk.randn((2, 3))</span>
 <span class="sd">        &gt;&gt;&gt; nodeB = tk.randn((3, 4))</span>
-<span class="sd">        &gt;&gt;&gt; nodeA[1] ^ nodeB[0]</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeA[1] ^ nodeB[0]</span>
 <span class="sd">        &gt;&gt;&gt; nodeB.network.delete_node(nodeB, False)</span>
 <span class="sd">        &gt;&gt;&gt; print(nodeA.name)</span>
 <span class="sd">        node_0</span>
@@ -4617,8 +4623,8 @@ title="Source repository"
 <span class="sd">        num_batch_edges : int</span>
 <span class="sd">            Number of batch edges in the ``data`` nodes.</span>
 <span class="sd">            </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; nodeA = tk.Node(shape=(2, 5, 2),</span>
 <span class="sd">        ...                 axes_names=(&#39;left&#39;, &#39;input&#39;, &#39;right&#39;),</span>
 <span class="sd">        ...                 name=&#39;nodeA&#39;,</span>
@@ -4627,7 +4633,7 @@ title="Source repository"
 <span class="sd">        ...                 axes_names=(&#39;left&#39;, &#39;input&#39;, &#39;right&#39;),</span>
 <span class="sd">        ...                 name=&#39;nodeB&#39;,</span>
 <span class="sd">        ...                 init_method=&#39;randn&#39;)</span>
-<span class="sd">        &gt;&gt;&gt; nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
 <span class="sd">        ...</span>
 <span class="sd">        &gt;&gt;&gt; net = nodeA.network</span>
 <span class="sd">        &gt;&gt;&gt; input_edges = [nodeA[&#39;input&#39;], nodeB[&#39;input&#39;]]</span>
@@ -4762,8 +4768,8 @@ title="Source repository"
 <span class="sd">                batch\_size_{0} \times ... \times batch\_size_{n} \times</span>
 <span class="sd">                feature\_dim</span>
 <span class="sd">                </span>
-<span class="sd">        Example</span>
-<span class="sd">        -------</span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; nodeA = tk.Node(shape=(3, 5, 3),</span>
 <span class="sd">        ...                 axes_names=(&#39;left&#39;, &#39;input&#39;, &#39;right&#39;),</span>
 <span class="sd">        ...                 name=&#39;nodeA&#39;,</span>
@@ -4772,7 +4778,7 @@ title="Source repository"
 <span class="sd">        ...                 axes_names=(&#39;left&#39;, &#39;input&#39;, &#39;right&#39;),</span>
 <span class="sd">        ...                 name=&#39;nodeB&#39;,</span>
 <span class="sd">        ...                 init_method=&#39;randn&#39;)</span>
-<span class="sd">        &gt;&gt;&gt; nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">        &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
 <span class="sd">        ...</span>
 <span class="sd">        &gt;&gt;&gt; net = nodeA.network</span>
 <span class="sd">        &gt;&gt;&gt; input_edges = [nodeA[&#39;input&#39;], nodeB[&#39;input&#39;]]</span>

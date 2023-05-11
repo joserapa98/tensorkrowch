@@ -187,16 +187,6 @@
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="initializers.html">
-     Initializers
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="embeddings.html">
-     Embeddings
-    </a>
-   </li>
-   <li class="toctree-l2">
     <a class="reference internal" href="operations.html">
      Operations
     </a>
@@ -204,6 +194,16 @@
    <li class="toctree-l2">
     <a class="reference internal" href="models.html">
      Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="embeddings.html">
+     Embeddings
     </a>
    </li>
   </ul>
@@ -314,14 +314,12 @@ title="Source repository"
 
 <div class="genindex-jumpbox">
  <a href="#A"><strong>A</strong></a>
- | <a href="#B"><strong>B</strong></a>
  | <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
  | <a href="#E"><strong>E</strong></a>
  | <a href="#F"><strong>F</strong></a>
  | <a href="#G"><strong>G</strong></a>
  | <a href="#I"><strong>I</strong></a>
- | <a href="#K"><strong>K</strong></a>
  | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
@@ -370,37 +368,9 @@ title="Source repository"
   </ul></td>
 </tr></table>
 
-<h2 id="B">B</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#tensorkrowch.MPS.boundary">boundary (tensorkrowch.MPS property)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.MPSLayer.boundary">(tensorkrowch.MPSLayer property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.PEPS.boundary">(tensorkrowch.PEPS property)</a>
-</li>
-      </ul></li>
-  </ul></td>
-</tr></table>
-
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#tensorkrowch.MPS.canonicalize">canonicalize() (tensorkrowch.MPS method)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.MPSLayer.canonicalize">(tensorkrowch.MPSLayer method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.Tree.canonicalize">(tensorkrowch.Tree method)</a>
-</li>
-      </ul></li>
-      <li><a href="models.html#tensorkrowch.MPS.canonicalize_univocal">canonicalize_univocal() (tensorkrowch.MPS method)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.MPSLayer.canonicalize_univocal">(tensorkrowch.MPSLayer method)</a>
-</li>
-      </ul></li>
       <li><a href="components.html#tensorkrowch.Edge.change_size">change_size() (tensorkrowch.Edge method)</a>
 </li>
       <li><a href="operations.html#tensorkrowch.connect">connect() (in module tensorkrowch)</a>
@@ -413,28 +383,8 @@ title="Source repository"
       </ul></li>
       <li><a href="operations.html#tensorkrowch.connect_stack">connect_stack() (in module tensorkrowch)</a>
 </li>
-      <li><a href="models.html#tensorkrowch.MPS.contract">contract() (tensorkrowch.MPS method)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.MPSLayer.contract">(tensorkrowch.MPSLayer method)</a>
+      <li><a href="components.html#tensorkrowch.TensorNetwork.contract">contract() (tensorkrowch.TensorNetwork method)</a>
 </li>
-        <li><a href="models.html#tensorkrowch.PEPS.contract">(tensorkrowch.PEPS method)</a>
-</li>
-        <li><a href="components.html#tensorkrowch.TensorNetwork.contract">(tensorkrowch.TensorNetwork method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.Tree.contract">(tensorkrowch.Tree method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UMPS.contract">(tensorkrowch.UMPS method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UMPSLayer.contract">(tensorkrowch.UMPSLayer method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UPEPS.contract">(tensorkrowch.UPEPS method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UTree.contract">(tensorkrowch.UTree method)</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="operations.html#tensorkrowch.contract_">contract_() (in module tensorkrowch)</a>
 
       <ul>
@@ -447,6 +397,8 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.AbstractNode.contract_between">(tensorkrowch.AbstractNode method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="operations.html#tensorkrowch.contract_between_">contract_between_() (in module tensorkrowch)</a>
 
       <ul>
@@ -454,22 +406,6 @@ title="Source repository"
 </li>
       </ul></li>
       <li><a href="operations.html#tensorkrowch.contract_edges">contract_edges() (in module tensorkrowch)</a>
-</li>
-      <li><a href="models.html#tensorkrowch.ConvMPS">ConvMPS (class in tensorkrowch)</a>
-</li>
-      <li><a href="models.html#tensorkrowch.ConvMPSLayer">ConvMPSLayer (class in tensorkrowch)</a>
-</li>
-      <li><a href="models.html#tensorkrowch.ConvPEPS">ConvPEPS (class in tensorkrowch)</a>
-</li>
-      <li><a href="models.html#tensorkrowch.ConvTree">ConvTree (class in tensorkrowch)</a>
-</li>
-      <li><a href="models.html#tensorkrowch.ConvUMPS">ConvUMPS (class in tensorkrowch)</a>
-</li>
-      <li><a href="models.html#tensorkrowch.ConvUMPSLayer">ConvUMPSLayer (class in tensorkrowch)</a>
-</li>
-      <li><a href="models.html#tensorkrowch.ConvUPEPS">ConvUPEPS (class in tensorkrowch)</a>
-</li>
-      <li><a href="models.html#tensorkrowch.ConvUTree">ConvUTree (class in tensorkrowch)</a>
 </li>
       <li><a href="initializers.html#tensorkrowch.copy">copy() (in module tensorkrowch)</a>
 
@@ -489,64 +425,14 @@ title="Source repository"
 <h2 id="D">D</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#tensorkrowch.MPS.d_bond">d_bond (tensorkrowch.MPS property)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.MPSLayer.d_bond">(tensorkrowch.MPSLayer property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.PEPS.d_bond">(tensorkrowch.PEPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.Tree.d_bond">(tensorkrowch.Tree property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UMPS.d_bond">(tensorkrowch.UMPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UMPSLayer.d_bond">(tensorkrowch.UMPSLayer property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UPEPS.d_bond">(tensorkrowch.UPEPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UTree.d_bond">(tensorkrowch.UTree property)</a>
-</li>
-      </ul></li>
-      <li><a href="models.html#tensorkrowch.MPS.d_phys">d_phys (tensorkrowch.MPS property)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.MPSLayer.d_phys">(tensorkrowch.MPSLayer property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.PEPS.d_phys">(tensorkrowch.PEPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UMPS.d_phys">(tensorkrowch.UMPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UMPSLayer.d_phys">(tensorkrowch.UMPSLayer property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UPEPS.d_phys">(tensorkrowch.UPEPS property)</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.TensorNetwork.data_nodes">data_nodes (tensorkrowch.TensorNetwork property)</a>
 </li>
       <li><a href="components.html#tensorkrowch.TensorNetwork.delete_node">delete_node() (tensorkrowch.TensorNetwork method)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.device">device (tensorkrowch.AbstractNode property)</a>
 </li>
-      <li><a href="models.html#tensorkrowch.ConvMPS.dilation">dilation (tensorkrowch.ConvMPS property)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.ConvMPSLayer.dilation">(tensorkrowch.ConvMPSLayer property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvPEPS.dilation">(tensorkrowch.ConvPEPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvTree.dilation">(tensorkrowch.ConvTree property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUMPS.dilation">(tensorkrowch.ConvUMPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUMPSLayer.dilation">(tensorkrowch.ConvUMPSLayer property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUPEPS.dilation">(tensorkrowch.ConvUPEPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUTree.dilation">(tensorkrowch.ConvUTree property)</a>
-</li>
-      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="operations.html#tensorkrowch.disconnect">disconnect() (in module tensorkrowch)</a>
 
       <ul>
@@ -583,32 +469,16 @@ title="Source repository"
       </ul></li>
       <li><a href="operations.html#tensorkrowch.einsum">einsum() (in module tensorkrowch)</a>
 </li>
+      <li><a href="initializers.html#tensorkrowch.empty">empty() (in module tensorkrowch)</a>
+</li>
   </ul></td>
 </tr></table>
 
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#tensorkrowch.ConvMPS.forward">forward() (tensorkrowch.ConvMPS method)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.ConvMPSLayer.forward">(tensorkrowch.ConvMPSLayer method)</a>
+      <li><a href="components.html#tensorkrowch.TensorNetwork.forward">forward() (tensorkrowch.TensorNetwork method)</a>
 </li>
-        <li><a href="models.html#tensorkrowch.ConvPEPS.forward">(tensorkrowch.ConvPEPS method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvTree.forward">(tensorkrowch.ConvTree method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUMPS.forward">(tensorkrowch.ConvUMPS method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUMPSLayer.forward">(tensorkrowch.ConvUMPSLayer method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUPEPS.forward">(tensorkrowch.ConvUPEPS method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUTree.forward">(tensorkrowch.ConvUTree method)</a>
-</li>
-        <li><a href="components.html#tensorkrowch.TensorNetwork.forward">(tensorkrowch.TensorNetwork method)</a>
-</li>
-      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -631,46 +501,8 @@ title="Source repository"
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#tensorkrowch.ConvMPS.in_channels">in_channels (tensorkrowch.ConvMPS property)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.ConvMPSLayer.in_channels">(tensorkrowch.ConvMPSLayer property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvPEPS.in_channels">(tensorkrowch.ConvPEPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvTree.in_channels">(tensorkrowch.ConvTree property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUMPS.in_channels">(tensorkrowch.ConvUMPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUMPSLayer.in_channels">(tensorkrowch.ConvUMPSLayer property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUPEPS.in_channels">(tensorkrowch.ConvUPEPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUTree.in_channels">(tensorkrowch.ConvUTree property)</a>
-</li>
-      </ul></li>
       <li><a href="components.html#tensorkrowch.AbstractNode.in_which_axis">in_which_axis() (tensorkrowch.AbstractNode method)</a>
 </li>
-      <li><a href="models.html#tensorkrowch.MPS.initialize">initialize() (tensorkrowch.MPS method)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.MPSLayer.initialize">(tensorkrowch.MPSLayer method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.PEPS.initialize">(tensorkrowch.PEPS method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.Tree.initialize">(tensorkrowch.Tree method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UMPS.initialize">(tensorkrowch.UMPS method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UMPSLayer.initialize">(tensorkrowch.UMPSLayer method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UPEPS.initialize">(tensorkrowch.UPEPS method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UTree.initialize">(tensorkrowch.UTree method)</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.Edge.is_attached_to">is_attached_to() (tensorkrowch.Edge method)</a>
 </li>
       <li><a href="components.html#tensorkrowch.Axis.is_batch">is_batch() (tensorkrowch.Axis method)</a>
@@ -681,6 +513,8 @@ title="Source repository"
       </ul></li>
       <li><a href="components.html#tensorkrowch.Edge.is_dangling">is_dangling() (tensorkrowch.Edge method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.AbstractNode.is_data">is_data() (tensorkrowch.AbstractNode method)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.is_leaf">is_leaf() (tensorkrowch.AbstractNode method)</a>
@@ -698,40 +532,8 @@ title="Source repository"
   </ul></td>
 </tr></table>
 
-<h2 id="K">K</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#tensorkrowch.ConvMPS.kernel_size">kernel_size (tensorkrowch.ConvMPS property)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.ConvMPSLayer.kernel_size">(tensorkrowch.ConvMPSLayer property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvPEPS.kernel_size">(tensorkrowch.ConvPEPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvTree.kernel_size">(tensorkrowch.ConvTree property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUMPS.kernel_size">(tensorkrowch.ConvUMPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUMPSLayer.kernel_size">(tensorkrowch.ConvUMPSLayer property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUPEPS.kernel_size">(tensorkrowch.ConvUPEPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUTree.kernel_size">(tensorkrowch.ConvUTree property)</a>
-</li>
-      </ul></li>
-  </ul></td>
-</tr></table>
-
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#tensorkrowch.MPSLayer.l_position">l_position (tensorkrowch.MPSLayer property)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.UMPSLayer.l_position">(tensorkrowch.UMPSLayer property)</a>
-</li>
-      </ul></li>
-  </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.TensorNetwork.leaf_nodes">leaf_nodes (tensorkrowch.TensorNetwork property)</a>
 </li>
@@ -745,13 +547,9 @@ title="Source repository"
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.mean">mean() (tensorkrowch.AbstractNode method)</a>
 </li>
-      <li><a href="components.html#tensorkrowch.AbstractNode.move_to_network">move_to_network() (tensorkrowch.AbstractNode method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#tensorkrowch.MPS">MPS (class in tensorkrowch)</a>
-</li>
-      <li><a href="models.html#tensorkrowch.MPSLayer">MPSLayer (class in tensorkrowch)</a>
+      <li><a href="components.html#tensorkrowch.AbstractNode.move_to_network">move_to_network() (tensorkrowch.AbstractNode method)</a>
 </li>
       <li><a href="operations.html#tensorkrowch.mul">mul() (in module tensorkrowch)</a>
 </li>
@@ -761,34 +559,6 @@ title="Source repository"
 <h2 id="N">N</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#tensorkrowch.PEPS.n_cols">n_cols (tensorkrowch.PEPS property)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.UPEPS.n_cols">(tensorkrowch.UPEPS property)</a>
-</li>
-      </ul></li>
-      <li><a href="models.html#tensorkrowch.MPSLayer.n_labels">n_labels (tensorkrowch.MPSLayer property)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.UMPSLayer.n_labels">(tensorkrowch.UMPSLayer property)</a>
-</li>
-      </ul></li>
-      <li><a href="models.html#tensorkrowch.PEPS.n_rows">n_rows (tensorkrowch.PEPS property)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.UPEPS.n_rows">(tensorkrowch.UPEPS property)</a>
-</li>
-      </ul></li>
-      <li><a href="models.html#tensorkrowch.MPS.n_sites">n_sites (tensorkrowch.MPS property)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.MPSLayer.n_sites">(tensorkrowch.MPSLayer property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UMPS.n_sites">(tensorkrowch.UMPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UMPSLayer.n_sites">(tensorkrowch.UMPSLayer property)</a>
-</li>
-      </ul></li>
       <li><a href="components.html#tensorkrowch.AbstractNode.name">name (tensorkrowch.AbstractNode property)</a>
 
       <ul>
@@ -797,8 +567,6 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.Edge.name">(tensorkrowch.Edge property)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.AbstractNode.neighbours">neighbours() (tensorkrowch.AbstractNode method)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.network">network (tensorkrowch.AbstractNode property)</a>
@@ -809,6 +577,8 @@ title="Source repository"
 </li>
       <li><a href="components.html#tensorkrowch.Edge.node1">node1 (tensorkrowch.Edge property)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.StackEdge.node1_list">node1_list (tensorkrowch.StackEdge property)</a>
 </li>
       <li><a href="components.html#tensorkrowch.ParamStackNode.node1_lists_dict">node1_lists_dict (tensorkrowch.ParamStackNode property)</a>
@@ -849,24 +619,6 @@ title="Source repository"
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#tensorkrowch.ConvMPS.padding">padding (tensorkrowch.ConvMPS property)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.ConvMPSLayer.padding">(tensorkrowch.ConvMPSLayer property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvPEPS.padding">(tensorkrowch.ConvPEPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvTree.padding">(tensorkrowch.ConvTree property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUMPS.padding">(tensorkrowch.ConvUMPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUMPSLayer.padding">(tensorkrowch.ConvUMPSLayer property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUPEPS.padding">(tensorkrowch.ConvUPEPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUTree.padding">(tensorkrowch.ConvUTree property)</a>
-</li>
-      </ul></li>
       <li><a href="components.html#tensorkrowch.Node.parameterize">parameterize() (tensorkrowch.Node method)</a>
 
       <ul>
@@ -875,13 +627,11 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.TensorNetwork.parameterize">(tensorkrowch.TensorNetwork method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.ParamNode">ParamNode (class in tensorkrowch)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.ParamStackNode">ParamStackNode (class in tensorkrowch)</a>
-</li>
-      <li><a href="models.html#tensorkrowch.PEPS">PEPS (class in tensorkrowch)</a>
 </li>
       <li><a href="operations.html#tensorkrowch.permute">permute() (in module tensorkrowch)</a>
 
@@ -941,38 +691,14 @@ title="Source repository"
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#tensorkrowch.MPS.set_data_nodes">set_data_nodes() (tensorkrowch.MPS method)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.MPSLayer.set_data_nodes">(tensorkrowch.MPSLayer method)</a>
+      <li><a href="components.html#tensorkrowch.TensorNetwork.set_data_nodes">set_data_nodes() (tensorkrowch.TensorNetwork method)</a>
 </li>
-        <li><a href="models.html#tensorkrowch.PEPS.set_data_nodes">(tensorkrowch.PEPS method)</a>
-</li>
-        <li><a href="components.html#tensorkrowch.TensorNetwork.set_data_nodes">(tensorkrowch.TensorNetwork method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.Tree.set_data_nodes">(tensorkrowch.Tree method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UMPS.set_data_nodes">(tensorkrowch.UMPS method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UMPSLayer.set_data_nodes">(tensorkrowch.UMPSLayer method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UPEPS.set_data_nodes">(tensorkrowch.UPEPS method)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.UTree.set_data_nodes">(tensorkrowch.UTree method)</a>
-</li>
-      </ul></li>
       <li><a href="components.html#tensorkrowch.AbstractNode.set_tensor">set_tensor() (tensorkrowch.AbstractNode method)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.set_tensor_from">set_tensor_from() (tensorkrowch.AbstractNode method)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.shape">shape (tensorkrowch.AbstractNode property)</a>
 </li>
-      <li><a href="models.html#tensorkrowch.Tree.sites_per_layer">sites_per_layer (tensorkrowch.Tree property)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.UTree.sites_per_layer">(tensorkrowch.UTree property)</a>
-</li>
-      </ul></li>
       <li><a href="components.html#tensorkrowch.AbstractNode.size">size() (tensorkrowch.AbstractNode method)</a>
 
       <ul>
@@ -991,10 +717,10 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.AbstractNode.split_">(tensorkrowch.AbstractNode method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="operations.html#tensorkrowch.stack">stack() (in module tensorkrowch)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="operations.html#tensorkrowch.stacked_einsum">stacked_einsum() (in module tensorkrowch)</a>
 </li>
       <li><a href="components.html#tensorkrowch.StackEdge">StackEdge (class in tensorkrowch)</a>
@@ -1003,24 +729,6 @@ title="Source repository"
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.std">std() (tensorkrowch.AbstractNode method)</a>
 </li>
-      <li><a href="models.html#tensorkrowch.ConvMPS.stride">stride (tensorkrowch.ConvMPS property)</a>
-
-      <ul>
-        <li><a href="models.html#tensorkrowch.ConvMPSLayer.stride">(tensorkrowch.ConvMPSLayer property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvPEPS.stride">(tensorkrowch.ConvPEPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvTree.stride">(tensorkrowch.ConvTree property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUMPS.stride">(tensorkrowch.ConvUMPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUMPSLayer.stride">(tensorkrowch.ConvUMPSLayer property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUPEPS.stride">(tensorkrowch.ConvUPEPS property)</a>
-</li>
-        <li><a href="models.html#tensorkrowch.ConvUTree.stride">(tensorkrowch.ConvUTree property)</a>
-</li>
-      </ul></li>
       <li><a href="operations.html#tensorkrowch.sub">sub() (in module tensorkrowch)</a>
 </li>
       <li><a href="components.html#tensorkrowch.Successor">Successor (class in tensorkrowch)</a>
@@ -1051,15 +759,13 @@ title="Source repository"
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.tensor_address">tensor_address() (tensorkrowch.AbstractNode method)</a>
 </li>
-      <li><a href="components.html#tensorkrowch.TensorNetwork">TensorNetwork (class in tensorkrowch)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="components.html#tensorkrowch.TensorNetwork">TensorNetwork (class in tensorkrowch)</a>
+</li>
       <li><a href="operations.html#tensorkrowch.tprod">tprod() (in module tensorkrowch)</a>
 </li>
       <li><a href="components.html#tensorkrowch.TensorNetwork.trace">trace() (tensorkrowch.TensorNetwork method)</a>
-</li>
-      <li><a href="models.html#tensorkrowch.Tree">Tree (class in tensorkrowch)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1067,10 +773,6 @@ title="Source repository"
 <h2 id="U">U</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="models.html#tensorkrowch.UMPS">UMPS (class in tensorkrowch)</a>
-</li>
-      <li><a href="models.html#tensorkrowch.UMPSLayer">UMPSLayer (class in tensorkrowch)</a>
-</li>
       <li><a href="operations.html#tensorkrowch.unbind">unbind() (in module tensorkrowch)</a>
 </li>
       <li><a href="embeddings.html#tensorkrowch.unit">unit() (in module tensorkrowch)</a>
@@ -1080,10 +782,6 @@ title="Source repository"
       <li><a href="components.html#tensorkrowch.TensorNetwork.unset_data_nodes">unset_data_nodes() (tensorkrowch.TensorNetwork method)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.unset_tensor">unset_tensor() (tensorkrowch.AbstractNode method)</a>
-</li>
-      <li><a href="models.html#tensorkrowch.UPEPS">UPEPS (class in tensorkrowch)</a>
-</li>
-      <li><a href="models.html#tensorkrowch.UTree">UTree (class in tensorkrowch)</a>
 </li>
   </ul></td>
 </tr></table>

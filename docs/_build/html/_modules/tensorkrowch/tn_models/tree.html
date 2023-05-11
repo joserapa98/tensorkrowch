@@ -356,7 +356,7 @@ title="Source repository"
 <span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; tree = tk.Tree(sites_per_layer=[4, 2, 1],</span>
 <span class="sd">    ...                d_bond=[[3, 3, 4], [4, 4, 2], [2, 2, 2]])</span>
-<span class="sd">    &gt;&gt;&gt; data = torch.ones(8, 20, 3) # n_features x batch_size x feature_size</span>
+<span class="sd">    &gt;&gt;&gt; data = torch.ones(20, 8, 3) # batch_size x n_features x feature_size</span>
 <span class="sd">    &gt;&gt;&gt; result = tree(data)</span>
 <span class="sd">    &gt;&gt;&gt; print(result.shape)</span>
 <span class="sd">    torch.Size([20, 2])</span>

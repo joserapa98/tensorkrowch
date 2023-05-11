@@ -5,7 +5,7 @@ API Reference
    :maxdepth: 4
 
    components
-   initializers
-   embeddings
    operations
    models
+   initializers
+   embeddings

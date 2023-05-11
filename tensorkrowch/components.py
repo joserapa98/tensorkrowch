@@ -91,8 +91,8 @@ class Axis:
         is the node that contains the axis (``True``). Otherwise, the node is
         ``node2`` of the edge (``False``).
 
-    Example
-    -------
+    Examples
+    --------
     Although Axis will not be usually explicitly instantiated, it can be done
     like so:
 
@@ -353,7 +353,9 @@ class AbstractNode(ABC):
     * **resultant**: These are nodes that result from an :class:`Operation`.
       They are intermediate nodes that (almost always) inherit edges from ``leaf``
       and ``data`` nodes, the ones that really form the network. These nodes can
-      store their own tensors or use other node's tensor.
+      store their own tensors or use other node's tensor. The names of the
+      ``resultant`` nodes are the name of the :class:`Operation` that originated
+      it.
       
     See :class:`TensorNetwork` and :meth:`~TensorNetwork.reset` to learn more
     about the importance of these 4 types of nodes.
@@ -782,13 +784,13 @@ class AbstractNode(ABC):
         -------
         AbstractNode or list[AbstractNode]
         
-        Example
-        -------
+        Examples
+        --------
         >>> nodeA = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
         >>> nodeB = tk.randn(shape=(3, 4), axes_names=('left', 'right'))
         >>> nodeC = tk.randn(shape=(4, 5), axes_names=('left', 'right'))
-        >>> nodeA['right'] ^ nodeB['left']
-        >>> nodeB['right'] ^ nodeC['left']
+        >>> _ = nodeA['right'] ^ nodeB['left']
+        >>> _ = nodeB['right'] ^ nodeC['left']
         >>> set(nodeB.neighbours()) == set([nodeA, nodeC])
         True
         
@@ -997,13 +999,13 @@ class AbstractNode(ABC):
             the neighbours' edges will be pointing to the original nodes from which
             the current node inherits its edges (``False``).
             
-        Example
-        -------
+        Examples
+        --------
         >>> nodeA = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
         >>> nodeB = tk.randn(shape=(3, 4), axes_names=('left', 'right'))
         >>> nodeC = tk.randn(shape=(4, 5), axes_names=('left', 'right'))
-        >>> nodeA['right'] ^ nodeB['left']
-        >>> nodeB['right'] ^ nodeC['left']
+        >>> _ = nodeA['right'] ^ nodeB['left']
+        >>> _ = nodeB['right'] ^ nodeC['left']
         >>> result = nodeA @ nodeB
         
         Node ``result`` inherits its ``right`` edge from ``nodeB``.
@@ -1062,13 +1064,13 @@ class AbstractNode(ABC):
         axis : int, str or Axis, optional
             Axis whose edge will be disconnected.
             
-        Example
-        -------
+        Examples
+        --------
         >>> nodeA = tk.Node(shape=(2, 3), axes_names=('left', 'right'))
         >>> nodeB = tk.Node(shape=(3, 4), axes_names=('left', 'right'))
         >>> nodeC = tk.Node(shape=(4, 5), axes_names=('left', 'right'))
-        >>> nodeA['right'] ^ nodeB['left']
-        >>> nodeB['right'] ^ nodeC['left']
+        >>> _ = nodeA['right'] ^ nodeB['left']
+        >>> _ = nodeB['right'] ^ nodeC['left']
         >>> set(nodeB.neighbours()) == set([nodeA, nodeC])
         True
         
@@ -1337,8 +1339,8 @@ class AbstractNode(ABC):
             If the node is a ``resultant`` node or if it does not store its own
             tensor.
             
-        Example
-        -------
+        Examples
+        --------
         >>> node = tk.Node(shape=(2, 3), axes_names=('left', 'right'))
         ...
         >>> # Call set_tensor without arguments uses the
@@ -1374,8 +1376,8 @@ class AbstractNode(ABC):
         Replaces node's tensor with ``None``. This can only be used for **non**
         ``resultant`` nodes that store their own tensors.
         
-        Example
-        -------
+        Examples
+        --------
         >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
         >>> node.tensor is None
         False
@@ -1411,8 +1413,8 @@ class AbstractNode(ABC):
             If ``other`` is a different type than the current node, or if it is
             in a different network.
             
-        Example
-        -------
+        Examples
+        --------
         >>> nodeA = tk.randn(shape=(2, 3),
         ...                  name='nodeA',
         ...                  axes_names=('left', 'right'))
@@ -1460,8 +1462,8 @@ class AbstractNode(ABC):
         Thus the node will store its own tensor, instead of having a reference
         to other node's tensor.
         
-        Example
-        -------
+        Examples
+        --------
         >>> nodeA = tk.randn(shape=(2, 3),
         ...                  name='nodeA',
         ...                  axes_names=('left', 'right'))
@@ -1584,8 +1586,8 @@ class AbstractNode(ABC):
             List indicating the nodes that have been already moved to the new
             network, used by this DFS-like algorithm.
             
-        Example
-        -------
+        Examples
+        --------
         >>> net = tk.TensorNetwork()
         >>> nodeA = tk.Node(shape=(2, 3),
         ...                 axes_names=('left', 'right'),
@@ -1596,7 +1598,7 @@ class AbstractNode(ABC):
         >>> nodeC = tk.Node(shape=(5, 5),
         ...                 axes_names=('left', 'right'),
         ...                 network=net)
-        >>> nodeA['right'] ^ nodeB['left']
+        >>> _ = nodeA['right'] ^ nodeB['left']
         
         If ``nodeA`` is moved to other network, ``nodeB`` will also move, but
         ``nodeC`` will not.
@@ -1657,8 +1659,8 @@ class AbstractNode(ABC):
         -------
         torch.Tensor
         
-        Example
-        -------
+        Examples
+        --------
         >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
         >>> node.tensor
         tensor([[-0.2799, -0.4383, -0.8387],
@@ -1699,8 +1701,8 @@ class AbstractNode(ABC):
         -------
         torch.Tensor
         
-        Example
-        -------
+        Examples
+        --------
         >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
         >>> node.tensor
         tensor([[ 1.4005, -0.0521, -1.2091],
@@ -1741,8 +1743,8 @@ class AbstractNode(ABC):
         -------
         torch.Tensor
         
-        Example
-        -------
+        Examples
+        --------
         >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
         >>> node.tensor
         tensor([[ 0.2111, -0.9551, -0.7812],
@@ -1787,8 +1789,8 @@ class AbstractNode(ABC):
         -------
         torch.Tensor
         
-        Example
-        -------
+        Examples
+        --------
         >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
         >>> node.tensor
         tensor([[ 1.5570,  1.8441, -0.0743],
@@ -1892,8 +1894,8 @@ class Node(AbstractNode):
         Keyword arguments for the different initialization methods. See
         :meth:`AbstractNode.make_tensor`.
         
-    Example
-    -------
+    Examples
+    --------
     >>> node = tk.Node(shape=(2, 5, 2),
     ...                axes_names=('left', 'input', 'right'),
     ...                name='my_node',
@@ -1989,11 +1991,11 @@ class Node(AbstractNode):
         Node or ParamNode
             The original node or a parameterized version of it.
             
-        Example
-        -------
+        Examples
+        --------
         >>> nodeA = tk.randn((2, 3))
         >>> nodeB = tk.randn((3, 4))
-        >>> nodeA[1] ^ nodeB[0]
+        >>> _ = nodeA[1] ^ nodeB[0]
         >>> paramnodeA = nodeA.parameterize()
         >>> nodeB.neighbours() == [paramnodeA]
         True
@@ -2045,8 +2047,8 @@ class Node(AbstractNode):
         -------
         Node
             
-        Example
-        -------
+        Examples
+        --------
         >>> node = tk.randn(shape=(2, 3), name='node')
         >>> copy = node.copy()
         >>> node.tensor_address() != copy.tensor_address()
@@ -2161,8 +2163,8 @@ class ParamNode(AbstractNode):
         Keyword arguments for the different initialization methods. See
         :meth:`AbstractNode.make_tensor`.
         
-    Example
-    -------
+    Examples
+    --------
     >>> node = tk.ParamNode(shape=(2, 5, 2),
     ...                     axes_names=('left', 'input', 'right'),
     ...                     name='my_paramnode',
@@ -2270,8 +2272,8 @@ class ParamNode(AbstractNode):
         -------
         torch.Tensor or None
         
-        Example
-        -------
+        Examples
+        --------
         >>> paramnode = tk.randn((2, 3), param_node=True)
         >>> paramnode.tensor
         Parameter containing:
@@ -2344,11 +2346,11 @@ class ParamNode(AbstractNode):
         ParamNode or Node
             The original node or a de-parameterized version of it.
             
-        Example
-        -------
+        Examples
+        --------
         >>> paramnodeA = tk.randn((2, 3), param_node=True)
         >>> paramnodeB = tk.randn((3, 4), param_node=True)
-        >>> paramnodeA[1] ^ paramnodeB[0]
+        >>> _ = paramnodeA[1] ^ paramnodeB[0]
         >>> nodeA = paramnodeA.parameterize(False)
         >>> paramnodeB.neighbours() == [nodeA]
         True
@@ -2400,8 +2402,8 @@ class ParamNode(AbstractNode):
         -------
         ParamNode
         
-        Example
-        -------
+        Examples
+        --------
         >>> paramnode = tk.randn(shape=(2, 3), name='node', param_node=True)
         >>> copy = paramnode.copy()
         >>> paramnode.tensor_address() != copy.tensor_address()
@@ -2504,8 +2506,8 @@ class StackNode(Node):
         If ``edges`` are provided, the list of ``node1`` attributes of each edge
         should also be provided. Necessary if ``nodes`` are not provided.
 
-    Example
-    -------
+    Examples
+    --------
     >>> net = tk.TensorNetwork()
     >>> nodes = [tk.randn(shape=(2, 4, 2),
     ...                   axes_names=('left', 'input', 'right'),
@@ -2517,21 +2519,21 @@ class StackNode(Node):
     ...         for _ in range(10)]
     ...
     >>> for i in range(10):
-    ...     nodes[i]['input'] ^ data[i]['feature']
+    ...     _ = nodes[i]['input'] ^ data[i]['feature']
     ...
     >>> stack_nodes = tk.stack(nodes)
     >>> stack_data = tk.stack(data)
     ...
     >>> # It is necessary to re-connect stacks
-    >>> stack_nodes['input'] ^ stack_data['feature']
+    >>> _ = stack_nodes['input'] ^ stack_data['feature']
     >>> result = tk.unbind(stack_nodes @ stack_data)
     >>> print(result[0].name)
     unbind_0
 
-    >>> print(result[0].axes)
+    >>> result[0].axes
     [Axis( left (0) ), Axis( right (1) )]
 
-    >>> print(result[0].shape)
+    >>> result[0].shape
     torch.Size([2, 2])
     
     
@@ -2567,6 +2569,8 @@ class StackNode(Node):
                 if nodes[i].rank != nodes[i + 1].rank:
                     raise ValueError(
                         'Cannot stack nodes with different number of edges')
+                
+                # NOTE: If this condition is removed, ensure batch attr is equal
                 if nodes[i].axes_names != nodes[i + 1].axes_names:
                     raise ValueError(
                         'Stacked nodes must have the same name for each axis')
@@ -2715,8 +2719,8 @@ class ParamStackNode(ParamNode):
         it would be required that a new :class:`ParamNode` replaces the
         non-parameterized node in the network).
 
-    Example
-    -------
+    Examples
+    --------
     >>> net = tk.TensorNetwork()
     >>> net.auto_stack = True
     >>> nodes = [tk.randn(shape=(2, 4, 2),
@@ -2730,7 +2734,7 @@ class ParamStackNode(ParamNode):
     ...         for _ in range(10)]
     ...
     >>> for i in range(10):
-    ...     nodes[i]['input'] ^ data[i]['feature']
+    ...     _ = nodes[i]['input'] ^ data[i]['feature']
     ...
     >>> stack_nodes = tk.stack(nodes)
     >>> stack_nodes.name = 'my_stack'
@@ -2740,7 +2744,7 @@ class ParamStackNode(ParamNode):
     >>> stack_data = tk.stack(data)
     ...
     >>> # It is necessary to re-connect stacks
-    >>> stack_nodes['input'] ^ stack_data['feature']
+    >>> _ = stack_nodes['input'] ^ stack_data['feature']
     >>> result = tk.unbind(stack_nodes @ stack_data)
     >>> print(result[0].name)
     unbind_0
@@ -2776,6 +2780,8 @@ class ParamStackNode(ParamNode):
             if nodes[i].rank != nodes[i + 1].rank:
                 raise ValueError(
                     'Cannot stack nodes with different number of edges')
+                
+            # NOTE: If this condition is removed, ensure batch attr is equal
             if nodes[i].axes_names != nodes[i + 1].axes_names:
                 raise ValueError(
                     'Stacked nodes must have the same name for each axis')
@@ -2878,11 +2884,11 @@ class Edge:
     axis2 : int, str, Axis, optional
         Axis of ``node2`` where the edge is attached.
     
-    Example
-    -------
+    Examples
+    --------
     >>> nodeA = tk.randn((2, 3))
     >>> nodeB = tk.randn((3, 4))
-    >>> nodeA[1] ^ nodeB[0]
+    >>> _ = nodeA[1] ^ nodeB[0]
     >>> nodeA[0]
     Edge( node_0[axis_0] <-> None )  (Dangling Edge)
     
@@ -2978,8 +2984,8 @@ class Edge:
         Returns edge's name. It is formed with the corresponding nodes' and axes'
         names.
 
-        Example
-        -------
+        Examples
+        --------
         >>> nodeA = tk.Node(shape=(2, 3),
         ...                 name='nodeA',
         ...                 axes_names=['left', 'right'])
@@ -2990,7 +2996,7 @@ class Edge:
         >>> nodeB = tk.Node(shape=(3, 4),
         ...                 name='nodeB',
         ...                 axes_names=['left', 'right'])
-        >>> new_edge = nodeA['right'] ^ nodeB['left']
+        >>> _ = new_edge = nodeA['right'] ^ nodeB['left']
         >>> print(new_edge.name)
         nodeA[right] <-> nodeB[left]
         """
@@ -3031,11 +3037,11 @@ class Edge:
         size : int
             New size of the edge.
             
-        Example
-        -------
+        Examples
+        --------
         >>> nodeA = tk.ones((2, 3))
         >>> nodeB = tk.ones((3, 4))
-        >>> edge = nodeA[1] ^ nodeB[0]
+        >>> _ = edge = nodeA[1] ^ nodeB[0]
         >>> edge.size()
         3
         
@@ -3076,11 +3082,11 @@ class Edge:
         Returns a copy of the edge, that is, a new edge referencing the same
         nodes at the same axes.
         
-        Example
-        -------
+        Examples
+        --------
         >>> nodeA = tk.randn((2, 3))
         >>> nodeB = tk.randn((3, 4))
-        >>> edge = nodeA[1] ^ nodeB[0]
+        >>> _ = edge = nodeA[1] ^ nodeB[0]
         >>> copy = edge.copy()
         >>> copy != edge
         True
@@ -3122,8 +3128,8 @@ class Edge:
         -------
         Edge
 
-        Example
-        -------
+        Examples
+        --------
         To connect two edges, the overloaded operator ``^`` can also be used.
 
         >>> nodeA = tk.Node(shape=(2, 3),
@@ -3132,7 +3138,7 @@ class Edge:
         >>> nodeB = tk.Node(shape=(3, 4),
         ...                 name='nodeB',
         ...                 axes_names=('left', 'right'))
-        >>> new_edge = nodeA['right'] ^ nodeB['left']  # Same as .connect()
+        >>> _ = new_edge = nodeA['right'] ^ nodeB['left']  # Same as .connect()
         >>> print(new_edge.name)
         nodeA[right] <-> nodeB[left]
         """
@@ -3147,8 +3153,8 @@ class Edge:
         -------
         tuple[Edge, Edge]
 
-        Example
-        -------
+        Examples
+        --------
         To disconnect an edge, the overloaded operator ``|`` can also be used.
 
         >>> nodeA = tk.Node(shape=(2, 3),
@@ -3157,7 +3163,7 @@ class Edge:
         >>> nodeB = tk.Node(shape=(3, 4),
         ...                 name='nodeB',
         ...                 axes_names=('left', 'right'))
-        >>> new_edge = nodeA['right'] ^ nodeB['left']
+        >>> _ = new_edge = nodeA['right'] ^ nodeB['left']
         >>> new_edgeA, new_edgeB = new_edge | new_edge  # Same as .disconnect()
         >>> print(new_edgeA.name)
         nodeA[right] <-> None
@@ -3266,8 +3272,8 @@ class StackEdge(Edge):
         -------
         StackEdge
 
-        Example
-        -------
+        Examples
+        --------
         To connect two stack-edges, the overloaded operator ``^`` can also be
         used.
 
@@ -3282,13 +3288,13 @@ class StackEdge(Edge):
         ...         for _ in range(10)]
         ...
         >>> for i in range(10):
-        ...     nodes[i]['input'] ^ data[i]['feature']
+        ...     _ = nodes[i]['input'] ^ data[i]['feature']
         ...
         >>> stack_nodes = tk.stack(nodes)
         >>> stack_data = tk.stack(data)
         ...
         >>> # It is necessary to re-connect stacks to be able to contract
-        >>> new_edge = stack_nodes['input'] ^ stack_data['feature']
+        >>> _ = new_edge = stack_nodes['input'] ^ stack_data['feature']
         >>> print(new_edge.name)
         stack_0[input] <-> stack_1[feature]
         """
@@ -3329,8 +3335,8 @@ def connect(edge1: Edge, edge2: Edge) -> Edge:
     -------
     Edge
     
-    Example
-    -------
+    Examples
+    --------
     >>> nodeA = tk.Node(shape=(2, 3),
     ...                 name='nodeA',
     ...                 axes_names=('left', 'right'))
@@ -3506,14 +3512,14 @@ class Successor:
         A dictionary of hints created the first time an operation is computed in
         order to save some computation in the next calls of the operation.
 
-    Example
-    -------
+    Examples
+    --------
     When contracting two nodes, a ``Successor`` is created and added to the list
     of successors of the first node (left operand).
 
     >>> nodeA = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
     >>> nodeB = tk.randn(shape=(3, 4), axes_names=('left', 'right'))
-    >>> nodeA['right'] ^ nodeB['left']
+    >>> _ = nodeA['right'] ^ nodeB['left']
     ...
     >>> # Contract nodes
     >>> result = nodeA @ nodeB
@@ -3944,11 +3950,11 @@ class TensorNetwork(nn.Module):
             each resultant node has the same enumeration as the corresponding
             original node.
             
-        Example
-        -------
+        Examples
+        --------
         >>> nodeA = tk.randn((2, 3))
         >>> nodeB = tk.randn((3, 4))
-        >>> nodeA[1] ^ nodeB[0]
+        >>> _ = nodeA[1] ^ nodeB[0]
         >>> print(nodeA.name, nodeB.name)
         node_0 node_1
         
@@ -3965,7 +3971,7 @@ class TensorNetwork(nn.Module):
         
         >>> nodeA = tk.randn((2, 3))
         >>> nodeB = tk.randn((3, 4))
-        >>> nodeA[1] ^ nodeB[0]
+        >>> _ = nodeA[1] ^ nodeB[0]
         >>> nodeB.network.delete_node(nodeB, False)
         >>> print(nodeA.name)
         node_0
@@ -4305,8 +4311,8 @@ class TensorNetwork(nn.Module):
         num_batch_edges : int
             Number of batch edges in the ``data`` nodes.
             
-        Example
-        -------
+        Examples
+        --------
         >>> nodeA = tk.Node(shape=(2, 5, 2),
         ...                 axes_names=('left', 'input', 'right'),
         ...                 name='nodeA',
@@ -4315,7 +4321,7 @@ class TensorNetwork(nn.Module):
         ...                 axes_names=('left', 'input', 'right'),
         ...                 name='nodeB',
         ...                 init_method='randn')
-        >>> nodeA['right'] ^ nodeB['left']
+        >>> _ = nodeA['right'] ^ nodeB['left']
         ...
         >>> net = nodeA.network
         >>> input_edges = [nodeA['input'], nodeB['input']]
@@ -4450,8 +4456,8 @@ class TensorNetwork(nn.Module):
                 batch\_size_{0} \times ... \times batch\_size_{n} \times
                 feature\_dim
                 
-        Example
-        -------
+        Examples
+        --------
         >>> nodeA = tk.Node(shape=(3, 5, 3),
         ...                 axes_names=('left', 'input', 'right'),
         ...                 name='nodeA',
@@ -4460,7 +4466,7 @@ class TensorNetwork(nn.Module):
         ...                 axes_names=('left', 'input', 'right'),
         ...                 name='nodeB',
         ...                 init_method='randn')
-        >>> nodeA['right'] ^ nodeB['left']
+        >>> _ = nodeA['right'] ^ nodeB['left']
         ...
         >>> net = nodeA.network
         >>> input_edges = [nodeA['input'], nodeB['input']]

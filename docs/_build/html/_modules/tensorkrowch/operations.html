@@ -444,14 +444,15 @@ title="Source repository"
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The provided list of axis is not a permutation of the&#39;</span>
                          <span class="s1">&#39; axes of the node&#39;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">new_node</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">_create_resultant</span><span class="p">(</span><span class="n">axes_names</span><span class="o">=</span><span class="n">permute_list</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">,</span> <span class="n">axes_nums</span><span class="p">),</span>
-                                          <span class="n">name</span><span class="o">=</span><span class="s1">&#39;permute&#39;</span><span class="p">,</span>
-                                          <span class="n">network</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_network</span><span class="p">,</span>
-                                          <span class="n">tensor</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span>
-                                              <span class="n">axes_nums</span><span class="p">),</span>
-                                          <span class="n">edges</span><span class="o">=</span><span class="n">permute_list</span><span class="p">(</span>
-                                              <span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span> <span class="n">axes_nums</span><span class="p">),</span>
-                                          <span class="n">node1_list</span><span class="o">=</span><span class="n">permute_list</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">is_node1</span><span class="p">(),</span> <span class="n">axes_nums</span><span class="p">))</span>
+        <span class="n">new_node</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">_create_resultant</span><span class="p">(</span>
+            <span class="n">axes_names</span><span class="o">=</span><span class="n">permute_list</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">,</span> <span class="n">axes_nums</span><span class="p">),</span>
+            <span class="n">name</span><span class="o">=</span><span class="s1">&#39;permute&#39;</span><span class="p">,</span>
+            <span class="n">network</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_network</span><span class="p">,</span>
+            <span class="n">tensor</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span>
+                <span class="n">axes_nums</span><span class="p">),</span>
+            <span class="n">edges</span><span class="o">=</span><span class="n">permute_list</span><span class="p">(</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span> <span class="n">axes_nums</span><span class="p">),</span>
+            <span class="n">node1_list</span><span class="o">=</span><span class="n">permute_list</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">is_node1</span><span class="p">(),</span> <span class="n">axes_nums</span><span class="p">))</span>
 
     <span class="c1"># Create successor</span>
     <span class="n">net</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_network</span>
@@ -496,12 +497,15 @@ title="Source repository"
                        <span class="n">_permute_next</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="permute"><a class="viewcode-back" href="../../operations.html#tensorkrowch.permute">[docs]</a><span class="k">def</span> <span class="nf">permute</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">axes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]):</span>
+<div class="viewcode-block" id="permute"><a class="viewcode-back" href="../../operations.html#tensorkrowch.permute">[docs]</a><span class="k">def</span> <span class="nf">permute</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">axes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Permutes the nodes&#39; tensor, as well as its axes and edges to match the new</span>
 <span class="sd">    shape.</span>
 
 <span class="sd">    See `permute &lt;https://pytorch.org/docs/stable/generated/torch.permute.html&gt;`_.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;permute&quot;``. The node</span>
+<span class="sd">    that keeps information about the :class:`Successor` is ``node``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -509,6 +513,17 @@ title="Source repository"
 <span class="sd">        Node whose tensor is to be permuted.</span>
 <span class="sd">    axes: list[int, str or Axis]</span>
 <span class="sd">        List of axes in the permuted order.</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; node = tk.randn((2, 5, 7))</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.permute(node, (2, 0, 1))</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([7, 2, 5])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">permute_op</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">axes</span><span class="p">)</span></div>
 
@@ -521,10 +536,24 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    See `permute &lt;https://pytorch.org/docs/stable/generated/torch.permute.html&gt;`_.</span>
 <span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;permute&quot;``. The node</span>
+<span class="sd">    that keeps information about the :class:`Successor` is ``self``.</span>
+<span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    axes: list[int, str or Axis]</span>
 <span class="sd">        List of axes in the permuted order.</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Node</span>
+<span class="sd">        </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; node = tk.randn((2, 5, 7))</span>
+<span class="sd">    &gt;&gt;&gt; result = node.permute((2, 0, 1))</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([7, 2, 5])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
 <span class="n">AbstractNode</span><span class="o">.</span><span class="n">permute</span> <span class="o">=</span> <span class="n">permute_node</span>
@@ -539,6 +568,8 @@ title="Source repository"
 <span class="sd">    underscore indicate **in-place** operations.</span>
 
 <span class="sd">    See `permute &lt;https://pytorch.org/docs/stable/generated/torch.permute.html&gt;`_.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation use the same name as ``node``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -546,6 +577,17 @@ title="Source repository"
 <span class="sd">        Node whose tensor is to be permuted.</span>
 <span class="sd">    axes: list[int, str or Axis]</span>
 <span class="sd">        List of axes in the permuted order.</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; node = tk.randn((2, 5, 7))</span>
+<span class="sd">    &gt;&gt;&gt; node = tk.permute_(node, (2, 0, 1))</span>
+<span class="sd">    &gt;&gt;&gt; node.shape</span>
+<span class="sd">    torch.Size([7, 2, 5])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">axes_nums</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">axis</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">:</span>
@@ -579,11 +621,22 @@ title="Source repository"
 <span class="sd">    underscore indicate **in-place** operations.</span>
 
 <span class="sd">    See `permute &lt;https://pytorch.org/docs/stable/generated/torch.permute.html&gt;`_.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation use the same name as ``node``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    axes: list[int, str or Axis]</span>
 <span class="sd">        List of axes in the permuted order.</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Node</span>
+<span class="sd">        </span>
+<span class="sd">    &gt;&gt;&gt; node = tk.randn((2, 5, 7))</span>
+<span class="sd">    &gt;&gt;&gt; node = node.permute_((2, 0, 1))</span>
+<span class="sd">    &gt;&gt;&gt; node.shape</span>
+<span class="sd">    torch.Size([7, 2, 5])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
 <span class="n">AbstractNode</span><span class="o">.</span><span class="n">permute_</span> <span class="o">=</span> <span class="n">permute_node_</span>
@@ -611,12 +664,13 @@ title="Source repository"
     <span class="n">new_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
                              <span class="n">node2</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">_shape</span><span class="p">)</span> <span class="o">+</span>
                                                             <span class="nb">list</span><span class="p">(</span><span class="n">node2</span><span class="o">.</span><span class="n">_shape</span><span class="p">)))</span>
-    <span class="n">new_node</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">_create_resultant</span><span class="p">(</span><span class="n">axes_names</span><span class="o">=</span><span class="n">node1</span><span class="o">.</span><span class="n">axes_names</span> <span class="o">+</span> <span class="n">node2</span><span class="o">.</span><span class="n">axes_names</span><span class="p">,</span>
-                                      <span class="n">name</span><span class="o">=</span><span class="s1">&#39;tprod&#39;</span><span class="p">,</span>
-                                      <span class="n">network</span><span class="o">=</span><span class="n">node1</span><span class="o">.</span><span class="n">_network</span><span class="p">,</span>
-                                      <span class="n">tensor</span><span class="o">=</span><span class="n">new_tensor</span><span class="p">,</span>
-                                      <span class="n">edges</span><span class="o">=</span><span class="n">node1</span><span class="o">.</span><span class="n">_edges</span> <span class="o">+</span> <span class="n">node2</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span>
-                                      <span class="n">node1_list</span><span class="o">=</span><span class="n">node1</span><span class="o">.</span><span class="n">is_node1</span><span class="p">()</span> <span class="o">+</span> <span class="n">node2</span><span class="o">.</span><span class="n">is_node1</span><span class="p">())</span>
+    <span class="n">new_node</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">_create_resultant</span><span class="p">(</span>
+        <span class="n">axes_names</span><span class="o">=</span><span class="n">node1</span><span class="o">.</span><span class="n">axes_names</span> <span class="o">+</span> <span class="n">node2</span><span class="o">.</span><span class="n">axes_names</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;tprod&#39;</span><span class="p">,</span>
+        <span class="n">network</span><span class="o">=</span><span class="n">node1</span><span class="o">.</span><span class="n">_network</span><span class="p">,</span>
+        <span class="n">tensor</span><span class="o">=</span><span class="n">new_tensor</span><span class="p">,</span>
+        <span class="n">edges</span><span class="o">=</span><span class="n">node1</span><span class="o">.</span><span class="n">_edges</span> <span class="o">+</span> <span class="n">node2</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span>
+        <span class="n">node1_list</span><span class="o">=</span><span class="n">node1</span><span class="o">.</span><span class="n">is_node1</span><span class="p">()</span> <span class="o">+</span> <span class="n">node2</span><span class="o">.</span><span class="n">is_node1</span><span class="p">())</span>
 
     <span class="c1"># Create successor</span>
     <span class="n">net</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">_network</span>
@@ -664,6 +718,9 @@ title="Source repository"
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Tensor product between two nodes. It can also be performed using the</span>
 <span class="sd">    operator ``%``.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;tprod&quot;``. The node</span>
+<span class="sd">    that keeps information about the :class:`Successor` is ``node1``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -677,6 +734,15 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn((4, 5), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA % nodeB</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([2, 3, 4, 5])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">tprod_op</span><span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span></div>
 
@@ -686,6 +752,9 @@ title="Source repository"
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Tensor product between two nodes. It can also be performed using the</span>
 <span class="sd">    operator ``%``.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;tprod&quot;``. The node</span>
+<span class="sd">    that keeps information about the :class:`Successor` is ``self``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -696,6 +765,15 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn((4, 5), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA.tprod(nodeB)</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([2, 3, 4, 5])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
 <span class="n">AbstractNode</span><span class="o">.</span><span class="fm">__mod__</span> <span class="o">=</span> <span class="n">tprod_node</span>
@@ -769,6 +847,9 @@ title="Source repository"
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Element-wise product between two nodes. It can also be performed using the</span>
 <span class="sd">    operator ``*``.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;mul&quot;``. The node</span>
+<span class="sd">    that keeps information about the :class:`Successor` is ``node1``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -780,6 +861,15 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA * nodeB</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([2, 3])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">mul_op</span><span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span></div>
 
@@ -789,6 +879,9 @@ title="Source repository"
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Element-wise product between two nodes. It can also be performed using the</span>
 <span class="sd">    operator ``*``.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;mul&quot;``. The node</span>
+<span class="sd">    that keeps information about the :class:`Successor` is ``self``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -798,6 +891,15 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA.mul(nodeB)</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([2, 3])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
 <span class="n">AbstractNode</span><span class="o">.</span><span class="fm">__mul__</span> <span class="o">=</span> <span class="n">mul_node</span>
@@ -871,6 +973,9 @@ title="Source repository"
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Element-wise addition between two nodes. It can also be performed using the</span>
 <span class="sd">    operator ``+``.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;add&quot;``. The node</span>
+<span class="sd">    that keeps information about the :class:`Successor` is ``node1``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -882,6 +987,15 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA + nodeB</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([2, 3])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">add_op</span><span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span></div>
 
@@ -891,6 +1005,9 @@ title="Source repository"
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Element-wise addition between two nodes. It can also be performed using the</span>
 <span class="sd">    operator ``+``.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;add&quot;``. The node</span>
+<span class="sd">    that keeps information about the :class:`Successor` is ``self``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -900,6 +1017,15 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA.add(nodeB)</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([2, 3])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
 <span class="n">AbstractNode</span><span class="o">.</span><span class="fm">__add__</span> <span class="o">=</span> <span class="n">add_node</span>
@@ -973,6 +1099,9 @@ title="Source repository"
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Element-wise subtraction between two nodes. It can also be performed using</span>
 <span class="sd">    the operator ``-``.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;sub&quot;``. The node</span>
+<span class="sd">    that keeps information about the :class:`Successor` is ``node1``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -984,6 +1113,15 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA - nodeB</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([2, 3])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">sub_op</span><span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span></div>
 
@@ -993,6 +1131,9 @@ title="Source repository"
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Element-wise subtraction between two nodes. It can also be performed using</span>
 <span class="sd">    the operator ``-``.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;sub&quot;``. The node</span>
+<span class="sd">    that keeps information about the :class:`Successor` is ``self``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1002,6 +1143,15 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA.sub(nodeB)</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([2, 3])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
 <span class="n">AbstractNode</span><span class="o">.</span><span class="fm">__sub__</span> <span class="o">=</span> <span class="n">sub_node</span>
@@ -1263,8 +1413,7 @@ title="Source repository"
                           <span class="n">hints</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;batch_axes&#39;</span><span class="p">:</span> <span class="n">batch_axes</span><span class="p">,</span>
                                  <span class="s1">&#39;node1_axes&#39;</span><span class="p">:</span> <span class="n">node1_axes</span><span class="p">,</span>
                                  <span class="s1">&#39;node2_axes&#39;</span><span class="p">:</span> <span class="n">node2_axes</span><span class="p">,</span>
-                                 <span class="s1">&#39;permutation_dims&#39;</span><span class="p">:</span> <span class="n">permutation_dims</span><span class="p">,</span>
-                                 <span class="s1">&#39;splitted_edge&#39;</span><span class="p">:</span> <span class="n">splitted_edge</span><span class="p">})</span>
+                                 <span class="s1">&#39;permutation_dims&#39;</span><span class="p">:</span> <span class="n">permutation_dims</span><span class="p">})</span>
 
     <span class="c1"># Add successor to parent</span>
     <span class="k">if</span> <span class="s1">&#39;split&#39;</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">_successors</span><span class="p">:</span>
@@ -1295,7 +1444,6 @@ title="Source repository"
     <span class="n">node1_axes</span> <span class="o">=</span> <span class="n">successor</span><span class="o">.</span><span class="n">hints</span><span class="p">[</span><span class="s1">&#39;node1_axes&#39;</span><span class="p">]</span>
     <span class="n">node2_axes</span> <span class="o">=</span> <span class="n">successor</span><span class="o">.</span><span class="n">hints</span><span class="p">[</span><span class="s1">&#39;node2_axes&#39;</span><span class="p">]</span>
     <span class="n">permutation_dims</span> <span class="o">=</span> <span class="n">successor</span><span class="o">.</span><span class="n">hints</span><span class="p">[</span><span class="s1">&#39;permutation_dims&#39;</span><span class="p">]</span>
-    <span class="n">splitted_edge</span> <span class="o">=</span> <span class="n">successor</span><span class="o">.</span><span class="n">hints</span><span class="p">[</span><span class="s1">&#39;splitted_edge&#39;</span><span class="p">]</span>
 
     <span class="n">batch_shape</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">)[</span><span class="n">batch_axes</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
     <span class="n">node1_shape</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">)[</span><span class="n">node1_axes</span><span class="p">]</span>
@@ -1321,8 +1469,8 @@ title="Source repository"
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only one of `rank`, `cum_percentage` and &#39;</span>
                                  <span class="s1">&#39;`cutoff` should be provided&#39;</span><span class="p">)</span>
 
-            <span class="n">percentages</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">s</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span>
-                                                        <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="n">percentages</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">s</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>\
+                <span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
             <span class="n">cum_percentage_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
                 <span class="n">cum_percentage</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">percentages</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
             <span class="n">rank</span> <span class="o">=</span> <span class="mi">0</span>
@@ -1423,8 +1571,10 @@ title="Source repository"
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Splits one node in two via the decomposition specified in ``mode``. To</span>
 <span class="sd">    perform this operation the set of edges has to be split in two sets,</span>
-<span class="sd">    corresponding to the edges of the first and second resultant nodes. Batch</span>
-<span class="sd">    edges that don&#39;t appear in any of the lists will be repeated in both nodes.</span>
+<span class="sd">    corresponding to the edges of the first and second ``resultant nodes``.</span>
+<span class="sd">    Batch edges that don&#39;t appear in any of the lists will be repeated in both</span>
+<span class="sd">    nodes, and will appear as the first edges of the ``resultant`` nodes, in</span>
+<span class="sd">    the order they appeared in ``node``.</span>
 
 <span class="sd">    Having specified the two sets of edges, the node&#39;s tensor is reshaped as a</span>
 <span class="sd">    batch matrix, with batch dimensions first, a single input dimension</span>
@@ -1440,7 +1590,7 @@ title="Source repository"
 
 <span class="sd">      where :math:`U` and :math:`V` are unitary, and :math:`S` is diagonal.</span>
 
-<span class="sd">    * **&quot;svdr&quot;**: Singular Value Decomposition adding a Random phases (square</span>
+<span class="sd">    * **&quot;svdr&quot;**: Singular Value Decomposition adding Random phases (square</span>
 <span class="sd">      diagonal matrices with random 1&#39;s and -1&#39;s)</span>
 
 <span class="sd">      .. math::</span>
@@ -1469,6 +1619,12 @@ title="Source repository"
 
 <span class="sd">    If ``mode`` is &quot;svd&quot; or &quot;svdr&quot;, ``side`` must be provided. Besides, one</span>
 <span class="sd">    (and only one) of ``rank``, ``cum_percentage`` and ``cutoff`` is required.</span>
+<span class="sd">    </span>
+<span class="sd">    Since the node is `splitted` in two, a new edge appears connecting both</span>
+<span class="sd">    nodes. The axis that corresponds to this edge has the name ``&quot;splitted&quot;``.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;split&quot;``. The node</span>
+<span class="sd">    that keeps information about the :class:`Successor` is ``node``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1504,6 +1660,23 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    tuple[Node, Node]</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; node = tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                 axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;))</span>
+<span class="sd">    &gt;&gt;&gt; node_left, node_right = tk.split(node,</span>
+<span class="sd">    ...                                  [&#39;left&#39;], [&#39;right&#39;],</span>
+<span class="sd">    ...                                  mode=&#39;svd&#39;,</span>
+<span class="sd">    ...                                  rank=5)</span>
+<span class="sd">    &gt;&gt;&gt; node_left.shape</span>
+<span class="sd">    torch.Size([100, 10, 5])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; node_right.shape</span>
+<span class="sd">    torch.Size([100, 5, 15])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; node_left[&#39;splitted&#39;]</span>
+<span class="sd">    Edge( split_0[splitted] &lt;-&gt; split_1[splitted] )</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">split_op</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">node1_axes</span><span class="p">,</span> <span class="n">node2_axes</span><span class="p">,</span>
                     <span class="n">mode</span><span class="p">,</span> <span class="n">side</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">cum_percentage</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">)</span></div>
@@ -1514,6 +1687,12 @@ title="Source repository"
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Splits one node in two via the decomposition specified in ``mode``. See</span>
 <span class="sd">    :func:`split` for a more complete explanation.</span>
+<span class="sd">    </span>
+<span class="sd">    Since the node is `splitted` in two, a new edge appears connecting both</span>
+<span class="sd">    nodes. The axis that corresponds to this edge has the name ``&quot;splitted&quot;``.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;split&quot;``. The node</span>
+<span class="sd">    that keeps information about the :class:`Successor` is ``self``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1547,6 +1726,22 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    tuple[Node, Node]</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; node = tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                 axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;))</span>
+<span class="sd">    &gt;&gt;&gt; node_left, node_right = node.split([&#39;left&#39;], [&#39;right&#39;],</span>
+<span class="sd">    ...                                    mode=&#39;svd&#39;,</span>
+<span class="sd">    ...                                    rank=5)</span>
+<span class="sd">    &gt;&gt;&gt; node_left.shape</span>
+<span class="sd">    torch.Size([100, 10, 5])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; node_right.shape</span>
+<span class="sd">    torch.Size([100, 5, 15])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; node_left[&#39;splitted&#39;]</span>
+<span class="sd">    Edge( split_0[splitted] &lt;-&gt; split_1[splitted] )</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
 <span class="n">AbstractNode</span><span class="o">.</span><span class="n">split</span> <span class="o">=</span> <span class="n">split_node</span>
@@ -1565,6 +1760,11 @@ title="Source repository"
 
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
 <span class="sd">    underscore indicate **in-place** operations.</span>
+<span class="sd">    </span>
+<span class="sd">    Since the node is `splitted` in two, a new edge appears connecting both</span>
+<span class="sd">    nodes. The axis that corresponds to this edge has the name ``&quot;splitted&quot;``.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;split_ip&quot;``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1600,6 +1800,31 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    tuple[Node, Node]</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; node = tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                 axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;))</span>
+<span class="sd">    &gt;&gt;&gt; node_left, node_right = tk.split_(node,</span>
+<span class="sd">    ...                                   [&#39;left&#39;], [&#39;right&#39;],</span>
+<span class="sd">    ...                                   mode=&#39;svd&#39;,</span>
+<span class="sd">    ...                                   rank=5)</span>
+<span class="sd">    &gt;&gt;&gt; node_left.shape</span>
+<span class="sd">    torch.Size([100, 10, 5])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; node_right.shape</span>
+<span class="sd">    torch.Size([100, 5, 15])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; node_left[&#39;splitted&#39;]</span>
+<span class="sd">    Edge( split_ip_0[splitted] &lt;-&gt; split_ip_1[splitted] )</span>
+<span class="sd">    </span>
+<span class="sd">    ``node`` has been deleted (removed from the network), but it still exists</span>
+<span class="sd">    until is deleted.</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; node.network is None</span>
+<span class="sd">    True</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; del node</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span> <span class="o">=</span> <span class="n">split</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">node1_axes</span><span class="p">,</span> <span class="n">node2_axes</span><span class="p">,</span>
                          <span class="n">mode</span><span class="p">,</span> <span class="n">side</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">cum_percentage</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">)</span>
@@ -1642,6 +1867,11 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
 <span class="sd">    underscore indicate **in-place** operations.</span>
+<span class="sd">    </span>
+<span class="sd">    Since the node is `splitted` in two, a new edge appears connecting both</span>
+<span class="sd">    nodes. The axis that corresponds to this edge has the name ``&quot;splitted&quot;``.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;split_ip&quot;``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1675,6 +1905,31 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    tuple[Node, Node]</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; node = tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                 axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;))</span>
+<span class="sd">    &gt;&gt;&gt; node_left, node_right = tk.split_(node,</span>
+<span class="sd">    ...                                   [&#39;left&#39;], [&#39;right&#39;],</span>
+<span class="sd">    ...                                   mode=&#39;svd&#39;,</span>
+<span class="sd">    ...                                   rank=5)</span>
+<span class="sd">    &gt;&gt;&gt; node_left.shape</span>
+<span class="sd">    torch.Size([100, 10, 5])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; node_right.shape</span>
+<span class="sd">    torch.Size([100, 5, 15])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; node_left[&#39;splitted&#39;]</span>
+<span class="sd">    Edge( split_ip_0[splitted] &lt;-&gt; split_ip_1[splitted] )</span>
+<span class="sd">    </span>
+<span class="sd">    ``node`` has been deleted (removed from the network), but it still exists</span>
+<span class="sd">    until is deleted.</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; node.network is None</span>
+<span class="sd">    True</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; del node</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
 <span class="n">AbstractNode</span><span class="o">.</span><span class="n">split_</span> <span class="o">=</span> <span class="n">split_node_</span>
@@ -1692,6 +1947,9 @@ title="Source repository"
 
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
 <span class="sd">    underscore indicate **in-place** operations.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation use the same names as the original</span>
+<span class="sd">    nodes connected by ``edge``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1719,6 +1977,30 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    tuple[Node, Node]</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeA&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(15, 20, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeB&#39;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; nodeA, nodeB = tk.svd_(new_edge, rank=7)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; nodeA.shape</span>
+<span class="sd">    torch.Size([10, 7, 100])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeB.shape</span>
+<span class="sd">    torch.Size([7, 20, 100])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; print(nodeA.axes_names)</span>
+<span class="sd">    [&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; print(nodeB.axes_names)</span>
+<span class="sd">    [&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Edge should be connected to perform SVD&#39;</span><span class="p">)</span>
@@ -1762,8 +2044,8 @@ title="Source repository"
         <span class="n">new_node1</span> <span class="o">=</span> <span class="n">new_node1</span><span class="o">.</span><span class="n">permute_</span><span class="p">(</span><span class="n">permutation</span><span class="p">)</span>
 
     <span class="c1"># new_node2</span>
-    <span class="n">prev_nums</span> <span class="o">=</span> <span class="p">[</span><span class="n">node2</span><span class="o">.</span><span class="n">in_which_axis</span><span class="p">(</span><span class="n">node1</span><span class="p">[</span><span class="n">ax</span><span class="p">])</span><span class="o">.</span><span class="n">_num</span> <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">batch_axes</span><span class="p">]</span> <span class="o">+</span> \
-        <span class="p">[</span><span class="n">axis2</span><span class="o">.</span><span class="n">_num</span><span class="p">]</span>
+    <span class="n">prev_nums</span> <span class="o">=</span> <span class="p">[</span><span class="n">node2</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="n">ax</span><span class="p">)</span><span class="o">.</span><span class="n">_name</span><span class="p">)</span>
+                 <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">batch_axes</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">axis2</span><span class="o">.</span><span class="n">_num</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">new_node2</span><span class="o">.</span><span class="n">rank</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">prev_nums</span><span class="p">:</span>
             <span class="n">prev_nums</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
@@ -1781,8 +2063,8 @@ title="Source repository"
     <span class="k">return</span> <span class="n">new_node1</span><span class="p">,</span> <span class="n">new_node2</span></div>
 
 
-<span class="n">svd_node_</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">svd_</span><span class="p">)</span>
-<span class="n">svd_node_</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
+<span class="n">svd_edge_</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">svd_</span><span class="p">)</span>
+<span class="n">svd_edge_</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts an edge in-place via :func:`~Edge.contract_` and splits</span>
 <span class="sd">    it in-place via :func:`~AbstractNode.split_` using ``mode = &quot;svd&quot;``. See</span>
@@ -1790,6 +2072,9 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
 <span class="sd">    underscore indicate **in-place** operations.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation use the same names as the original</span>
+<span class="sd">    nodes connected by ``self``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1815,9 +2100,33 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    tuple[Node, Node]</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeA&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(15, 20, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeB&#39;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; nodeA, nodeB = new_edge.svd_(rank=7)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; nodeA.shape</span>
+<span class="sd">    torch.Size([10, 7, 100])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeB.shape</span>
+<span class="sd">    torch.Size([7, 20, 100])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; print(nodeA.axes_names)</span>
+<span class="sd">    [&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; print(nodeB.axes_names)</span>
+<span class="sd">    [&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-<span class="n">Edge</span><span class="o">.</span><span class="n">svd_</span> <span class="o">=</span> <span class="n">svd_node_</span>
+<span class="n">Edge</span><span class="o">.</span><span class="n">svd_</span> <span class="o">=</span> <span class="n">svd_edge_</span>
 
 
 <div class="viewcode-block" id="svdr_"><a class="viewcode-back" href="../../operations.html#tensorkrowch.svdr_">[docs]</a><span class="k">def</span> <span class="nf">svdr_</span><span class="p">(</span><span class="n">edge</span><span class="p">:</span> <span class="n">Edge</span><span class="p">,</span>
@@ -1832,6 +2141,9 @@ title="Source repository"
 
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
 <span class="sd">    underscore indicate **in-place** operations.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation use the same names as the original</span>
+<span class="sd">    nodes connected by ``edge``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1859,6 +2171,30 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    tuple[Node, Node]</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeA&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(15, 20, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeB&#39;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; nodeA, nodeB = tk.svdr_(new_edge, rank=7)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; nodeA.shape</span>
+<span class="sd">    torch.Size([10, 7, 100])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeB.shape</span>
+<span class="sd">    torch.Size([7, 20, 100])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; print(nodeA.axes_names)</span>
+<span class="sd">    [&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; print(nodeB.axes_names)</span>
+<span class="sd">    [&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Edge should be connected to perform SVD&#39;</span><span class="p">)</span>
@@ -1902,8 +2238,8 @@ title="Source repository"
         <span class="n">new_node1</span> <span class="o">=</span> <span class="n">new_node1</span><span class="o">.</span><span class="n">permute_</span><span class="p">(</span><span class="n">permutation</span><span class="p">)</span>
 
     <span class="c1"># new_node2</span>
-    <span class="n">prev_nums</span> <span class="o">=</span> <span class="p">[</span><span class="n">node2</span><span class="o">.</span><span class="n">in_which_axis</span><span class="p">(</span><span class="n">node1</span><span class="p">[</span><span class="n">ax</span><span class="p">])</span><span class="o">.</span><span class="n">_num</span> <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">batch_axes</span><span class="p">]</span> <span class="o">+</span> \
-        <span class="p">[</span><span class="n">axis2</span><span class="o">.</span><span class="n">_num</span><span class="p">]</span>
+    <span class="n">prev_nums</span> <span class="o">=</span> <span class="p">[</span><span class="n">node2</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="n">ax</span><span class="p">)</span><span class="o">.</span><span class="n">_name</span><span class="p">)</span>
+                 <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">batch_axes</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">axis2</span><span class="o">.</span><span class="n">_num</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">new_node2</span><span class="o">.</span><span class="n">rank</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">prev_nums</span><span class="p">:</span>
             <span class="n">prev_nums</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
@@ -1921,8 +2257,8 @@ title="Source repository"
     <span class="k">return</span> <span class="n">new_node1</span><span class="p">,</span> <span class="n">new_node2</span></div>
 
 
-<span class="n">svdr_node_</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">svdr_</span><span class="p">)</span>
-<span class="n">svdr_node_</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
+<span class="n">svdr_edge_</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">svdr_</span><span class="p">)</span>
+<span class="n">svdr_edge_</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts an edge in-place via :func:`~Edge.contract_` and splits</span>
 <span class="sd">    it in-place via :func:`~AbstractNode.split_` using ``mode = &quot;svdr&quot;``. See</span>
@@ -1930,6 +2266,9 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
 <span class="sd">    underscore indicate **in-place** operations.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation use the same names as the original</span>
+<span class="sd">    nodes connected by ``self``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1955,9 +2294,33 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    tuple[Node, Node]</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeA&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(15, 20, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeB&#39;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; nodeA, nodeB = new_edge.svdr_(rank=7)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; nodeA.shape</span>
+<span class="sd">    torch.Size([10, 7, 100])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeB.shape</span>
+<span class="sd">    torch.Size([7, 20, 100])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; print(nodeA.axes_names)</span>
+<span class="sd">    [&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; print(nodeB.axes_names)</span>
+<span class="sd">    [&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-<span class="n">Edge</span><span class="o">.</span><span class="n">svdr_</span> <span class="o">=</span> <span class="n">svdr_node_</span>
+<span class="n">Edge</span><span class="o">.</span><span class="n">svdr_</span> <span class="o">=</span> <span class="n">svdr_edge_</span>
 
 
 <div class="viewcode-block" id="qr_"><a class="viewcode-back" href="../../operations.html#tensorkrowch.qr_">[docs]</a><span class="k">def</span> <span class="nf">qr_</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">Node</span><span class="p">]:</span>
@@ -1968,6 +2331,9 @@ title="Source repository"
 
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
 <span class="sd">    underscore indicate **in-place** operations.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation use the same names as the original</span>
+<span class="sd">    nodes connected by ``edge``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1977,6 +2343,30 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    tuple[Node, Node]</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeA&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(15, 20, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeB&#39;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; nodeA, nodeB = tk.qr_(new_edge)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; nodeA.shape</span>
+<span class="sd">    torch.Size([10, 10, 100])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeB.shape</span>
+<span class="sd">    torch.Size([10, 20, 100])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; print(nodeA.axes_names)</span>
+<span class="sd">    [&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; print(nodeB.axes_names)</span>
+<span class="sd">    [&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Edge should be connected to perform SVD&#39;</span><span class="p">)</span>
@@ -2016,8 +2406,8 @@ title="Source repository"
         <span class="n">new_node1</span> <span class="o">=</span> <span class="n">new_node1</span><span class="o">.</span><span class="n">permute_</span><span class="p">(</span><span class="n">permutation</span><span class="p">)</span>
 
     <span class="c1"># new_node2</span>
-    <span class="n">prev_nums</span> <span class="o">=</span> <span class="p">[</span><span class="n">node2</span><span class="o">.</span><span class="n">in_which_axis</span><span class="p">(</span><span class="n">node1</span><span class="p">[</span><span class="n">ax</span><span class="p">])</span><span class="o">.</span><span class="n">_num</span> <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">batch_axes</span><span class="p">]</span> <span class="o">+</span> \
-        <span class="p">[</span><span class="n">axis2</span><span class="o">.</span><span class="n">_num</span><span class="p">]</span>
+    <span class="n">prev_nums</span> <span class="o">=</span> <span class="p">[</span><span class="n">node2</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="n">ax</span><span class="p">)</span><span class="o">.</span><span class="n">_name</span><span class="p">)</span>
+                 <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">batch_axes</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">axis2</span><span class="o">.</span><span class="n">_num</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">new_node2</span><span class="o">.</span><span class="n">rank</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">prev_nums</span><span class="p">:</span>
             <span class="n">prev_nums</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
@@ -2035,8 +2425,8 @@ title="Source repository"
     <span class="k">return</span> <span class="n">new_node1</span><span class="p">,</span> <span class="n">new_node2</span></div>
 
 
-<span class="n">qr_node_</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">qr_</span><span class="p">)</span>
-<span class="n">qr_node_</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
+<span class="n">qr_edge_</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">qr_</span><span class="p">)</span>
+<span class="n">qr_edge_</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts an edge in-place via :func:`~Edge.contract_` and splits</span>
 <span class="sd">    it in-place via :func:`~AbstractNode.split_` using ``mode = &quot;qr&quot;``. See</span>
@@ -2044,13 +2434,40 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
 <span class="sd">    underscore indicate **in-place** operations.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation use the same names as the original</span>
+<span class="sd">    nodes connected by ``self``.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    tuple[Node, Node]</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeA&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(15, 20, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeB&#39;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; nodeA, nodeB = new_edge.qr_()</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; nodeA.shape</span>
+<span class="sd">    torch.Size([10, 10, 100])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeB.shape</span>
+<span class="sd">    torch.Size([10, 20, 100])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; print(nodeA.axes_names)</span>
+<span class="sd">    [&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; print(nodeB.axes_names)</span>
+<span class="sd">    [&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-<span class="n">Edge</span><span class="o">.</span><span class="n">qr_</span> <span class="o">=</span> <span class="n">qr_node_</span>
+<span class="n">Edge</span><span class="o">.</span><span class="n">qr_</span> <span class="o">=</span> <span class="n">qr_edge_</span>
 
 
 <div class="viewcode-block" id="rq_"><a class="viewcode-back" href="../../operations.html#tensorkrowch.rq_">[docs]</a><span class="k">def</span> <span class="nf">rq_</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">Node</span><span class="p">]:</span>
@@ -2061,6 +2478,9 @@ title="Source repository"
 
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
 <span class="sd">    underscore indicate **in-place** operations.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation use the same names as the original</span>
+<span class="sd">    nodes connected by ``edge``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2070,6 +2490,30 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    tuple[Node, Node]</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeA&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(15, 20, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeB&#39;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; nodeA, nodeB = tk.rq_(new_edge)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; nodeA.shape</span>
+<span class="sd">    torch.Size([10, 10, 100])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeB.shape</span>
+<span class="sd">    torch.Size([10, 20, 100])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; print(nodeA.axes_names)</span>
+<span class="sd">    [&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; print(nodeB.axes_names)</span>
+<span class="sd">    [&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Edge should be connected to perform SVD&#39;</span><span class="p">)</span>
@@ -2109,8 +2553,8 @@ title="Source repository"
         <span class="n">new_node1</span> <span class="o">=</span> <span class="n">new_node1</span><span class="o">.</span><span class="n">permute_</span><span class="p">(</span><span class="n">permutation</span><span class="p">)</span>
 
     <span class="c1"># new_node2</span>
-    <span class="n">prev_nums</span> <span class="o">=</span> <span class="p">[</span><span class="n">node2</span><span class="o">.</span><span class="n">in_which_axis</span><span class="p">(</span><span class="n">node1</span><span class="p">[</span><span class="n">ax</span><span class="p">])</span><span class="o">.</span><span class="n">_num</span> <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">batch_axes</span><span class="p">]</span> <span class="o">+</span> \
-        <span class="p">[</span><span class="n">axis2</span><span class="o">.</span><span class="n">_num</span><span class="p">]</span>
+    <span class="n">prev_nums</span> <span class="o">=</span> <span class="p">[</span><span class="n">node2</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="n">ax</span><span class="p">)</span><span class="o">.</span><span class="n">_name</span><span class="p">)</span>
+                 <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">batch_axes</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">axis2</span><span class="o">.</span><span class="n">_num</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">new_node2</span><span class="o">.</span><span class="n">rank</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">prev_nums</span><span class="p">:</span>
             <span class="n">prev_nums</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
@@ -2128,8 +2572,8 @@ title="Source repository"
     <span class="k">return</span> <span class="n">new_node1</span><span class="p">,</span> <span class="n">new_node2</span></div>
 
 
-<span class="n">rq_node_</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">rq_</span><span class="p">)</span>
-<span class="n">rq_node_</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
+<span class="n">rq_edge_</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">rq_</span><span class="p">)</span>
+<span class="n">rq_edge_</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts an edge in-place via :func:`~Edge.contract_` and splits</span>
 <span class="sd">    it in-place via :func:`~AbstractNode.split_` using ``mode = &quot;qr&quot;``. See</span>
@@ -2138,12 +2582,39 @@ title="Source repository"
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
 <span class="sd">    underscore indicate **in-place** operations.</span>
 <span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation use the same names as the original</span>
+<span class="sd">    nodes connected by ``self``.</span>
+<span class="sd">    </span>
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    tuple[Node, Node]</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeA&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(15, 20, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeB&#39;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; new_edge = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; nodeA, nodeB = tk.rq_(new_edge)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; nodeA.shape</span>
+<span class="sd">    torch.Size([10, 10, 100])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeB.shape</span>
+<span class="sd">    torch.Size([10, 20, 100])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; print(nodeA.axes_names)</span>
+<span class="sd">    [&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; print(nodeB.axes_names)</span>
+<span class="sd">    [&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-<span class="n">Edge</span><span class="o">.</span><span class="n">rq_</span> <span class="o">=</span> <span class="n">rq_node_</span>
+<span class="n">Edge</span><span class="o">.</span><span class="n">rq_</span> <span class="o">=</span> <span class="n">rq_edge_</span>
 
 
 <span class="c1">################################   CONTRACT    ################################</span>
@@ -2412,6 +2883,9 @@ title="Source repository"
                    <span class="n">node2</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts all selected edges between two nodes.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;contract_edges&quot;``.</span>
+<span class="sd">    The node that keeps information about the :class:`Successor` is ``node1``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2429,6 +2903,29 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(10, 15, 20),</span>
+<span class="sd">    ...                  axes_names=(&#39;one&#39;, &#39;two&#39;, &#39;three&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeA&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(10, 15, 20),</span>
+<span class="sd">    ...                  axes_names=(&#39;one&#39;, &#39;two&#39;, &#39;three&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeB&#39;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;one&#39;] ^ nodeB[&#39;one&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;two&#39;] ^ nodeB[&#39;two&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;three&#39;] ^ nodeB[&#39;three&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.contract_edges([nodeA[&#39;one&#39;], nodeA[&#39;three&#39;]],</span>
+<span class="sd">    ...                            nodeA, nodeB)</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([15, 15])</span>
+<span class="sd">    </span>
+<span class="sd">    If ``node1`` and ``node2`` are the same node, the contraction is a trace.</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; result2 = tk.contract_edges([result[&#39;two_0&#39;]], result, result)</span>
+<span class="sd">    &gt;&gt;&gt; result2.shape</span>
+<span class="sd">    torch.Size([])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">contract_edges_op</span><span class="p">(</span><span class="n">edges</span><span class="p">,</span> <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span></div>
 
@@ -2440,6 +2937,8 @@ title="Source repository"
 
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
 <span class="sd">    underscore indicate **in-place** operations.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;contract_edges_ip&quot;``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2450,6 +2949,33 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(10, 15, 20),</span>
+<span class="sd">    ...                  axes_names=(&#39;one&#39;, &#39;two&#39;, &#39;three&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeA&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(10, 15, 20),</span>
+<span class="sd">    ...                  axes_names=(&#39;one&#39;, &#39;two&#39;, &#39;three&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeB&#39;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;one&#39;] ^ nodeB[&#39;one&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;two&#39;] ^ nodeB[&#39;two&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;three&#39;] ^ nodeB[&#39;three&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.contract_(nodeA[&#39;one&#39;])</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([15, 20, 15, 20])</span>
+<span class="sd">    </span>
+<span class="sd">    ``nodeA`` and ``nodeB`` have been removed from the network.</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeA.network is None</span>
+<span class="sd">    True</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeB.network is None</span>
+<span class="sd">    True</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; del nodeA</span>
+<span class="sd">    &gt;&gt;&gt; del nodeB</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">contract_edges</span><span class="p">([</span><span class="n">edge</span><span class="p">],</span> <span class="n">edge</span><span class="o">.</span><span class="n">node1</span><span class="p">,</span> <span class="n">edge</span><span class="o">.</span><span class="n">node2</span><span class="p">)</span>
     <span class="n">result</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
@@ -2484,9 +3010,7 @@ title="Source repository"
 
 <span class="k">def</span> <span class="nf">get_shared_edges</span><span class="p">(</span><span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
                      <span class="n">node2</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Edge</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Returns list of edges shared between two nodes</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns list of edges shared between two nodes.&quot;&quot;&quot;</span>
     <span class="n">edges</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">i1</span><span class="p">,</span> <span class="n">edge1</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">_edges</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">i2</span><span class="p">,</span> <span class="n">edge2</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">node2</span><span class="o">.</span><span class="n">_edges</span><span class="p">):</span>
@@ -2503,6 +3027,9 @@ title="Source repository"
 <span class="sd">    Contracts all edges shared between two nodes. Batch contraction is</span>
 <span class="sd">    automatically performed when both nodes have batch edges with the same</span>
 <span class="sd">    names.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;contract_edges&quot;``.</span>
+<span class="sd">    The node that keeps information about the :class:`Successor` is ``node1``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2516,6 +3043,20 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeA&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(15, 7, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeB&#39;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.contract_between(nodeA, nodeB)</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([100, 10, 7])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">contract_edges</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span></div>
 
@@ -2526,6 +3067,9 @@ title="Source repository"
 <span class="sd">    Contracts all edges shared between two nodes. Batch contraction is</span>
 <span class="sd">    automatically performed when both nodes have batch edges with the same</span>
 <span class="sd">    names. It can also be performed using the operator ``@``.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;contract_edges&quot;``.</span>
+<span class="sd">    The node that keeps information about the :class:`Successor` is ``self``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2536,6 +3080,20 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeA&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(15, 7, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeB&#39;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA @ nodeB</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([100, 10, 7])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
 <span class="n">AbstractNode</span><span class="o">.</span><span class="fm">__matmul__</span> <span class="o">=</span> <span class="n">contract_between_node</span>
@@ -2549,6 +3107,8 @@ title="Source repository"
 
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
 <span class="sd">    underscore indicate **in-place** operations.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;contract_edges_ip&quot;``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2562,6 +3122,31 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeA&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(15, 7, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeB&#39;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.contract_between_(nodeA, nodeB)</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([100, 10, 7])</span>
+<span class="sd">    </span>
+<span class="sd">    ``nodeA`` and ``nodeB`` have been removed from the network.</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeA.network is None</span>
+<span class="sd">    True</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeB.network is None</span>
+<span class="sd">    True</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; del nodeA</span>
+<span class="sd">    &gt;&gt;&gt; del nodeB</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">contract_between</span><span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span>
     <span class="n">result</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
@@ -2598,6 +3183,8 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
 <span class="sd">    underscore indicate **in-place** operations.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;contract_edges_ip&quot;``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2608,6 +3195,31 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeA&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(15, 7, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeB&#39;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA.contract_between_(nodeB)</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([100, 10, 7])</span>
+<span class="sd">    </span>
+<span class="sd">    ``nodeA`` and ``nodeB`` have been removed from the network.</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeA.network is None</span>
+<span class="sd">    True</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeB.network is None</span>
+<span class="sd">    True</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; del nodeA</span>
+<span class="sd">    &gt;&gt;&gt; del nodeB</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
 <span class="n">AbstractNode</span><span class="o">.</span><span class="n">contract_between_</span> <span class="o">=</span> <span class="n">contract_between_node_</span>
@@ -2638,8 +3250,9 @@ title="Source repository"
     <span class="n">stack_indices</span> <span class="o">=</span> <span class="p">[]</span>       <span class="c1"># In the case above, stack indices of each node in</span>
     <span class="c1"># the reference node&#39;s memory</span>
 
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
-        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`nodes` should be a list or tuple of nodes&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span> <span class="ow">and</span> \
+        <span class="nb">isinstance</span><span class="p">(</span><span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">AbstractNode</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`nodes` should be a list or tuple of AbstractNodes&#39;</span><span class="p">)</span>
 
     <span class="n">net</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">_network</span>
     <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
@@ -2773,11 +3386,22 @@ title="Source repository"
 
 <div class="viewcode-block" id="stack"><a class="viewcode-back" href="../../operations.html#tensorkrowch.stack">[docs]</a><span class="k">def</span> <span class="nf">stack</span><span class="p">(</span><span class="n">nodes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Creates a StackNode or ParamStackNode by stacking a collection of Nodes or</span>
-<span class="sd">    ParamNodes, respectively. Restrictions that are applied to the nodes in</span>
-<span class="sd">    order to be `stackable` are the same as in :class:`StackNode`.</span>
+<span class="sd">    Creates a :class:`StackNode` or :class:`ParamStackNode` by stacking a</span>
+<span class="sd">    collection of :class:`Nodes &lt;Nodes&gt;` or :class:`ParamNodes &lt;ParamNode&gt;`,</span>
+<span class="sd">    respectively. Restrictions that are applied to the nodes in order to be</span>
+<span class="sd">    `stackable` are the same as in :class:`StackNode`.</span>
 
-<span class="sd">    The stack dimension will be the first one in the resultant node.</span>
+<span class="sd">    The stack dimension will be the first one in the ``resultant`` node.</span>
+<span class="sd">    </span>
+<span class="sd">    See :class:`ParamStackNode` and :class:`TensorNetwork` to learn how the</span>
+<span class="sd">    :meth:`~TensorNetwork.auto_unbind` mode affects the computation of</span>
+<span class="sd">    :func:`stack`.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;stack&quot;``. If this</span>
+<span class="sd">    operation returns a ``virtual`` :class:`ParamStackNode`, it will be called</span>
+<span class="sd">    ``&quot;virtual_stack&quot;``. See :class:AbstractNode` to learn about this **reserved</span>
+<span class="sd">    name**.  The node that keeps information about the :class:`Successor` is</span>
+<span class="sd">    ``nodes[0]``, the first stacked node.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2785,6 +3409,17 @@ title="Source repository"
 <span class="sd">        Sequence of nodes that are to be stacked. They must be of the same type,</span>
 <span class="sd">        have the same rank and axes names, be in the same tensor network, and</span>
 <span class="sd">        have edges with the same types.</span>
+<span class="sd">        </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
+<span class="sd">    &gt;&gt;&gt; nodes = [tk.randn(shape=(2, 4, 2),</span>
+<span class="sd">    ...                   axes_names=(&#39;left&#39;, &#39;input&#39;, &#39;right&#39;),</span>
+<span class="sd">    ...                   network=net)</span>
+<span class="sd">    ...          for _ in range(10)]</span>
+<span class="sd">    &gt;&gt;&gt; stack_node = tk.stack(nodes)</span>
+<span class="sd">    &gt;&gt;&gt; stack_node.shape</span>
+<span class="sd">    torch.Size([10, 2, 4, 2])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">stack_op</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span></div>
 
@@ -2960,6 +3595,12 @@ title="Source repository"
 <span class="sd">    If :meth:`~TensorNetwork.auto_unbind` is set to ``False``, each resultant</span>
 <span class="sd">    node will store its own tensor. Otherwise, they will have only a reference</span>
 <span class="sd">    to the corresponding slice of the ``(Param)StackNode``.</span>
+<span class="sd">    </span>
+<span class="sd">    See :class:`TensorNetwork` to learn how the ``auto_unbind`` mode affects</span>
+<span class="sd">    the computation of :func:`unbind`.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;unbind&quot;``. The node</span>
+<span class="sd">    that keeps information about the :class:`Successor` is ``node``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2969,6 +3610,36 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    list[Node]</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
+<span class="sd">    &gt;&gt;&gt; nodes = [tk.randn(shape=(2, 4, 2),</span>
+<span class="sd">    ...                   axes_names=(&#39;left&#39;, &#39;input&#39;, &#39;right&#39;),</span>
+<span class="sd">    ...                   network=net)</span>
+<span class="sd">    ...          for _ in range(10)]</span>
+<span class="sd">    &gt;&gt;&gt; data = [tk.randn(shape=(4,),</span>
+<span class="sd">    ...                  axes_names=(&#39;feature&#39;,),</span>
+<span class="sd">    ...                  network=net)</span>
+<span class="sd">    ...         for _ in range(10)]</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; for i in range(10):</span>
+<span class="sd">    ...     _ = nodes[i][&#39;input&#39;] ^ data[i][&#39;feature&#39;]</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; stack_nodes = tk.stack(nodes)</span>
+<span class="sd">    &gt;&gt;&gt; stack_data = tk.stack(data)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; # It is necessary to re-connect stacks</span>
+<span class="sd">    &gt;&gt;&gt; _ = stack_nodes[&#39;input&#39;] ^ stack_data[&#39;feature&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.unbind(stack_nodes @ stack_data)</span>
+<span class="sd">    &gt;&gt;&gt; print(result[0].name)</span>
+<span class="sd">    unbind_0</span>
+
+<span class="sd">    &gt;&gt;&gt; result[0].axes</span>
+<span class="sd">    [Axis( left (0) ), Axis( right (1) )]</span>
+
+<span class="sd">    &gt;&gt;&gt; result[0].shape</span>
+<span class="sd">    torch.Size([2, 2])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">unbind_op</span><span class="p">(</span><span class="n">node</span><span class="p">)</span></div>
 
@@ -3176,6 +3847,10 @@ title="Source repository"
 <span class="sd">    first checked. Thus, it verifies that all edges are correctly connected and</span>
 <span class="sd">    all nodes are in the same network. It also performs batch contraction</span>
 <span class="sd">    whenever corresponding edges are batch edges.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;einsum&quot;``. The node</span>
+<span class="sd">    that keeps information about the :class:`Successor` is ``nodes[0]``, the</span>
+<span class="sd">    first node involved in the operation.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -3199,6 +3874,26 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeA&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(15, 7, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeB&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeC = tk.randn(shape=(7, 10, 100),</span>
+<span class="sd">    ...                  axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeC&#39;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;right&#39;] ^ nodeB[&#39;left&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeB[&#39;right&#39;] ^ nodeC[&#39;left&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeC[&#39;right&#39;] ^ nodeA[&#39;left&#39;]</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.einsum(&#39;ijb,jkb,kib-&gt;b&#39;, nodeA, nodeB, nodeC)</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([100])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">einsum_op</span><span class="p">(</span><span class="n">string</span><span class="p">,</span> <span class="o">*</span><span class="n">nodes</span><span class="p">)</span></div>
 
@@ -3210,7 +3905,7 @@ title="Source repository"
 <span class="sd">    Applies the same :func:`einsum` operation (same ``string``) to a sequence</span>
 <span class="sd">    of groups of nodes (all groups having the same amount of nodes, with the</span>
 <span class="sd">    same properties, etc.). That is, it stacks these groups of nodes into a</span>
-<span class="sd">    siongle collection of nodes that is then contracte via ``einsum``, and</span>
+<span class="sd">    single collection of nodes that is then contracted via :func:`einsum`, and</span>
 <span class="sd">    :func:`unbinded &lt;unbind&gt;` afterwards.</span>
 
 <span class="sd">    Parameters</span>
@@ -3234,6 +3929,37 @@ title="Source repository"
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    list[Node]</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
+<span class="sd">    &gt;&gt;&gt; nodesA = [tk.randn(shape=(10, 15, 100),</span>
+<span class="sd">    ...                    axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                    name=&#39;nodeA&#39;,</span>
+<span class="sd">    ...                    network=net)</span>
+<span class="sd">    ...           for _ in range(10)]</span>
+<span class="sd">    &gt;&gt;&gt; nodesB = [tk.randn(shape=(15, 7, 100),</span>
+<span class="sd">    ...                    axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                    name=&#39;nodeB&#39;,</span>
+<span class="sd">    ...                    network=net)</span>
+<span class="sd">    ...           for _ in range(10)]</span>
+<span class="sd">    &gt;&gt;&gt; nodesC = [tk.randn(shape=(7, 10, 100),</span>
+<span class="sd">    ...                    axes_names=(&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;),</span>
+<span class="sd">    ...                    name=&#39;nodeC&#39;,</span>
+<span class="sd">    ...                    network=net)</span>
+<span class="sd">    ...           for _ in range(10)]</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; for i in range(10):</span>
+<span class="sd">    ...     _ = nodesA[i][&#39;right&#39;] ^ nodesB[i][&#39;left&#39;]</span>
+<span class="sd">    ...     _ = nodesB[i][&#39;right&#39;] ^ nodesC[i][&#39;left&#39;]</span>
+<span class="sd">    ...     _ = nodesC[i][&#39;right&#39;] ^ nodesA[i][&#39;left&#39;]</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.stacked_einsum(&#39;ijb,jkb,kib-&gt;b&#39;, nodesA, nodesB, nodesC)</span>
+<span class="sd">    &gt;&gt;&gt; len(result)</span>
+<span class="sd">    10</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; result[0].shape</span>
+<span class="sd">    torch.Size([100])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">stacks_list</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">nodes_list</span> <span class="ow">in</span> <span class="n">nodes_lists</span><span class="p">:</span>

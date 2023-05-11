@@ -1,0 +1,550 @@
+Results of doctest builder run on 2023-05-11 23:58:37
+=====================================================
+
+Document: models
+----------------
+**********************************************************************
+File "../tensorkrowch/tn_models/mps.py", line ?, in default
+Failed example:
+    result = conv_mps(data)
+Exception raised:
+    Traceback (most recent call last):
+      File "/home/jose/anaconda3/envs/pytorch/lib/python3.8/doctest.py", line 1336, in __run
+        exec(compile(example.source, filename, "single",
+      File "<doctest default[2]>", line 1, in <module>
+        result = conv_mps(data)
+      File "/home/jose/anaconda3/envs/pytorch/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1130, in _call_impl
+        return forward_call(*input, **kwargs)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/tn_models/mps.py", line 1103, in forward
+        result = super().forward(patches, *args, **kwargs)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 4685, in forward
+        self.add_data(data=data)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 4484, in add_data
+        stack_node.tensor = data
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 587, in tensor
+        self.set_tensor(tensor)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 1366, in set_tensor
+        self._unrestricted_set_tensor(tensor=tensor,
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 1278, in _unrestricted_set_tensor
+        tensor = self._crop_tensor(tensor)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 1221, in _crop_tensor
+        raise ValueError(f'Cannot crop tensor if its size at axis {i}'
+    ValueError: Cannot crop tensor if its size at axis 0 is smaller than node's size
+**********************************************************************
+File "../tensorkrowch/tn_models/mps.py", line ?, in default
+Failed example:
+    print(result.shape)
+Expected:
+    torch.Size([20, 1, 1])
+Got:
+    torch.Size([20])
+**********************************************************************
+File "../tensorkrowch/tn_models/mps_layer.py", line ?, in default
+Failed example:
+    result = conv_mps_layer(data)
+Exception raised:
+    Traceback (most recent call last):
+      File "/home/jose/anaconda3/envs/pytorch/lib/python3.8/doctest.py", line 1336, in __run
+        exec(compile(example.source, filename, "single",
+      File "<doctest default[2]>", line 1, in <module>
+        result = conv_mps_layer(data)
+      File "/home/jose/anaconda3/envs/pytorch/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1130, in _call_impl
+        return forward_call(*input, **kwargs)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/tn_models/mps_layer.py", line 1528, in forward
+        result = super().forward(patches, *args, **kwargs)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 4685, in forward
+        self.add_data(data=data)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 4484, in add_data
+        stack_node.tensor = data
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 587, in tensor
+        self.set_tensor(tensor)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 1366, in set_tensor
+        self._unrestricted_set_tensor(tensor=tensor,
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 1278, in _unrestricted_set_tensor
+        tensor = self._crop_tensor(tensor)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 1221, in _crop_tensor
+        raise ValueError(f'Cannot crop tensor if its size at axis {i}'
+    ValueError: Cannot crop tensor if its size at axis 0 is smaller than node's size
+**********************************************************************
+File "../tensorkrowch/tn_models/mps_layer.py", line ?, in default
+Failed example:
+    print(result.shape)
+Expected:
+    torch.Size([20, 10, 1, 1])
+Got:
+    torch.Size([20, 10])
+**********************************************************************
+File "../tensorkrowch/tn_models/tree.py", line ?, in default
+Failed example:
+    result = conv_tree(data)
+Exception raised:
+    Traceback (most recent call last):
+      File "/home/jose/anaconda3/envs/pytorch/lib/python3.8/doctest.py", line 1336, in __run
+        exec(compile(example.source, filename, "single",
+      File "<doctest default[2]>", line 1, in <module>
+        result = conv_tree(data)
+      File "/home/jose/anaconda3/envs/pytorch/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1130, in _call_impl
+        return forward_call(*input, **kwargs)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/tn_models/tree.py", line 712, in forward
+        result = super().forward(patches, *args, **kwargs)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 4685, in forward
+        self.add_data(data=data)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 4484, in add_data
+        stack_node.tensor = data
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 587, in tensor
+        self.set_tensor(tensor)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 1366, in set_tensor
+        self._unrestricted_set_tensor(tensor=tensor,
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 1278, in _unrestricted_set_tensor
+        tensor = self._crop_tensor(tensor)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 1221, in _crop_tensor
+        raise ValueError(f'Cannot crop tensor if its size at axis {i}'
+    ValueError: Cannot crop tensor if its size at axis 0 is smaller than node's size
+**********************************************************************
+File "../tensorkrowch/tn_models/tree.py", line ?, in default
+Failed example:
+    print(result.shape)
+Expected:
+    torch.Size([20, 5, 1, 1])
+Got:
+    torch.Size([20, 2])
+**********************************************************************
+File "../tensorkrowch/tn_models/peps.py", line ?, in default
+Failed example:
+    result = conv_peps(data)
+Exception raised:
+    Traceback (most recent call last):
+      File "/home/jose/anaconda3/envs/pytorch/lib/python3.8/doctest.py", line 1336, in __run
+        exec(compile(example.source, filename, "single",
+      File "<doctest default[2]>", line 1, in <module>
+        result = conv_peps(data)
+      File "/home/jose/anaconda3/envs/pytorch/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1130, in _call_impl
+        return forward_call(*input, **kwargs)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/tn_models/peps.py", line 1288, in forward
+        result = super().forward(patches, *args, **kwargs)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 4685, in forward
+        self.add_data(data=data)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 4484, in add_data
+        stack_node.tensor = data
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 587, in tensor
+        self.set_tensor(tensor)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 1366, in set_tensor
+        self._unrestricted_set_tensor(tensor=tensor,
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 1278, in _unrestricted_set_tensor
+        tensor = self._crop_tensor(tensor)
+      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 1221, in _crop_tensor
+        raise ValueError(f'Cannot crop tensor if its size at axis {i}'
+    ValueError: Cannot crop tensor if its size at axis 0 is smaller than node's size
+**********************************************************************
+File "../tensorkrowch/tn_models/peps.py", line ?, in default
+Failed example:
+    print(result.shape)
+Expected:
+    torch.Size([20, 1, 1])
+Got:
+    torch.Size([20])
+**********************************************************************
+1 items had failures:
+   8 of  40 in default
+40 tests in 1 items.
+32 passed and 8 failed.
+***Test Failed*** 8 failures.
+
+Document: operations
+--------------------
+1 items passed all tests:
+ 139 tests in default
+139 tests in 1 items.
+139 passed and 0 failed.
+Test passed.
+
+Document: components
+--------------------
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.tensor
+Expected:
+    tensor([[-0.2799, -0.4383, -0.8387],
+            [ 1.6225, -0.3370, -1.2316]])
+Got:
+    tensor([[-1.0491, -0.1280, -0.4575],
+            [ 0.9306,  1.4404,  0.4437]])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.sum()
+Expected:
+    tensor(-1.5029)
+Got:
+    tensor(1.1801)
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.sum('left')
+Expected:
+    tensor([ 1.3427, -0.7752, -2.0704])
+Got:
+    tensor([-0.1185,  1.3124, -0.0138])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.tensor
+Expected:
+    tensor([[ 1.4005, -0.0521, -1.2091],
+            [ 1.9844,  0.3513, -0.5920]])
+Got:
+    tensor([[ 1.5402,  0.5938, -0.4137],
+            [-0.5678,  0.1812, -3.3952]])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.mean()
+Expected:
+    tensor(0.3139)
+Got:
+    tensor(-0.3436)
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.mean('left')
+Expected:
+    tensor([ 1.6925,  0.1496, -0.9006])
+Got:
+    tensor([ 0.4862,  0.3875, -1.9045])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.tensor
+Expected:
+    tensor([[ 0.2111, -0.9551, -0.7812],
+            [ 0.2254,  0.3381, -0.2461]])
+Got:
+    tensor([[ 0.2222,  1.0027,  0.6690],
+            [-0.5964,  0.6728, -1.6448]])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.std()
+Expected:
+    tensor(0.5567)
+Got:
+    tensor(0.9998)
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.std('left')
+Expected:
+    tensor([0.0101, 0.9145, 0.3784])
+Got:
+    tensor([0.5788, 0.2333, 1.6361])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.tensor
+Expected:
+    tensor([[ 1.5570,  1.8441, -0.0743],
+            [ 0.4572,  0.7592,  0.6356]])
+Got:
+    tensor([[ 0.8321, -0.6541, -0.3499],
+            [-0.3381,  0.5606,  1.5970]])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.norm()
+Expected:
+    tensor(2.6495)
+Got:
+    tensor(2.0546)
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node.norm(axis='left')
+Expected:
+    tensor([1.6227, 1.9942, 0.6399])
+Got:
+    tensor([0.8982, 0.8614, 1.6348])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node
+Expected:
+    Node(
+        name: my_node
+        tensor:
+                tensor([[[-1.2517, -1.8147],
+                         [-0.7997, -0.0440],
+                         [-0.2808,  0.3508],
+                         [-1.2380,  0.8859],
+                         [-0.3585,  0.8815]],
+                        [[-0.2898, -2.2775],
+                         [ 1.2856, -0.3222],
+                         [-0.8911, -0.4216],
+                         [ 0.0086,  0.2449],
+                         [-2.1998, -1.6295]]])
+        axes:
+                [left
+                 input
+                 right]
+        edges:
+                [my_node[left] <-> None
+                 my_node[input] <-> None
+                 my_node[right] <-> None])
+Got:
+    Node(
+     	name: my_node
+    	tensor:
+    		tensor([[[-0.6296,  0.4748],
+    		         [-0.2435,  0.2830],
+    		         [-1.0512, -0.1279],
+    		         [-0.0365, -0.3398],
+    		         [ 0.7900,  1.0573]],
+    		
+    		        [[ 0.9217, -1.4421],
+    		         [ 1.2229,  1.2669],
+    		         [ 0.1674, -0.0155],
+    		         [-0.8595,  0.1379],
+    		         [ 0.4404,  2.0454]]])
+    	axes:
+    		[left
+    		 input
+    		 right]
+    	edges:
+    		[my_node[left] <-> None
+    		 my_node[input] <-> None
+    		 my_node[right] <-> None])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node
+Expected:
+    Node(
+        name: node
+        tensor:
+                tensor([[[ 0.6545, -0.0445],
+                         [-0.9265, -0.2730],
+                         [-0.5069, -0.6524],
+                         [-0.8227, -1.1211],
+                         [ 0.2390,  0.9432]],
+                        [[ 0.8633,  0.4402],
+                         [-0.6982,  0.4461],
+                         [-0.0633, -0.9320],
+                         [ 1.6023,  0.5406],
+                         [ 0.3489, -0.3088]]])
+        axes:
+                [axis_0
+                 axis_1
+                 axis_2]
+        edges:
+                [node[axis_0] <-> None
+                 node[axis_1] <-> None
+                 node[axis_2] <-> None])
+Got:
+    Node(
+     	name: node
+    	tensor:
+    		tensor([[[ 0.2336,  0.2726],
+    		         [-0.7748,  1.1623],
+    		         [ 1.4629, -0.0427],
+    		         [-0.7519, -0.6945],
+    		         [-1.3793, -0.9597]],
+    		
+    		        [[-0.8849, -1.2603],
+    		         [-0.8400, -1.1610],
+    		         [ 2.7815,  0.0313],
+    		         [ 1.2125, -1.1907],
+    		         [-1.2366, -1.3669]]])
+    	axes:
+    		[axis_0
+    		 axis_1
+    		 axis_2]
+    	edges:
+    		[node[axis_0] <-> None
+    		 node[axis_1] <-> None
+    		 node[axis_2] <-> None])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    nodeA = nodeA.parameterize()
+Exception raised:
+    Traceback (most recent call last):
+      File "/home/jose/anaconda3/envs/pytorch/lib/python3.8/doctest.py", line 1336, in __run
+        exec(compile(example.source, filename, "single",
+      File "<doctest default[0]>", line 1, in <module>
+        nodeA = nodeA.parameterize()
+    NameError: name 'nodeA' is not defined
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node
+Expected:
+    ParamNode(
+        name: my_paramnode
+        tensor:
+                Parameter containing:
+                tensor([[[ 1.8090, -0.1371],
+                         [-0.0501, -1.0371],
+                         [ 1.4588, -0.8361],
+                         [-0.4974, -1.9957],
+                         [ 0.3760, -1.0412]],
+                        [[ 0.3393, -0.2503],
+                         [ 1.7752, -0.0188],
+                         [-0.9561, -0.0806],
+                         [-1.0465, -0.5731],
+                         [ 1.5021,  0.4181]]], requires_grad=True)
+        axes:
+                [left
+                 input
+                 right]
+        edges:
+                [my_paramnode[left] <-> None
+                 my_paramnode[input] <-> None
+                 my_paramnode[right] <-> None])
+Got:
+    ParamNode(
+     	name: my_paramnode
+    	tensor:
+    		Parameter containing:
+    		tensor([[[ 0.5803, -1.7584],
+    		         [ 0.2919, -1.2505],
+    		         [ 1.5796,  0.9242],
+    		         [ 0.8374,  0.6462],
+    		         [-0.9386, -0.1666]],
+    		
+    		        [[ 0.4627,  0.2177],
+    		         [ 1.0383, -2.5743],
+    		         [ 1.5824, -0.2317],
+    		         [ 0.0210, -0.0748],
+    		         [ 0.4547, -0.5256]]], requires_grad=True)
+    	axes:
+    		[left
+    		 input
+    		 right]
+    	edges:
+    		[my_paramnode[left] <-> None
+    		 my_paramnode[input] <-> None
+    		 my_paramnode[right] <-> None])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node
+Expected:
+    ParamNode(
+        name: paramnode
+        tensor:
+                Parameter containing:
+                tensor([[[-0.8442,  1.4184],
+                         [ 0.4431, -1.4385],
+                         [-0.5161, -0.6492],
+                         [ 0.2095,  0.5760],
+                         [-0.9925, -1.5797]],
+                        [[-0.8649, -0.5401],
+                         [-0.1091,  1.1654],
+                         [-0.3821, -0.2477],
+                         [-0.7688, -2.4731],
+                         [-0.0234,  0.9618]]], requires_grad=True)
+        axes:
+                [axis_0
+                 axis_1
+                 axis_2]
+        edges:
+                [paramnode[axis_0] <-> None
+                 paramnode[axis_1] <-> None
+                 paramnode[axis_2] <-> None])
+Got:
+    ParamNode(
+     	name: paramnode
+    	tensor:
+    		Parameter containing:
+    		tensor([[[ 1.4446, -2.8728],
+    		         [-0.6466,  1.1010],
+    		         [ 2.1601,  0.4951],
+    		         [-0.3621, -0.3322],
+    		         [-1.0443,  1.9657]],
+    		
+    		        [[-0.7869, -0.6348],
+    		         [-1.4473,  0.0267],
+    		         [-0.6340,  0.4477],
+    		         [ 0.8521, -1.1114],
+    		         [-0.4908, -0.4750]]], requires_grad=True)
+    	axes:
+    		[axis_0
+    		 axis_1
+    		 axis_2]
+    	edges:
+    		[paramnode[axis_0] <-> None
+    		 paramnode[axis_1] <-> None
+    		 paramnode[axis_2] <-> None])
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    paramnode.tensor
+Expected:
+    Parameter containing:
+    tensor([[-0.3340,  0.6811, -0.2866],
+            [ 1.3371,  1.4761,  0.6551]], requires_grad=True)
+Got:
+    Parameter containing:
+    tensor([[ 0.0921, -1.2261, -1.1645],
+            [-0.0050,  1.7048,  0.7441]], requires_grad=True)
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    paramnodeA = paramnodeA.parameterize()
+Exception raised:
+    Traceback (most recent call last):
+      File "/home/jose/anaconda3/envs/pytorch/lib/python3.8/doctest.py", line 1336, in __run
+        exec(compile(example.source, filename, "single",
+      File "<doctest default[0]>", line 1, in <module>
+        paramnodeA = paramnodeA.parameterize()
+    NameError: name 'paramnodeA' is not defined
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    node = node.copy()  # .copy() calls to .delete_node()
+Exception raised:
+    Traceback (most recent call last):
+      File "/home/jose/anaconda3/envs/pytorch/lib/python3.8/doctest.py", line 1336, in __run
+        exec(compile(example.source, filename, "single",
+      File "<doctest default[0]>", line 1, in <module>
+        node = node.copy()  # .copy() calls to .delete_node()
+    NameError: name 'node' is not defined
+**********************************************************************
+File "../tensorkrowch/components.py", line ?, in default
+Failed example:
+    net['data_0']
+Expected:
+    Node(
+        name: data_0
+        tensor:
+                None
+        axes:
+                [batch
+                 feature]
+        edges:
+                [data_0[batch] <-> None
+                 data_0[feature] <-> nodeA[input]])
+Got:
+    Node(
+     	name: data_0
+    	tensor:
+    		None
+    	axes:
+    		[batch
+    		 feature]
+    	edges:
+    		[data_0[batch] <-> None
+    		 data_0[feature] <-> nodeA[input]])
+**********************************************************************
+1 items had failures:
+  21 of 322 in default
+322 tests in 1 items.
+301 passed and 21 failed.
+***Test Failed*** 21 failures.
+
+Doctest summary
+===============
+  501 tests
+   29 failures in tests
+    0 failures in setup code
+    0 failures in cleanup code

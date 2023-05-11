@@ -5,6 +5,10 @@ Initializers
 
 .. currentmodule:: tensorkrowch
 
+empty
+^^^^^
+.. autofunction:: empty
+
 zeros
 ^^^^^
 .. autofunction:: zeros

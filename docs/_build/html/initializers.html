@@ -41,7 +41,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Embeddings" href="embeddings.html" />
-    <link rel="prev" title="Components" href="components.html" />
+    <link rel="prev" title="Models" href="models.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -191,16 +191,6 @@
      Components
     </a>
    </li>
-   <li class="toctree-l2 current active">
-    <a class="current reference internal" href="#">
-     Initializers
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="embeddings.html">
-     Embeddings
-    </a>
-   </li>
    <li class="toctree-l2">
     <a class="reference internal" href="operations.html">
      Operations
@@ -209,6 +199,16 @@
    <li class="toctree-l2">
     <a class="reference internal" href="models.html">
      Models
+    </a>
+   </li>
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="embeddings.html">
+     Embeddings
     </a>
    </li>
   </ul>
@@ -359,6 +359,11 @@ title="Print to PDF"
     <nav id="bd-toc-nav" aria-label="Page">
         <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#empty">
+   empty
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#zeros">
    zeros
   </a>
@@ -403,6 +408,11 @@ title="Print to PDF"
                         <nav aria-label="Page">
                             <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#empty">
+   empty
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#zeros">
    zeros
   </a>
@@ -439,6 +449,34 @@ title="Print to PDF"
                 
   <section id="initializers">
 <span id="id1"></span><h1>Initializers<a class="headerlink" href="#initializers" title="Permalink to this headline">#</a></h1>
+<section id="empty">
+<h2>empty<a class="headerlink" href="#empty" title="Permalink to this headline">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.empty">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">empty</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/initializers.html#empty"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.empty" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns <a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> without tensor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>]</em><em>, </em><em>torch.Size</em>) – Node’s shape, that is, the shape of its tensor.</p></li>
+<li><p><strong>axes_names</strong> (<em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – Sequence of names for each of the node’s axes. Names are used to access
+the edge that is attached to the node in a certain axis. Hence they
+should be all distinct.</p></li>
+<li><p><strong>name</strong> (<em>str</em><em>, </em><em>optional</em>) – Node’s name, used to access the node from de <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>
+where it belongs. It cannot contain blank spaces.</p></li>
+<li><p><strong>network</strong> (<a class="reference internal" href="components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><em>TensorNetwork</em></a><em>, </em><em>optional</em>) – Tensor network where the node should belong. If None, a new tensor
+network, will be created to contain the node.</p></li>
+<li><p><strong>param_node</strong> (<em>bool</em>) – Boolean indicating whether the node should be a <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a>
+(<code class="docutils literal notranslate"><span class="pre">True</span></code>) or a <a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a> or <a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode">ParamNode</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
 <section id="zeros">
 <h2>zeros<a class="headerlink" href="#zeros" title="Permalink to this headline">#</a></h2>
 <dl class="py function">
@@ -598,11 +636,11 @@ network, will be created to contain the node.</p></li>
                 
     <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-    <a class='left-prev' id="prev-link" href="components.html" title="previous page">
+    <a class='left-prev' id="prev-link" href="models.html" title="previous page">
         <i class="fas fa-angle-left"></i>
         <div class="prev-next-info">
             <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">Components</p>
+            <p class="prev-next-title">Models</p>
         </div>
     </a>
     <a class='right-next' id="next-link" href="embeddings.html" title="next page">

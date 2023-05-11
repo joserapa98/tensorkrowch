@@ -3816,7 +3816,7 @@ class TensorNetwork(nn.Module):
         """Updates a single node's name, without taking care of the other names."""
         # Node is ParamNode and tensor is not None
         if isinstance(node.tensor, Parameter):
-            delattr(self, 'param_' + node._name)
+            delattr(self, '_'.join(['param', node._name]))
         for edge in node._edges:
             if edge.is_attached_to(node):
                 self._remove_edge(edge)
@@ -3825,9 +3825,10 @@ class TensorNetwork(nn.Module):
         node._name = new_name
 
         if isinstance(node.tensor, Parameter):
-            if not hasattr(self, 'param_' + node.name):
+            if not hasattr(self, '_'.join(['param', node._name])):
                 self.register_parameter(
-                    'param_' + node._name, self._memory_nodes[node._name])
+                    '_'.join(['param', node._name]),
+                    self._memory_nodes[node._name])
             else:
                 # Nodes names are never repeated, so it is likely that
                 # this case will never occur
@@ -3866,7 +3867,7 @@ class TensorNetwork(nn.Module):
           **Result**: ["my_node_0", "my_node_1"(new node)]
 
         To add a custom enumeration to keep track of the nodes of the network
-        in a used-defined way, one may use brackets or parenthesis.
+        in a user-defined way, one may use brackets or parenthesis.
 
         * **New node's name**: "my_node_(0)"
           **Network's nodes' names**: ["my_node"]
@@ -3896,9 +3897,9 @@ class TensorNetwork(nn.Module):
             count = self._repeated_nodes_names[non_enum_prev_name]
             if count == 1:
                 aux_node = self.nodes[non_enum_prev_name]
-                aux_new_name = non_enum_prev_name + '_0'
+                aux_new_name = '_'.join([non_enum_prev_name, '0'])
                 self._update_node_name(aux_node, aux_new_name)
-            new_name = non_enum_prev_name + '_' + str(count)
+            new_name = '_'.join([non_enum_prev_name, str(count)])
         else:
             new_name = non_enum_prev_name
             self._repeated_nodes_names[non_enum_prev_name] = 0
@@ -3927,9 +3928,10 @@ class TensorNetwork(nn.Module):
 
         # Node is ParamNode and tensor is not None
         if isinstance(node.tensor, Parameter):
-            if not hasattr(self, 'param_' + node._name):
+            if not hasattr(self, '_'.join(['param', node._name])):
                 self.register_parameter(
-                    'param_' + node._name, self._memory_nodes[node._name])
+                    '_'.join(['param', node._name]),
+                    self._memory_nodes[node._name])
             else:
                 # Nodes names are never repeated, so it is likely that
                 # this case will never occur
@@ -3969,7 +3971,7 @@ class TensorNetwork(nn.Module):
         """
         # Node is ParamNode and tensor is not None
         if isinstance(node.tensor, Parameter):
-            delattr(self, 'param_' + node._name)
+            delattr(self, '_'.join(['param', node._name]))
         for edge in node._edges:
             if edge.is_attached_to(node):
                 self._remove_edge(edge)
@@ -3980,8 +3982,8 @@ class TensorNetwork(nn.Module):
             if count > 1:
                 enum = int(node.name.split('_')[-1])
                 for i in range(enum + 1, count):
-                    aux_prev_name = non_enum_prev_name + '_' + str(i)
-                    aux_new_name = non_enum_prev_name + '_' + str(i - 1)
+                    aux_prev_name = '_'.join([non_enum_prev_name, str(i)])
+                    aux_new_name = '_'.join([non_enum_prev_name, str(i - 1)])
                     aux_node = self.nodes[aux_prev_name]
                     self._update_node_name(aux_node, aux_new_name)
 
@@ -3991,7 +3993,7 @@ class TensorNetwork(nn.Module):
             del self._repeated_nodes_names[non_enum_prev_name]
         elif count == 1:
             if move_names:
-                aux_prev_name = non_enum_prev_name + '_0'
+                aux_prev_name = '_'.join([non_enum_prev_name, '0'])
                 aux_new_name = non_enum_prev_name
                 aux_node = self.nodes[aux_prev_name]
                 self._update_node_name(aux_node, aux_new_name)

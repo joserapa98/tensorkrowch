@@ -4507,7 +4507,7 @@ class TestStackUnbind:
             input_edges += [node['input_0'], node['input_1']]
 
         net.set_data_nodes(input_edges, 1)
-        data = torch.randn(2 * 5, 10, 3)
+        data = torch.randn(100, 2 * 5, 3)
         net.add_data(data)
 
         stack_node = tk.stack(nodes)
@@ -4604,7 +4604,7 @@ class TestStackUnbind:
             input_edges += [node['input_0'], node['input_1']]
 
         net.set_data_nodes(input_edges, 1)
-        data = torch.randn(2 * 5, 10, 3)
+        data = torch.randn(100, 2 * 5, 3)
         net.add_data(data)
 
         stack_node = tk.stack(nodes)
@@ -4617,14 +4617,14 @@ class TestStackUnbind:
 
         stack_result = tk.einsum(
             'sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
-        assert stack_result.shape == (5, 10, 2)
+        assert stack_result.shape == (5, 100, 2)
 
         unbinded_nodes = tk.unbind(stack_result)
         assert len(unbinded_nodes) == 5
-        assert unbinded_nodes[0].shape == (10, 2)
+        assert unbinded_nodes[0].shape == (100, 2)
 
         second_stack = tk.stack(unbinded_nodes[0::2])
-        assert second_stack.shape == (3, 10, 2)
+        assert second_stack.shape == (3, 100, 2)
 
         # Repeat operations second time
         stack_node = tk.stack(nodes)
@@ -4637,14 +4637,14 @@ class TestStackUnbind:
 
         stack_result = tk.einsum(
             'sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
-        assert stack_result.shape == (5, 10, 2)
+        assert stack_result.shape == (5, 100, 2)
 
         nodes = tk.unbind(stack_result)
         assert len(nodes) == 5
-        assert nodes[0].shape == (10, 2)
+        assert nodes[0].shape == (100, 2)
 
         second_stack = tk.stack(unbinded_nodes[0::2])
-        assert second_stack.shape == (3, 10, 2)
+        assert second_stack.shape == (3, 100, 2)
 
     def test_einsum_with_paramstacks(self):
         net = tk.TensorNetwork()
@@ -4659,7 +4659,7 @@ class TestStackUnbind:
             nodes.append(node)
             input_edges += [node['input_0'], node['input_1']]
         net.set_data_nodes(input_edges, 1)
-        data = torch.randn(2 * 5, 10, 3)
+        data = torch.randn(100, 2 * 5, 3)
         net.add_data(data)
 
         net._contracting = True
@@ -4673,14 +4673,14 @@ class TestStackUnbind:
 
         stack_result = tk.einsum(
             'sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
-        assert stack_result.shape == (5, 10, 2)
+        assert stack_result.shape == (5, 100, 2)
 
         unbinded_nodes = tk.unbind(stack_result)
         assert len(unbinded_nodes) == 5
-        assert unbinded_nodes[0].shape == (10, 2)
+        assert unbinded_nodes[0].shape == (100, 2)
 
         second_stack = tk.stack(unbinded_nodes[0::2])
-        assert second_stack.shape == (3, 10, 2)
+        assert second_stack.shape == (3, 100, 2)
 
         # Repeat operations second time
         stack_node = tk.stack(nodes)
@@ -4693,14 +4693,14 @@ class TestStackUnbind:
 
         stack_result = tk.einsum(
             'sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
-        assert stack_result.shape == (5, 10, 2)
+        assert stack_result.shape == (5, 100, 2)
 
         nodes = tk.unbind(stack_result)
         assert len(nodes) == 5
-        assert nodes[0].shape == (10, 2)
+        assert nodes[0].shape == (100, 2)
 
         second_stack = tk.stack(unbinded_nodes[0::2])
-        assert second_stack.shape == (3, 10, 2)
+        assert second_stack.shape == (3, 100, 2)
 
     def test_einsum_autoconnect_stacks(self):
         # If stack edges are not connected, but they should,
@@ -4717,7 +4717,7 @@ class TestStackUnbind:
             nodes.append(node)
             input_edges += [node['input_0'], node['input_1']]
         net.set_data_nodes(input_edges, 1)
-        data = torch.randn(2 * 5, 10, 3)
+        data = torch.randn(100, 2 * 5, 3)
         net.add_data(data)
 
         stack_node = tk.stack(nodes)
@@ -4729,11 +4729,11 @@ class TestStackUnbind:
 
         stack_result = tk.einsum(
             'sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
-        assert stack_result.shape == (5, 10, 2)
+        assert stack_result.shape == (5, 100, 2)
 
         nodes = tk.unbind(stack_result)
         assert len(nodes) == 5
-        assert nodes[0].shape == (10, 2)
+        assert nodes[0].shape == (100, 2)
 
         # Error is raised if the nodes' edges were not previously connected
         net = tk.TensorNetwork()
@@ -4967,7 +4967,7 @@ class TestEinsum:
                        network=net,
                        init_method='randn')
         net.set_data_nodes(node.edges[:-1], 1)
-        data = torch.randn(4, 10, 5)
+        data = torch.randn(10, 4, 5)
         net.add_data(data)
 
         out_node = tk.einsum('ijklm,bi,bj,bk,bl->bm', *
@@ -4981,7 +4981,7 @@ class TestEinsum:
                             network=net,
                             init_method='randn')
         net.set_data_nodes(node.edges[:-1], 1)
-        data = torch.randn(4, 10, 5)
+        data = torch.randn(10, 4, 5)
         net.add_data(data)
 
         out_node = tk.einsum('ijklm,bi,bj,bk,bl->bm', *
@@ -5009,7 +5009,7 @@ class TestEinsum:
         net['node_10']['right'] ^ net['node_0']['left']
 
         net.set_data_nodes(input_edges, 1)
-        data = torch.randn(10, 10, 5)
+        data = torch.randn(100, 10, 5)
         net.add_data(data)
 
         result_list = tk.stacked_einsum('lir,bi->lbr', nodes[:5] + nodes[6:],
@@ -5019,7 +5019,7 @@ class TestEinsum:
         node1 = result_list[0]
         for i in range(1, 11):
             node1 @= result_list[i]
-        assert node1.shape == (10, 5)
+        assert node1.shape == (100, 5)
 
         node2 = result_list[0]
         for i in range(1, 5):
@@ -5029,7 +5029,7 @@ class TestEinsum:
             node2 = tk.einsum('lbor,rbs->lbos', node2, result_list[i])
         node2 = tk.einsum('lbol->bo', node2)
 
-        assert node2.shape == (10, 5)
+        assert node2.shape == (100, 5)
         assert torch.allclose(node1.tensor, node2.tensor)
 
     def test_aux(self):
@@ -5046,7 +5046,7 @@ class TestEinsum:
         node1['right'] ^ node2['left']
 
         net.set_data_nodes([node1['input'], node2['input']], 1)
-        data = torch.randn(2, 10, 5)
+        data = torch.randn(100, 2, 5)
         net.add_data(data)
 
         result_list = tk.stacked_einsum('lir,bi->lbr', [node1, node2],
@@ -5077,7 +5077,7 @@ class TestEinsum:
         net['paramnode_10']['right'] ^ net['paramnode_0']['left']
 
         net.set_data_nodes(input_edges, 1)
-        data = torch.randn(10, 10, 5)
+        data = torch.randn(100, 10, 5)
         net.add_data(data)
 
         result_list = tk.stacked_einsum('lir,bi->lbr', nodes[:5] + nodes[6:],
@@ -5087,7 +5087,7 @@ class TestEinsum:
         node1 = result_list[0]
         for i in range(1, 11):
             node1 @= result_list[i]
-        assert node1.shape == (10, 5)
+        assert node1.shape == (100, 5)
 
         node2 = result_list[0]
         for i in range(1, 5):
@@ -5097,7 +5097,7 @@ class TestEinsum:
             node2 = tk.einsum('lbor,rbs->lbos', node2, result_list[i])
         node2 = tk.einsum('lbol->bo', node2)
 
-        assert node2.shape == (10, 5)
+        assert node2.shape == (100, 5)
         assert torch.allclose(node1.tensor, node2.tensor, atol=1e-7, rtol=1e-3)
 
 
@@ -5228,7 +5228,7 @@ class TestTNModels:
         image = embedding(image)
         image = image.to(device)
         image = image.view(
-            500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
+            500, 3, image_size[0] * image_size[1]).transpose(1, 2)
 
         mps.auto_stack = True
         mps.auto_unbind = False
@@ -5258,7 +5258,7 @@ class TestTNModels:
         image = embedding(image)
         image = image.to(device)
         image = image.view(
-            500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
+            500, 3, image_size[0] * image_size[1]).transpose(1, 2)
 
         mps.auto_stack = True
         mps.auto_unbind = False
@@ -5481,7 +5481,7 @@ class TestTNModels:
         image = embedding(image)
         image = image.to(device)
         image = image.view(
-            500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
+            500, 3, image_size[0] * image_size[1]).transpose(1, 2)
 
         peps.auto_stack = True
         peps.auto_unbind = False
@@ -5511,7 +5511,7 @@ class TestTNModels:
         image = embedding(image)
         image = image.to(device)
         image = image.view(
-            500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
+            500, 3, image_size[0] * image_size[1]).transpose(1, 2)
 
         peps.auto_stack = True
         peps.auto_unbind = False
@@ -5555,8 +5555,8 @@ class TestTNModels:
         patches = patches.view((*patches.shape[:-2], -1))
         print(patches.shape)  # batch_size, nb_windows, channels, num_input
 
-        patches = patches.permute(3, 0, 1, 2)
-        print(patches.shape)  # num_input, batch_size, nb_windows, channels
+        patches = patches.transpose(2, 3)
+        print(patches.shape)  # batch_size, nb_windows, num_input, channels
 
         class ConvNode(tk.TensorNetwork):
 
@@ -5745,8 +5745,8 @@ class TestTNModels:
                     *patches.shape[:-1], self.in_channels, -1)
                 # batch_size x nb_windows x in_channels x nb_pixels
 
-                patches = patches.permute(3, 0, 1, 2)
-                # nb_pixels x batch_size x nb_windows x in_channels
+                patches = patches.transpose(2, 3)
+                # batch_size x nb_windows x nb_pixels x in_channels
 
                 result = self.nodelayer(patches)
                 # batch_size x nb_windows x out_channels

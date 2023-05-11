@@ -374,15 +374,16 @@ title="Source repository"
 
 <div class="viewcode-block" id="Operation"><a class="viewcode-back" href="../../operations.html#tensorkrowch.Operation">[docs]</a><span class="k">class</span> <span class="nc">Operation</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Class for node operations. A node operation is made up of two functions,</span>
-<span class="sd">    the one that is executed the first time the operation is called (with the</span>
-<span class="sd">    same arguments) and the one that is executed in every other call. Both</span>
-<span class="sd">    functions are usually similar, though the former computes extra things</span>
-<span class="sd">    regarding the creation of the resultant nodes and some auxilliary operations</span>
-<span class="sd">    whose result will be the same in every call (e.g. when contracting two nodes,</span>
-<span class="sd">    maybe a permutation of the tensors should be first performed; how this</span>
-<span class="sd">    permutation is carried out is always the same, though the tensors themselves</span>
-<span class="sd">    are different).</span>
+<span class="sd">    Class for node operations.</span>
+<span class="sd">    </span>
+<span class="sd">    A node operation is made up of two functions, the one that is executed the</span>
+<span class="sd">    first time the operation is called and the one that is executed in every</span>
+<span class="sd">    other call (with the same arguments). Both functions are usually similar,</span>
+<span class="sd">    though the former computes extra things regarding the creation of the</span>
+<span class="sd">    ``resultant`` nodes and some auxilliary operations whose result will be the</span>
+<span class="sd">    same in every call (e.g. when contracting two nodes, maybe a permutation of</span>
+<span class="sd">    the tensors should be first performed; how this permutation is carried out</span>
+<span class="sd">    is always the same, though the tensors themselves are different).</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>

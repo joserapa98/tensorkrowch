@@ -903,15 +903,15 @@ performed when both nodes have batch edges with the same names.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.Operation">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Operation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_first</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#Operation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Operation" title="Permalink to this definition">#</a></dt>
-<dd><p>Class for node operations. A node operation is made up of two functions,
-the one that is executed the first time the operation is called (with the
-same arguments) and the one that is executed in every other call. Both
-functions are usually similar, though the former computes extra things
-regarding the creation of the resultant nodes and some auxilliary operations
-whose result will be the same in every call (e.g. when contracting two nodes,
-maybe a permutation of the tensors should be first performed; how this
-permutation is carried out is always the same, though the tensors themselves
-are different).</p>
+<dd><p>Class for node operations.</p>
+<p>A node operation is made up of two functions, the one that is executed the
+first time the operation is called and the one that is executed in every
+other call (with the same arguments). Both functions are usually similar,
+though the former computes extra things regarding the creation of the
+<code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes and some auxilliary operations whose result will be the
+same in every call (e.g. when contracting two nodes, maybe a permutation of
+the tensors should be first performed; how this permutation is carried out
+is always the same, though the tensors themselves are different).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -927,7 +927,7 @@ Operation names can be checked via <code class="docutils literal notranslate"><s
 
 </section>
 <section id="tensor-like-operations">
-<h2>Tensor-like Operations<a class="headerlink" href="#tensor-like-operations" title="Permalink to this headline">#</a></h2>
+<span id="tensor-like"></span><h2>Tensor-like Operations<a class="headerlink" href="#tensor-like-operations" title="Permalink to this headline">#</a></h2>
 <section id="permute">
 <h3>permute<a class="headerlink" href="#permute" title="Permalink to this headline">#</a></h3>
 <dl class="py function">

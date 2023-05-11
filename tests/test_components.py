@@ -2232,21 +2232,34 @@ class TestTensorNetwork:
             input_edges.append(net[f'node_{i}']['input'])
         net.set_data_nodes(input_edges, 1)
 
-        # data shape = n_features x batch_dim x feature_dim
-        data = torch.randn(2, 10, 5)
+        # data shape = batch_dim x n_features x feature_dim
+        data = torch.randn(10, 2, 5)
         net.add_data(data)
-        assert torch.equal(net.data_nodes['data_0'].tensor, data[0, :, :])
-        assert torch.equal(net.data_nodes['data_1'].tensor, data[1, :, :])
-        assert torch.equal(net.nodes['stack_data_memory'].tensor, data)
+        assert torch.equal(net.data_nodes['data_0'].tensor, data[:, 0, :])
+        assert torch.equal(net.data_nodes['data_1'].tensor, data[:, 1, :])
+        assert torch.equal(net.nodes['stack_data_memory'].tensor,
+                           data.movedim(-2, 0))
+        
+        assert net.data_nodes['data_0'].shape == (10, 5)
+        assert net.data_nodes['data_1'].shape == (10, 5)
+        assert net.nodes['stack_data_memory'].shape == (2, 10, 5)
 
         # This causes no error, because the data tensor will be cropped to fit
         # the shape of the stack_data_memory node. It gives a warning
-        data = torch.randn(3, 10, 5)
+        data = torch.randn(10, 3, 5)
         net.add_data(data)
+        
+        assert net.data_nodes['data_0'].shape == (10, 5)
+        assert net.data_nodes['data_1'].shape == (10, 5)
+        assert net.nodes['stack_data_memory'].shape == (2, 10, 5)
 
         # This does not give warning, batch size can be changed as we wish
-        data = torch.randn(2, 100, 5)
+        data = torch.randn(100, 2, 5)
         net.add_data(data)
+        
+        assert net.data_nodes['data_0'].shape == (100, 5)
+        assert net.data_nodes['data_1'].shape == (100, 5)
+        assert net.nodes['stack_data_memory'].shape == (2, 100, 5)
 
         # Add data with no data nodes raises error
         net.unset_data_nodes()
@@ -2307,6 +2320,7 @@ class TestTensorNetwork:
         net.add_data(data)
         for i in range(4):
             assert torch.equal(net.data_nodes[f'data_{i}'].tensor, data[i])
+            assert net.data_nodes[f'data_{i}'].shape == data[i].shape
 
         # This does not raise error because indexing data[i] works
         # the same for lists or tensors where the "node" index is the
@@ -2379,6 +2393,188 @@ class TestTensorNetwork:
         assert len(net.leaf_nodes) == 3
         assert len(net.resultant_nodes) == 1
         assert len(net.edges) == 5
+        
+    def test_inverse_memory(self):
+        net = tk.TensorNetwork()
+        nodes = []
+        for i in range(4):
+            node = tk.Node(shape=(2, 5, 2),
+                           axes_names=('left', 'input', 'right'),
+                           name='node',
+                           network=net,
+                           init_method='randn')
+            nodes.append(node)
+
+        for i in range(3):
+            nodes[i]['right'] ^ nodes[i + 1]['left']
+            
+        input_edges = []
+        for node in nodes:
+            input_edges.append(node['input'])
+            
+        net.set_data_nodes(input_edges, 1)
+        
+        # Trace
+        net._tracing = True
+        net.add_data(torch.randn(100, 4, 5))
+        aux_nodes = [node @ node.neighbours('input') for node in nodes]
+        result1 = aux_nodes[0] @ aux_nodes[1]
+        result2 = aux_nodes[2] @ aux_nodes[3]
+        result = result1 @ result2
+        
+        # Repeat operations
+        net._tracing = False
+        net.add_data(torch.randn(100, 4, 5))
+        aux_nodes = [node @ node.neighbours('input') for node in nodes]
+        
+        # Memory in nodes should be still there
+        for node in nodes:
+            assert node.tensor is not None
+        
+        # Memory in data nodes should be consumed:
+        for data_node in list(net.data_nodes.values()):
+            assert data_node.tensor is None
+            assert net['stack_data_memory'].tensor is None
+        
+        result1 = aux_nodes[0] @ aux_nodes[1]
+        assert aux_nodes[0].tensor is None
+        assert aux_nodes[1].tensor is None
+        
+        result2 = aux_nodes[2] @ aux_nodes[3]
+        assert aux_nodes[2].tensor is None
+        assert aux_nodes[3].tensor is None
+        
+        result = result1 @ result2
+        assert result1.tensor is None
+        assert result2.tensor is None
+        
+    def test_inverse_memory_contract_data_stack(self):
+        net = tk.TensorNetwork()
+        nodes = []
+        for i in range(4):
+            node = tk.Node(shape=(2, 5, 2),
+                           axes_names=('left', 'input', 'right'),
+                           name='node',
+                           network=net,
+                           init_method='randn')
+            nodes.append(node)
+
+        for i in range(3):
+            nodes[i]['right'] ^ nodes[i + 1]['left']
+            
+        input_edges = []
+        for node in nodes:
+            input_edges.append(node['input'])
+            
+        net.set_data_nodes(input_edges, 1)
+        
+        # Trace
+        net._tracing = True
+        net.add_data(torch.randn(100, 4, 5))
+        
+        stack_nodes = tk.stack(nodes)
+        stack_data = tk.stack(list(net.data_nodes.values()))
+        stack_nodes['input'] ^ stack_data['feature']
+        aux_nodes = tk.unbind(stack_nodes @ stack_data)
+        
+        result1 = aux_nodes[0] @ aux_nodes[1]
+        result2 = aux_nodes[2] @ aux_nodes[3]
+        result = result1 @ result2
+        
+        # Repeat operations
+        net._tracing = False
+        net.add_data(torch.randn(100, 4, 5))
+        
+        stack_nodes = tk.stack(nodes)
+        stack_data = tk.stack(list(net.data_nodes.values()))
+        stack_nodes['input'] ^ stack_data['feature']
+        aux_nodes = tk.unbind(stack_nodes @ stack_data)
+        
+        # Memory in nodes should be still there
+        for node in nodes:
+            assert node.tensor is not None
+        
+        # Memory in data nodes should be consumed:
+        for data_node in list(net.data_nodes.values()):
+            assert data_node.tensor is None
+            assert net['stack_data_memory'].tensor is None
+        
+        result1 = aux_nodes[0] @ aux_nodes[1]
+        assert aux_nodes[0].tensor is None
+        assert aux_nodes[1].tensor is None
+        
+        result2 = aux_nodes[2] @ aux_nodes[3]
+        assert aux_nodes[2].tensor is None
+        assert aux_nodes[3].tensor is None
+        
+        result = result1 @ result2
+        assert result1.tensor is None
+        assert result2.tensor is None
+        
+    def test_inverse_memory_contract_data_stack_auto_stack(self):
+        net = tk.TensorNetwork()
+        nodes = []
+        for i in range(4):
+            node = tk.Node(shape=(2, 5, 2),
+                           axes_names=('left', 'input', 'right'),
+                           name='node',
+                           network=net,
+                           init_method='randn')
+            nodes.append(node)
+
+        for i in range(3):
+            nodes[i]['right'] ^ nodes[i + 1]['left']
+            
+        input_edges = []
+        for node in nodes:
+            input_edges.append(node['input'])
+            
+        net.set_data_nodes(input_edges, 1)
+        net.auto_stack = True
+        
+        # Trace
+        net._tracing = True
+        net.add_data(torch.randn(100, 4, 5))
+        
+        stack_nodes = tk.stack(nodes)
+        stack_data = tk.stack(list(net.data_nodes.values()))
+        stack_nodes['input'] ^ stack_data['feature']
+        aux_nodes = tk.unbind(stack_nodes @ stack_data)
+        
+        result1 = aux_nodes[0] @ aux_nodes[1]
+        result2 = aux_nodes[2] @ aux_nodes[3]
+        result = result1 @ result2
+        
+        # Repeat operations
+        net._tracing = False
+        net.add_data(torch.randn(100, 4, 5))
+        
+        stack_nodes = tk.stack(nodes)
+        stack_data = tk.stack(list(net.data_nodes.values()))
+        stack_nodes['input'] ^ stack_data['feature']
+        aux_nodes = tk.unbind(stack_nodes @ stack_data)
+        
+        # Memory in nodes should be still there
+        for node in nodes:
+            assert node.tensor is not None
+        
+        # Memory in data nodes should be consumed:
+        for data_node in list(net.data_nodes.values()):
+            assert data_node.tensor is None
+            assert net['stack_data_memory'].tensor is None
+        
+        result1 = aux_nodes[0] @ aux_nodes[1]
+        assert aux_nodes[0].tensor is None
+        assert aux_nodes[1].tensor is None
+        
+        result2 = aux_nodes[2] @ aux_nodes[3]
+        assert aux_nodes[2].tensor is None
+        assert aux_nodes[3].tensor is None
+        
+        result = result1 @ result2
+        assert result1.tensor is None
+        assert result2.tensor is None
+        
 
     def test_reset(self):
         net = tk.TensorNetwork(name='net')
@@ -2413,6 +2609,9 @@ class TestTensorNetwork:
         assert len(net.leaf_nodes) == 4
         assert len(net.resultant_nodes) == 0
         assert len(net.edges) == 6
+        
+    def test_trace(self):
+        pass
 
     def test_auto_stack(self):
         net = tk.TensorNetwork(name='net')

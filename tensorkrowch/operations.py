@@ -62,15 +62,16 @@ def copy_func(f):
 
 class Operation:
     """
-    Class for node operations. A node operation is made up of two functions,
-    the one that is executed the first time the operation is called (with the
-    same arguments) and the one that is executed in every other call. Both
-    functions are usually similar, though the former computes extra things
-    regarding the creation of the resultant nodes and some auxilliary operations
-    whose result will be the same in every call (e.g. when contracting two nodes,
-    maybe a permutation of the tensors should be first performed; how this
-    permutation is carried out is always the same, though the tensors themselves
-    are different).
+    Class for node operations.
+    
+    A node operation is made up of two functions, the one that is executed the
+    first time the operation is called and the one that is executed in every
+    other call (with the same arguments). Both functions are usually similar,
+    though the former computes extra things regarding the creation of the
+    ``resultant`` nodes and some auxilliary operations whose result will be the
+    same in every call (e.g. when contracting two nodes, maybe a permutation of
+    the tensors should be first performed; how this permutation is carried out
+    is always the same, though the tensors themselves are different).
 
     Parameters
     ----------

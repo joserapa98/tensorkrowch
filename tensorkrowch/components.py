@@ -1904,24 +1904,24 @@ class Node(AbstractNode):
     Node(
      	name: my_node
     	tensor:
-    		tensor([[[-1.2517, -1.8147],
-    		         [-0.7997, -0.0440],
-    		         [-0.2808,  0.3508],
-    		         [-1.2380,  0.8859],
-    		         [-0.3585,  0.8815]],
-    		        [[-0.2898, -2.2775],
-    		         [ 1.2856, -0.3222],
-    		         [-0.8911, -0.4216],
-    		         [ 0.0086,  0.2449],
-    		         [-2.1998, -1.6295]]])
+                tensor([[[-1.2517, -1.8147],
+                         [-0.7997, -0.0440],
+                         [-0.2808,  0.3508],
+                         [-1.2380,  0.8859],
+                         [-0.3585,  0.8815]],
+                        [[-0.2898, -2.2775],
+                         [ 1.2856, -0.3222],
+                         [-0.8911, -0.4216],
+                         [ 0.0086,  0.2449],
+                         [-2.1998, -1.6295]]])
     	axes:
-    		[left
-    		 input
-    		 right]
+                [left
+                 input
+                 right]
     	edges:
-    		[my_node[left] <-> None
-    		 my_node[input] <-> None
-    		 my_node[right] <-> None])
+                [my_node[left] <-> None
+                 my_node[input] <-> None
+                 my_node[right] <-> None])
     
     Also, one can use one of the :ref:`Initializers` to simplify:
     
@@ -1930,24 +1930,24 @@ class Node(AbstractNode):
     Node(
      	name: node
     	tensor:
-    		tensor([[[ 0.6545, -0.0445],
-    		         [-0.9265, -0.2730],
-    		         [-0.5069, -0.6524],
-    		         [-0.8227, -1.1211],
-    		         [ 0.2390,  0.9432]],
-    		        [[ 0.8633,  0.4402],
-    		         [-0.6982,  0.4461],
-    		         [-0.0633, -0.9320],
-    		         [ 1.6023,  0.5406],
-    		         [ 0.3489, -0.3088]]])
+                tensor([[[ 0.6545, -0.0445],
+                         [-0.9265, -0.2730],
+                         [-0.5069, -0.6524],
+                         [-0.8227, -1.1211],
+                         [ 0.2390,  0.9432]],
+                        [[ 0.8633,  0.4402],
+                         [-0.6982,  0.4461],
+                         [-0.0633, -0.9320],
+                         [ 1.6023,  0.5406],
+                         [ 0.3489, -0.3088]]])
     	axes:
-    		[axis_0
-    		 axis_1
-    		 axis_2]
+                [axis_0
+                 axis_1
+                 axis_2]
     	edges:
-    		[node[axis_0] <-> None
-    		 node[axis_1] <-> None
-    		 node[axis_2] <-> None])
+                [node[axis_0] <-> None
+                 node[axis_1] <-> None
+                 node[axis_2] <-> None])
     
     
     |
@@ -2173,25 +2173,25 @@ class ParamNode(AbstractNode):
     ParamNode(
      	name: my_paramnode
     	tensor:
-    		Parameter containing:
-    		tensor([[[ 1.8090, -0.1371],
-    		         [-0.0501, -1.0371],
-    		         [ 1.4588, -0.8361],
-    		         [-0.4974, -1.9957],
-    		         [ 0.3760, -1.0412]],
-    		        [[ 0.3393, -0.2503],
-    		         [ 1.7752, -0.0188],
-    		         [-0.9561, -0.0806],
-    		         [-1.0465, -0.5731],
-    		         [ 1.5021,  0.4181]]], requires_grad=True)
+                Parameter containing:
+                tensor([[[ 1.8090, -0.1371],
+                         [-0.0501, -1.0371],
+                         [ 1.4588, -0.8361],
+                         [-0.4974, -1.9957],
+                         [ 0.3760, -1.0412]],
+                        [[ 0.3393, -0.2503],
+                         [ 1.7752, -0.0188],
+                         [-0.9561, -0.0806],
+                         [-1.0465, -0.5731],
+                         [ 1.5021,  0.4181]]], requires_grad=True)
     	axes:
-    		[left
-    		 input
-    		 right]
+                [left
+                 input
+                 right]
     	edges:
-    		[my_paramnode[left] <-> None
-    		 my_paramnode[input] <-> None
-    		 my_paramnode[right] <-> None])
+                [my_paramnode[left] <-> None
+                 my_paramnode[input] <-> None
+                 my_paramnode[right] <-> None])
     
     Also, one can use one of the :ref:`Initializers` to simplify:
     
@@ -2201,25 +2201,25 @@ class ParamNode(AbstractNode):
     ParamNode(
      	name: paramnode
     	tensor:
-    		Parameter containing:
-    		tensor([[[-0.8442,  1.4184],
-    		         [ 0.4431, -1.4385],
-    		         [-0.5161, -0.6492],
-    		         [ 0.2095,  0.5760],
-    		         [-0.9925, -1.5797]],
-    		        [[-0.8649, -0.5401],
-    		         [-0.1091,  1.1654],
-    		         [-0.3821, -0.2477],
-    		         [-0.7688, -2.4731],
-    		         [-0.0234,  0.9618]]], requires_grad=True)
+                Parameter containing:
+                tensor([[[-0.8442,  1.4184],
+                         [ 0.4431, -1.4385],
+                         [-0.5161, -0.6492],
+                         [ 0.2095,  0.5760],
+                         [-0.9925, -1.5797]],
+                        [[-0.8649, -0.5401],
+                         [-0.1091,  1.1654],
+                         [-0.3821, -0.2477],
+                         [-0.7688, -2.4731],
+                         [-0.0234,  0.9618]]], requires_grad=True)
     	axes:
-    		[axis_0
-    		 axis_1
-    		 axis_2]
+                [axis_0
+                 axis_1
+                 axis_2]
     	edges:
-    		[paramnode[axis_0] <-> None
-    		 paramnode[axis_1] <-> None
-    		 paramnode[axis_2] <-> None])
+                [paramnode[axis_0] <-> None
+                 paramnode[axis_1] <-> None
+                 paramnode[axis_2] <-> None])
        
     
     |
@@ -3566,19 +3566,28 @@ class TensorNetwork(nn.Module):
 
     With ``TensorNetwork``, the workflow is similar, though there are other
     methods that should be overriden:
-
+    
     * ``__init__``: Defines the graph of the tensor network and initializes the
-      tensors of the nodes.
+      tensors of the nodes. See :class:`AbstractNode` and :class:`Edge` to learn
+      how to create nodes and connect them.
       
-    * ``set_data_nodes``: Creates the data nodes where the data tensor(s) will
-      be placed. Usually, it will just select the edges to which the data nodes
-      should be connected, and call the parent method :meth:`set_data_nodes`.
+    * ``set_data_nodes`` (optional): Creates the data nodes where the data
+      tensor(s) will be placed. Usually, it will just select the edges to which
+      the data nodes should be connected, and call the parent method. See
+      :meth:`set_data_nodes` to learn good practices to override it. See also
+      :meth:`add_data`.
+      
+    * ``add_data`` (optional): Adds new data tensors that will be stored in
+      ``data`` nodes. Usually it will not be necessary to override this method,
+      but if one wants to customize how data is set into the ``data`` nodes,
+      :meth:`add_data` can be overriden.
       
     * ``contract``: Defines the contraction algorithm of the whole tensor network,
       thus returning a single node. Very much like ``forward`` this is the main
       method that describes how the components of the network are combined.
       Hence, in ``TensorNetwork`` the :meth:`forward` method shall not be
-      overriden, since it will just call :meth:`contract`.
+      overriden, since it will just call :meth:`set_data_nodes`, if needed,
+      and :meth:`contract`.
       
     |
 
@@ -4208,7 +4217,9 @@ class TensorNetwork(nn.Module):
                      set_param: bool = True,
                      override: bool = False) -> 'TensorNetwork':
         """
-        Parameterizes all nodes of the network.
+        Parameterizes all ``leaf`` nodes of the network. If there are
+        ``resultant`` nodes in the :class:`TensorNetwork`, it will be first
+        :meth:`reset`.
 
         Parameters
         ----------
@@ -4219,69 +4230,291 @@ class TensorNetwork(nn.Module):
             Boolean indicating whether the tensor network should be parameterized
             in-place (``True``) or copied and then parameterized (``False``).
         """
-        if override:
-            net = self
-        else:
-            net = self.copy()
-
-        # TODO: reset always? care with what does parameterize, case uniform?
         if self._resultant_nodes:
             warnings.warn('Resultant nodes will be removed before parameterizing'
                           ' the TN')
             self.reset()
+            
+        if override:
+            net = self
+        else:
+            net = self.copy()
 
         for node in list(net._leaf_nodes.values()):
             node.parameterize(set_param)
 
         return net
 
-    def trace(self, example: Optional[Tensor] = None, *args, **kwargs) -> None:
+    def set_data_nodes(self,
+                       input_edges: Union[List[int], List[Edge]],
+                       num_batch_edges: int) -> None:
         """
-        Traces the tensor network contraction algorithm with two purposes:
+        Creates ``data`` nodes with as many batch edges as ``num_batch_edges``
+        and one feature edge. Then it connects each of these nodes' feature
+        edges to an edge from the list ``input_edges`` (following the provided
+        order). Thus, edges in ``input_edges`` need to be dangling. Also, if
+        there are already ``data`` nodes (or the ``"stack_data_memory"``) in
+        the network, they should be :meth:`unset` first.
 
-        * Create all the intermediate ``resultant`` nodes that result from
-          :class:`Operations <Operation>` so that in the next contractions only
-          the tensor-like operations have to be computed, thus saving a lot of time.
-
-        * Keep track of the tensors that are used to compute operations, so that
-          intermediate results that are not useful any more can be deleted, thus
-          saving a lot of memory. This is achieved by constructing an ``inverse_memory``
-          that, given a memory address, stores the nodes that use the tensor located
-          in that address.
-
-        To trace a tensor network, it is necessary to provide the same arguments
-        that would be required in the forward call. In case the tensor network
-        is contracted with some input data, an example tensor with batch dimension
-        1 and filled with zeros would be enough to trace the contraction.
+        If all the ``data`` nodes have the same shape, a ``virtual`` node will
+        contain all the tensors stacked in one, what will save some memory
+        and time in computations. This node is ``"stack_data_memory"``. See
+        :class:`AbstractNode` to learn more about this node.
+        
+        If this method is overriden in subclasses, it can be done in two
+        flavours:
+        
+        ::
+        
+            def set_data_nodes(self):
+                # Collect input edges
+                input_edges = [node_1[i], ..., node_n[j]]
+                
+                # Define number of batches
+                num_batch_edges = m
+                
+                # Call parent method
+                super().set_data_nodes(input, edges, num_batch_edges)
+                
+        ::
+        
+            def set_data_nodes(self):
+                # Create data nodes directly
+                data_nodes = [
+                    tk.Node(shape=(batch_1, ..., batch_m, feature_dim),
+                                   axes_names=('batch_1', ..., 'batch_m', 'feature')
+                                   network=self,
+                                   data=True)
+                    for _ in range(n)]
+                    
+                # Connect them with the leaf nodes
+                for i, data_node in enumerate(data_nodes):
+                    data_node['feature'] ^ self.my_nodes[i]['input']
+                    
+        If this method is overriden, there is no need to call it explicitly
+        during training, since it will be done in the :meth:`forward` call.
+        
+        On the other hand, if one does not override ``set_data_nodes``, it
+        should be called before starting training.
 
         Parameters
         ----------
-        example : torch.Tensor, optional
-            Example tensor used to trace the contraction of the tensor network.
-            In case the tensor network is contracted with some input data, an
-            example tensor with batch dimension 1 and filled with zeros would
-            be enough to trace the contraction.
-        args :
-            Arguments that might be used in :meth:`contract`.
-        kwargs :
-            Keyword arguments that might be used in :meth:`contract`.
+        input_edges : list[int] or list[Edge]
+            List of edges (or indices of :meth:`edges` if given as ``int``) to
+            which the ``data`` nodes' feature edges will be connected.
+        num_batch_edges : int
+            Number of batch edges in the ``data`` nodes.
+            
+        Example
+        -------
+        >>> nodeA = tk.Node(shape=(2, 5, 2),
+        ...                 axes_names=('left', 'input', 'right'),
+        ...                 name='nodeA',
+        ...                 init_method='randn')
+        >>> nodeB = tk.Node(shape=(2, 5, 2),
+        ...                 axes_names=('left', 'input', 'right'),
+        ...                 name='nodeB',
+        ...                 init_method='randn')
+        >>> nodeA['right'] ^ nodeB['left']
+        ...
+        >>> net = nodeA.network
+        >>> input_edges = [nodeA['input'], nodeB['input']]
+        >>> net.set_data_nodes(input_edges, 1)
+        >>> list(net.data_nodes.keys())
+        ['data_0', 'data_1']
+        
+        >>> net['data_0']
+        Node(
+            name: data_0
+            tensor:
+                    None
+            axes:
+                    [batch
+                     feature]
+            edges:
+                    [data_0[batch] <-> None
+                     data_0[feature] <-> nodeA[input]])
         """
-        self.reset()
+        if input_edges == []:
+            raise ValueError(
+                '`input_edges` is empty. '
+                'Cannot set data nodes if no edges are provided')
+        if self._data_nodes:
+            raise ValueError(
+                'Tensor network already has data nodes. These should be unset '
+                'in order to set new ones')
 
-        with torch.no_grad():
-            self._tracing = True
-            self(example, *args, **kwargs)
-            self._tracing = False
-            self(example, *args, **kwargs)
+        # "stack_data_memory" is only created if all the input edges
+        # have the same dimension
+        same_dim = True
+        for i in range(len(input_edges) - 1):
+            if input_edges[i].size() != input_edges[i + 1].size():
+                same_dim = False
+                break
 
+        if same_dim:
+            if 'stack_data_memory' not in self._virtual_nodes:
+                # If `same_dim`, all input_edges have the same feature dimension
+                
+                # 'n_features' is still in the first position because it is
+                # easier to index just the first position of the tensor,
+                # provided there might be several batch edges
+                stack_node = Node(shape=(len(input_edges),
+                                         *([1]*num_batch_edges),
+                                         input_edges[0].size()),
+                                  axes_names=('n_features',
+                                              *(['batch']*num_batch_edges),
+                                              'feature'),
+                                  name='stack_data_memory',
+                                  network=self,
+                                  virtual=True)
+            else:
+                raise ValueError(
+                    'Tensor network already has "stack_data_memory" node. '
+                    'Data nodes should be unset in order to set new ones')
+
+        data_nodes = []
+        for i, edge in enumerate(input_edges):
+            if isinstance(edge, int):
+                edge = self[edge]
+            elif isinstance(edge, Edge):
+                if edge not in self._edges:
+                    raise ValueError(
+                        f'Edge {edge!r} should be a dangling edge of the '
+                        'Tensor Network')
+            else:
+                raise TypeError(
+                    '`input_edges` should be list[int] or list[Edge] type')
+
+            node = Node(shape=(*([1]*num_batch_edges), edge.size()),
+                        axes_names=(*(['batch']*num_batch_edges), 'feature'),
+                        name='data',
+                        network=self,
+                        data=True)
+            node['feature'] ^ edge
+            data_nodes.append(node)
+
+        if same_dim:
+            # Use "stack_data_memory" tensor for all data nodes
+            for i, node in enumerate(data_nodes):
+                del self._memory_nodes[node._tensor_info['address']]
+                node._tensor_info['address'] = None
+                node._tensor_info['node_ref'] = stack_node
+                node._tensor_info['full'] = False
+                node._tensor_info['index'] = i
+
+    def unset_data_nodes(self) -> None:
+        """
+        Deletes all ``data`` nodes (including the ``"stack_data_memory"`` when
+        this node exists).
+        """
+        if self._data_nodes:
+            for node in list(self._data_nodes.values()):
+                self.delete_node(node, False)
+            self._data_nodes = dict()
+
+            if 'stack_data_memory' in self._virtual_nodes:
+                self.delete_node(self._virtual_nodes['stack_data_memory'])
+
+    def add_data(self, data: Union[Tensor, Sequence[Tensor]]) -> None:
+        r"""
+        Adds data tensor(s) to ``data`` nodes, that is, changes their tensors
+        by new data tensors when a new batch is provided.
+        
+        If all data nodes have the same shape, thus having its tensor stored in
+        ``"stack_data_memory"``, the whole data tensor will be stored by this
+        node. The ``data`` nodes will just store a reference to a slice of that
+        tensor.
+        
+        Otherwise, each tensor in the list (``data``) will be stored by each
+        ``data`` node in the network, in the order they appear in
+        :meth:`data_nodes`.
+        
+        If one wants to customize how data is set into the ``data`` nodes, this
+        method can be overriden.
+
+        Parameters
+        ----------
+        data : torch.Tensor or list[torch.Tensor]
+            If all data nodes have the same shape, thus having its tensor stored
+            in ``"stack_data_memory"``, ``data`` should be a tensor of shape
+            
+            .. math::
+                batch\_size_{0} \times ... \times batch\_size_{n} \times
+                n_{features} \times feature\_dim
+                
+            Otherwise, it should be a list with :math:`n_{features}` elements,
+            each of them being a tensor with shape
+            
+            .. math::
+                batch\_size_{0} \times ... \times batch\_size_{n} \times
+                feature\_dim
+                
+        Example
+        -------
+        >>> nodeA = tk.Node(shape=(3, 5, 3),
+        ...                 axes_names=('left', 'input', 'right'),
+        ...                 name='nodeA',
+        ...                 init_method='randn')
+        >>> nodeB = tk.Node(shape=(3, 5, 3),
+        ...                 axes_names=('left', 'input', 'right'),
+        ...                 name='nodeB',
+        ...                 init_method='randn')
+        >>> nodeA['right'] ^ nodeB['left']
+        ...
+        >>> net = nodeA.network
+        >>> input_edges = [nodeA['input'], nodeB['input']]
+        >>> net.set_data_nodes(input_edges, 1)
+        ...
+        >>> net.add_data(torch.randn(100, 2, 5))
+        >>> net['data_0'].shape
+        torch.Size([100, 5])
+        """
+
+        stack_node = self._virtual_nodes.get('stack_data_memory')
+
+        if stack_node is not None:
+            data = data.movedim(-2, 0)
+            stack_node.tensor = data
+            for i, data_node in enumerate(list(self._data_nodes.values())):
+                data_node._shape = data[i].shape
+        elif self._data_nodes:
+            for i, data_node in enumerate(list(self._data_nodes.values())):
+                data_node.tensor = data[i]
+        else:
+            raise ValueError('Cannot add data if no data nodes are set')
+        
     def reset(self):
         """
-        Resets the tensor network as it was before tracing, contracting or, in
-        general, performing any non-in-place :class:`Operation`. Hence, it deletes
-        all ``resultant`` and ``virtual`` nodes that are created when performing
-        an operation, and resets the ``memory_nodes`` of the network, so that
-        each node stores its corresponding tensor. Also, the lists of successors
-        of all ``leaf`` and ``data`` nodes are emptied.
+        Resets the :class:`TensorNetwork` to its initial state, before computing
+        any non-in-place :class:`Operation`. Different actions apply to different
+        types of nodes:
+        
+        * ``leaf``: These nodes retrieve their tensors in case they were just
+          referencing a slice of the tensor in the :class:`ParamStackNode` that
+          is created when :func:`stacking <stack>` :class:`ParamNodes <ParamNode>`
+          (if ``auto_stack`` mode is active). If there is a ``"virtual_uniform"``
+          node in the network from which all ``leaf`` nodes take their tensor,
+          this is not modified.
+          
+        * ``virtual``: Only virtual nodes created in :class:`operations
+          <Operation>` are :meth:`deleted <delete_node>`. This only includes
+          nodes using the reserved name ``"virtual_stack"``.
+          
+        * ``resultant``: These nodes are :meth:`deleted <delete_node>` from the
+          network.
+        
+        Also, the lists of :class:`Successors <Successor>` of all ``leaf`` and
+        ``data`` nodes are emptied.
+        
+        The :class:`TensorNetwork` is automatically ``reset`` when
+        :meth:`parameterizing <parameterize>` it, changing :meth:`auto_stack`
+        or :meth:`auto_unbind` modes, or :meth:`tracing <trace>`.
+        
+        See :class:`AbstractNode` to learn more about the **4 types** of nodes
+        and the **reserved names**.
+        
+        # TODO: include example from other file
         """
         self._seq_ops = []
         self._inverse_memory = dict()
@@ -4296,7 +4529,6 @@ class TensorNetwork(nn.Module):
                     # Virtual nodes named "virtual_stack" are ParamStackNodes
                     # that result from stacking a collection of ParamNodes
                     # This condition is satisfied by the rest of virtual nodes
-                    # (e.g. "virtual_feature", "virtual_n_features")
                     continue
 
                 node._successors = dict()
@@ -4340,139 +4572,54 @@ class TensorNetwork(nn.Module):
                     # (e.g. "virtual_feature", "virtual_n_features")
                     continue
                 self.delete_node(node, False)
-
-    def set_data_nodes(self,
-                       input_edges: Union[List[int], List[Edge]],
-                       num_batch_edges: int) -> None:
-        # TODO: mention stack_data_memory
+                
+    def trace(self, example: Optional[Tensor] = None, *args, **kwargs) -> None:
         """
-        Creates ``data`` nodes with as many batch edges as ``num_batch_edges``
-        and one feature edge, and connects each of these feature edges to an
-        edge from the list ``input_edges`` (following the provided order).
+        Traces the tensor network contraction algorithm with two purposes:
 
-        If all the data nodes have the same shape, a ``virtual`` node will
-        contain all the tensors stacked in one, what will save some memory
-        and time in computations.
+        * Create all the intermediate ``resultant`` nodes that result from
+          :class:`Operations <Operation>` so that in the next contractions only
+          the :ref:`tensor-like` operations have to be computed, thus saving a
+          lot of time.
 
-        This method can be overriden in subclasses so that it is specified in
-        its implementation to which edges of the network the data nodes should
-        be connected. In this case, there is no need to call ``set_data_nodes``
-        explicitly during training, since it will be done in the :meth:`forward`
-        call. Otherwise, it should be called before starting training.
+        * Keep track of the tensors that are used to compute operations, so that
+          intermediate results that are not useful any more can be deleted, thus
+          saving a lot of memory. This is achieved by constructing an
+          ``inverse_memory`` that, given a memory address, stores the nodes that
+          use the tensor located in that address of the network's memory.
+
+        To trace a tensor network, it is necessary to provide the same arguments
+        that would be required in the forward call. In case the tensor network
+        is contracted with some input data, an example tensor with batch dimension
+        1 and filled with zeros would be enough to trace the contraction.
 
         Parameters
         ----------
-        input_edges : list[int] or list[Edge]
-            List of edges (or indices of :meth:`edges` if given as ``int``) to
-            which the ``data`` nodes' feature edges will be connected.
-        num_batch_edges : int
-            Number of batch edges in the ``data`` nodes.
+        example : torch.Tensor, optional
+            Example tensor used to trace the contraction of the tensor network.
+            In case the tensor network is contracted with some input data, an
+            example tensor with batch dimension 1 and filled with zeros would
+            be enough to trace the contraction.
+        args :
+            Arguments that might be used in :meth:`contract`.
+        kwargs :
+            Keyword arguments that might be used in :meth:`contract`.
+            
+        # TODO: include example from other file
         """
-        if input_edges == []:
-            raise ValueError(
-                '`input_edges` is empty.'
-                ' Cannot set data nodes if no edges are provided')
-        if self._data_nodes:
-            raise ValueError(
-                'Tensor network already has data nodes. These should be unset '
-                'in order to set new ones')
+        self.reset()
 
-        # "stack_data_memory" is only created if all the input edges
-        # have the same dimension
-        same_dim = True
-        for i in range(len(input_edges) - 1):
-            if input_edges[i].size() != input_edges[i + 1].size():
-                same_dim = False
-                break
+        with torch.no_grad():
+            self._tracing = True
+            self(example, *args, **kwargs)
+            self._tracing = False
+            self(example, *args, **kwargs)
 
-        if same_dim:
-            if 'stack_data_memory' not in self._virtual_nodes:
-                # If ``same_dim``, all input_edges have the same feature dimension
-                stack_node = Node(shape=(len(input_edges),
-                                         *([1]*num_batch_edges),
-                                         input_edges[0].size()),
-                                  axes_names=('n_features',
-                                              *(['batch']*num_batch_edges),
-                                              'feature'),
-                                  name='stack_data_memory',
-                                  network=self,
-                                  virtual=True)
-            else:
-                stack_node = self._virtual_nodes['stack_data_memory']
-
-        data_nodes = []
-        for i, edge in enumerate(input_edges):
-            if isinstance(edge, int):
-                edge = self[edge]
-            elif isinstance(edge, Edge):
-                if edge not in self._edges:
-                    raise ValueError(
-                        f'Edge {edge!r} should be a dangling edge of the '
-                        'Tensor Network')
-            else:
-                raise TypeError(
-                    '`input_edges` should be list[int] or list[Edge] type')
-
-            node = Node(shape=(*([1]*num_batch_edges), edge.size()),
-                        axes_names=(*(['batch']*num_batch_edges), 'feature'),
-                        name='data',
-                        network=self,
-                        data=True)
-            node['feature'] ^ edge
-            data_nodes.append(node)
-
-        if same_dim:
-            for i, node in enumerate(data_nodes):
-                del self._memory_nodes[node._tensor_info['address']]
-                node._tensor_info['address'] = None
-                node._tensor_info['node_ref'] = stack_node
-                node._tensor_info['full'] = False
-                node._tensor_info['index'] = i
-
-    def unset_data_nodes(self) -> None:
+    def contract(self) -> Node:
         """
-        Deletes all ``data`` nodes (and ``virtual`` ancillary nodes in case it
-        is necessary).
-        """
-        if self._data_nodes:
-            for node in list(self._data_nodes.values()):
-                self.delete_node(node)
-            self._data_nodes = dict()
-
-            if 'stack_data_memory' in self._virtual_nodes:
-                self.delete_node(self._virtual_nodes['stack_data_memory'])
-
-    def add_data(self, data: Union[Tensor, Sequence[Tensor]]) -> None:
-        # TODO: mention stack_data_memory
-        """
-        Adds data tensor(s) to ``data`` nodes, that is, changes their tensors
-        by new data tensors when a new batch is provided.
-
-        Parameters
-        ----------
-        data : torch.Tensor or list[torch.Tensor]
-            If all data nodes have the same shape, thus having its tensor stored
-            in "stack_data_memory", ``data`` should be a tensor of shape
-            n_features x batch_size_{0} x ... x batch_size_{n} x feature_size.
-            Otherwise, it should be a list with n_features elements, each of them
-            being a tensor with shape batch_size_{0} x ... x batch_size_{n} x feature_size.
-        """
-
-        stack_node = self._virtual_nodes.get('stack_data_memory')
-
-        if stack_node is not None:
-            stack_node.tensor = data
-        elif self._data_nodes:
-            for i, data_node in enumerate(list(self._data_nodes.values())):
-                data_node.tensor = data[i]
-        else:
-            raise ValueError('Cannot add data if no data nodes are set')
-
-    def contract(self) -> AbstractNode:
-        """
-        Contracts the whole tensor network returning a single ``Node``. This
-        method is not implemented and should be overriden in subclasses of
-        :class:`TensorNetwork`.
+        Contracts the whole tensor network returning a single :class:`Node`.
+        This method is not implemented and subclasses of :class:`TensorNetwork`
+        should override it to define the contraction algorithm of the network.
         """
         # Custom, optimized contraction methods should be defined for each new
         # subclass of TensorNetwork
@@ -4481,33 +4628,41 @@ class TensorNetwork(nn.Module):
 
     def forward(self,
                 data: Optional[Union[Tensor, Sequence[Tensor]]] = None,
-                *args, **kwargs) -> Tensor:
+                *args,
+                **kwargs) -> Tensor:
         r"""
-        Contract Tensor Network with input data with shape batch x n_features x feature.
+        Contracts :class:`TensorNetwork` with input data. It can be called using
+        the ``__call__`` operator ``()``.
 
-        Overrides the ``forward`` method of **PyTorch** ``nn.Module``. Sets data
-        nodes automatically whenever ``set_data_nodes`` is overriden, adds data
-        tensor(s) to these nodes, and contracts the whole network according to
-        :meth:`contract`, returning a single ``torch.Tensor``.
-
-        It can be called using the ``__call__`` operator ``()``.
+        Overrides the ``forward`` method of **PyTorch**'s ``torch.nn.Module``.
+        Sets data nodes automatically whenever :meth:`set_data_nodes` is
+        overriden, :meth:`adds data <add_data>` tensor(s) to these nodes, and
+        contracts the whole network according to :meth:`contract`, returning a
+        single ``torch.Tensor``.
+        
+        Furthermore, to optimize the contraction algorithm during training,
+        once the :class:`TensorNetwork` is :meth:`traced <trace>`, all that
+        ``forward`` does is calling the different :class:`Operations <Operation>`
+        used in :meth:`contract` in the same order they appeared in the code.
+        Hence, the **last operation** in :meth:`contract` should be the one that
+        **returns the single output** :class:`Node`.
 
         Parameters
         ----------
         data : torch.Tensor or list[torch.Tensor], optional
             If all data nodes have the same shape, thus having its tensor stored
-            in "stack_data_memory", ``data`` should be a tensor of shape
-
-            .. math::
-                n_{features} \times batch\_size_{0} \times ... \times
-                batch\_size_{n} \times feature\_size.
-
-            Otherwise, it should be a list with :math:`n_{features}` elements,
-            each of them being a tensor with shape
-
+            in ``"stack_data_memory"``, ``data`` should be a tensor of shape
+            
             .. math::
                 batch\_size_{0} \times ... \times batch\_size_{n} \times
-                feature\_size.
+                n_{features} \times feature\_dim
+                
+            Otherwise, it should be a list with :math:`n_{features}` elements,
+            each of them being a tensor with shape
+            
+            .. math::
+                batch\_size_{0} \times ... \times batch\_size_{n} \times
+                feature\_dim
 
             Also, it is not necessary that the network has ``data`` nodes, thus
             ``None`` is also valid.
@@ -4515,6 +4670,8 @@ class TensorNetwork(nn.Module):
             Arguments that might be used in :meth:`contract`.
         kwargs :
             Keyword arguments that might be used in :meth:`contract`.
+            
+        # TODO: include example from other file
         """
         if data is not None:
             if not self._data_nodes:

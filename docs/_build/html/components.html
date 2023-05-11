@@ -3257,8 +3257,8 @@ and the <strong>reserved names</strong>.</p>
 <ul class="simple">
 <li><p>Create all the intermediate <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes that result from
 <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operations</span></code></a> so that in the next contractions only
-the <a class="reference internal" href="operations.html#tensor-like"><span class="std std-ref">Tensor-like Operations</span></a> operations have to be computed, thus saving a
-lot of time.</p></li>
+the <a class="reference internal" href="operations.html#tensor-like-ops"><span class="std std-ref">Tensor-like Operations</span></a> have to be computed, thus saving a lot of
+time.</p></li>
 <li><p>Keep track of the tensors that are used to compute operations, so that
 intermediate results that are not useful any more can be deleted, thus
 saving a lot of memory. This is achieved by constructing an

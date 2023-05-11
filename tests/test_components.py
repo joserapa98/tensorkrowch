@@ -953,6 +953,58 @@ class TestSetTensorParamNode:
 
 class TestMoveToNetwork:
     
+    def test_change_network(self):
+        node1 = tk.Node(axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        tensor=torch.randn(2, 5, 2))
+        node2 = tk.Node(axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        tensor=torch.randn(2, 5, 2))
+
+        net1 = node1.network
+        net2 = node2.network
+        assert net1 != net2
+        assert len(net1.nodes) == 1
+        assert len(net1.edges) == 3
+        assert len(net2.nodes) == 1
+        assert len(net2.edges) == 3
+
+        node2.network = net1
+        assert node1.network == node2.network
+        assert len(net1.nodes) == 2
+        assert len(net1.edges) == 6
+        assert len(net2.nodes) == 0
+        assert len(net2.edges) == 0
+
+    def test_move_to_network(self):
+        net1 = tk.TensorNetwork(name='net1')
+        node1 = tk.Node(axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        tensor=torch.randn(2, 5, 2),
+                        network=net1)
+        node2 = tk.Node(axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        tensor=torch.randn(2, 5, 2),
+                        network=net1)
+
+        net2 = tk.TensorNetwork(name='net2')
+        node2.network = net2
+        assert node1.network == net1
+        assert node2.network == net2
+
+        node2.network = net1
+        assert node1.network == net1
+        assert node2.network == net1
+
+        node1['right'] ^ node2['left']
+        node2.network = net2
+        assert node1.network == net2
+        assert node2.network == net2
+        assert len(net2.nodes) == 2
+        assert len(net2.edges) == 4
+        assert len(net1.nodes) == 0
+        assert len(net1.edges) == 0
+    
     def test_move_all(self):
         net = tk.TensorNetwork()
         node1 = tk.Node(shape=(2, 3),
@@ -1719,6 +1771,9 @@ class TestStack:
         assert isinstance(stack['stack'], tk.Edge)
         assert isinstance(stack['input'], tk.StackEdge)
         assert isinstance(stack['output'], tk.StackEdge)
+        
+        for node in nodes:
+            assert node.tensor_address() == node.name
 
     def test_stack_paramnodes_in_stacknode(self):
         net = tk.TensorNetwork()
@@ -1738,6 +1793,9 @@ class TestStack:
         assert isinstance(stack['stack'], tk.Edge)
         assert isinstance(stack['input'], tk.StackEdge)
         assert isinstance(stack['output'], tk.StackEdge)
+        
+        for node in nodes:
+            assert node.tensor_address() == node.name
 
     def test_stack_nodes_in_paramstacknode(self):
         net = tk.TensorNetwork()
@@ -1757,6 +1815,9 @@ class TestStack:
         assert isinstance(stack['stack'], tk.Edge)
         assert isinstance(stack['input'], tk.StackEdge)
         assert isinstance(stack['output'], tk.StackEdge)
+        
+        for node in nodes:
+            assert node.tensor_address() == node.name
 
     def test_stack_paramnodes_in_paramstacknode(self):
         net = tk.TensorNetwork()
@@ -1776,6 +1837,11 @@ class TestStack:
         assert isinstance(stack['stack'], tk.Edge)
         assert isinstance(stack['input'], tk.StackEdge)
         assert isinstance(stack['output'], tk.StackEdge)
+        
+        # Nodes only modify their memory address if stacked
+        # via operation `stack`
+        for node in nodes:
+            assert node.tensor_address() == node.name
 
     def test_error_stack_node(self):
         node = tk.Node(shape=(3, 2),
@@ -1902,58 +1968,6 @@ class TestStack:
 
 class TestTensorNetwork:
 
-    def test_change_network(self):
-        node1 = tk.Node(axes_names=('left', 'input', 'right'),
-                        name='node1',
-                        tensor=torch.randn(2, 5, 2))
-        node2 = tk.Node(axes_names=('left', 'input', 'right'),
-                        name='node2',
-                        tensor=torch.randn(2, 5, 2))
-
-        net1 = node1.network
-        net2 = node2.network
-        assert net1 != net2
-        assert len(net1.nodes) == 1
-        assert len(net1.edges) == 3
-        assert len(net2.nodes) == 1
-        assert len(net2.edges) == 3
-
-        node2.network = net1
-        assert node1.network == node2.network
-        assert len(net1.nodes) == 2
-        assert len(net1.edges) == 6
-        assert len(net2.nodes) == 0
-        assert len(net2.edges) == 0
-
-    def test_move_to_network(self):
-        net1 = tk.TensorNetwork(name='net1')
-        node1 = tk.Node(axes_names=('left', 'input', 'right'),
-                        name='node1',
-                        tensor=torch.randn(2, 5, 2),
-                        network=net1)
-        node2 = tk.Node(axes_names=('left', 'input', 'right'),
-                        name='node2',
-                        tensor=torch.randn(2, 5, 2),
-                        network=net1)
-
-        net2 = tk.TensorNetwork(name='net2')
-        node2.network = net2
-        assert node1.network == net1
-        assert node2.network == net2
-
-        node2.network = net1
-        assert node1.network == net1
-        assert node2.network == net1
-
-        node1['right'] ^ node2['left']
-        node2.network = net2
-        assert node1.network == net2
-        assert node2.network == net2
-        assert len(net2.nodes) == 2
-        assert len(net2.edges) == 4
-        assert len(net1.nodes) == 0
-        assert len(net1.edges) == 0
-
     def test_add_remove(self):
         net = tk.TensorNetwork()
         for _ in range(4):
@@ -2059,7 +2073,8 @@ class TestTensorNetwork:
         assert len(submodules) == 0
         assert len(net._parameters) == 0
 
-        # NOTE: This test was implemented when edges could be parametric
+        # NOTE: This test was implemented when edges could be parametric,
+        # Now the network never has submodules, only parameters
         net['paramnode_0']['right'] ^ net['paramnode_1']['left']
         net['paramnode_1']['right'] ^ net['node_0']['left']
         net['node_0']['right'] ^ net['node_1']['left']
@@ -2087,6 +2102,7 @@ class TestTensorNetwork:
         assert len(net._parameters) == 2
 
         # NOTE: This test was implemented when edges could be parametric
+        # Now the network never has submodules, only parameters
         net['paramnode_0']['right'] ^ net['paramnode_1']['left']
         net['paramnode_1']['right'] ^ net['node_0']['left']
         net['node_0']['right'] ^ net['node_1']['left']
@@ -2415,7 +2431,7 @@ class TestTensorNetwork:
             assert node._tensor_info['address'] is not None
 
         assert net.auto_stack == False
-        assert net.auto_unbind == True
+        assert net.auto_unbind == False
 
         stack = tk.stack(list(net.nodes.values()))
         # All nodes still have their own memory
@@ -2426,7 +2442,7 @@ class TestTensorNetwork:
 
         net.auto_stack = True
         assert net.auto_stack == True
-        assert net.auto_unbind == True
+        assert net.auto_unbind == False
 
         stack = tk.stack(list(net.nodes.values()))
         # Now leaf nodes have their emory stored in the stack
@@ -2452,8 +2468,12 @@ class TestTensorNetwork:
             assert node._tensor_info['address'] is not None
 
         assert net.auto_stack == False
-        assert net.auto_unbind == True
+        assert net.auto_unbind == False
 
+        net.auto_unbind = True
+        assert net.auto_stack == False
+        assert net.auto_unbind == True
+        
         stack1 = tk.stack(list(net.nodes.values()))
         unbinded = tk.unbind(stack1)
         stack2 = tk.stack(unbinded)

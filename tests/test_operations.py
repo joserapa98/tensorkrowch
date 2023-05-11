@@ -3336,6 +3336,7 @@ class TestStackUnbind:
         return net, nodes
 
     # TODO: change names tests
+    # TODO: add tensor_address checks
     def test_stack_all_leaf_all_non_param_auto_stack_unbind(self, setup):
         net, nodes = setup
 
@@ -5152,14 +5153,12 @@ class TestTNModels:
                         torch.eye(tensor.shape[0], tensor.shape[2])
                     tensor[:, 0, :] = random_eye
 
-                    uniform_memory._unrestricted_set_tensor(tensor)
+                    uniform_memory.tensor = tensor
 
+                    # Memory of each node is just a reference
+                    # to the uniform_memory tensor
                     for node in input_nodes:
-                        del self._memory_nodes[node._tensor_info['address']]
-                        node._tensor_info['address'] = None
-                        node._tensor_info['node_ref'] = uniform_memory
-                        node._tensor_info['full'] = True
-                        node._tensor_info['index'] = None
+                        node.set_tensor_from(self.uniform_memory)
 
                 else:
                     std = 1e-9
@@ -5208,6 +5207,7 @@ class TestTNModels:
 
         return MPS
 
+    # TODO: use embeddings
     def test_mps(self, setup_mps):
         MPS = setup_mps
 
@@ -5239,66 +5239,6 @@ class TestTNModels:
             result = mps(image)
 
     def test_uniform_mps(self, setup_mps):
-        MPS = setup_mps
-
-        image_size = (10, 10)
-        mps = MPS(image_size=image_size, uniform=True)
-
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        mps = mps.to(device)
-
-        # batch_size x height x width
-        image = torch.randn(500, image_size[0], image_size[1])
-
-        def embedding(image: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(image),
-                                image,
-                                1 - image], dim=1)
-
-        image = embedding(image)
-        image = image.to(device)
-        image = image.view(
-            500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
-
-        mps.auto_stack = True
-        mps.auto_unbind = False
-        mps.trace(image)
-
-        # Forward
-        for _ in range(5):
-            result = mps(image)
-
-    def test_mps_paramedges(self, setup_mps):
-        MPS = setup_mps
-
-        image_size = (10, 10)
-        mps = MPS(image_size=image_size)
-
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        mps = mps.to(device)
-
-        # batch_size x height x width
-        image = torch.randn(500, image_size[0], image_size[1])
-
-        def embedding(image: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(image),
-                                image,
-                                1 - image], dim=1)
-
-        image = embedding(image)
-        image = image.to(device)
-        image = image.view(
-            500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
-
-        mps.auto_stack = True
-        mps.auto_unbind = False
-        mps.trace(image)
-
-        # Forward
-        for _ in range(5):
-            result = mps(image)
-
-    def test_uniform_mps_paramedges(self, setup_mps):
         MPS = setup_mps
 
         image_size = (10, 10)
@@ -5380,15 +5320,13 @@ class TestTNModels:
                     # random_eye  = random_eye + torch.eye(tensor.shape[0], tensor.shape[2])
                     # tensor[:, 0, :] = random_eye
 
-                    uniform_memory._unrestricted_set_tensor(tensor)
+                    uniform_memory.tensor = tensor
 
+                    # Memory of each node is just a reference
+                    # to the uniform_memory tensor
                     for lst in input_nodes:
                         for node in lst:
-                            del self._memory_nodes[node._tensor_info['address']]
-                            node._tensor_info['address'] = None
-                            node._tensor_info['node_ref'] = uniform_memory
-                            node._tensor_info['full'] = True
-                            node._tensor_info['index'] = None
+                            node.set_tensor_from(self.uniform_memory)
 
                 else:
                     std = 1e-9
@@ -5554,66 +5492,6 @@ class TestTNModels:
             result = peps(image)
 
     def test_uniform_peps(self, setup_peps):
-        PEPS = setup_peps
-
-        image_size = (3, 3)
-        peps = PEPS(image_size=image_size, uniform=True)
-
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        peps = peps.to(device)
-
-        # batch_size x height x width
-        image = torch.randn(500, image_size[0], image_size[1])
-
-        def embedding(image: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(image),
-                                image,
-                                1 - image], dim=1)
-
-        image = embedding(image)
-        image = image.to(device)
-        image = image.view(
-            500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
-
-        peps.auto_stack = True
-        peps.auto_unbind = False
-        peps.trace(image)
-
-        # Forward
-        for _ in range(5):
-            result = peps(image)
-
-    def test_peps_paramedges(self, setup_peps):
-        PEPS = setup_peps
-
-        image_size = (3, 3)
-        peps = PEPS(image_size=image_size)
-
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        peps = peps.to(device)
-
-        # batch_size x height x width
-        image = torch.randn(500, image_size[0], image_size[1])
-
-        def embedding(image: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(image),
-                                image,
-                                1 - image], dim=1)
-
-        image = embedding(image)
-        image = image.to(device)
-        image = image.view(
-            500, 3, image_size[0] * image_size[1]).permute(2, 0, 1)
-
-        peps.auto_stack = True
-        peps.auto_unbind = False
-        peps.trace(image)
-
-        # Forward
-        for _ in range(5):
-            result = peps(image)
-
-    def test_uniform_peps_paramedges(self, setup_peps):
         PEPS = setup_peps
 
         image_size = (3, 3)

@@ -680,9 +680,15 @@ title="Print to PDF"
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edge1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.connect" title="Permalink to this definition">#</a></dt>
 <dd><p>Connects two dangling edges. It is necessary that both edges have the same
 size so that contractions along that edge can be computed.</p>
+<p>Note that this connectes edges from <code class="docutils literal notranslate"><span class="pre">leaf</span></code> (or <code class="docutils literal notranslate"><span class="pre">data</span></code>, <code class="docutils literal notranslate"><span class="pre">virtual</span></code>)
+nodes, but never from <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes. If one tries to connect one of
+the inherited edges of a <code class="docutils literal notranslate"><span class="pre">resultant</span></code> node, the new connected edge will be
+attached to the original <code class="docutils literal notranslate"><span class="pre">leaf`</span> <span class="pre">nodes</span> <span class="pre">from</span> <span class="pre">which</span> <span class="pre">the</span> <span class="pre">``resultant</span></code> node
+inherited its edges. Hence, the <code class="docutils literal notranslate"><span class="pre">resultant</span></code> node will not “see” the
+connection until the <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> is <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>.</p>
 <p>If the nodes that are being connected come from different networks, the
 <code class="docutils literal notranslate"><span class="pre">node2</span></code> (and its connected component) will be movec to <code class="docutils literal notranslate"><span class="pre">node1</span></code>’s network.
-See also ~:meth:<cite>AbstractNode.move_to_network</cite>.</p>
+See also <a class="reference internal" href="components.html#tensorkrowch.AbstractNode.move_to_network" title="tensorkrowch.AbstractNode.move_to_network"><code class="xref py py-meth docutils literal notranslate"><span class="pre">move_to_network()</span></code></a>.</p>
 <p>This operation is the same as <a class="reference internal" href="components.html#tensorkrowch.Edge.connect" title="tensorkrowch.Edge.connect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Edge.connect()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>

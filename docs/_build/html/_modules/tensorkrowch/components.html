@@ -380,6 +380,8 @@ title="Source repository"
 <span class="sd">      Then ``nodeA`` will be the ``node1`` of ``new_edge`` and ``nodeB``, the</span>
 <span class="sd">      ``node2``. Hence, to access one of the nodes from ``new_edge`` one needs</span>
 <span class="sd">      to know if it is ``node1`` or ``node2``.</span>
+<span class="sd">      </span>
+<span class="sd">    |</span>
 
 <span class="sd">    Even though we can create ``Axis`` instances, that will not be usually the</span>
 <span class="sd">    case, since axes are automatically created when instantiating a new</span>
@@ -457,6 +459,9 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; # result is still node1 of edge2, since nodeA was</span>
 <span class="sd">    &gt;&gt;&gt; result.is_node1(&#39;right&#39;)</span>
 <span class="sd">    True</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -638,6 +643,7 @@ title="Source repository"
 <span class="sd">      steps can be skipped in further training iterations.</span>
 <span class="sd">      See :meth:`TensorNetwork.trace`.</span>
 <span class="sd">      </span>
+<span class="sd">    |</span>
 <span class="sd">      </span>
 <span class="sd">    Also, there are **4 excluding types** of nodes that will have different</span>
 <span class="sd">    roles in the :class:`TensorNetwork`:</span>
@@ -661,10 +667,40 @@ title="Source repository"
 <span class="sd">      and ``data`` nodes, the ones that really form the network. These nodes can</span>
 <span class="sd">      store their own tensors or use other node&#39;s tensor.</span>
 <span class="sd">      </span>
-<span class="sd">    See :class:`TensorNetwork` to learn more about the importance of these 4</span>
-<span class="sd">    types of nodes.</span>
+<span class="sd">    See :class:`TensorNetwork` and :meth:`~TensorNetwork.reset` to learn more</span>
+<span class="sd">    about the importance of these 4 types of nodes.</span>
 <span class="sd">    </span>
-
+<span class="sd">    |</span>
+<span class="sd">    </span>
+<span class="sd">    Other thing one should take into account are **reserved nodes&#39; names**:</span>
+<span class="sd">    </span>
+<span class="sd">    * ``&quot;stack_data_memory&quot;``: Name of the ``virtual`` :class:`StackNode` that</span>
+<span class="sd">      is created in :meth:`~TensorNetwork.set_data_nodes` to store the whole</span>
+<span class="sd">      data tensor from which each ``data`` node might take just one `slice`.</span>
+<span class="sd">      There should be at most one ``&quot;stack_data_memory&quot;`` in the network.</span>
+<span class="sd">      To learn more about this, see :meth:`~TensorNetwork.set_data_nodes` and</span>
+<span class="sd">      :meth:`~TensorNetwork.add_data`.</span>
+<span class="sd">    </span>
+<span class="sd">    * ``&quot;virtual_stack&quot;``: Name of the ``virtual`` :class:`ParamStackNode` that</span>
+<span class="sd">      results from stacking :class:`ParamNodes &lt;ParamNode&gt;` as the first</span>
+<span class="sd">      operation in the network contraction. There might be as much</span>
+<span class="sd">      ``&quot;virtual_stack&quot;`` nodes as stacks are created from ``ParamNodes``. To</span>
+<span class="sd">      learn more about this, see :class:`ParamStackNode`.</span>
+<span class="sd">    </span>
+<span class="sd">    * ``&quot;virtual_uniform&quot;``: Name of the ``virtual`` :class:`Node` or</span>
+<span class="sd">      :class:`ParamNode` that is used in uniform (translationally invariant)</span>
+<span class="sd">      tensor networks to store the tensor that will be shared by all ``leaf``</span>
+<span class="sd">      nodes. There might be as much ``&quot;virtual_uniform&quot;`` nodes as shared</span>
+<span class="sd">      memories are used for the ``leaf`` nodes in the network (usually just one).</span>
+<span class="sd">      </span>
+<span class="sd">    Although these names can in principle be used for other nodes, this can lead</span>
+<span class="sd">    to undesired behaviour.</span>
+<span class="sd">      </span>
+<span class="sd">    See :meth:`~TensorNetwork.reset` to learn more about the importance of these</span>
+<span class="sd">    reserved nodes&#39; names.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
+<span class="sd">    </span>
 <span class="sd">    Refer to the subclasses of ``AbstractNode`` to see how to instantiate nodes:</span>
 
 <span class="sd">    * :class:`Node`</span>
@@ -674,6 +710,9 @@ title="Source repository"
 <span class="sd">    * :class:`StackNode`</span>
 
 <span class="sd">    * :class:`ParamStackNode`</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -2101,10 +2140,14 @@ title="Source repository"
 <span class="sd">    Can be used for fixed nodes of the :class:`TensorNetwork`, or intermediate</span>
 <span class="sd">    nodes that are resultant from an :class:`Operation` between nodes.</span>
 <span class="sd">    </span>
+<span class="sd">    |</span>
+<span class="sd">    </span>
 <span class="sd">    All **4 types of nodes** (``leaf``, ``data``, ``virtual`` and ``resultant``)</span>
 <span class="sd">    can be ``Node``. In fact, ``data`` and ``resultant`` nodes can **only** be</span>
 <span class="sd">    of class ``Node``, since they are not intended to be trainable. To learn</span>
-<span class="sd">    more about these 4 types of nodes, see :class:`AbstractNode`.</span>
+<span class="sd">    more about these **4 types of nodes**, see :class:`AbstractNode`.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 
 <span class="sd">    For a complete list of properties and methods, see also :class:`AbstractNode`.</span>
 
@@ -2169,10 +2212,57 @@ title="Source repository"
 <span class="sd">    ...                init_method=&#39;randn&#39;,</span>
 <span class="sd">    ...                mean=0.,</span>
 <span class="sd">    ...                std=1.)</span>
+<span class="sd">    &gt;&gt;&gt; node</span>
+<span class="sd">    Node(</span>
+<span class="sd">     	name: my_node</span>
+<span class="sd">    	tensor:</span>
+<span class="sd">    		tensor([[[-1.2517, -1.8147],</span>
+<span class="sd">    		         [-0.7997, -0.0440],</span>
+<span class="sd">    		         [-0.2808,  0.3508],</span>
+<span class="sd">    		         [-1.2380,  0.8859],</span>
+<span class="sd">    		         [-0.3585,  0.8815]],</span>
+<span class="sd">    		        [[-0.2898, -2.2775],</span>
+<span class="sd">    		         [ 1.2856, -0.3222],</span>
+<span class="sd">    		         [-0.8911, -0.4216],</span>
+<span class="sd">    		         [ 0.0086,  0.2449],</span>
+<span class="sd">    		         [-2.1998, -1.6295]]])</span>
+<span class="sd">    	axes:</span>
+<span class="sd">    		[left</span>
+<span class="sd">    		 input</span>
+<span class="sd">    		 right]</span>
+<span class="sd">    	edges:</span>
+<span class="sd">    		[my_node[left] &lt;-&gt; None</span>
+<span class="sd">    		 my_node[input] &lt;-&gt; None</span>
+<span class="sd">    		 my_node[right] &lt;-&gt; None])</span>
 <span class="sd">    </span>
 <span class="sd">    Also, one can use one of the :ref:`Initializers` to simplify:</span>
 <span class="sd">    </span>
 <span class="sd">    &gt;&gt;&gt; node = tk.randn((2, 5, 2))</span>
+<span class="sd">    &gt;&gt;&gt; node</span>
+<span class="sd">    Node(</span>
+<span class="sd">     	name: node</span>
+<span class="sd">    	tensor:</span>
+<span class="sd">    		tensor([[[ 0.6545, -0.0445],</span>
+<span class="sd">    		         [-0.9265, -0.2730],</span>
+<span class="sd">    		         [-0.5069, -0.6524],</span>
+<span class="sd">    		         [-0.8227, -1.1211],</span>
+<span class="sd">    		         [ 0.2390,  0.9432]],</span>
+<span class="sd">    		        [[ 0.8633,  0.4402],</span>
+<span class="sd">    		         [-0.6982,  0.4461],</span>
+<span class="sd">    		         [-0.0633, -0.9320],</span>
+<span class="sd">    		         [ 1.6023,  0.5406],</span>
+<span class="sd">    		         [ 0.3489, -0.3088]]])</span>
+<span class="sd">    	axes:</span>
+<span class="sd">    		[axis_0</span>
+<span class="sd">    		 axis_1</span>
+<span class="sd">    		 axis_2]</span>
+<span class="sd">    	edges:</span>
+<span class="sd">    		[node[axis_0] &lt;-&gt; None</span>
+<span class="sd">    		 node[axis_1] &lt;-&gt; None</span>
+<span class="sd">    		 node[axis_2] &lt;-&gt; None])</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># -------</span>
@@ -2318,13 +2408,17 @@ title="Source repository"
 <span class="sd">    ``torch.nn.Parameter`` tensors instead of ``torch.Tensor``. Therefore, a</span>
 <span class="sd">    ``ParamNode`` is a sort of `parameter` that is attached to the</span>
 <span class="sd">    :class:`TensorNetwork` (which is itself a ``torch.nn.Module``). That is,</span>
-<span class="sd">    the list of parameters of the tensor network module contains the tensors</span>
+<span class="sd">    the **list of parameters of the tensor network** module contains the tensors</span>
 <span class="sd">    of all ``ParamNodes``.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 <span class="sd">    </span>
 <span class="sd">    ``ParamNodes`` can only be ``leaf`` and ``virtual`` (e.g. a ``virtual`` node</span>
 <span class="sd">    used in a uniform :class:`TensorNetwork` to store the tensor that is shared</span>
 <span class="sd">    by all the trainable nodes must also be a ``ParamNode``, since it stores</span>
 <span class="sd">    a ``torch.nn.Parameter``.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 
 <span class="sd">    For a complete list of properties and methods, see also :class:`AbstractNode`.</span>
 <span class="sd">    </span>
@@ -2387,11 +2481,60 @@ title="Source repository"
 <span class="sd">    ...                     init_method=&#39;randn&#39;,</span>
 <span class="sd">    ...                     mean=0.,</span>
 <span class="sd">    ...                     std=1.)</span>
+<span class="sd">    &gt;&gt;&gt; node</span>
+<span class="sd">    ParamNode(</span>
+<span class="sd">     	name: my_paramnode</span>
+<span class="sd">    	tensor:</span>
+<span class="sd">    		Parameter containing:</span>
+<span class="sd">    		tensor([[[ 1.8090, -0.1371],</span>
+<span class="sd">    		         [-0.0501, -1.0371],</span>
+<span class="sd">    		         [ 1.4588, -0.8361],</span>
+<span class="sd">    		         [-0.4974, -1.9957],</span>
+<span class="sd">    		         [ 0.3760, -1.0412]],</span>
+<span class="sd">    		        [[ 0.3393, -0.2503],</span>
+<span class="sd">    		         [ 1.7752, -0.0188],</span>
+<span class="sd">    		         [-0.9561, -0.0806],</span>
+<span class="sd">    		         [-1.0465, -0.5731],</span>
+<span class="sd">    		         [ 1.5021,  0.4181]]], requires_grad=True)</span>
+<span class="sd">    	axes:</span>
+<span class="sd">    		[left</span>
+<span class="sd">    		 input</span>
+<span class="sd">    		 right]</span>
+<span class="sd">    	edges:</span>
+<span class="sd">    		[my_paramnode[left] &lt;-&gt; None</span>
+<span class="sd">    		 my_paramnode[input] &lt;-&gt; None</span>
+<span class="sd">    		 my_paramnode[right] &lt;-&gt; None])</span>
 <span class="sd">    </span>
 <span class="sd">    Also, one can use one of the :ref:`Initializers` to simplify:</span>
 <span class="sd">    </span>
 <span class="sd">    &gt;&gt;&gt; node = tk.randn((2, 5, 2),</span>
 <span class="sd">    ...                 param_node=True)</span>
+<span class="sd">    &gt;&gt;&gt; node</span>
+<span class="sd">    ParamNode(</span>
+<span class="sd">     	name: paramnode</span>
+<span class="sd">    	tensor:</span>
+<span class="sd">    		Parameter containing:</span>
+<span class="sd">    		tensor([[[-0.8442,  1.4184],</span>
+<span class="sd">    		         [ 0.4431, -1.4385],</span>
+<span class="sd">    		         [-0.5161, -0.6492],</span>
+<span class="sd">    		         [ 0.2095,  0.5760],</span>
+<span class="sd">    		         [-0.9925, -1.5797]],</span>
+<span class="sd">    		        [[-0.8649, -0.5401],</span>
+<span class="sd">    		         [-0.1091,  1.1654],</span>
+<span class="sd">    		         [-0.3821, -0.2477],</span>
+<span class="sd">    		         [-0.7688, -2.4731],</span>
+<span class="sd">    		         [-0.0234,  0.9618]]], requires_grad=True)</span>
+<span class="sd">    	axes:</span>
+<span class="sd">    		[axis_0</span>
+<span class="sd">    		 axis_1</span>
+<span class="sd">    		 axis_2]</span>
+<span class="sd">    	edges:</span>
+<span class="sd">    		[paramnode[axis_0] &lt;-&gt; None</span>
+<span class="sd">    		 paramnode[axis_1] &lt;-&gt; None</span>
+<span class="sd">    		 paramnode[axis_2] &lt;-&gt; None])</span>
+<span class="sd">       </span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -2628,6 +2771,8 @@ title="Source repository"
 <span class="sd">    * Provide a stacked tensor: if the stacked ``tensor`` is provided, it is also</span>
 <span class="sd">      necessary to specify the ``axes_names``, ``network``, ``edges`` and</span>
 <span class="sd">      ``node1_list``.</span>
+<span class="sd">      </span>
+<span class="sd">    |</span>
 
 <span class="sd">    ``StackNodes`` have an additional axis for the new `stack` dimension, which</span>
 <span class="sd">    is a batch edge. This way, some contractions can be computed in parallel by</span>
@@ -2700,6 +2845,9 @@ title="Source repository"
 
 <span class="sd">    &gt;&gt;&gt; print(result[0].shape)</span>
 <span class="sd">    torch.Size([2, 2])</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -2845,6 +2993,16 @@ title="Source repository"
 <span class="sd">    reference to a slide of a greater ``ParamStackNode`` (if ``auto_stack``</span>
 <span class="sd">    attribute of the :class:`TensorNetwork` is set to ``True``). Hence, that</span>
 <span class="sd">    first :func:`stack` is never actually computed.</span>
+<span class="sd">    </span>
+<span class="sd">    The ``ParamStackNode`` that results from this process uses the reserved name</span>
+<span class="sd">    ``&quot;virtual_stack&quot;``, as explained :class:`here &lt;AbstractNode&gt;`. This node</span>
+<span class="sd">    stores the tensor from which all the stacked :class:`ParamNodes &lt;ParamNode&gt;`</span>
+<span class="sd">    just take one `slice`.</span>
+<span class="sd">    </span>
+<span class="sd">    This behaviour occurs when stacking param-nodes via :func:`stack`, not when</span>
+<span class="sd">    instantiating ``ParamStackNode`` manually.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 
 <span class="sd">    ``ParamStackNodes`` can only be instantiated by providing a sequence of nodes.</span>
 
@@ -2904,6 +3062,9 @@ title="Source repository"
 
 <span class="sd">    &gt;&gt;&gt; print(result[0].shape)</span>
 <span class="sd">    torch.Size([2, 2])</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -3010,6 +3171,8 @@ title="Source repository"
 <span class="sd">    Above all, its importance lies in that edges enable to connect nodes, forming</span>
 <span class="sd">    any possible graph, and to perform easily :class:`Operations &lt;Operation&gt;` like</span>
 <span class="sd">    contracting and splitting nodes.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 
 <span class="sd">    Furthermore, edges have specific operations like :meth:`contract_` or</span>
 <span class="sd">    :meth:`svd_` (and its variations) that allow in-place modification of the</span>
@@ -3026,6 +3189,23 @@ title="Source repository"
 <span class="sd">        be dangling.</span>
 <span class="sd">    axis2 : int, str, Axis, optional</span>
 <span class="sd">        Axis of ``node2`` where the edge is attached.</span>
+<span class="sd">    </span>
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((2, 3))</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn((3, 4))</span>
+<span class="sd">    &gt;&gt;&gt; nodeA[1] ^ nodeB[0]</span>
+<span class="sd">    &gt;&gt;&gt; nodeA[0]</span>
+<span class="sd">    Edge( node_0[axis_0] &lt;-&gt; None )  (Dangling Edge)</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeA[1]</span>
+<span class="sd">    Edge( node_0[axis_1] &lt;-&gt; node_1[axis_0] )</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; nodeB[1]</span>
+<span class="sd">    Edge( node_1[axis_1] &lt;-&gt; None )  (Dangling Edge)</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -3233,9 +3413,17 @@ title="Source repository"
 <span class="sd">        both edges have the same size so that contractions along that edge can</span>
 <span class="sd">        be computed.</span>
 <span class="sd">        </span>
+<span class="sd">        Note that this connectes edges from ``leaf`` (or ``data``, ``virtual``)</span>
+<span class="sd">        nodes, but never from ``resultant`` nodes. If one tries to connect</span>
+<span class="sd">        one of the inherited edges of a ``resultant`` node, the new connected</span>
+<span class="sd">        edge will be attached to the original ``leaf` nodes from which the</span>
+<span class="sd">        ``resultant`` node inherited its edges. Hence, the ``resultant`` node</span>
+<span class="sd">        will not &quot;see&quot; the connection until the :class:`TensorNetwork` is</span>
+<span class="sd">        :meth:`~TensorNetwork.reset`.</span>
+<span class="sd">        </span>
 <span class="sd">        If the nodes that are being connected come from different networks, the</span>
-<span class="sd">        ``node2`` (and its connected component) will be movec to ``node1``&#39;s</span>
-<span class="sd">        network. See also ~:meth:`AbstractNode.move_to_network`.</span>
+<span class="sd">        ``node2`` (and its connected component) will be moved to ``node1``&#39;s</span>
+<span class="sd">        network. See also :meth:`~AbstractNode.move_to_network`.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -3344,6 +3532,9 @@ title="Source repository"
 <span class="sd">        be dangling.</span>
 <span class="sd">    axis2 : int, str, Axis, optional</span>
 <span class="sd">        Axis of ``node2`` where the edge is attached.</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -3424,9 +3615,16 @@ title="Source repository"
 <span class="sd">    Connects two dangling edges. It is necessary that both edges have the same</span>
 <span class="sd">    size so that contractions along that edge can be computed.</span>
 <span class="sd">    </span>
+<span class="sd">    Note that this connectes edges from ``leaf`` (or ``data``, ``virtual``)</span>
+<span class="sd">    nodes, but never from ``resultant`` nodes. If one tries to connect one of</span>
+<span class="sd">    the inherited edges of a ``resultant`` node, the new connected edge will be</span>
+<span class="sd">    attached to the original ``leaf` nodes from which the ``resultant`` node</span>
+<span class="sd">    inherited its edges. Hence, the ``resultant`` node will not &quot;see&quot; the</span>
+<span class="sd">    connection until the :class:`TensorNetwork` is :meth:`~TensorNetwork.reset`.</span>
+<span class="sd">    </span>
 <span class="sd">    If the nodes that are being connected come from different networks, the</span>
 <span class="sd">    ``node2`` (and its connected component) will be movec to ``node1``&#39;s network.</span>
-<span class="sd">    See also ~:meth:`AbstractNode.move_to_network`.</span>
+<span class="sd">    See also :meth:`~AbstractNode.move_to_network`.</span>
 
 <span class="sd">    This operation is the same as :meth:`Edge.connect`.</span>
 
@@ -3599,9 +3797,13 @@ title="Source repository"
 <span class="sd">    that gave rise to a resultant node, a reference to the resultant node itself,</span>
 <span class="sd">    and some hints that might help accelerating the computations the next time</span>
 <span class="sd">    the operation is performed.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 
 <span class="sd">    These three properties can be accessed via ``successor.kwargs``,</span>
 <span class="sd">    ``successor.child`` and ``successor.hints``.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 <span class="sd">    </span>
 <span class="sd">    See the different :class:`operations &lt;Operation&gt;` to learn which resultant</span>
 <span class="sd">    node keeps the ``Successor`` information.</span>
@@ -3632,6 +3834,9 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    &gt;&gt;&gt; nodeA.successors[&#39;contract_edges&#39;][0].child == result</span>
 <span class="sd">    True</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -3648,214 +3853,119 @@ title="Source repository"
 <span class="c1">###############################################################################</span>
 <div class="viewcode-block" id="TensorNetwork"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork">[docs]</a><span class="k">class</span> <span class="nc">TensorNetwork</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Class for arbitrary Tensor Networks. Subclass of **PyTorch** ``nn.Module``.</span>
+<span class="sd">    Class for arbitrary Tensor Networks. Subclass of **PyTorch**</span>
+<span class="sd">    ``torch.nn.Module``.</span>
 
 <span class="sd">    Tensor Networks are the central objects of **TensorKrowch**. Basically,</span>
-<span class="sd">    a tensor network is a graph where vertices are :class:`Nodes &lt;AbstractNode&gt;`</span>
-<span class="sd">    and edges are, pun intended, :class:`Edges &lt;Edge&gt;`. In these models,</span>
-<span class="sd">    nodes&#39; tensors will be trained so that the contraction of the whole network</span>
-<span class="sd">    approximates a certain function. Hence, Tensor Networks are the `trainable</span>
-<span class="sd">    objects` of **TensorKrowch**, very much like ``nn.Module``&#39;s are the</span>
-<span class="sd">    `trainable objects` of **PyTorch**.</span>
+<span class="sd">    a tensor network is a graph with vertices (:class:`Nodes &lt;AbstractNode&gt;`)</span>
+<span class="sd">    connected by :class:`Edges &lt;Edge&gt;`. In these models, nodes&#39; tensors will be</span>
+<span class="sd">    trained so that the contraction of the whole network approximates a certain</span>
+<span class="sd">    function. Hence, ``TensorNetwork``&#39;s are the **trainable objects** of</span>
+<span class="sd">    **TensorKrowch**, very much like ``torch.nn.Module``&#39;s are the **trainable</span>
+<span class="sd">    objects** of **PyTorch**.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 
-<span class="sd">    Recall that the common way of defining models out of ``nn.Module`` is by</span>
-<span class="sd">    defining a subclass where the ``__init__`` and ``forward`` methods are</span>
+<span class="sd">    Recall that the common way of defining models out of ``torch.nn.Module`` is</span>
+<span class="sd">    by defining a subclass where the ``__init__`` and ``forward`` methods are</span>
 <span class="sd">    overriden:</span>
 
 <span class="sd">    * ``__init__``: Defines the model itself (its layers, attributes, etc.).</span>
+<span class="sd">    </span>
 <span class="sd">    * ``forward``: Defines the way the model operates, that is, how the different</span>
-<span class="sd">      parts of the model migh combine to get an output from a particular input.</span>
+<span class="sd">      parts of the model might combine to get an output from a particular input.</span>
+
 
 <span class="sd">    With ``TensorNetwork``, the workflow is similar, though there are other</span>
 <span class="sd">    methods that should be overriden:</span>
 
 <span class="sd">    * ``__init__``: Defines the graph of the tensor network and initializes the</span>
 <span class="sd">      tensors of the nodes.</span>
+<span class="sd">      </span>
 <span class="sd">    * ``set_data_nodes``: Creates the data nodes where the data tensor(s) will</span>
 <span class="sd">      be placed. Usually, it will just select the edges to which the data nodes</span>
-<span class="sd">      should be connected, and call the parent method ``set_data_nodes``.</span>
+<span class="sd">      should be connected, and call the parent method :meth:`set_data_nodes`.</span>
+<span class="sd">      </span>
 <span class="sd">    * ``contract``: Defines the contraction algorithm of the whole tensor network,</span>
 <span class="sd">      thus returning a single node. Very much like ``forward`` this is the main</span>
 <span class="sd">      method that describes how the components of the network are combined.</span>
-<span class="sd">      Hence, in ``TensorNetwork`` the ``forward`` method shall not be overriden,</span>
-<span class="sd">      since it will just call ``contract``.</span>
+<span class="sd">      Hence, in ``TensorNetwork`` the :meth:`forward` method shall not be</span>
+<span class="sd">      overriden, since it will just call :meth:`contract`.</span>
+<span class="sd">      </span>
+<span class="sd">    |</span>
 
 <span class="sd">    Although one can define how the network is going to be contracted, there a</span>
 <span class="sd">    couple of modes that can change how this contraction behaves at a lower level:</span>
 
-<span class="sd">    * **auto_stack** (``False`` by default): This mode indicates whether node</span>
-<span class="sd">      :class:`Operations &lt;Operation&gt;` have the ability to take control of the</span>
-<span class="sd">      memory management of the network. For instance, if ``auto_stack`` is set</span>
-<span class="sd">      to ``True`` and a collection of :class:`ParamNodes &lt;ParamNode&gt;` are</span>
-<span class="sd">      :func:`stacked &lt;stack&gt;` (as the first operation in the contraction),</span>
-<span class="sd">      then those nodes will no longer store their own tensors, but rather a</span>
-<span class="sd">      ``virtual`` :class:`ParamStackNode` will store the stacked tensor, avoiding</span>
-<span class="sd">      the computation of the first :func:`stack` in every contraction. This</span>
-<span class="sd">      behaviour is not possible if ``auto_stack`` is set to ``False``, in which</span>
-<span class="sd">      case all nodes will always store their own tensors.</span>
+<span class="sd">    * ``auto_stack`` (``False`` by default): This mode indicates whether the</span>
+<span class="sd">      operation :func:`stack` can take control of the memory management of the</span>
+<span class="sd">      network to skip some steps in future computations. If ``auto_stack`` is</span>
+<span class="sd">      set to ``True`` and a collection of :class:`ParamNodes &lt;ParamNode&gt;` are</span>
+<span class="sd">      :func:`stacked &lt;stack&gt;` (as the first operation in which these nodes are</span>
+<span class="sd">      involved), then those nodes will no longer store their own tensors,</span>
+<span class="sd">      but rather a ``virtual`` :class:`ParamStackNode` will store the stacked</span>
+<span class="sd">      tensor, avoiding the computation of that first :func:`stack` in every</span>
+<span class="sd">      contraction. This behaviour is not possible if ``auto_stack`` is set to</span>
+<span class="sd">      ``False``, in which case all nodes will always store their own tensors.</span>
+<span class="sd">      </span>
+<span class="sd">      Setting ``auto_stack`` to ``True`` will be faster for both **inference**</span>
+<span class="sd">      and **training**. However, while experimenting with ``TensorNetwork``&#39;s</span>
+<span class="sd">      one might want that all nodes store their own tensors to avoid problems.</span>
 
-<span class="sd">    * **auto_unbind** (``True`` by default): This mode indicates whether the</span>
+<span class="sd">    * ``auto_unbind`` (``False`` by default): This mode indicates whether the</span>
 <span class="sd">      operation :func:`unbind` has to actually `unbind` the stacked tensor or</span>
 <span class="sd">      just generate a collection of references. That is, if ``auto_unbind`` is</span>
-<span class="sd">      set to ``False``, :func:`unbind` creates a collection of nodes, each of them</span>
-<span class="sd">      storing the corresponding slice of the stacked tensor. If ``auto_unbind``</span>
-<span class="sd">      is set to ``True`` (called ``index_mode``), :func:`unbind` just creates</span>
-<span class="sd">      the nodes and gives each of them an index for the stacked tensor, so that</span>
+<span class="sd">      set to ``False``, :func:`unbind` creates a collection of nodes, each of</span>
+<span class="sd">      them storing the corresponding slice of the stacked tensor. If</span>
+<span class="sd">      ``auto_unbind`` is set to ``True``, :func:`unbind` just creates the nodes</span>
+<span class="sd">      and gives each of them an index to reference the stacked tensor, so that</span>
 <span class="sd">      each node&#39;s tensor would be retrieved by indexing the stack. This avoids</span>
-<span class="sd">      performing the operation, since these indices will be the same in consecutive</span>
-<span class="sd">      iterations. Hence, in a similar way to ``auto_stack``, this mode entails</span>
-<span class="sd">      a certain control of the memory management of the network.</span>
+<span class="sd">      performing the operation, since these indices will be the same in</span>
+<span class="sd">      subsequent iterations.</span>
+<span class="sd">      </span>
+<span class="sd">      Setting ``auto_unbind`` to ``True`` will be faster for **inference**, but</span>
+<span class="sd">      slower for **training**.</span>
 
 <span class="sd">    Once the training algorithm starts, these modes should not be changed (very</span>
-<span class="sd">    often at least), since changing them entails first resetting the whole</span>
-<span class="sd">    network (see :meth:`reset`), which is a costly method. To understand what</span>
-<span class="sd">    reset means, check the different types of nodes a network might have:</span>
+<span class="sd">    often at least), since changing them entails first :meth:`resetting &lt;reset&gt;`</span>
+<span class="sd">    the whole network, which is a costly method.</span>
 <span class="sd">    </span>
-<span class="sd">    # TODO: reference to AbstarctNode</span>
+<span class="sd">    |</span>
 
-<span class="sd">    * **leaf**: These are the nodes that make up the graph of the Tensor Network,</span>
-<span class="sd">      except for the nodes containing data. These can be either type :class:`Node`</span>
-<span class="sd">      or :class:`ParamNode` (trainable nodes).</span>
-<span class="sd">    * **data**: These are :class:`Nodes &lt;Node&gt;` which store the tensors coming</span>
-<span class="sd">      from input data. These are set via :meth:`set_data_nodes`.</span>
-<span class="sd">    * **virtual**: These nodes (:class:`Node` or :class:`ParamNode`) are a sort</span>
-<span class="sd">      of ancillay, hidden nodes that accomplish some useful task (e.g. in uniform</span>
-<span class="sd">      tensor networks a virtual node has the shared tensor, while all the other</span>
-<span class="sd">      nodes in the network just have a reference to it).</span>
-<span class="sd">    * **resultant**: These are :class:`Nodes &lt;Node&gt;` that result from an</span>
-<span class="sd">      :class:`Operation`. They are intermediate nodes that (almost always)</span>
-<span class="sd">      inherit edges from ``leaf``  and ``data`` nodes, the ones that really</span>
-<span class="sd">      establish the network&#39;s graph. Thus ``resultant`` nodes can be thought of</span>
-<span class="sd">      like permutations or combinations of ``leaf`` nodes.</span>
-
-<span class="sd">    This way, when the Tensor Network is defined, it has a bunch of ``leaf``,</span>
-<span class="sd">    ``data`` and ``virtual`` nodes that make up the network structure, each of</span>
-<span class="sd">    them storing its own tensor. However, when the network is contracted, several</span>
+<span class="sd">    When the ``TensorNetwork`` is defined, it has a bunch of ``leaf``, ``data``</span>
+<span class="sd">    and ``virtual`` nodes that make up the network structure, each of them</span>
+<span class="sd">    storing its own tensor. However, when the network is contracted, several</span>
 <span class="sd">    ``resultant`` nodes become new members of the network, even modifying its</span>
-<span class="sd">    memory (depending on the ``auto_stack`` and ``auto_unbind`` modes). Therefore,</span>
-<span class="sd">    if one wants to `reset` the network to its initial state after performing</span>
-<span class="sd">    some operations, all the ``resultant`` nodes should be deleted, and all the</span>
-<span class="sd">    tensors should return to its nodes. This is exactly what :meth:`reset` does.</span>
-<span class="sd">    Besides, since ``auto_stack`` and ``auto_unbind`` can change how the tensors</span>
-<span class="sd">    are stored, if one wants to change these modes, the network should be first</span>
-<span class="sd">    reset (this is already done automatically when changing the modes).</span>
-
-<span class="sd">    Example</span>
-<span class="sd">    -------</span>
-<span class="sd">    This is how one may define an **MPS**.</span>
-
-<span class="sd">    ::</span>
-
-<span class="sd">        class MPS(tk.TensorNetwork):</span>
-
-<span class="sd">            def __init__(self, image_size, uniform=False):</span>
-<span class="sd">                super().__init__(name=&#39;MPS&#39;)</span>
-
-<span class="sd">                # Create TN</span>
-<span class="sd">                input_nodes = []</span>
-<span class="sd">                for _ in range(image_size[0] * image_size[1]):</span>
-<span class="sd">                    node = tk.ParamNode(shape=(10, 3, 10),</span>
-<span class="sd">                                        axes_names=(&#39;left&#39;,</span>
-<span class="sd">                                                    &#39;input&#39;,</span>
-<span class="sd">                                                    &#39;right&#39;),</span>
-<span class="sd">                                        name=&#39;input_node&#39;,</span>
-<span class="sd">                                        network=self)</span>
-<span class="sd">                    input_nodes.append(node)</span>
-
-<span class="sd">                for i in range(len(input_nodes) - 1):</span>
-<span class="sd">                    input_nodes[i][&#39;right&#39;] ^ input_nodes[i + 1][&#39;left&#39;]</span>
-
-<span class="sd">                # Periodic boundary conditions</span>
-<span class="sd">                output_node = tk.ParamNode(shape=(10, 10, 10),</span>
-<span class="sd">                                           axes_names=(&#39;left&#39;,</span>
-<span class="sd">                                                       &#39;output&#39;,</span>
-<span class="sd">                                                       &#39;right&#39;),</span>
-<span class="sd">                                           name=&#39;output_node&#39;,</span>
-<span class="sd">                                           network=self)</span>
-<span class="sd">                output_node[&#39;right&#39;] ^ input_nodes[0][&#39;left&#39;]</span>
-<span class="sd">                output_node[&#39;left&#39;] ^ input_nodes[-1][&#39;right&#39;]</span>
-
-<span class="sd">                self.input_nodes = input_nodes</span>
-<span class="sd">                self.output_node = output_node</span>
-
-<span class="sd">                if uniform:</span>
-<span class="sd">                    uniform_memory = tk.ParamNode(shape=(10, 3, 10),</span>
-<span class="sd">                                                  axes_names=(&#39;left&#39;,</span>
-<span class="sd">                                                              &#39;input&#39;,</span>
-<span class="sd">                                                              &#39;right&#39;),</span>
-<span class="sd">                                                  name=&#39;virtual_uniform&#39;,</span>
-<span class="sd">                                                  network=self,</span>
-<span class="sd">                                                  virtual=True)</span>
-<span class="sd">                    self.uniform_memory = uniform_memory</span>
-
-<span class="sd">                # Initialize nodes</span>
-<span class="sd">                if uniform:</span>
-<span class="sd">                    std = 1e-9</span>
-<span class="sd">                    tensor = torch.randn(uniform_memory.shape) * std</span>
-<span class="sd">                    random_eye = torch.randn(tensor.shape[0],</span>
-<span class="sd">                                             tensor.shape[2]) * std</span>
-<span class="sd">                    random_eye  = random_eye + torch.eye(tensor.shape[0],</span>
-<span class="sd">                                                         tensor.shape[2])</span>
-<span class="sd">                    tensor[:, 0, :] = random_eye</span>
-
-<span class="sd">                    uniform_memory._unrestricted_set_tensor(tensor)</span>
-
-<span class="sd">                    # Memory of each node is just a reference</span>
-<span class="sd">                    # to the uniform_memory tensor</span>
-<span class="sd">                    for node in input_nodes:</span>
-<span class="sd">                        del self._memory_nodes[node._tensor_info[&#39;address&#39;]]</span>
-<span class="sd">                        node._tensor_info[&#39;address&#39;] = None</span>
-<span class="sd">                        node._tensor_info[&#39;node_ref&#39;] = uniform_memory</span>
-<span class="sd">                        node._tensor_info[&#39;full&#39;] = True</span>
-<span class="sd">                        node._tensor_info[&#39;index&#39;] = None</span>
-
-<span class="sd">                else:</span>
-<span class="sd">                    std = 1e-9</span>
-<span class="sd">                    for node in input_nodes:</span>
-<span class="sd">                        tensor = torch.randn(node.shape) * std</span>
-<span class="sd">                        random_eye = torch.randn(tensor.shape[0],</span>
-<span class="sd">                                                 tensor.shape[2]) * std</span>
-<span class="sd">                        random_eye  = random_eye + torch.eye(tensor.shape[0],</span>
-<span class="sd">                                                             tensor.shape[2])</span>
-<span class="sd">                        tensor[:, 0, :] = random_eye</span>
-
-<span class="sd">                        node.tensor = tensor</span>
-
-<span class="sd">                eye_tensor = torch.eye(</span>
-<span class="sd">                    output_node.shape[0],</span>
-<span class="sd">                    output_node.shape[2]).view([output_node.shape[0],</span>
-<span class="sd">                                                1,</span>
-<span class="sd">                                                output_node.shape[2]])</span>
-<span class="sd">                eye_tensor = eye_tensor.expand(output_node.shape)</span>
-<span class="sd">                tensor = eye_tensor + std * torch.randn(output_node.shape)</span>
-
-<span class="sd">                output_node.tensor = tensor</span>
-
-<span class="sd">                self.input_nodes = input_nodes</span>
-<span class="sd">                self.output_node = output_node</span>
-
-<span class="sd">            def set_data_nodes(self) -&gt; None:</span>
-<span class="sd">                input_edges = []</span>
-<span class="sd">                for node in self.input_nodes:</span>
-<span class="sd">                    input_edges.append(node[&#39;input&#39;])</span>
-
-<span class="sd">                super().set_data_nodes(input_edges, 1)</span>
-
-<span class="sd">            def contract(self):</span>
-<span class="sd">                stack_input = tk.stack(self.input_nodes)</span>
-<span class="sd">                stack_data = tk.stack(list(self.data_nodes.values()))</span>
-
-<span class="sd">                stack_input[&#39;input&#39;] ^ stack_data[&#39;feature&#39;]</span>
-<span class="sd">                stack_result = stack_input @ stack_data</span>
-
-<span class="sd">                stack_result = tk.unbind(stack_result)</span>
-
-<span class="sd">                result = stack_result[0]</span>
-<span class="sd">                for node in stack_result[1:]:</span>
-<span class="sd">                    result @= node</span>
-<span class="sd">                result @= self.output_node</span>
-
-<span class="sd">                return result</span>
+<span class="sd">    memory (depending on the ``auto_stack`` and ``auto_unbind`` modes).</span>
+<span class="sd">    </span>
+<span class="sd">    Therefore, if one wants to :meth:`reset` the network to its initial state</span>
+<span class="sd">    after performing some operations, all the ``resultant`` nodes should be</span>
+<span class="sd">    deleted, and all the tensors should return to its nodes (each node stores</span>
+<span class="sd">    its own tensor). This is exactly what :meth:`reset` does. Besides, since</span>
+<span class="sd">    ``auto_stack`` and ``auto_unbind`` can change how the tensors are stored,</span>
+<span class="sd">    if one wants to change these modes, the network should be first reset (this</span>
+<span class="sd">    is already done automatically when changing the modes).</span>
+<span class="sd">    </span>
+<span class="sd">    See :class:`AbstractNode` to learn about the **4 excluding types** of nodes,</span>
+<span class="sd">    and :meth:`reset` to learn about how these nodes are treated differently.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
+<span class="sd">    </span>
+<span class="sd">    There are also some special nodes that one should take into account. These</span>
+<span class="sd">    are specified by name. See :class:`AbstractNode` to learn about</span>
+<span class="sd">    **reserved nodes&#39; names**, and :meth:`reset` to learn about how these</span>
+<span class="sd">    nodes are treated differently.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    name : str, optional</span>
+<span class="sd">        Network&#39;s name. By default, it is the name of the class</span>
+<span class="sd">        (e.g. ``&quot;tensornetwork&quot;``).</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
+<span class="sd">    </span>
+<span class="sd">    # TODO: add reference to example in other file</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">operations</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>  <span class="c1"># References to the Operations defined for nodes</span>
@@ -3880,14 +3990,14 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span> <span class="o">=</span> <span class="p">[]</span>
 
         <span class="c1"># Memories</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_memory_nodes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>   <span class="c1"># address -&gt; memory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_memory_nodes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>    <span class="c1"># address -&gt; memory</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_inverse_memory</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>  <span class="c1"># address -&gt; nodes using that memory</span>
 
         <span class="c1"># TN modes</span>
-        <span class="c1"># Auto-management of memory mode (train -&gt; True)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_auto_unbind</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># Unbind/index mode (train -&gt; True)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_tracing</span> <span class="o">=</span> <span class="kc">False</span>     <span class="c1"># Tracing mode (True while calling .trace())</span>
+        <span class="c1"># Auto-management of memory mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span> <span class="o">=</span> <span class="kc">False</span>   <span class="c1"># train -&gt; True / eval -&gt; True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_auto_unbind</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># train -&gt; False / eval -&gt; True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tracing</span> <span class="o">=</span> <span class="kc">False</span>      <span class="c1"># Tracing mode (True while calling .trace())</span>
 
         <span class="c1"># Lis of operations used to contract the TN</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_seq_ops</span> <span class="o">=</span> <span class="p">[]</span>
@@ -3923,48 +4033,95 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">leaf_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Text</span><span class="p">,</span> <span class="n">AbstractNode</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``leaf`` nodes of the network.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns dictionary of ``leaf`` nodes of the network.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Text</span><span class="p">,</span> <span class="n">AbstractNode</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``data`` nodes of the network.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns dictionary of ``data`` nodes of the network.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_nodes</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">virtual_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Text</span><span class="p">,</span> <span class="n">AbstractNode</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``virtual`` nodes of the network.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns dictionary of ``virtual`` nodes of the network.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_virtual_nodes</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">resultant_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Text</span><span class="p">,</span> <span class="n">AbstractNode</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``resultant`` nodes of the network.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns dictionary of ``resultant`` nodes of the network.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">edges</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Edge</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns list of dangling, non-batch edges of the network.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns list of dangling, non-batch edges of the network. Dangling</span>
+<span class="sd">        edges from ``virtual`` nodes are not included.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">auto_stack</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boolean indicating whether ``auto_stack`` is on/off.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns boolean indicating whether ``auto_stack`` mode is active. By</span>
+<span class="sd">        default it is ``False``.</span>
+<span class="sd">        </span>
+<span class="sd">        This mode indicates whether the operation :func:`stack` can take control</span>
+<span class="sd">        of the memory management of the network to skip some steps in future</span>
+<span class="sd">        computations. If ``auto_stack`` is set to ``True`` and a collection of</span>
+<span class="sd">        :class:`ParamNodes &lt;ParamNode&gt;` are :func:`stacked &lt;stack&gt;` (as the</span>
+<span class="sd">        first operation in which these nodes are involved), then those nodes</span>
+<span class="sd">        will no longer store their own tensors, but rather a ``virtual``</span>
+<span class="sd">        :class:`ParamStackNode` will store the stacked tensor, avoiding the</span>
+<span class="sd">        computation of that first :func:`stack` in every contraction. This</span>
+<span class="sd">        behaviour is not possible if ``auto_stack`` is set to ``False``, in</span>
+<span class="sd">        which case all nodes will always store their own tensors.</span>
+<span class="sd">        </span>
+<span class="sd">        Setting ``auto_stack`` to ``True`` will be faster for both **inference**</span>
+<span class="sd">        and **training**. However, while experimenting with ``TensorNetwork``&#39;s</span>
+<span class="sd">        one might want that all nodes store their own tensors to avoid problems.</span>
+<span class="sd">        </span>
+<span class="sd">        Be aware that changing ``auto_stack`` mode entails :meth:`resetting &lt;reset&gt;`</span>
+<span class="sd">        the network, which will modify its nodes. This has to be done manually</span>
+<span class="sd">        in order to avoid undesired behaviour.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span>
 
     <span class="nd">@auto_stack</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">auto_stack</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">automem</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span> <span class="o">=</span> <span class="n">automem</span>
+    <span class="k">def</span> <span class="nf">auto_stack</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_mode</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">set_mode</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span> <span class="o">=</span> <span class="n">set_mode</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">auto_unbind</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boolean indicating whether ``auto_unbind`` is on/off.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns boolean indicating whether ``auto_unbind`` mode is active. By</span>
+<span class="sd">        default it is ``False``.</span>
+<span class="sd">        </span>
+<span class="sd">        This mode indicates whether the operation :func:`unbind` has to actually</span>
+<span class="sd">        `unbind` the stacked tensor or just generate a collection of references.</span>
+<span class="sd">        That is, if ``auto_unbind`` is set to ``False``, :func:`unbind` creates</span>
+<span class="sd">        a collection of nodes, each of them storing the corresponding slice of</span>
+<span class="sd">        the stacked tensor. If ``auto_unbind`` is set to ``True``, :func:`unbind`</span>
+<span class="sd">        just creates the nodes and gives each of them an index to reference the</span>
+<span class="sd">        stacked tensor, so that each node&#39;s tensor would be retrieved by indexing</span>
+<span class="sd">        the stack. This avoids performing the operation, since these indices</span>
+<span class="sd">        will be the same in subsequent iterations.</span>
+<span class="sd">      </span>
+<span class="sd">        Setting ``auto_unbind`` to ``True`` will be faster for **inference**, but</span>
+<span class="sd">        slower for **training**.</span>
+<span class="sd">        </span>
+<span class="sd">        Be aware that changing ``auto_unbind`` mode entails :meth:`resetting</span>
+<span class="sd">        &lt;reset&gt;` the network, which will modify its nodes. Thus, this mode has</span>
+<span class="sd">        to be changed manually in order to avoid undesired behaviour.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_unbind</span>
 
     <span class="nd">@auto_unbind</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">auto_unbind</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">unbind</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_auto_unbind</span> <span class="o">=</span> <span class="n">unbind</span>
+    <span class="k">def</span> <span class="nf">auto_unbind</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_mode</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">set_mode</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_unbind</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_auto_unbind</span> <span class="o">=</span> <span class="n">set_mode</span>
 
     <span class="c1"># -------</span>
     <span class="c1"># Methods</span>
@@ -3982,16 +4139,16 @@ title="Source repository"
 
     <span class="k">def</span> <span class="nf">_add_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge</span><span class="p">:</span> <span class="n">Edge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Adds an edge to the network. If it is a :class:`ParamEdge` that is not</span>
-<span class="sd">        already a sub-module of the network, it is added as such. If it is a</span>
-<span class="sd">        ``(Param)StackEdge``, it is not added, since those edges are a sort of</span>
-<span class="sd">        `virtual` edges.</span>
+<span class="sd">        Adds an edge to the network. If it is a ``StackEdge``, it is not added,</span>
+<span class="sd">        since those edges are a sort of `virtual` edges used for ``resultant``</span>
+<span class="sd">        ``StackNodes``.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        edge : Edge</span>
 <span class="sd">            Edge to be added.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># StackEdges are ignores since these are edges for ``resultant`` nodes</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">StackEdge</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_batch</span><span class="p">()</span> <span class="ow">and</span> \
                     <span class="p">(</span><span class="n">edge</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">):</span>
@@ -3999,8 +4156,7 @@ title="Source repository"
 
     <span class="k">def</span> <span class="nf">_remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge</span><span class="p">:</span> <span class="n">Edge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Removes an edge from the network. If it is a :class:`ParamEdge`, it is</span>
-<span class="sd">        removed as sub-module.</span>
+<span class="sd">        Removes an edge from the network.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -4014,9 +4170,8 @@ title="Source repository"
 
     <span class="k">def</span> <span class="nf">_add_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">override</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Adds a node to the network. If it is a :class:`ParamEdge`, its tensor</span>
-<span class="sd">        (``nn.Parameter``) becomes a parameter of the network. If it has</span>
-<span class="sd">        :class:`ParamEdges &lt;ParamEdge&gt;`, they become sub-modules of the network.</span>
+<span class="sd">        Adds a node to the network. If it is a :class:`ParamNode`, its tensor</span>
+<span class="sd">        (``torch.nn.Parameter``) becomes a parameter of the network.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -4038,7 +4193,7 @@ title="Source repository"
 <span class="sd">        node from the network, as well as the reference to the network that is</span>
 <span class="sd">        kept by the node. To completely get rid of the node, it should be first</span>
 <span class="sd">        disconnected from all its neighbours (that belong to the network) and</span>
-<span class="sd">        then removed. This what :meth:`delete_node` does.</span>
+<span class="sd">        then removed. This is what :meth:`delete_node` does.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -4073,6 +4228,13 @@ title="Source repository"
 <div class="viewcode-block" id="TensorNetwork.delete_node"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork.delete_node">[docs]</a>    <span class="k">def</span> <span class="nf">delete_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">move_names</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Disconnects node from all its neighbours and removes it from the network.</span>
+<span class="sd">        To completely get rid of the node, do not forget to delete it:</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; del node</span>
+<span class="sd">            </span>
+<span class="sd">        or override it:</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; node = node.copy()  # .copy() calls to .delete_node()</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -4084,6 +4246,32 @@ title="Source repository"
 <span class="sd">            This is useful when several nodes are being modified at once, and</span>
 <span class="sd">            each resultant node has the same enumeration as the corresponding</span>
 <span class="sd">            original node.</span>
+<span class="sd">            </span>
+<span class="sd">        Example</span>
+<span class="sd">        -------</span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.randn((2, 3))</span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.randn((3, 4))</span>
+<span class="sd">        &gt;&gt;&gt; nodeA[1] ^ nodeB[0]</span>
+<span class="sd">        &gt;&gt;&gt; print(nodeA.name, nodeB.name)</span>
+<span class="sd">        node_0 node_1</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; nodeB.network.delete_node(nodeB)</span>
+<span class="sd">        &gt;&gt;&gt; nodeA.neighbours() == []</span>
+<span class="sd">        True</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; print(nodeA.name)</span>
+<span class="sd">        node</span>
+<span class="sd">        </span>
+<span class="sd">        If ``move_names`` is set to ``False``, enumeration is not removed.</span>
+<span class="sd">        Useful to avoid managing enumeration of a list of nodes that are all</span>
+<span class="sd">        going to be deleted.</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; nodeA = tk.randn((2, 3))</span>
+<span class="sd">        &gt;&gt;&gt; nodeB = tk.randn((3, 4))</span>
+<span class="sd">        &gt;&gt;&gt; nodeA[1] ^ nodeB[0]</span>
+<span class="sd">        &gt;&gt;&gt; nodeB.network.delete_node(nodeB, False)</span>
+<span class="sd">        &gt;&gt;&gt; print(nodeA.name)</span>
+<span class="sd">        node_0</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">node</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_remove_node</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">move_names</span><span class="p">)</span>
@@ -4128,7 +4316,7 @@ title="Source repository"
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Updates a single node&#39;s name, without taking care of the other names.&quot;&quot;&quot;</span>
         <span class="c1"># Node is ParamNode and tensor is not None</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
-            <span class="nb">delattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">)</span>
+            <span class="nb">delattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;param&#39;</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">]))</span>
         <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_attached_to</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_remove_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
@@ -4137,9 +4325,10 @@ title="Source repository"
         <span class="n">node</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">new_name</span>
 
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">name</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;param&#39;</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">])):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">register_parameter</span><span class="p">(</span>
-                    <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">])</span>
+                    <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;param&#39;</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">]),</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">])</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="c1"># Nodes names are never repeated, so it is likely that</span>
                 <span class="c1"># this case will never occur</span>
@@ -4178,7 +4367,7 @@ title="Source repository"
 <span class="sd">          **Result**: [&quot;my_node_0&quot;, &quot;my_node_1&quot;(new node)]</span>
 
 <span class="sd">        To add a custom enumeration to keep track of the nodes of the network</span>
-<span class="sd">        in a used-defined way, one may use brackets or parenthesis.</span>
+<span class="sd">        in a user-defined way, one may use brackets or parenthesis.</span>
 
 <span class="sd">        * **New node&#39;s name**: &quot;my_node_(0)&quot;</span>
 <span class="sd">          **Network&#39;s nodes&#39; names**: [&quot;my_node&quot;]</span>
@@ -4208,9 +4397,9 @@ title="Source repository"
             <span class="n">count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repeated_nodes_names</span><span class="p">[</span><span class="n">non_enum_prev_name</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">count</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">aux_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">non_enum_prev_name</span><span class="p">]</span>
-                <span class="n">aux_new_name</span> <span class="o">=</span> <span class="n">non_enum_prev_name</span> <span class="o">+</span> <span class="s1">&#39;_0&#39;</span>
+                <span class="n">aux_new_name</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">non_enum_prev_name</span><span class="p">,</span> <span class="s1">&#39;0&#39;</span><span class="p">])</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_update_node_name</span><span class="p">(</span><span class="n">aux_node</span><span class="p">,</span> <span class="n">aux_new_name</span><span class="p">)</span>
-            <span class="n">new_name</span> <span class="o">=</span> <span class="n">non_enum_prev_name</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">count</span><span class="p">)</span>
+            <span class="n">new_name</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">non_enum_prev_name</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">count</span><span class="p">)])</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">new_name</span> <span class="o">=</span> <span class="n">non_enum_prev_name</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_repeated_nodes_names</span><span class="p">[</span><span class="n">non_enum_prev_name</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
@@ -4239,9 +4428,10 @@ title="Source repository"
 
         <span class="c1"># Node is ParamNode and tensor is not None</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;param&#39;</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">])):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">register_parameter</span><span class="p">(</span>
-                    <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">])</span>
+                    <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;param&#39;</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">]),</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">])</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="c1"># Nodes names are never repeated, so it is likely that</span>
                 <span class="c1"># this case will never occur</span>
@@ -4281,7 +4471,7 @@ title="Source repository"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Node is ParamNode and tensor is not None</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
-            <span class="nb">delattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">)</span>
+            <span class="nb">delattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;param&#39;</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">]))</span>
         <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_attached_to</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_remove_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
@@ -4292,8 +4482,8 @@ title="Source repository"
             <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">enum</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">enum</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">count</span><span class="p">):</span>
-                    <span class="n">aux_prev_name</span> <span class="o">=</span> <span class="n">non_enum_prev_name</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
-                    <span class="n">aux_new_name</span> <span class="o">=</span> <span class="n">non_enum_prev_name</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+                    <span class="n">aux_prev_name</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">non_enum_prev_name</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)])</span>
+                    <span class="n">aux_new_name</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">non_enum_prev_name</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)])</span>
                     <span class="n">aux_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">aux_prev_name</span><span class="p">]</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_update_node_name</span><span class="p">(</span><span class="n">aux_node</span><span class="p">,</span> <span class="n">aux_new_name</span><span class="p">)</span>
 
@@ -4303,7 +4493,7 @@ title="Source repository"
             <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repeated_nodes_names</span><span class="p">[</span><span class="n">non_enum_prev_name</span><span class="p">]</span>
         <span class="k">elif</span> <span class="n">count</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">move_names</span><span class="p">:</span>
-                <span class="n">aux_prev_name</span> <span class="o">=</span> <span class="n">non_enum_prev_name</span> <span class="o">+</span> <span class="s1">&#39;_0&#39;</span>
+                <span class="n">aux_prev_name</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">non_enum_prev_name</span><span class="p">,</span> <span class="s1">&#39;0&#39;</span><span class="p">])</span>
                 <span class="n">aux_new_name</span> <span class="o">=</span> <span class="n">non_enum_prev_name</span>
                 <span class="n">aux_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">aux_prev_name</span><span class="p">]</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_update_node_name</span><span class="p">(</span><span class="n">aux_node</span><span class="p">,</span> <span class="n">aux_new_name</span><span class="p">)</span>
@@ -4466,6 +4656,7 @@ title="Source repository"
 <div class="viewcode-block" id="TensorNetwork.set_data_nodes"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                        <span class="n">input_edges</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="n">Edge</span><span class="p">]],</span>
                        <span class="n">num_batch_edges</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># TODO: mention stack_data_memory</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates ``data`` nodes with as many batch edges as ``num_batch_edges``</span>
 <span class="sd">        and one feature edge, and connects each of these feature edges to an</span>
@@ -4564,6 +4755,7 @@ title="Source repository"
                 <span class="bp">self</span><span class="o">.</span><span class="n">delete_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_virtual_nodes</span><span class="p">[</span><span class="s1">&#39;stack_data_memory&#39;</span><span class="p">])</span></div>
 
 <div class="viewcode-block" id="TensorNetwork.add_data"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork.add_data">[docs]</a>    <span class="k">def</span> <span class="nf">add_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># TODO: mention stack_data_memory</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Adds data tensor(s) to ``data`` nodes, that is, changes their tensors</span>
 <span class="sd">        by new data tensors when a new batch is provided.</span>

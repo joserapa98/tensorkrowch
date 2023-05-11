@@ -56,7 +56,7 @@ class MPS(TensorNetwork):
     >>> mps = tk.MPS(n_sites=5,
     ...              d_phys=2,
     ...              d_bond=5)
-    >>> data = torch.ones(5, 20, 2) # n_features x batch_size x feature_size
+    >>> data = torch.ones(20, 5, 2) # batch_size x n_features x feature_size
     >>> result = mps(data)
     >>> print(result.shape)
     torch.Size([20])
@@ -486,7 +486,7 @@ class MPS(TensorNetwork):
         d_bond = []
         for node in nodes:
             if 'right' in node.axes_names:
-                d_bond.append(node['right'].size())  # TODO: _size?
+                d_bond.append(node['right'].size())
         self._d_bond = d_bond
         
         self.auto_stack = prev_auto_stack

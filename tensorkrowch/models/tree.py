@@ -44,7 +44,7 @@ class Tree(TensorNetwork):
     --------
     >>> tree = tk.Tree(sites_per_layer=[4, 2, 1],
     ...                d_bond=[[3, 3, 4], [4, 4, 2], [2, 2, 2]])
-    >>> data = torch.ones(8, 20, 3) # n_features x batch_size x feature_size
+    >>> data = torch.ones(20, 8, 3) # batch_size x n_features x feature_size
     >>> result = tree(data)
     >>> print(result.shape)
     torch.Size([20, 2])

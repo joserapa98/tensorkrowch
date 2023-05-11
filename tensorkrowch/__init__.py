@@ -13,7 +13,7 @@ from tensorkrowch.components import Successor, TensorNetwork
 from tensorkrowch.initializers import empty, zeros, ones, copy, rand, randn
 
 # Embeddings
-from tensorkrowch.embeddings import unit, add_ones
+import tensorkrowch.embeddings as embeddings
 
 # Edge operations
 from tensorkrowch.components import connect, connect_stack, disconnect
@@ -30,8 +30,4 @@ from tensorkrowch.operations import (split, split_, contract_edges, contract_,
                                      stack, unbind, einsum, stacked_einsum)
 
 # Models
-from tensorkrowch.tn_models.mps import MPS, UMPS, ConvMPS, ConvUMPS
-from tensorkrowch.tn_models.mps_layer import (MPSLayer, UMPSLayer,
-                                              ConvMPSLayer, ConvUMPSLayer)
-from tensorkrowch.tn_models.peps import PEPS, UPEPS, ConvPEPS, ConvUPEPS
-from tensorkrowch.tn_models.tree import Tree, UTree, ConvTree, ConvUTree
+import tensorkrowch.models as models

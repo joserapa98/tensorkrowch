@@ -74,7 +74,7 @@ class MPSLayer(TensorNetwork):
     ...                         d_phys=2,
     ...                         n_labels=10,
     ...                         d_bond=5)
-    >>> data = torch.ones(4, 20, 2) # n_features x batch_size x feature_size
+    >>> data = torch.ones(20, 4, 2) # batch_size x n_features x feature_size
     >>> result = mps_layer(data)
     >>> print(result.shape)
     torch.Size([20, 10])

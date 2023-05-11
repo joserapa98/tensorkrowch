@@ -51,7 +51,7 @@ class PEPS(TensorNetwork):
     ...                n_cols=2,
     ...                d_phys=3,
     ...                d_bond=[5, 5])
-    >>> data = torch.ones(4, 20, 3) # n_features x batch_size x feature_size
+    >>> data = torch.ones(20, 4, 3) # batch_size x n_features x feature_size
     >>> result = peps(data)
     >>> print(result.shape)
     torch.Size([20])

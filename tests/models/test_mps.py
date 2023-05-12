@@ -19,9 +19,9 @@ class TestMPS:
         data = torch.randn(4, 100, 5)
 
         for boundary in ['obc', 'pbc']:
-            mps = tk.MPS(n_sites=4,
-                         d_phys=5,
-                         d_bond=2,
+            mps = tk.MPS(n_features=4,
+                         in_dim=5,
+                         bond_dim=2,
                          boundary=boundary)
 
             for auto_stack in [True, False]:
@@ -72,15 +72,15 @@ class TestMPS:
                                         else:
                                             assert len(mps.virtual_nodes) == 1
 
-    def test_all_algorithms_diff_d_phys(self):
-        d_phys = torch.randint(low=2, high=7, size=(4,)).tolist()
-        example = [torch.randn(1, d) for d in d_phys]
-        data = [torch.randn(100, d) for d in d_phys]
+    def test_all_algorithms_diff_in_dim(self):
+        in_dim = torch.randint(low=2, high=7, size=(4,)).tolist()
+        example = [torch.randn(1, d) for d in in_dim]
+        data = [torch.randn(100, d) for d in in_dim]
 
         for boundary in ['obc', 'pbc']:
-            mps = tk.MPS(n_sites=4,
-                         d_phys=d_phys,
-                         d_bond=2,
+            mps = tk.MPS(n_features=4,
+                         in_dim=in_dim,
+                         bond_dim=2,
                          boundary=boundary)
 
             for auto_stack in [True, False]:
@@ -131,15 +131,15 @@ class TestMPS:
                                         else:
                                             assert len(mps.virtual_nodes) == 0
 
-    def test_all_algorithms_diff_d_bond(self):
-        d_bond = torch.randint(low=2, high=7, size=(4,)).tolist()
+    def test_all_algorithms_diff_bond_dim(self):
+        bond_dim = torch.randint(low=2, high=7, size=(4,)).tolist()
         example = torch.randn(4, 1, 5)
         data = torch.randn(4, 100, 5)
 
         for boundary in ['obc', 'pbc']:
-            mps = tk.MPS(n_sites=4,
-                         d_phys=5,
-                         d_bond=d_bond[:-1] if boundary == 'obc' else d_bond,
+            mps = tk.MPS(n_features=4,
+                         in_dim=5,
+                         bond_dim=bond_dim[:-1] if boundary == 'obc' else bond_dim,
                          boundary=boundary)
 
             for auto_stack in [True, False]:
@@ -190,16 +190,16 @@ class TestMPS:
                                         else:
                                             assert len(mps.virtual_nodes) == 1
 
-    def test_all_algorithms_diff_d_phys_d_bond(self):
-        d_phys = torch.randint(low=2, high=7, size=(4,)).tolist()
-        d_bond = torch.randint(low=2, high=7, size=(4,)).tolist()
-        example = [torch.randn(1, d) for d in d_phys]
-        data = [torch.randn(100, d) for d in d_phys]
+    def test_all_algorithms_diff_in_dim_bond_dim(self):
+        in_dim = torch.randint(low=2, high=7, size=(4,)).tolist()
+        bond_dim = torch.randint(low=2, high=7, size=(4,)).tolist()
+        example = [torch.randn(1, d) for d in in_dim]
+        data = [torch.randn(100, d) for d in in_dim]
 
         for boundary in ['obc', 'pbc']:
-            mps = tk.MPS(n_sites=4,
-                         d_phys=d_phys,
-                         d_bond=d_bond[:-1] if boundary == 'obc' else d_bond,
+            mps = tk.MPS(n_features=4,
+                         in_dim=in_dim,
+                         bond_dim=bond_dim[:-1] if boundary == 'obc' else bond_dim,
                          boundary=boundary)
 
             for auto_stack in [True, False]:
@@ -252,9 +252,9 @@ class TestMPS:
 
     def test_extreme_case_left_right(self):
         # Left node + Right node
-        mps = tk.MPS(n_sites=2,
-                     d_phys=5,
-                     d_bond=2,
+        mps = tk.MPS(n_features=2,
+                     in_dim=5,
+                     bond_dim=2,
                      boundary='obc')
         example = torch.randn(2, 1, 5)
         data = torch.randn(2, 100, 5)
@@ -303,9 +303,9 @@ class TestMPS:
 
     def test_extreme_case_one_node(self):
         # One node
-        mps = tk.MPS(n_sites=1,
-                     d_phys=5,
-                     d_bond=2,
+        mps = tk.MPS(n_features=1,
+                     in_dim=5,
+                     bond_dim=2,
                      boundary='pbc')
         example = torch.randn(1, 1, 5)
         data = torch.randn(1, 100, 5)
@@ -361,9 +361,9 @@ class TestMPS:
         example = torch.randn(5, 1, 2)
         data = torch.randn(5, 100, 2)
 
-        mps = tk.MPS(n_sites=5,
-                     d_phys=2,
-                     d_bond=5,
+        mps = tk.MPS(n_features=5,
+                     in_dim=2,
+                     bond_dim=5,
                      boundary='obc')
 
         # Contract with data
@@ -402,14 +402,14 @@ class TestMPS:
         assert norm.item() < 1e-5
 
     def test_canonicalize_univocal_diff_dims(self):
-        d_phys = torch.arange(2, 7).int().tolist()
-        d_bond = torch.arange(2, 6).int().tolist()
-        example = [torch.randn(1, d) for d in d_phys]
-        data = [torch.randn(100, d) for d in d_phys]
+        in_dim = torch.arange(2, 7).int().tolist()
+        bond_dim = torch.arange(2, 6).int().tolist()
+        example = [torch.randn(1, d) for d in in_dim]
+        data = [torch.randn(100, d) for d in in_dim]
 
-        mps = tk.MPS(n_sites=5,
-                     d_phys=d_phys,
-                     d_bond=d_bond,
+        mps = tk.MPS(n_features=5,
+                     in_dim=in_dim,
+                     bond_dim=bond_dim,
                      boundary='obc')
 
         # Contract with data
@@ -448,19 +448,19 @@ class TestMPS:
         assert norm.item() < 1e-5
 
     def test_canonicalize_univocal_diff_rand_dims(self):
-        # d_phys = [2, 3, 5, 4, 5] #torch.randint(low=2, high=10, size=(5,)).tolist()
-        # d_bond = [2, 3, 4, 5] #torch.randint(low=2, high=10, size=(4,)).tolist()
+        # in_dim = [2, 3, 5, 4, 5] #torch.randint(low=2, high=10, size=(5,)).tolist()
+        # bond_dim = [2, 3, 4, 5] #torch.randint(low=2, high=10, size=(4,)).tolist()
         # NOTE: just that combination of dims raises error
 
-        d_phys = [2, 3, 5, 3, 2]
-        d_bond = [2, 6, 6, 2]
+        in_dim = [2, 3, 5, 3, 2]
+        bond_dim = [2, 6, 6, 2]
 
-        example = [torch.randn(1, d) for d in d_phys]
-        data = [torch.randn(100, d) for d in d_phys]
+        example = [torch.randn(1, d) for d in in_dim]
+        data = [torch.randn(100, d) for d in in_dim]
 
-        mps = tk.MPS(n_sites=5,
-                     d_phys=d_phys,
-                     d_bond=d_bond,
+        mps = tk.MPS(n_features=5,
+                     in_dim=in_dim,
+                     bond_dim=bond_dim,
                      boundary='obc')
 
         # Contract with data
@@ -502,9 +502,9 @@ class TestMPS:
         example = torch.randn(5, 1, 2)
         data = torch.randn(5, 100, 2)
 
-        mps = tk.MPS(n_sites=5,
-                     d_phys=2,
-                     d_bond=20,
+        mps = tk.MPS(n_features=5,
+                     in_dim=2,
+                     bond_dim=20,
                      boundary='obc')
 
         # Contract with data
@@ -549,9 +549,9 @@ class TestUMPS:
         example = torch.randn(4, 1, 5)
         data = torch.randn(4, 100, 5)
 
-        mps = tk.UMPS(n_sites=4,
-                      d_phys=5,
-                      d_bond=2)
+        mps = tk.models.UMPS(n_features=4,
+                      in_dim=5,
+                      bond_dim=2)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -575,9 +575,9 @@ class TestUMPS:
 
     def test_extreme_case_mats_env_2_nodes(self):
         # Two nodes
-        mps = tk.UMPS(n_sites=2,
-                      d_phys=5,
-                      d_bond=2)
+        mps = tk.models.UMPS(n_features=2,
+                      in_dim=5,
+                      bond_dim=2)
         example = torch.randn(2, 1, 5)
         data = torch.randn(2, 100, 5)
 
@@ -603,9 +603,9 @@ class TestUMPS:
 
     def test_extreme_case_mats_env_1_node(self):
         # One node
-        mps = tk.UMPS(n_sites=1,
-                      d_phys=5,
-                      d_bond=2)
+        mps = tk.models.UMPS(n_features=1,
+                      in_dim=5,
+                      bond_dim=2)
         example = torch.randn(1, 1, 5)
         data = torch.randn(1, 100, 5)
 
@@ -641,8 +641,8 @@ class TestConvMPS:
         data = embedding(torch.randn(100, 5, 5))
 
         for boundary in ['obc', 'pbc']:
-            mps = tk.ConvMPS(in_channels=2,
-                             d_bond=2,
+            mps = tk.models.ConvMPS(in_channels=2,
+                             bond_dim=2,
                              kernel_size=2,
                              boundary=boundary)
 
@@ -701,19 +701,19 @@ class TestConvMPS:
                                                 assert len(
                                                     mps.virtual_nodes) == 1
 
-    def test_all_algorithms_diff_d_bond(self):
+    def test_all_algorithms_diff_bond_dim(self):
         def embedding(data: torch.Tensor) -> torch.Tensor:
             return torch.stack([torch.ones_like(data),
                                 data], dim=1)
 
-        d_bond = torch.randint(low=2, high=7, size=(4,)).tolist()
+        bond_dim = torch.randint(low=2, high=7, size=(4,)).tolist()
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
 
         for boundary in ['obc', 'pbc']:
-            mps = tk.ConvMPS(in_channels=2,
-                             d_bond=d_bond[:-
-                                           1] if boundary == 'obc' else d_bond,
+            mps = tk.models.ConvMPS(in_channels=2,
+                             bond_dim=bond_dim[:-
+                                           1] if boundary == 'obc' else bond_dim,
                              kernel_size=2,
                              boundary=boundary)
 
@@ -781,8 +781,8 @@ class TestConvMPS:
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
 
-        mps = tk.ConvMPS(in_channels=2,
-                         d_bond=2,
+        mps = tk.models.ConvMPS(in_channels=2,
+                         bond_dim=2,
                          kernel_size=(1, 2),
                          boundary='obc')
 
@@ -842,8 +842,8 @@ class TestConvMPS:
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
 
-        mps = tk.ConvMPS(in_channels=2,
-                         d_bond=2,
+        mps = tk.models.ConvMPS(in_channels=2,
+                         bond_dim=2,
                          kernel_size=1,
                          boundary='pbc')
 
@@ -910,8 +910,8 @@ class TestConvUMPS:
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
 
-        mps = tk.ConvUMPS(in_channels=2,
-                          d_bond=2,
+        mps = tk.models.ConvUMPS(in_channels=2,
+                          bond_dim=2,
                           kernel_size=2)
 
         for auto_stack in [True, False]:
@@ -946,8 +946,8 @@ class TestConvUMPS:
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
 
-        mps = tk.ConvUMPS(in_channels=2,
-                          d_bond=2,
+        mps = tk.models.ConvUMPS(in_channels=2,
+                          bond_dim=2,
                           kernel_size=(1, 2))
 
         for auto_stack in [True, False]:
@@ -982,8 +982,8 @@ class TestConvUMPS:
         example = embedding(torch.randn(1, 5, 5))
         data = embedding(torch.randn(100, 5, 5))
 
-        mps = tk.ConvUMPS(in_channels=2,
-                          d_bond=2,
+        mps = tk.models.ConvUMPS(in_channels=2,
+                          bond_dim=2,
                           kernel_size=1)
 
         for auto_stack in [True, False]:

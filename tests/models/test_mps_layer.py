@@ -1,31 +1,32 @@
 """
-Tests for network_components
+Tests for mps_layer:
+
+    * TestMPSLayer
+    * TestUMPSLayer
+    * TestConvMPSLayer
+    * TestConvUMPSLayer
 """
 
 import pytest
 
 import torch
-import torch.nn as nn
 import tensorkrowch as tk
-
-from typing import Sequence
-import time
 
 
 class TestMPSLayer:
 
     def test_all_algorithms(self):
-        example = torch.randn(4, 1, 5)
-        data = torch.randn(4, 100, 5)
+        example = torch.randn(1, 4, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 4, 5)
 
         for boundary in ['obc', 'pbc']:
-            for l_position in range(5):
-                mps = tk.MPSLayer(n_sites=5,
-                                  d_phys=5,
-                                  n_labels=12,
-                                  d_bond=2,
-                                  l_position=l_position,
-                                  boundary=boundary)
+            for out_position in range(5):
+                mps = tk.models.MPSLayer(n_features=4,
+                                         in_dim=5,
+                                         out_dim=12,
+                                         bond_dim=2,
+                                         out_position=out_position,
+                                         boundary=boundary)
 
                 for auto_stack in [True, False]:
                     for auto_unbind in [True, False]:
@@ -46,9 +47,9 @@ class TestMPSLayer:
                                 assert len(mps.leaf_nodes) == 5
                                 assert len(mps.data_nodes) == 4
                                 if not inline_input and auto_stack:
-                                    assert len(mps.virtual_nodes) == 4
+                                    assert len(mps.virtual_nodes) == 2
                                 else:
-                                    assert len(mps.virtual_nodes) == 3
+                                    assert len(mps.virtual_nodes) == 1
 
                                 # Canonicalize and continue
                                 for mode in ['svd', 'svdr', 'qr']:
@@ -69,23 +70,23 @@ class TestMPSLayer:
                                         assert len(mps.leaf_nodes) == 5
                                         assert len(mps.data_nodes) == 4
                                         if not inline_input and auto_stack:
-                                            assert len(mps.virtual_nodes) == 4
+                                            assert len(mps.virtual_nodes) == 2
                                         else:
-                                            assert len(mps.virtual_nodes) == 3
+                                            assert len(mps.virtual_nodes) == 1
 
-    def test_all_algorithms_diff_d_phys(self):
-        d_phys = torch.randint(low=2, high=7, size=(4,)).tolist()
-        example = [torch.randn(1, d) for d in d_phys]
-        data = [torch.randn(100, d) for d in d_phys]
+    def test_all_algorithms_diff_in_dim(self):
+        in_dim = torch.randint(low=2, high=7, size=(4,)).tolist()
+        example = [torch.randn(1, d) for d in in_dim]
+        data = [torch.randn(100, d) for d in in_dim]
 
         for boundary in ['obc', 'pbc']:
-            for l_position in range(5):
-                mps = tk.MPSLayer(n_sites=5,
-                                  d_phys=d_phys,
-                                  n_labels=12,
-                                  d_bond=2,
-                                  l_position=l_position,
-                                  boundary=boundary)
+            for out_position in range(5):
+                mps = tk.models.MPSLayer(n_features=4,
+                                         in_dim=in_dim,
+                                         out_dim=12,
+                                         bond_dim=2,
+                                         out_position=out_position,
+                                         boundary=boundary)
 
                 for auto_stack in [True, False]:
                     for auto_unbind in [True, False]:
@@ -133,20 +134,20 @@ class TestMPSLayer:
                                         else:
                                             assert len(mps.virtual_nodes) == 0
 
-    def test_all_algorithms_diff_d_bond(self):
-        d_bond = torch.randint(low=2, high=7, size=(5,)).tolist()
-        example = torch.randn(4, 1, 5)
-        data = torch.randn(4, 100, 5)
+    def test_all_algorithms_diff_bond_dim(self):
+        bond_dim = torch.randint(low=2, high=7, size=(5,)).tolist()
+        example = torch.randn(1, 4, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 4, 5)
 
         for boundary in ['obc', 'pbc']:
-            for l_position in range(5):
-                mps = tk.MPSLayer(n_sites=5,
-                                  d_phys=5,
-                                  n_labels=12,
-                                  d_bond=d_bond[:-
-                                                1] if boundary == 'obc' else d_bond,
-                                  l_position=l_position,
-                                  boundary=boundary)
+            for out_position in range(5):
+                mps = tk.models.MPSLayer(
+                    n_features=4,
+                    in_dim=5,
+                    out_dim=12,
+                    bond_dim=bond_dim[:-1] if boundary == 'obc' else bond_dim,
+                    out_position=out_position,
+                    boundary=boundary)
 
                 for auto_stack in [True, False]:
                     for auto_unbind in [True, False]:
@@ -167,9 +168,9 @@ class TestMPSLayer:
                                 assert len(mps.leaf_nodes) == 5
                                 assert len(mps.data_nodes) == 4
                                 if not inline_input and auto_stack:
-                                    assert len(mps.virtual_nodes) == 4
+                                    assert len(mps.virtual_nodes) == 2
                                 else:
-                                    assert len(mps.virtual_nodes) == 3
+                                    assert len(mps.virtual_nodes) == 1
 
                                 # Canonicalize and continue
                                 for mode in ['svd', 'svdr', 'qr']:
@@ -190,25 +191,25 @@ class TestMPSLayer:
                                         assert len(mps.leaf_nodes) == 5
                                         assert len(mps.data_nodes) == 4
                                         if not inline_input and auto_stack:
-                                            assert len(mps.virtual_nodes) == 4
+                                            assert len(mps.virtual_nodes) == 2
                                         else:
-                                            assert len(mps.virtual_nodes) == 3
+                                            assert len(mps.virtual_nodes) == 1
 
-    def test_all_algorithms_diff_d_phys_d_bond(self):
-        d_phys = torch.randint(low=2, high=7, size=(4,)).tolist()
-        d_bond = torch.randint(low=2, high=7, size=(5,)).tolist()
-        example = [torch.randn(1, d) for d in d_phys]
-        data = [torch.randn(100, d) for d in d_phys]
+    def test_all_algorithms_diff_in_dim_bond_dim(self):
+        in_dim = torch.randint(low=2, high=7, size=(4,)).tolist()
+        bond_dim = torch.randint(low=2, high=7, size=(5,)).tolist()
+        example = [torch.randn(1, d) for d in in_dim]
+        data = [torch.randn(100, d) for d in in_dim]
 
         for boundary in ['obc', 'pbc']:
-            for l_position in range(5):
-                mps = tk.MPSLayer(n_sites=5,
-                                  d_phys=d_phys,
-                                  n_labels=12,
-                                  d_bond=d_bond[:-
-                                                1] if boundary == 'obc' else d_bond,
-                                  l_position=l_position,
-                                  boundary=boundary)
+            for out_position in range(5):
+                mps = tk.models.MPSLayer(
+                    n_features=4,
+                    in_dim=in_dim,
+                    out_dim=12,
+                    bond_dim=bond_dim[:-1] if boundary == 'obc' else bond_dim,
+                    out_position=out_position,
+                    boundary=boundary)
 
                 for auto_stack in [True, False]:
                     for auto_unbind in [True, False]:
@@ -258,14 +259,14 @@ class TestMPSLayer:
 
     def test_extreme_case_left_output(self):
         # Left node + Outpt node
-        mps = tk.MPSLayer(n_sites=2,
-                          d_phys=5,
-                          n_labels=12,
-                          d_bond=2,
-                          l_position=1,
-                          boundary='obc')
-        example = torch.randn(1, 1, 5)
-        data = torch.randn(1, 100, 5)
+        mps = tk.models.MPSLayer(n_features=1,
+                                 in_dim=5,
+                                 out_dim=12,
+                                 bond_dim=2,
+                                 out_position=1,
+                                 boundary='obc')
+        example = torch.randn(1, 1, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 1, 5)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -285,7 +286,7 @@ class TestMPSLayer:
                         assert len(mps.edges) == 1
                         assert len(mps.leaf_nodes) == 2
                         assert len(mps.data_nodes) == 1
-                        assert len(mps.virtual_nodes) == 3
+                        assert len(mps.virtual_nodes) == 1
 
                         # Canonicalize and continue
                         for mode in ['svd', 'svdr', 'qr']:
@@ -305,18 +306,18 @@ class TestMPSLayer:
                                 assert len(mps.edges) == 1
                                 assert len(mps.leaf_nodes) == 2
                                 assert len(mps.data_nodes) == 1
-                                assert len(mps.virtual_nodes) == 3
+                                assert len(mps.virtual_nodes) == 1
 
     def test_extreme_case_output_right(self):
         # Output node + Right node
-        mps = tk.MPSLayer(n_sites=2,
-                          d_phys=5,
-                          n_labels=12,
-                          d_bond=2,
-                          l_position=0,
-                          boundary='obc')
-        example = torch.randn(1, 1, 5)
-        data = torch.randn(1, 100, 5)
+        mps = tk.models.MPSLayer(n_features=1,
+                                 in_dim=5,
+                                 out_dim=12,
+                                 bond_dim=2,
+                                 out_position=0,
+                                 boundary='obc')
+        example = torch.randn(1, 1, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 1, 5)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -336,7 +337,7 @@ class TestMPSLayer:
                         assert len(mps.edges) == 1
                         assert len(mps.leaf_nodes) == 2
                         assert len(mps.data_nodes) == 1
-                        assert len(mps.virtual_nodes) == 3
+                        assert len(mps.virtual_nodes) == 1
 
                         # Canonicalize and continue
                         for mode in ['svd', 'svdr', 'qr']:
@@ -356,16 +357,16 @@ class TestMPSLayer:
                                 assert len(mps.edges) == 1
                                 assert len(mps.leaf_nodes) == 2
                                 assert len(mps.data_nodes) == 1
-                                assert len(mps.virtual_nodes) == 3
+                                assert len(mps.virtual_nodes) == 1
 
     def test_extreme_case_output(self):
         # Outpt node
-        mps = tk.MPSLayer(n_sites=1,
-                          d_phys=5,
-                          n_labels=12,
-                          d_bond=2,
-                          l_position=0,
-                          boundary='pbc')
+        mps = tk.models.MPSLayer(n_features=0,
+                                 in_dim=5,
+                                 out_dim=12,
+                                 bond_dim=2,
+                                 out_position=0,
+                                 boundary='pbc')
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -388,14 +389,14 @@ class TestMPSLayer:
                         assert len(mps.virtual_nodes) == 0
 
     def test_canonicalize_univocal(self):
-        example = torch.randn(4, 1, 2)
-        data = torch.randn(4, 100, 2)
+        example = torch.randn(1, 4, 2)  # batch x n_features x feature_dim
+        data = torch.randn(100, 4, 2)
 
-        mps = tk.MPSLayer(n_sites=5,
-                          d_phys=2,
-                          d_bond=5,
-                          n_labels=2,
-                          boundary='obc')
+        mps = tk.models.MPSLayer(n_features=4,
+                                 in_dim=2,
+                                 out_dim=2,
+                                 bond_dim=5,
+                                 boundary='obc')
 
         tensor = torch.randn(mps.output_node.shape) * 1e-9
         aux = torch.eye(tensor.shape[0], tensor.shape[2])
@@ -428,7 +429,7 @@ class TestMPSLayer:
         assert len(mps.edges) == 1
         assert len(mps.leaf_nodes) == 5
         assert len(mps.data_nodes) == 4
-        assert len(mps.virtual_nodes) == 3
+        assert len(mps.virtual_nodes) == 1
 
         # Contract Canonical MPS
         result = mps.left_node
@@ -446,16 +447,16 @@ class TestMPSLayer:
         assert norm.item() < 1e-4
 
     def test_canonicalize_univocal_diff_dims(self):
-        d_phys = [2, 3, 5, 6]  # torch.arange(2, 6).int().tolist()
-        d_bond = torch.arange(2, 6).int().tolist()
-        example = [torch.randn(1, d) for d in d_phys]
-        data = [torch.randn(100, d) for d in d_phys]
+        in_dim = [2, 3, 5, 6]  # torch.arange(2, 6).int().tolist()
+        bond_dim = torch.arange(2, 6).int().tolist()
+        example = [torch.randn(1, d) for d in in_dim]
+        data = [torch.randn(100, d) for d in in_dim]
 
-        mps = tk.MPSLayer(n_sites=5,
-                          d_phys=d_phys,
-                          d_bond=d_bond,
-                          n_labels=5,
-                          boundary='obc')
+        mps = tk.models.MPSLayer(n_features=4,
+                                 in_dim=in_dim,
+                                 out_dim=5,
+                                 bond_dim=bond_dim,
+                                 boundary='obc')
 
         tensor = torch.randn(mps.output_node.shape) * 1e-9
         aux = torch.eye(tensor.shape[0], tensor.shape[2])
@@ -506,14 +507,14 @@ class TestMPSLayer:
         assert norm.item() < 1e-5
 
     def test_canonicalize_univocal_bond_greater_than_phys(self):
-        example = torch.randn(5, 1, 2)
-        data = torch.randn(5, 100, 2)
+        example = torch.randn(1, 4, 2)  # batch x n_features x feature_dim
+        data = torch.randn(100, 4, 2)
 
-        mps = tk.MPSLayer(n_sites=5,
-                          d_phys=2,
-                          d_bond=20,
-                          n_labels=2,
-                          boundary='obc')
+        mps = tk.models.MPSLayer(n_features=4,
+                                 in_dim=2,
+                                 out_dim=2,
+                                 bond_dim=20,
+                                 boundary='obc')
 
         tensor = torch.randn(mps.output_node.shape) * 1e-9
         aux = torch.eye(tensor.shape[0], tensor.shape[2])
@@ -546,7 +547,7 @@ class TestMPSLayer:
         assert len(mps.edges) == 1
         assert len(mps.leaf_nodes) == 5
         assert len(mps.data_nodes) == 4
-        assert len(mps.virtual_nodes) == 3
+        assert len(mps.virtual_nodes) == 1
 
         # Contract Canonical MPS
         result = mps.left_node
@@ -564,12 +565,12 @@ class TestMPSLayer:
         assert norm.item() < 1e-5
 
     def test_check_grad(self):
-        mps = tk.MPSLayer(n_sites=2,
-                          d_phys=2,
-                          n_labels=2,
-                          d_bond=2,
-                          l_position=1,
-                          boundary='obc').cuda()
+        mps = tk.models.MPSLayer(n_features=1,
+                                 in_dim=2,
+                                 out_dim=2,
+                                 bond_dim=2,
+                                 out_position=1,
+                                 boundary='obc').cuda()
 
         data = torch.randn(1, 1, 2).cuda()
         result = mps.forward(data)
@@ -591,15 +592,15 @@ class TestMPSLayer:
 class TestUMPSLayer:
 
     def test_all_algorithms(self):
-        example = torch.randn(4, 1, 5)
-        data = torch.randn(4, 100, 5)
+        example = torch.randn(1, 4, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 4, 5)
 
-        for l_position in range(5):
-            mps = tk.UMPSLayer(n_sites=5,
-                               d_phys=5,
-                               n_labels=12,
-                               d_bond=2,
-                               l_position=l_position)
+        for out_position in range(5):
+            mps = tk.models.UMPSLayer(n_features=4,
+                                      in_dim=5,
+                                      out_dim=12,
+                                      bond_dim=2,
+                                      out_position=out_position)
 
             for auto_stack in [True, False]:
                 for auto_unbind in [True, False]:
@@ -619,17 +620,17 @@ class TestUMPSLayer:
                             assert len(mps.edges) == 1
                             assert len(mps.leaf_nodes) == 5
                             assert len(mps.data_nodes) == 4
-                            assert len(mps.virtual_nodes) == 4
+                            assert len(mps.virtual_nodes) == 2
 
     def test_extreme_case_left_output(self):
         # Left node + Output node
-        mps = tk.UMPSLayer(n_sites=2,
-                           d_phys=5,
-                           n_labels=12,
-                           d_bond=2,
-                           l_position=1)
-        example = torch.randn(1, 1, 5)
-        data = torch.randn(1, 100, 5)
+        mps = tk.models.UMPSLayer(n_features=1,
+                                  in_dim=5,
+                                  out_dim=12,
+                                  bond_dim=2,
+                                  out_position=1)
+        example = torch.randn(1, 1, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 1, 5)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -649,17 +650,17 @@ class TestUMPSLayer:
                         assert len(mps.edges) == 1
                         assert len(mps.leaf_nodes) == 2
                         assert len(mps.data_nodes) == 1
-                        assert len(mps.virtual_nodes) == 4
+                        assert len(mps.virtual_nodes) == 2
 
     def test_extreme_case_output_right(self):
         # Output node + Right node
-        mps = tk.UMPSLayer(n_sites=2,
-                           d_phys=5,
-                           n_labels=12,
-                           d_bond=2,
-                           l_position=0)
-        example = torch.randn(1, 1, 5)
-        data = torch.randn(1, 100, 5)
+        mps = tk.models.UMPSLayer(n_features=1,
+                                  in_dim=5,
+                                  out_dim=12,
+                                  bond_dim=2,
+                                  out_position=0)
+        example = torch.randn(1, 1, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 1, 5)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -679,15 +680,15 @@ class TestUMPSLayer:
                         assert len(mps.edges) == 1
                         assert len(mps.leaf_nodes) == 2
                         assert len(mps.data_nodes) == 1
-                        assert len(mps.virtual_nodes) == 4
+                        assert len(mps.virtual_nodes) == 2
 
     def test_extreme_case_output(self):
         # Outpt node
-        mps = tk.UMPSLayer(n_sites=1,
-                           d_phys=5,
-                           n_labels=12,
-                           d_bond=2,
-                           l_position=0)
+        mps = tk.models.UMPSLayer(n_features=0,
+                                  in_dim=5,
+                                  out_dim=12,
+                                  bond_dim=2,
+                                  out_position=0)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -713,22 +714,17 @@ class TestUMPSLayer:
 class TestConvMPSLayer:
 
     def test_all_algorithms(self):
-        # TODO: change embedding by tk.add_ones
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = tk.add_ones(torch.randn(1, 5, 5), dim=1)
-        data = tk.add_ones(torch.randn(100, 5, 5), dim=1)
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         for boundary in ['obc', 'pbc']:
-            for l_position in range(5):
-                mps = tk.ConvMPSLayer(in_channels=2,
-                                      out_channels=5,
-                                      d_bond=2,
-                                      kernel_size=2,
-                                      l_position=l_position,
-                                      boundary=boundary)
+            for out_position in range(5):
+                mps = tk.models.ConvMPSLayer(in_channels=2,
+                                             out_channels=5,
+                                             bond_dim=2,
+                                             kernel_size=2,
+                                             out_position=out_position,
+                                             boundary=boundary)
 
                 for auto_stack in [True, False]:
                     for auto_unbind in [True, False]:
@@ -752,9 +748,9 @@ class TestConvMPSLayer:
                                     assert len(mps.leaf_nodes) == 5
                                     assert len(mps.data_nodes) == 4
                                     if not inline_input and auto_stack:
-                                        assert len(mps.virtual_nodes) == 4
+                                        assert len(mps.virtual_nodes) == 2
                                     else:
-                                        assert len(mps.virtual_nodes) == 3
+                                        assert len(mps.virtual_nodes) == 1
 
                                     # Canonicalize and continue
                                     for mode in ['svd', 'svdr', 'qr']:
@@ -780,29 +776,25 @@ class TestConvMPSLayer:
                                             assert len(mps.data_nodes) == 4
                                             if not inline_input and auto_stack:
                                                 assert len(
-                                                    mps.virtual_nodes) == 4
+                                                    mps.virtual_nodes) == 2
                                             else:
                                                 assert len(
-                                                    mps.virtual_nodes) == 3
+                                                    mps.virtual_nodes) == 1
 
-    def test_all_algorithms_diff_d_bond(self):
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        d_bond = torch.randint(low=2, high=7, size=(5,)).tolist()
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+    def test_all_algorithms_diff_bond_dim(self):
+        bond_dim = torch.randint(low=2, high=7, size=(5,)).tolist()
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         for boundary in ['obc', 'pbc']:
-            for l_position in range(5):
-                mps = tk.ConvMPSLayer(in_channels=2,
-                                      out_channels=5,
-                                      d_bond=d_bond[:-
-                                                    1] if boundary == 'obc' else d_bond,
-                                      kernel_size=2,
-                                      l_position=l_position,
-                                      boundary=boundary)
+            for out_position in range(5):
+                mps = tk.models.ConvMPSLayer(
+                    in_channels=2,
+                    out_channels=5,
+                    bond_dim=bond_dim[:-1] if boundary == 'obc' else bond_dim,
+                    kernel_size=2,
+                    out_position=out_position,
+                    boundary=boundary)
 
                 for auto_stack in [True, False]:
                     for auto_unbind in [True, False]:
@@ -826,9 +818,9 @@ class TestConvMPSLayer:
                                     assert len(mps.leaf_nodes) == 5
                                     assert len(mps.data_nodes) == 4
                                     if not inline_input and auto_stack:
-                                        assert len(mps.virtual_nodes) == 4
+                                        assert len(mps.virtual_nodes) == 2
                                     else:
-                                        assert len(mps.virtual_nodes) == 3
+                                        assert len(mps.virtual_nodes) == 1
 
                                     # Canonicalize and continue
                                     for mode in ['svd', 'svdr', 'qr']:
@@ -854,26 +846,22 @@ class TestConvMPSLayer:
                                             assert len(mps.data_nodes) == 4
                                             if not inline_input and auto_stack:
                                                 assert len(
-                                                    mps.virtual_nodes) == 4
+                                                    mps.virtual_nodes) == 2
                                             else:
                                                 assert len(
-                                                    mps.virtual_nodes) == 3
+                                                    mps.virtual_nodes) == 1
 
     def test_extreme_case_left_output(self):
         # Left node + Outpt node
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
-
-        mps = tk.ConvMPSLayer(in_channels=2,
-                              out_channels=5,
-                              d_bond=2,
-                              kernel_size=1,
-                              l_position=1,
-                              boundary='obc')
+        mps = tk.models.ConvMPSLayer(in_channels=2,
+                                     out_channels=5,
+                                     bond_dim=2,
+                                     kernel_size=1,
+                                     out_position=1,
+                                     boundary='obc')
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -896,7 +884,7 @@ class TestConvMPSLayer:
                             assert len(mps.edges) == 1
                             assert len(mps.leaf_nodes) == 2
                             assert len(mps.data_nodes) == 1
-                            assert len(mps.virtual_nodes) == 3
+                            assert len(mps.virtual_nodes) == 1
 
                             # Canonicalize and continue
                             for mode in ['svd', 'svdr', 'qr']:
@@ -918,23 +906,19 @@ class TestConvMPSLayer:
                                     assert len(mps.edges) == 1
                                     assert len(mps.leaf_nodes) == 2
                                     assert len(mps.data_nodes) == 1
-                                    assert len(mps.virtual_nodes) == 3
+                                    assert len(mps.virtual_nodes) == 1
 
     def test_extreme_case_output_right(self):
         # Output node + Right node
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
-
-        mps = tk.ConvMPSLayer(in_channels=2,
-                              out_channels=5,
-                              d_bond=2,
-                              kernel_size=1,
-                              l_position=0,
-                              boundary='obc')
+        mps = tk.models.ConvMPSLayer(in_channels=2,
+                                     out_channels=5,
+                                     bond_dim=2,
+                                     kernel_size=1,
+                                     out_position=0,
+                                     boundary='obc')
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -957,7 +941,7 @@ class TestConvMPSLayer:
                             assert len(mps.edges) == 1
                             assert len(mps.leaf_nodes) == 2
                             assert len(mps.data_nodes) == 1
-                            assert len(mps.virtual_nodes) == 3
+                            assert len(mps.virtual_nodes) == 1
 
                             # Canonicalize and continue
                             for mode in ['svd', 'svdr', 'qr']:
@@ -979,25 +963,21 @@ class TestConvMPSLayer:
                                     assert len(mps.edges) == 1
                                     assert len(mps.leaf_nodes) == 2
                                     assert len(mps.data_nodes) == 1
-                                    assert len(mps.virtual_nodes) == 3
+                                    assert len(mps.virtual_nodes) == 1
 
 
 class TestConvUMPSLayer:
 
     def test_all_algorithms(self):
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
-
-        for l_position in range(5):
-            mps = tk.ConvUMPSLayer(in_channels=2,
-                                   out_channels=5,
-                                   d_bond=2,
-                                   kernel_size=2,
-                                   l_position=l_position)
+        for out_position in range(5):
+            mps = tk.models.ConvUMPSLayer(in_channels=2,
+                                          out_channels=5,
+                                          bond_dim=2,
+                                          kernel_size=2,
+                                          out_position=out_position)
 
             for auto_stack in [True, False]:
                 for auto_unbind in [True, False]:
@@ -1020,22 +1000,18 @@ class TestConvUMPSLayer:
                                 assert len(mps.edges) == 1
                                 assert len(mps.leaf_nodes) == 5
                                 assert len(mps.data_nodes) == 4
-                                assert len(mps.virtual_nodes) == 4
+                                assert len(mps.virtual_nodes) == 2
 
     def test_extreme_case_left_output(self):
         # Left node + Output node
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
-
-        mps = tk.ConvUMPSLayer(in_channels=2,
-                               d_bond=2,
-                               out_channels=5,
-                               kernel_size=1,
-                               l_position=1)
+        mps = tk.models.ConvUMPSLayer(in_channels=2,
+                                      bond_dim=2,
+                                      out_channels=5,
+                                      kernel_size=1,
+                                      out_position=1)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -1058,22 +1034,18 @@ class TestConvUMPSLayer:
                             assert len(mps.edges) == 1
                             assert len(mps.leaf_nodes) == 2
                             assert len(mps.data_nodes) == 1
-                            assert len(mps.virtual_nodes) == 4
+                            assert len(mps.virtual_nodes) == 2
 
     def test_extreme_case_output_right(self):
         # Output node + Right node
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
-
-        mps = tk.ConvUMPSLayer(in_channels=2,
-                               d_bond=2,
-                               out_channels=5,
-                               kernel_size=1,
-                               l_position=0)
+        mps = tk.models.ConvUMPSLayer(in_channels=2,
+                                      bond_dim=2,
+                                      out_channels=5,
+                                      kernel_size=1,
+                                      out_position=0)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -1096,4 +1068,4 @@ class TestConvUMPSLayer:
                             assert len(mps.edges) == 1
                             assert len(mps.leaf_nodes) == 2
                             assert len(mps.data_nodes) == 1
-                            assert len(mps.virtual_nodes) == 4
+                            assert len(mps.virtual_nodes) == 2

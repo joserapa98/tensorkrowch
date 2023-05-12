@@ -1,22 +1,23 @@
 """
-Tests for network_components
+Tests for peps:
+
+    * TestPEPS
+    * TestUPEPS
+    * TestConvPEPS
+    * TestConvUPEPS
 """
 
 import pytest
 
 import torch
-import torch.nn as nn
 import tensorkrowch as tk
-
-from typing import Sequence
-import time
 
 
 class TestPEPS:
 
     def test_all_algorithms(self):
-        example = torch.randn(3*4, 1, 5)
-        data = torch.randn(3*4, 100, 5)
+        example = torch.randn(1, 3*4, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 3*4, 5)
 
         for boundary_0 in ['obc', 'pbc']:
             for boundary_1 in ['obc', 'pbc']:
@@ -47,16 +48,16 @@ class TestPEPS:
                                 if auto_stack:
                                     if boundary_0 == 'obc':
                                         if boundary_1 == 'obc':
-                                            assert len(peps.virtual_nodes) == 8
-                                        else:
-                                            assert len(peps.virtual_nodes) == 6
-                                    else:
-                                        if boundary_1 == 'obc':
                                             assert len(peps.virtual_nodes) == 6
                                         else:
                                             assert len(peps.virtual_nodes) == 4
+                                    else:
+                                        if boundary_1 == 'obc':
+                                            assert len(peps.virtual_nodes) == 4
+                                        else:
+                                            assert len(peps.virtual_nodes) == 2
                                 else:
-                                    assert len(peps.virtual_nodes) == 3
+                                    assert len(peps.virtual_nodes) == 1
 
     def test_extreme_case_2_rows_2_cols(self):
         n_rows = 2
@@ -68,8 +69,8 @@ class TestPEPS:
                        in_dim=5,
                        bond_dim=[2, 3],
                        boundary=boundary)
-        example = torch.randn(n_rows * n_cols, 1, 5)
-        data = torch.randn(n_rows * n_cols, 100, 5)
+        example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, n_rows * n_cols, 5)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -90,7 +91,7 @@ class TestPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        assert len(peps.virtual_nodes) == 3
+                        assert len(peps.virtual_nodes) == 1
 
     def test_extreme_case_1_row_3_cols(self):
         n_rows = 1
@@ -102,156 +103,8 @@ class TestPEPS:
                        in_dim=5,
                        bond_dim=[2, 3],
                        boundary=boundary)
-        example = torch.randn(n_rows * n_cols, 1, 5)
-        data = torch.randn(n_rows * n_cols, 100, 5)
-
-        for auto_stack in [True, False]:
-            for auto_unbind in [True, False]:
-                for side in ['up', 'down', 'left', 'right']:
-                    for inline in [True, False]:
-                        print(auto_stack, auto_unbind, side, inline)
-                        peps.auto_stack = auto_stack
-                        peps.auto_unbind = auto_unbind
-
-                        peps.trace(example,
-                                   from_side=side,
-                                   inline=inline)
-                        result = peps(data,
-                                      from_side=side,
-                                      inline=inline)
-
-                        assert result.shape == (100,)
-                        assert len(peps.edges) == 0
-                        assert len(peps.leaf_nodes) == n_rows * n_cols
-                        assert len(peps.data_nodes) == n_rows * n_cols
-                        if auto_stack:
-                            assert len(peps.virtual_nodes) == 6
-                        else:
-                            assert len(peps.virtual_nodes) == 3
-
-    def test_extreme_case_1_row_2_cols(self):
-        n_rows = 1
-        n_cols = 2
-        boundary = ['pbc', 'obc']
-
-        peps = tk.models.PEPS(n_rows=n_rows,
-                       n_cols=n_cols,
-                       in_dim=5,
-                       bond_dim=[2, 3],
-                       boundary=boundary)
-        example = torch.randn(n_rows * n_cols, 1, 5)
-        data = torch.randn(n_rows * n_cols, 100, 5)
-
-        for auto_stack in [True, False]:
-            for auto_unbind in [True, False]:
-                for side in ['up', 'down', 'left', 'right']:
-                    for inline in [True, False]:
-                        print(auto_stack, auto_unbind, side, inline)
-                        peps.auto_stack = auto_stack
-                        peps.auto_unbind = auto_unbind
-
-                        peps.trace(example,
-                                   from_side=side,
-                                   inline=inline)
-                        result = peps(data,
-                                      from_side=side,
-                                      inline=inline)
-
-                        assert result.shape == (100,)
-                        assert len(peps.edges) == 0
-                        assert len(peps.leaf_nodes) == n_rows * n_cols
-                        assert len(peps.data_nodes) == n_rows * n_cols
-                        if auto_stack:
-                            assert len(peps.virtual_nodes) == 5
-                        else:
-                            assert len(peps.virtual_nodes) == 3
-
-    def test_extreme_case_3_rows_1_col(self):
-        n_rows = 3
-        n_cols = 1
-        boundary = ['obc', 'pbc']
-
-        peps = tk.models.PEPS(n_rows=n_rows,
-                       n_cols=n_cols,
-                       in_dim=5,
-                       bond_dim=[2, 3],
-                       boundary=boundary)
-        example = torch.randn(n_rows * n_cols, 1, 5)
-        data = torch.randn(n_rows * n_cols, 100, 5)
-
-        for auto_stack in [True, False]:
-            for auto_unbind in [True, False]:
-                for side in ['up', 'down', 'left', 'right']:
-                    for inline in [True, False]:
-                        print(auto_stack, auto_unbind, side, inline)
-                        peps.auto_stack = auto_stack
-                        peps.auto_unbind = auto_unbind
-
-                        peps.trace(example,
-                                   from_side=side,
-                                   inline=inline)
-                        result = peps(data,
-                                      from_side=side,
-                                      inline=inline)
-
-                        assert result.shape == (100,)
-                        assert len(peps.edges) == 0
-                        assert len(peps.leaf_nodes) == n_rows * n_cols
-                        assert len(peps.data_nodes) == n_rows * n_cols
-                        if auto_stack:
-                            assert len(peps.virtual_nodes) == 6
-                        else:
-                            assert len(peps.virtual_nodes) == 3
-
-    def test_extreme_case_2_rows_1_col(self):
-        n_rows = 2
-        n_cols = 1
-        boundary = ['obc', 'pbc']
-
-        peps = tk.models.PEPS(n_rows=n_rows,
-                       n_cols=n_cols,
-                       in_dim=5,
-                       bond_dim=[2, 3],
-                       boundary=boundary)
-        example = torch.randn(n_rows * n_cols, 1, 5)
-        data = torch.randn(n_rows * n_cols, 100, 5)
-
-        for auto_stack in [True, False]:
-            for auto_unbind in [True, False]:
-                for side in ['up', 'down', 'left', 'right']:
-                    for inline in [True, False]:
-                        print(auto_stack, auto_unbind, side, inline)
-                        peps.auto_stack = auto_stack
-                        peps.auto_unbind = auto_unbind
-
-                        peps.trace(example,
-                                   from_side=side,
-                                   inline=inline)
-                        result = peps(data,
-                                      from_side=side,
-                                      inline=inline)
-
-                        assert result.shape == (100,)
-                        assert len(peps.edges) == 0
-                        assert len(peps.leaf_nodes) == n_rows * n_cols
-                        assert len(peps.data_nodes) == n_rows * n_cols
-                        if auto_stack:
-                            assert len(peps.virtual_nodes) == 5
-                        else:
-                            assert len(peps.virtual_nodes) == 3
-
-    def test_extreme_case_1_row_1_col(self):
-        n_rows = 1
-        n_cols = 1
-        boundary = ['pbc', 'pbc']
-
-        peps = tk.models.PEPS(n_rows=n_rows,
-                       n_cols=n_cols,
-                       in_dim=5,
-                       bond_dim=[2, 3],
-                       boundary=boundary)
-        example = torch.randn(n_rows * n_cols, 1, 5)
-        data = torch.randn(n_rows * n_cols, 100, 5)
+        example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, n_rows * n_cols, 5)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -275,14 +128,162 @@ class TestPEPS:
                         if auto_stack:
                             assert len(peps.virtual_nodes) == 4
                         else:
+                            assert len(peps.virtual_nodes) == 1
+
+    def test_extreme_case_1_row_2_cols(self):
+        n_rows = 1
+        n_cols = 2
+        boundary = ['pbc', 'obc']
+
+        peps = tk.models.PEPS(n_rows=n_rows,
+                       n_cols=n_cols,
+                       in_dim=5,
+                       bond_dim=[2, 3],
+                       boundary=boundary)
+        example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, n_rows * n_cols, 5)
+
+        for auto_stack in [True, False]:
+            for auto_unbind in [True, False]:
+                for side in ['up', 'down', 'left', 'right']:
+                    for inline in [True, False]:
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
+                        peps.auto_unbind = auto_unbind
+
+                        peps.trace(example,
+                                   from_side=side,
+                                   inline=inline)
+                        result = peps(data,
+                                      from_side=side,
+                                      inline=inline)
+
+                        assert result.shape == (100,)
+                        assert len(peps.edges) == 0
+                        assert len(peps.leaf_nodes) == n_rows * n_cols
+                        assert len(peps.data_nodes) == n_rows * n_cols
+                        if auto_stack:
                             assert len(peps.virtual_nodes) == 3
+                        else:
+                            assert len(peps.virtual_nodes) == 1
+
+    def test_extreme_case_3_rows_1_col(self):
+        n_rows = 3
+        n_cols = 1
+        boundary = ['obc', 'pbc']
+
+        peps = tk.models.PEPS(n_rows=n_rows,
+                       n_cols=n_cols,
+                       in_dim=5,
+                       bond_dim=[2, 3],
+                       boundary=boundary)
+        example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, n_rows * n_cols, 5)
+
+        for auto_stack in [True, False]:
+            for auto_unbind in [True, False]:
+                for side in ['up', 'down', 'left', 'right']:
+                    for inline in [True, False]:
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
+                        peps.auto_unbind = auto_unbind
+
+                        peps.trace(example,
+                                   from_side=side,
+                                   inline=inline)
+                        result = peps(data,
+                                      from_side=side,
+                                      inline=inline)
+
+                        assert result.shape == (100,)
+                        assert len(peps.edges) == 0
+                        assert len(peps.leaf_nodes) == n_rows * n_cols
+                        assert len(peps.data_nodes) == n_rows * n_cols
+                        if auto_stack:
+                            assert len(peps.virtual_nodes) == 4
+                        else:
+                            assert len(peps.virtual_nodes) == 1
+
+    def test_extreme_case_2_rows_1_col(self):
+        n_rows = 2
+        n_cols = 1
+        boundary = ['obc', 'pbc']
+
+        peps = tk.models.PEPS(n_rows=n_rows,
+                       n_cols=n_cols,
+                       in_dim=5,
+                       bond_dim=[2, 3],
+                       boundary=boundary)
+        example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, n_rows * n_cols, 5)
+
+        for auto_stack in [True, False]:
+            for auto_unbind in [True, False]:
+                for side in ['up', 'down', 'left', 'right']:
+                    for inline in [True, False]:
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
+                        peps.auto_unbind = auto_unbind
+
+                        peps.trace(example,
+                                   from_side=side,
+                                   inline=inline)
+                        result = peps(data,
+                                      from_side=side,
+                                      inline=inline)
+
+                        assert result.shape == (100,)
+                        assert len(peps.edges) == 0
+                        assert len(peps.leaf_nodes) == n_rows * n_cols
+                        assert len(peps.data_nodes) == n_rows * n_cols
+                        if auto_stack:
+                            assert len(peps.virtual_nodes) == 3
+                        else:
+                            assert len(peps.virtual_nodes) == 1
+
+    def test_extreme_case_1_row_1_col(self):
+        n_rows = 1
+        n_cols = 1
+        boundary = ['pbc', 'pbc']
+
+        peps = tk.models.PEPS(n_rows=n_rows,
+                       n_cols=n_cols,
+                       in_dim=5,
+                       bond_dim=[2, 3],
+                       boundary=boundary)
+        example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, n_rows * n_cols, 5)
+
+        for auto_stack in [True, False]:
+            for auto_unbind in [True, False]:
+                for side in ['up', 'down', 'left', 'right']:
+                    for inline in [True, False]:
+                        print(auto_stack, auto_unbind, side, inline)
+                        peps.auto_stack = auto_stack
+                        peps.auto_unbind = auto_unbind
+
+                        peps.trace(example,
+                                   from_side=side,
+                                   inline=inline)
+                        result = peps(data,
+                                      from_side=side,
+                                      inline=inline)
+
+                        assert result.shape == (100,)
+                        assert len(peps.edges) == 0
+                        assert len(peps.leaf_nodes) == n_rows * n_cols
+                        assert len(peps.data_nodes) == n_rows * n_cols
+                        if auto_stack:
+                            assert len(peps.virtual_nodes) == 2
+                        else:
+                            assert len(peps.virtual_nodes) == 1
 
 
 class TestUPEPS:
 
     def test_all_algorithms(self):
-        example = torch.randn(3*4, 1, 5)
-        data = torch.randn(3*4, 100, 5)
+        example = torch.randn(1, 3*4, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 3*4, 5)
 
         peps = tk.models.UPEPS(n_rows=3,
                         n_cols=4,
@@ -307,7 +308,7 @@ class TestUPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == 3*4
                         assert len(peps.data_nodes) == 3*4
-                        assert len(peps.virtual_nodes) == 4
+                        assert len(peps.virtual_nodes) == 2
 
     def test_extreme_case_2_rows_2_cols(self):
         n_rows = 2
@@ -317,8 +318,8 @@ class TestUPEPS:
                         n_cols=n_cols,
                         in_dim=5,
                         bond_dim=[2, 3])
-        example = torch.randn(n_rows * n_cols, 1, 5)
-        data = torch.randn(n_rows * n_cols, 100, 5)
+        example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, n_rows * n_cols, 5)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -339,7 +340,7 @@ class TestUPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        assert len(peps.virtual_nodes) == 4
+                        assert len(peps.virtual_nodes) == 2
 
     def test_extreme_case_1_row_2_cols(self):
         n_rows = 1
@@ -349,8 +350,8 @@ class TestUPEPS:
                         n_cols=n_cols,
                         in_dim=5,
                         bond_dim=[2, 3])
-        example = torch.randn(n_rows * n_cols, 1, 5)
-        data = torch.randn(n_rows * n_cols, 100, 5)
+        example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, n_rows * n_cols, 5)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -371,7 +372,7 @@ class TestUPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        assert len(peps.virtual_nodes) == 4
+                        assert len(peps.virtual_nodes) == 2
 
     def test_extreme_case_2_rows_1_col(self):
         n_rows = 2
@@ -381,8 +382,8 @@ class TestUPEPS:
                         n_cols=n_cols,
                         in_dim=5,
                         bond_dim=[2, 3])
-        example = torch.randn(n_rows * n_cols, 1, 5)
-        data = torch.randn(n_rows * n_cols, 100, 5)
+        example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, n_rows * n_cols, 5)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -403,7 +404,7 @@ class TestUPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        assert len(peps.virtual_nodes) == 4
+                        assert len(peps.virtual_nodes) == 2
 
     def test_extreme_case_1_row_1_col(self):
         n_rows = 1
@@ -413,8 +414,8 @@ class TestUPEPS:
                         n_cols=n_cols,
                         in_dim=5,
                         bond_dim=[2, 3])
-        example = torch.randn(n_rows * n_cols, 1, 5)
-        data = torch.randn(n_rows * n_cols, 100, 5)
+        example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, n_rows * n_cols, 5)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -435,18 +436,14 @@ class TestUPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        assert len(peps.virtual_nodes) == 4
+                        assert len(peps.virtual_nodes) == 2
 
 
 class TestConvPEPS:
 
     def test_all_algorithms(self):
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         for boundary_0 in ['obc', 'pbc']:
             for boundary_1 in ['obc', 'pbc']:
@@ -478,27 +475,23 @@ class TestConvPEPS:
                                 if auto_stack:
                                     if boundary_0 == 'obc':
                                         if boundary_1 == 'obc':
-                                            assert len(peps.virtual_nodes) == 8
-                                        else:
-                                            assert len(peps.virtual_nodes) == 6
-                                    else:
-                                        if boundary_1 == 'obc':
                                             assert len(peps.virtual_nodes) == 6
                                         else:
                                             assert len(peps.virtual_nodes) == 4
+                                    else:
+                                        if boundary_1 == 'obc':
+                                            assert len(peps.virtual_nodes) == 4
+                                        else:
+                                            assert len(peps.virtual_nodes) == 2
                                 else:
-                                    assert len(peps.virtual_nodes) == 3
+                                    assert len(peps.virtual_nodes) == 1
 
     def test_extreme_case_2_rows_2_cols(self):
         n_rows = 2
         n_cols = 2
 
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvPEPS(in_channels=2,
                            bond_dim=[2, 3],
@@ -524,18 +517,14 @@ class TestConvPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        assert len(peps.virtual_nodes) == 3
+                        assert len(peps.virtual_nodes) == 1
 
     def test_extreme_case_1_row_3_cols(self):
         n_rows = 1
         n_cols = 3
 
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvPEPS(in_channels=2,
                            bond_dim=[2, 3],
@@ -562,20 +551,16 @@ class TestConvPEPS:
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
                         if auto_stack:
-                            assert len(peps.virtual_nodes) == 6
+                            assert len(peps.virtual_nodes) == 4
                         else:
-                            assert len(peps.virtual_nodes) == 3
+                            assert len(peps.virtual_nodes) == 1
 
     def test_extreme_case_1_row_2_cols(self):
         n_rows = 1
         n_cols = 2
 
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvPEPS(in_channels=2,
                            bond_dim=[2, 3],
@@ -602,20 +587,16 @@ class TestConvPEPS:
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
                         if auto_stack:
-                            assert len(peps.virtual_nodes) == 5
-                        else:
                             assert len(peps.virtual_nodes) == 3
+                        else:
+                            assert len(peps.virtual_nodes) == 1
 
     def test_extreme_case_3_rows_1_col(self):
         n_rows = 3
         n_cols = 1
 
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvPEPS(in_channels=2,
                            bond_dim=[2, 3],
@@ -642,20 +623,16 @@ class TestConvPEPS:
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
                         if auto_stack:
-                            assert len(peps.virtual_nodes) == 6
+                            assert len(peps.virtual_nodes) == 4
                         else:
-                            assert len(peps.virtual_nodes) == 3
+                            assert len(peps.virtual_nodes) == 1
 
     def test_extreme_case_2_rows_1_col(self):
         n_rows = 2
         n_cols = 1
 
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvPEPS(in_channels=2,
                            bond_dim=[2, 3],
@@ -682,20 +659,16 @@ class TestConvPEPS:
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
                         if auto_stack:
-                            assert len(peps.virtual_nodes) == 5
-                        else:
                             assert len(peps.virtual_nodes) == 3
+                        else:
+                            assert len(peps.virtual_nodes) == 1
 
     def test_extreme_case_1_row_1_col(self):
         n_rows = 1
         n_cols = 1
 
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvPEPS(in_channels=2,
                            bond_dim=[2, 3],
@@ -722,20 +695,16 @@ class TestConvPEPS:
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
                         if auto_stack:
-                            assert len(peps.virtual_nodes) == 4
+                            assert len(peps.virtual_nodes) == 2
                         else:
-                            assert len(peps.virtual_nodes) == 3
+                            assert len(peps.virtual_nodes) == 1
 
 
 class TestConvUPEPS:
 
     def test_all_algorithms(self):
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvUPEPS(in_channels=2,
                             bond_dim=[2, 3],
@@ -761,18 +730,14 @@ class TestConvUPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == 3*3
                         assert len(peps.data_nodes) == 3*3
-                        assert len(peps.virtual_nodes) == 4
+                        assert len(peps.virtual_nodes) == 2
 
     def test_extreme_case_2_rows_2_cols(self):
         n_rows = 2
         n_cols = 2
 
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvUPEPS(in_channels=2,
                             bond_dim=[2, 3],
@@ -797,18 +762,14 @@ class TestConvUPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        assert len(peps.virtual_nodes) == 4
+                        assert len(peps.virtual_nodes) == 2
 
     def test_extreme_case_1_row_2_cols(self):
         n_rows = 1
         n_cols = 2
 
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvUPEPS(in_channels=2,
                             bond_dim=[2, 3],
@@ -833,18 +794,14 @@ class TestConvUPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        assert len(peps.virtual_nodes) == 4
+                        assert len(peps.virtual_nodes) == 2
 
     def test_extreme_case_2_rows_1_col(self):
         n_rows = 2
         n_cols = 1
 
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvUPEPS(in_channels=2,
                             bond_dim=[2, 3],
@@ -869,18 +826,14 @@ class TestConvUPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        assert len(peps.virtual_nodes) == 4
+                        assert len(peps.virtual_nodes) == 2
 
     def test_extreme_case_1_row_1_col(self):
         n_rows = 1
         n_cols = 1
 
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvUPEPS(in_channels=2,
                             bond_dim=[2, 3],
@@ -905,4 +858,4 @@ class TestConvUPEPS:
                         assert len(peps.edges) == 0
                         assert len(peps.leaf_nodes) == n_rows * n_cols
                         assert len(peps.data_nodes) == n_rows * n_cols
-                        assert len(peps.virtual_nodes) == 4
+                        assert len(peps.virtual_nodes) == 2

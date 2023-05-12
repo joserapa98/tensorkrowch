@@ -361,7 +361,7 @@ title="Source repository"
 <span class="sd">        to ``n_features`` (if ``boundary = &quot;pbc&quot;``) or ``n_features - 1`` (if</span>
 <span class="sd">        ``boundary = &quot;obc&quot;``). The i-th bond dimension is always the dimension</span>
 <span class="sd">        of the right edge of the i-th node.</span>
-<span class="sd">    boundary : {&#39;obc&#39;, &#39;pbc&#39;}</span>
+<span class="sd">    boundary : {&quot;obc&quot;, &quot;pbc&quot;}</span>
 <span class="sd">        String indicating whether periodic or open boundary conditions should</span>
 <span class="sd">        be used.</span>
 <span class="sd">    n_batches : int</span>
@@ -1278,7 +1278,7 @@ title="Source repository"
 <span class="sd">    the input data is a batch of images. It is the convolutional version of</span>
 <span class="sd">    :class:`MPS`.</span>
 <span class="sd">    </span>
-<span class="sd">    Input data as well as initialization parameters are described in `nn.Conv2d</span>
+<span class="sd">    Input data as well as initialization parameters are described in `torch.nn.Conv2d</span>
 <span class="sd">    &lt;https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html&gt;`_.</span>
 
 <span class="sd">    Parameters</span>
@@ -1292,24 +1292,24 @@ title="Source repository"
 <span class="sd">        ``boundary = &quot;obc&quot;``). The i-th bond dimension is always the dimension</span>
 <span class="sd">        of the right edge of the i-th node.</span>
 <span class="sd">    kernel_size : int, list[int] or tuple[int]</span>
-<span class="sd">        Kernel size used in `nn.Unfold</span>
+<span class="sd">        Kernel size used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        If given as an ``int``, the actual kernel size will be</span>
 <span class="sd">        ``(kernel_size, kernel_size)``.</span>
 <span class="sd">    stride : int</span>
-<span class="sd">        Stride used in `nn.Unfold</span>
+<span class="sd">        Stride used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">    padding : int</span>
-<span class="sd">        Padding used in `nn.Unfold</span>
+<span class="sd">        Padding used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        If given as an ``int``, the actual kernel size will be</span>
 <span class="sd">        ``(kernel_size, kernel_size)``.</span>
 <span class="sd">    dilation : int</span>
-<span class="sd">        Dilation used in `nn.Unfold</span>
+<span class="sd">        Dilation used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        If given as an ``int``, the actual kernel size will be</span>
 <span class="sd">        ``(kernel_size, kernel_size)``.</span>
-<span class="sd">    boundary : {&#39;obc&#39;, &#39;pbc&#39;}</span>
+<span class="sd">    boundary : {&quot;obc&quot;, &quot;pbc&quot;}</span>
 <span class="sd">        String indicating whether periodic or open boundary conditions should</span>
 <span class="sd">        be used.</span>
 <span class="sd">        </span>
@@ -1386,7 +1386,7 @@ title="Source repository"
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">stride</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns stride used in `nn.Unfold</span>
+<span class="sd">        Returns stride used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stride</span>
@@ -1394,7 +1394,7 @@ title="Source repository"
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">padding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns padding used in `nn.Unfold</span>
+<span class="sd">        Returns padding used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_padding</span>
@@ -1402,7 +1402,7 @@ title="Source repository"
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dilation</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns dilation used in `nn.Unfold</span>
+<span class="sd">        Returns dilation used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>
@@ -1484,7 +1484,7 @@ title="Source repository"
 <span class="sd">    version of :class:`UMPS`. This class cannot have different bond dimensions</span>
 <span class="sd">    for each site and boundary conditions are always periodic.</span>
 <span class="sd">    </span>
-<span class="sd">    Input data as well as initialization parameters are described in `nn.Conv2d</span>
+<span class="sd">    Input data as well as initialization parameters are described in `torch.nn.Conv2d</span>
 <span class="sd">    &lt;https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html&gt;`_.</span>
 
 <span class="sd">    Parameters</span>
@@ -1494,20 +1494,20 @@ title="Source repository"
 <span class="sd">    bond_dim : int</span>
 <span class="sd">        Bond dimension.</span>
 <span class="sd">    kernel_size : int, list[int] or tuple[int]</span>
-<span class="sd">        Kernel size used in `nn.Unfold</span>
+<span class="sd">        Kernel size used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        If given as an ``int``, the actual kernel size will be</span>
 <span class="sd">        ``(kernel_size, kernel_size)``.</span>
 <span class="sd">    stride : int</span>
-<span class="sd">        Stride used in `nn.Unfold</span>
+<span class="sd">        Stride used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">    padding : int</span>
-<span class="sd">        Padding used in `nn.Unfold</span>
+<span class="sd">        Padding used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        If given as an ``int``, the actual kernel size will be</span>
 <span class="sd">        ``(kernel_size, kernel_size)``.</span>
 <span class="sd">    dilation : int</span>
-<span class="sd">        Dilation used in `nn.Unfold</span>
+<span class="sd">        Dilation used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        If given as an ``int``, the actual kernel size will be</span>
 <span class="sd">        ``(kernel_size, kernel_size)``.</span>
@@ -1586,7 +1586,7 @@ title="Source repository"
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">stride</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns stride used in `nn.Unfold</span>
+<span class="sd">        Returns stride used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stride</span>
@@ -1594,7 +1594,7 @@ title="Source repository"
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">padding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns padding used in `nn.Unfold</span>
+<span class="sd">        Returns padding used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_padding</span>
@@ -1602,7 +1602,7 @@ title="Source repository"
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dilation</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns dilation used in `nn.Unfold</span>
+<span class="sd">        Returns dilation used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>

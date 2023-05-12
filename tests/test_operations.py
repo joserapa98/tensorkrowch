@@ -5532,7 +5532,6 @@ class TestTNModels:
 
         return MPS
 
-    # TODO: use embeddings
     def test_mps(self, setup_mps):
         MPS = setup_mps
 
@@ -5544,13 +5543,7 @@ class TestTNModels:
 
         # batch_size x height x width
         image = torch.randn(500, image_size[0], image_size[1])
-
-        def embedding(image: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(image),
-                                image,
-                                1 - image], dim=1)
-
-        image = embedding(image)
+        image = tk.embeddings.poly(image, axis=1)
         image = image.to(device)
         image = image.view(
             500, 3, image_size[0] * image_size[1]).transpose(1, 2)
@@ -5574,13 +5567,7 @@ class TestTNModels:
 
         # batch_size x height x width
         image = torch.randn(500, image_size[0], image_size[1])
-
-        def embedding(image: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(image),
-                                image,
-                                1 - image], dim=1)
-
-        image = embedding(image)
+        image = tk.embeddings.poly(image, axis=1)
         image = image.to(device)
         image = image.view(
             500, 3, image_size[0] * image_size[1]).transpose(1, 2)
@@ -5797,13 +5784,7 @@ class TestTNModels:
 
         # batch_size x height x width
         image = torch.randn(500, image_size[0], image_size[1])
-
-        def embedding(image: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(image),
-                                image,
-                                1 - image], dim=1)
-
-        image = embedding(image)
+        image = tk.embeddings.poly(image, axis=1)
         image = image.to(device)
         image = image.view(
             500, 3, image_size[0] * image_size[1]).transpose(1, 2)
@@ -5827,13 +5808,7 @@ class TestTNModels:
 
         # batch_size x height x width
         image = torch.randn(500, image_size[0], image_size[1])
-
-        def embedding(image: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(image),
-                                image,
-                                1 - image], dim=1)
-
-        image = embedding(image)
+        image = tk.embeddings.poly(image, axis=1)
         image = image.to(device)
         image = image.view(
             500, 3, image_size[0] * image_size[1]).transpose(1, 2)
@@ -5848,13 +5823,7 @@ class TestTNModels:
 
     def test_convnode(self):
         image = torch.randn(1, 28, 28)  # batch x height x width
-
-        def embedding(image: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(image),
-                                image,
-                                1 - image], dim=1)
-
-        image = embedding(image)
+        image = tk.embeddings.poly(image, axis=1)
         print(image.shape)  # batch x channels x height x width
 
         n_channels = 3
@@ -6093,12 +6062,7 @@ class TestTNModels:
                 return result
 
         image = torch.randn(500, 14, 14)  # batch_size x height x width
-
-        def embedding(image: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(image),
-                                image], dim=1)
-
-        image = embedding(image)
+        image = tk.embeddings.add_ones(image, axis=1)
         print(image.shape)  # batch_size x in_channels x height x width
 
         model = ConvNodeLayer(2, 5, (3, 3), stride=2,

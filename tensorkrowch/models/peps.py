@@ -1,12 +1,12 @@
 """
 This script contains:
-    *PEPS
-    *UPEPS
-    *ConvPEPS
-    *ConvUPEPS
+    * PEPS
+    * UPEPS
+    * ConvPEPS
+    * ConvUPEPS
 """
 
-from typing import (List, Optional, Sequence,
+from typing import (List, Sequence,
                     Text, Tuple, Union)
 
 import torch
@@ -23,47 +23,61 @@ class PEPS(TensorNetwork):
     that is, they are all connected to ``data`` nodes that will store the input
     data tensor(s). When contracting the PEPS with new input data, the result
     will be a just a number.
+    
+    A ``PEPS`` is formed by the following nodes:
+    
+    * ``left_up_corner``, ``left_down_corner``, ``right_up_corner``,
+      ``right_down_corner``: Corner nodes with 3 edges, the one corresponding
+      to the input and 2 connected to the borders.
+      
+    * ``left_border``, ``right_border``, ``up_border``, ``down_border``: Border
+      nodes with 4 edges, the one corresponding to the input, 2 connected to
+      the neighbours in the border, and 1 connected to the `interior` of the
+      grid.
+      
+    * ``grid_env``: Grid environment of nodes with 5 edges, ("input", "left",
+      "right", "up", "down"). Is is a list of lists of nodes.
 
     Parameters
     ----------
     n_rows : int
         Number of rows of the 2D grid.
     n_cols : int
-        Number of columns of the 2D grid
-    d_phys : int
-        Physical dimension.
+        Number of columns of the 2D grid.
+    in_dim : int
+        Input dimension.
     bond_dim : list[int] or tuple[int]
         Bond dimensions for horizontal and vertical edges (in that order). Thus
-        it should also contain 2 elements
-    boundary : list[{'obc', 'pbc'}]
+        it should contain 2 elements.
+    boundary : list[{"obc", "pbc"}]
         List of strings indicating whether periodic or open boundary conditions
         should be used in the horizontal (up and down) and vertical (left and
         right) boundaries.
-    num_batches : int
-        Number of batch edges of input data nodes. Usually ``num_batches = 1``
+    n_batches : int
+        Number of batch edges of input ``data`` nodes. Usually ``n_batches = 1``
         (where the batch edge is used for the data batched) but it could also
-        be ``num_batches = 2`` (one edge for data batched, other edge for image
+        be ``n_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
     
     Examples
     --------
     >>> peps = tk.models.PEPS(n_rows=2,
-    ...                n_cols=2,
-    ...                d_phys=3,
-    ...                bond_dim=[5, 5])
+    ...                       n_cols=2,
+    ...                       in_dim=3,
+    ...                       bond_dim=[5, 5])
     >>> data = torch.ones(20, 4, 3) # batch_size x n_features x feature_size
     >>> result = peps(data)
-    >>> print(result.shape)
+    >>> result.shape
     torch.Size([20])
     """
 
     def __init__(self,
                  n_rows: int,
                  n_cols: int,
-                 d_phys: int,
+                 in_dim: int,
                  bond_dim: Sequence[int],
                  boundary: Sequence[Text] = ['obc', 'obc'],
-                 num_batches: int = 1) -> None:
+                 n_batches: int = 1) -> None:
 
         super().__init__(name='peps')
 
@@ -101,10 +115,10 @@ class PEPS(TensorNetwork):
         self._n_cols = n_cols
         self._boundary = boundary
 
-        # d_phys
-        if not isinstance(d_phys, int):
-            raise ValueError('`d_phys` should be int type')
-        self._d_phys = d_phys
+        # in_dim
+        if not isinstance(in_dim, int):
+            raise ValueError('`in_dim` should be int type')
+        self._in_dim = in_dim
             
         # bond_dim
         if isinstance(bond_dim, (list, tuple)):
@@ -114,10 +128,14 @@ class PEPS(TensorNetwork):
         else:
             raise TypeError('`bond_dim` should be a pair of ints')
 
+        # n_batches
+        if not isinstance(n_batches, int):
+            raise TypeError('`n_batches` should be int type')
+        self._n_batches = n_batches
+
+        # Create Tensor Network
         self._make_nodes()
         self.initialize()
-        
-        self._num_batches = num_batches
         
     @property
     def n_rows(self) -> int:
@@ -138,47 +156,52 @@ class PEPS(TensorNetwork):
         return self._boundary
 
     @property
-    def d_phys(self) -> int:
-        """Returns physical dimension."""
-        return self._d_phys
+    def in_dim(self) -> int:
+        """Returns input dimension."""
+        return self._in_dim
 
     @property
     def bond_dim(self) -> List[int]:
         """Returns bond dimensions for horizontal and vertical edges."""
         return self._bond_dim
+    
+    @property
+    def n_batches(self) -> int:
+        """Returns number of batch edges of the ``data`` nodes."""
+        return self._n_batches
             
     def _make_nodes(self) -> None:
         """Creates all the nodes of the PEPS."""
-        if self._leaf_nodes:
+        if self.leaf_nodes:
             raise ValueError('Cannot create PEPS nodes if the PEPS already has'
                              ' nodes')
 
-        self.left_border = []
-        self.right_border = []
-        self.up_border = []
-        self.down_border = []
-        
         self.left_up_corner = None
         self.left_down_corner = None
         self.right_up_corner = None
         self.right_down_corner = None
         
+        self.left_border = []
+        self.right_border = []
+        self.up_border = []
+        self.down_border = []
+        
         self.grid_env = []
         
-        d_phys = self._d_phys
-        bond_dim = self._bond_dim
+        in_dim = self.in_dim
+        bond_dim = self.bond_dim
         
-        if self._boundary == ['obc', 'obc']:
+        if self.boundary == ['obc', 'obc']:
             # Left up corner
-            node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[1]),
+            node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[1]),
                              axes_names=('input', 'right', 'down'),
                              name=f'left_up_corner_node',
                              network=self)
             self.left_up_corner = node
             
             # Up border
-            for j in range(self._n_cols - 2):
-                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0], bond_dim[1]),
+            for j in range(self.n_cols - 2):
+                node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[0], bond_dim[1]),
                                  axes_names=('input', 'left', 'right', 'down'),
                                  name=f'up_border_node_({j})',
                                  network=self)
@@ -190,20 +213,20 @@ class PEPS(TensorNetwork):
                     self.up_border[-2]['right'] ^ node['left']
                     
             # Right up corner
-            node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[1]),
+            node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[1]),
                              axes_names=('input', 'left', 'down'),
                              name=f'right_up_corner_node',
                              network=self)
             self.right_up_corner = node
             
-            if self._n_cols > 2:
+            if self.n_cols > 2:
                 self.up_border[-1]['right'] ^ node['left']
             else:
                 self.left_up_corner['right'] ^ node['left']
                 
             # Left border
-            for i in range(self._n_rows - 2):
-                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[1], bond_dim[1]),
+            for i in range(self.n_rows - 2):
+                node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[1], bond_dim[1]),
                                  axes_names=('input', 'right', 'up', 'down'),
                                  name=f'left_border_node_({i})',
                                  network=self)
@@ -215,8 +238,8 @@ class PEPS(TensorNetwork):
                     self.left_border[-2]['down'] ^ node['up']
                     
             # Right border
-            for i in range(self._n_rows - 2):
-                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[1], bond_dim[1]),
+            for i in range(self.n_rows - 2):
+                node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[1], bond_dim[1]),
                                  axes_names=('input', 'left', 'up', 'down'),
                                  name=f'right_border_node_({i})',
                                  network=self)
@@ -228,20 +251,20 @@ class PEPS(TensorNetwork):
                     self.right_border[-2]['down'] ^ node['up']
                     
             # Left down corner
-            node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[1]),
+            node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[1]),
                              axes_names=('input', 'right', 'up'),
                              name=f'left_down_corner_node',
                              network=self)
             self.left_down_corner = node
             
-            if self._n_rows > 2:
+            if self.n_rows > 2:
                 self.left_border[-1]['down'] ^ node['up']
             else:
                 self.left_up_corner['down'] ^ node['up']
                 
             # Down border
-            for j in range(self._n_cols - 2):
-                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0], bond_dim[1]),
+            for j in range(self.n_cols - 2):
+                node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[0], bond_dim[1]),
                                  axes_names=('input', 'left', 'right', 'up'),
                                  name=f'down_border_node_({j})',
                                  network=self)
@@ -253,27 +276,27 @@ class PEPS(TensorNetwork):
                     self.down_border[-2]['right'] ^ node['left']
                     
             # Right down corner
-            node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[1]),
+            node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[1]),
                              axes_names=('input', 'left', 'up'),
                              name=f'right_down_corner_node',
                              network=self)
             self.right_down_corner = node
             
-            if self._n_rows > 2:
+            if self.n_rows > 2:
                 self.right_border[-1]['down'] ^ node['up']
             else:
                 self.right_up_corner['down'] ^ node['up']
                 
-            if self._n_cols > 2:
+            if self.n_cols > 2:
                 self.down_border[-1]['right'] ^ node['left']
             else:
                 self.left_down_corner['right'] ^ node['left']
             
             # Grid env
-            for i in range(self._n_rows - 2):
+            for i in range(self.n_rows - 2):
                 self.grid_env.append([])
-                for j in range(self._n_cols - 2):
-                    node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0],
+                for j in range(self.n_cols - 2):
+                    node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[0],
                                             bond_dim[1], bond_dim[1]),
                                      axes_names=('input', 'left', 'right',
                                                  'up', 'down'),
@@ -285,20 +308,20 @@ class PEPS(TensorNetwork):
                         self.up_border[j]['down'] ^ node['up']
                     else:
                         self.grid_env[i - 1][j]['down'] ^ node['up']
-                    if i == self._n_rows - 3:
+                    if i == self.n_rows - 3:
                         node['down'] ^ self.down_border[j]['up']
                         
                     if j == 0:
                         self.left_border[i]['right'] ^ node['left']
                     else:
                         self.grid_env[i][j - 1]['right'] ^ node['left']
-                    if j == self._n_cols - 3:
+                    if j == self.n_cols - 3:
                         node['right'] ^ self.right_border[i]['left']
                     
-        elif self._boundary == ['obc', 'pbc']:
+        elif self.boundary == ['obc', 'pbc']:
             # Up border
-            for j in range(self._n_cols):
-                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0], bond_dim[1]),
+            for j in range(self.n_cols):
+                node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[0], bond_dim[1]),
                                  axes_names=('input', 'left', 'right', 'down'),
                                  name=f'up_border_node_({j})',
                                  network=self)
@@ -306,12 +329,12 @@ class PEPS(TensorNetwork):
                 
                 if j > 0:
                     self.up_border[-2]['right'] ^ node['left']
-                if j == self._n_cols - 1:
+                if j == self.n_cols - 1:
                     node['right'] ^ self.up_border[0]['left']
                 
             # Down border
-            for j in range(self._n_cols):
-                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0], bond_dim[1]),
+            for j in range(self.n_cols):
+                node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[0], bond_dim[1]),
                                  axes_names=('input', 'left', 'right', 'up'),
                                  name=f'down_border_node_({j})',
                                  network=self)
@@ -319,16 +342,16 @@ class PEPS(TensorNetwork):
                 
                 if j > 0:
                     self.down_border[-2]['right'] ^ node['left']
-                if j == self._n_cols - 1:
+                if j == self.n_cols - 1:
                     node['right'] ^ self.down_border[0]['left']
-                if self._n_rows == 2:
+                if self.n_rows == 2:
                     self.up_border[j]['down'] ^ node['up']
             
             # Grid env
-            for i in range(self._n_rows - 2):
+            for i in range(self.n_rows - 2):
                 self.grid_env.append([])
-                for j in range(self._n_cols):
-                    node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0],
+                for j in range(self.n_cols):
+                    node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[0],
                                             bond_dim[1], bond_dim[1]),
                                      axes_names=('input', 'left', 'right',
                                                  'up', 'down'),
@@ -340,18 +363,18 @@ class PEPS(TensorNetwork):
                         self.up_border[j]['down'] ^ node['up']
                     else:
                         self.grid_env[i - 1][j]['down'] ^ node['up']
-                    if i == self._n_rows - 3:
+                    if i == self.n_rows - 3:
                         node['down'] ^ self.down_border[j]['up']
                         
                     if j > 0:
                         self.grid_env[i][j - 1]['right'] ^ node['left']
-                    if j == self._n_cols - 1:
+                    if j == self.n_cols - 1:
                         node['right'] ^ self.grid_env[i][0]['left']
                     
-        elif self._boundary == ['pbc', 'obc']:
+        elif self.boundary == ['pbc', 'obc']:
             # Left border
-            for i in range(self._n_rows):
-                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[1], bond_dim[1]),
+            for i in range(self.n_rows):
+                node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[1], bond_dim[1]),
                                  axes_names=('input', 'right', 'up', 'down'),
                                  name=f'left_border_node_({i})',
                                  network=self)
@@ -359,12 +382,12 @@ class PEPS(TensorNetwork):
                 
                 if i > 0:
                     self.left_border[-2]['down'] ^ node['up']
-                if i == self._n_rows - 1:
+                if i == self.n_rows - 1:
                     node['down'] ^ self.left_border[0]['up']
                     
             # Right border
-            for i in range(self._n_rows):
-                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[1], bond_dim[1]),
+            for i in range(self.n_rows):
+                node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[1], bond_dim[1]),
                                  axes_names=('input', 'left', 'up', 'down'),
                                  name=f'right_border_node_({i})',
                                  network=self)
@@ -372,16 +395,16 @@ class PEPS(TensorNetwork):
                 
                 if i > 0:
                     self.right_border[-2]['down'] ^ node['up']
-                if i == self._n_rows - 1:
+                if i == self.n_rows - 1:
                     node['down'] ^ self.right_border[0]['up']
-                if self._n_cols == 2:
+                if self.n_cols == 2:
                     self.left_border[i]['right'] ^ node['left']
             
             # Grid env
-            for i in range(self._n_rows):
+            for i in range(self.n_rows):
                 self.grid_env.append([])
-                for j in range(self._n_cols - 2):
-                    node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0],
+                for j in range(self.n_cols - 2):
+                    node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[0],
                                             bond_dim[1], bond_dim[1]),
                                      axes_names=('input', 'left', 'right',
                                                  'up', 'down'),
@@ -391,22 +414,22 @@ class PEPS(TensorNetwork):
                     
                     if i > 0:
                         self.grid_env[i - 1][j]['down'] ^ node['up']
-                    if i == self._n_rows - 1:
+                    if i == self.n_rows - 1:
                         node['down'] ^ self.grid_env[0][j]['up']
                         
                     if j == 0:
                         self.left_border[i]['right'] ^ node['left']
                     else:
                         self.grid_env[i][j - 1]['right'] ^ node['left']
-                    if j == self._n_cols - 3:
+                    if j == self.n_cols - 3:
                         node['right'] ^ self.right_border[i]['left']
                     
         else:
             # Grid env
-            for i in range(self._n_rows):
+            for i in range(self.n_rows):
                 self.grid_env.append([])
-                for j in range(self._n_cols):
-                    node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0],
+                for j in range(self.n_cols):
+                    node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[0],
                                             bond_dim[1], bond_dim[1]),
                                      axes_names=('input', 'left', 'right',
                                                  'up', 'down'),
@@ -416,18 +439,18 @@ class PEPS(TensorNetwork):
                     
                     if i > 0:
                         self.grid_env[i - 1][j]['down'] ^ node['up']
-                    if i == self._n_rows - 1:
+                    if i == self.n_rows - 1:
                         node['down'] ^ self.grid_env[0][j]['up']
                         
                     if j > 0:
                         self.grid_env[i][j - 1]['right'] ^ node['left']
-                    if j == self._n_cols - 1:
+                    if j == self.n_cols - 1:
                         node['right'] ^  self.grid_env[i][0]['left']
                     
     def initialize(self, std: float = 1e-9) -> None:
         """Initializes all the nodes."""
-        for node in self._leaf_nodes.values():
-            node.tensor = torch.randn(node._shape) * std
+        for node in self.leaf_nodes.values():
+            node.tensor = torch.randn(node.shape) * std
     
     def set_data_nodes(self) -> None:
         """
@@ -436,41 +459,41 @@ class PEPS(TensorNetwork):
         """
         input_edges = []
         
-        for i in range(self._n_rows):
-            for j in range(self._n_cols):
-                if self._boundary == ['obc', 'obc']:
+        for i in range(self.n_rows):
+            for j in range(self.n_cols):
+                if self.boundary == ['obc', 'obc']:
                     if i == 0:
                         if j == 0:
                             node = self.left_up_corner
-                        elif j < self._n_cols - 1:
+                        elif j < self.n_cols - 1:
                             node = self.up_border[j - 1]
                         else:
                             node = self.right_up_corner
-                    elif i < self._n_rows - 1:
+                    elif i < self.n_rows - 1:
                         if j == 0:
                             node = self.left_border[i - 1]
-                        elif j < self._n_cols - 1:
+                        elif j < self.n_cols - 1:
                             node = self.grid_env[i - 1][j - 1]
                         else:
                             node = self.right_border[i - 1]
                     else:
                         if j == 0:
                             node = self.left_down_corner
-                        elif j < self._n_cols - 1:
+                        elif j < self.n_cols - 1:
                             node = self.down_border[j - 1]
                         else:
                             node = self.right_down_corner
-                elif self._boundary == ['obc', 'pbc']:
+                elif self.boundary == ['obc', 'pbc']:
                     if i == 0:
                         node = self.up_border[j]
-                    elif i < self._n_rows - 1:
+                    elif i < self.n_rows - 1:
                         node = self.grid_env[i - 1][j]
                     else:
                         node = self.down_border[j]
-                elif self._boundary == ['pbc', 'obc']:
+                elif self.boundary == ['pbc', 'obc']:
                     if j == 0:
                         node = self.left_border[i]
-                    elif j < self._n_cols - 1:
+                    elif j < self.n_cols - 1:
                         node = self.grid_env[i][j - 1]
                     else:
                         node = self.right_border[i]
@@ -480,18 +503,18 @@ class PEPS(TensorNetwork):
                 input_edges.append(node['input'])
             
         super().set_data_nodes(input_edges=input_edges,
-                               num_batch_edges=self._num_batches)
+                               num_batch_edges=self.n_batches)
         
     def _input_contraction(self):
         """Contracts input data nodes with PEPS nodes."""
         full_grid = []
-        for _ in range(self._n_rows):
+        for _ in range(self.n_rows):
             full_grid.append([])
-            for _ in range(self._n_cols):
+            for _ in range(self.n_cols):
                 full_grid[-1].append(None)
         
         # Contract with data
-        if self._boundary == ['obc', 'obc']:
+        if self.boundary == ['obc', 'obc']:
             # Corners
             full_grid[0][0] = self.left_up_corner.neighbours('input') @ \
                 self.left_up_corner
@@ -521,7 +544,7 @@ class PEPS(TensorNetwork):
             result_down_border = stack_down_border_data @ stack_down_border
             result_down_border = op.unbind(result_down_border)
             
-            if self._boundary[1] == 'obc':
+            if self.boundary[1] == 'obc':
                 full_grid[0][1:-1] = result_up_border
                 full_grid[-1][1:-1] = result_down_border
             else:
@@ -547,12 +570,12 @@ class PEPS(TensorNetwork):
             result_right_border = stack_right_border_data @ stack_right_border
             result_right_border = op.unbind(result_right_border)
             
-            if self._boundary[0] == 'obc':
-                for i in range(self._n_rows - 2):
+            if self.boundary[0] == 'obc':
+                for i in range(self.n_rows - 2):
                     full_grid[i + 1][0] = result_left_border[i]
                     full_grid[i + 1][-1] = result_right_border[i]
             else:
-                for i in range(self._n_rows):
+                for i in range(self.n_rows):
                     full_grid[i][0] = result_left_border[i]
                     full_grid[i][-1] = result_right_border[i]
             
@@ -570,26 +593,26 @@ class PEPS(TensorNetwork):
             result_grid_env = stack_grid_env_data @ stack_grid_env
             result_grid_env = op.unbind(result_grid_env)
             
-            if self._boundary == ['obc', 'obc']:
-                for i in range(self._n_rows - 2):
-                    for j in range(self._n_cols - 2):
+            if self.boundary == ['obc', 'obc']:
+                for i in range(self.n_rows - 2):
+                    for j in range(self.n_cols - 2):
                         full_grid[i + 1][j + 1] = result_grid_env[
-                            i * (self._n_cols - 2) + j]
-            elif self._boundary == ['obc', 'pbc']:
-                for i in range(self._n_rows - 2):
-                    for j in range(self._n_cols):
+                            i * (self.n_cols - 2) + j]
+            elif self.boundary == ['obc', 'pbc']:
+                for i in range(self.n_rows - 2):
+                    for j in range(self.n_cols):
                         full_grid[i + 1][j] = result_grid_env[
-                            i * self._n_cols + j]
-            elif self._boundary == ['pbc', 'obc']:
-                for i in range(self._n_rows):
-                    for j in range(self._n_cols - 2):
+                            i * self.n_cols + j]
+            elif self.boundary == ['pbc', 'obc']:
+                for i in range(self.n_rows):
+                    for j in range(self.n_cols - 2):
                         full_grid[i][j + 1] = result_grid_env[
-                            i * (self._n_cols - 2) + j]
+                            i * (self.n_cols - 2) + j]
             else:
-                for i in range(self._n_rows):
-                    for j in range(self._n_cols):
+                for i in range(self.n_rows):
+                    for j in range(self.n_cols):
                         full_grid[i][j] = result_grid_env[
-                            i * self._n_cols + j]
+                            i * self.n_cols + j]
                     
         return full_grid
     
@@ -608,10 +631,10 @@ class PEPS(TensorNetwork):
         else:
             condition = False
             if from_side in ['up', 'down']:
-                if self._boundary[1] == 'obc':
+                if self.boundary[1] == 'obc':
                     condition = True
             elif from_side in ['left', 'right']:
-                if self._boundary[0] == 'obc':
+                if self.boundary[0] == 'obc':
                     condition = True
             
             if condition:
@@ -624,11 +647,11 @@ class PEPS(TensorNetwork):
                     node1 = line1[1]
                     node2 = line2[1]
                     axes1, axes2 = [], []
-                    for i1, edge1 in enumerate(node1._edges):
-                        for edge2 in node2._edges:
+                    for i1, edge1 in enumerate(node1.edges):
+                        for edge2 in node2.edges:
                             if edge1 == edge2:
-                                axis1 = edge1._axes[1 - node1.is_node1(i1)]
-                                axis2 = edge1._axes[node1.is_node1(i1)]
+                                axis1 = edge1.axes[1 - node1.is_node1(i1)]
+                                axis2 = edge1.axes[node1.is_node1(i1)]
                                 axes1.append(axis1)
                                 axes2.append(axis2)
                     
@@ -647,11 +670,11 @@ class PEPS(TensorNetwork):
                 node1 = line1[0]
                 node2 = line2[0]
                 axes1, axes2 = [], []
-                for i1, edge1 in enumerate(node1._edges):
-                    for edge2 in node2._edges:
+                for i1, edge1 in enumerate(node1.edges):
+                    for edge2 in node2.edges:
                         if edge1 == edge2:
-                            axis1 = edge1._axes[1 - node1.is_node1(i1)]
-                            axis2 = edge1._axes[node1.is_node1(i1)]
+                            axis1 = edge1.axes[1 - node1.is_node1(i1)]
+                            axis2 = edge1.axes[node1.is_node1(i1)]
                             axes1.append(axis1)
                             axes2.append(axis2)
                 
@@ -673,12 +696,12 @@ class PEPS(TensorNetwork):
         neighbours and splits the result again, to reduce the bond dimension
         (keeping it bounded by ``max_bond``).
         """
-        nb = self._num_batches
+        nb = self.n_batches
         for i in range(len(line) - 1):
             contracted = line[i] @ line[i + 1]
             splitted1, splitted2 = contracted.split(
-                node1_axes=contracted._axes[nb:(line[i].rank - 2)],
-                node2_axes=contracted._axes[(line[i].rank - 2):],
+                node1_axes=contracted.axes[nb:(line[i].rank - 2)],
+                node2_axes=contracted.axes[(line[i].rank - 2):],
                 rank=max_bond)
             if (from_side == 'up') or (from_side == 'down'):
                 splitted1.get_axis('splitted').name = 'right'
@@ -692,8 +715,8 @@ class PEPS(TensorNetwork):
         if pbc and (len(line) > 2):
             contracted = line[-1] @ line[0]
             splitted1, splitted2 = contracted.split(
-                node1_axes=contracted._axes[nb:(line[-1].rank - 2)],
-                node2_axes=contracted._axes[(line[-1].rank - 2):],
+                node1_axes=contracted.axes[nb:(line[-1].rank - 2)],
+                node2_axes=contracted.axes[(line[-1].rank - 2):],
                 rank=max_bond)
             if (from_side == 'up') or (from_side == 'down'):
                 splitted1.get_axis('splitted').name = 'right'
@@ -735,13 +758,13 @@ class PEPS(TensorNetwork):
         
         pbc = False
         if from_side == 'up':
-            if self._boundary[1] == 'pbc':
+            if self.boundary[1] == 'pbc':
                 pbc = True
                 
         elif from_side == 'down':
             full_grid.reverse()
             
-            if self._boundary[1] == 'pbc':
+            if self.boundary[1] == 'pbc':
                 pbc = True
                 
         elif from_side == 'left':
@@ -753,7 +776,7 @@ class PEPS(TensorNetwork):
                 new_grid.append(row)
             full_grid = new_grid
             
-            if self._boundary[0] == 'pbc':
+            if self.boundary[0] == 'pbc':
                 pbc = True
                 
         elif from_side == 'right':
@@ -766,7 +789,7 @@ class PEPS(TensorNetwork):
             full_grid = new_grid
             full_grid.reverse()
             
-            if self._boundary[0] == 'pbc':
+            if self.boundary[0] == 'pbc':
                 pbc = True
             
         for i in range(len(full_grid) - 1):
@@ -786,7 +809,7 @@ class PEPS(TensorNetwork):
         for node in full_grid[-1][1:]:
             result @= node
             
-        for edge in result._edges:
+        for edge in result.edges:
             if not edge.is_batch():
                 result @= result
                 break
@@ -800,6 +823,11 @@ class UPEPS(TensorNetwork):
     States, where all nodes are input nodes. It is the uniform version of
     :class:`PEPS`, that is, all nodes share the same tensor. Thus boundary
     conditions are always periodic.
+    
+    A ``UPEPS`` is formed by the following nodes:
+    
+    * ``grid_env``: Grid environment of nodes with 5 edges, ("input", "left",
+      "right", "up", "down"). Is is a list of lists of nodes.
 
     Parameters
     ----------
@@ -807,24 +835,38 @@ class UPEPS(TensorNetwork):
         Number of rows of the 2D grid.
     n_cols : int
         Number of columns of the 2D grid
-    d_phys : int
-        Physical dimension.
+    in_dim : int
+        Input dimension.
     bond_dim : list[int] or tuple[int]
         Bond dimensions for horizontal and vertical edges (in that order). Thus
         it should also contain 2 elements
-    num_batches : int
-        Number of batch edges of input data nodes. Usually ``num_batches = 1``
+    n_batches : int
+        Number of batch edges of input ``data`` nodes. Usually ``n_batches = 1``
         (where the batch edge is used for the data batched) but it could also
-        be ``num_batches = 2`` (one edge for data batched, other edge for image
+        be ``nu_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
+        
+    Examples
+    --------
+    >>> peps = tk.models.PEPS(n_rows=2,
+    ...                       n_cols=2,
+    ...                       in_dim=3,
+    ...                       bond_dim=[5, 5])
+    >>> for node in peps.grid_env:
+    ...     assert node.tensor_address() == 'virtual_uniform'
+    ...
+    >>> data = torch.ones(20, 4, 3) # batch_size x n_features x feature_size
+    >>> result = peps(data)
+    >>> result.shape
+    torch.Size([20])
     """
 
     def __init__(self,
                  n_rows: int,
                  n_cols: int,
-                 d_phys: int,
+                 in_dim: int,
                  bond_dim: Sequence[int],
-                 num_batches: int = 1) -> None:
+                 n_batches: int = 1) -> None:
 
         super().__init__(name='peps')
 
@@ -837,10 +879,10 @@ class UPEPS(TensorNetwork):
         self._n_rows = n_rows
         self._n_cols = n_cols
 
-        # d_phys
-        if not isinstance(d_phys, int):
-            raise ValueError('`d_phys` should be int type')
-        self._d_phys = d_phys
+        # in_dim
+        if not isinstance(in_dim, int):
+            raise ValueError('`in_dim` should be int type')
+        self._in_dim = in_dim
             
         # bond_dim
         if isinstance(bond_dim, (list, tuple)):
@@ -850,10 +892,14 @@ class UPEPS(TensorNetwork):
         else:
             raise TypeError('`bond_dim` should be a pair of ints')
 
+        # n_batches
+        if not isinstance(n_batches, int):
+            raise TypeError('`n_batches should be int type')
+        self._n_batches = n_batches
+
+        # Create Tensor Network
         self._make_nodes()
         self.initialize()
-        
-        self._num_batches = num_batches
         
     @property
     def n_rows(self) -> int:
@@ -866,14 +912,19 @@ class UPEPS(TensorNetwork):
         return self._n_cols
 
     @property
-    def d_phys(self) -> int:
-        """Returns physical dimension."""
-        return self._d_phys
+    def in_dim(self) -> int:
+        """Returns input dimension."""
+        return self._in_dim
 
     @property
     def bond_dim(self) -> List[int]:
         """Returns bond dimensions for horizontal and vertical edges."""
         return self._bond_dim
+    
+    @property
+    def n_batches(self) -> int:
+        """Returns number of batch edges of the ``data`` nodes."""
+        return self._n_batches
             
     def _make_nodes(self) -> None:
         """Creates all the nodes of the PEPS."""
@@ -883,14 +934,14 @@ class UPEPS(TensorNetwork):
         
         self.grid_env = []
         
-        d_phys = self._d_phys
-        bond_dim = self._bond_dim
+        in_dim = self.in_dim
+        bond_dim = self.bond_dim
         
         # Grid env
-        for i in range(self._n_rows):
+        for i in range(self.n_rows):
             self.grid_env.append([])
-            for j in range(self._n_cols):
-                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0],
+            for j in range(self.n_cols):
+                node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[0],
                                         bond_dim[1], bond_dim[1]),
                                  axes_names=('input', 'left', 'right',
                                              'up', 'down'),
@@ -900,16 +951,16 @@ class UPEPS(TensorNetwork):
                 
                 if i > 0:
                     self.grid_env[i - 1][j]['down'] ^ node['up']
-                if i == self._n_rows - 1:
+                if i == self.n_rows - 1:
                     node['down'] ^ self.grid_env[0][j]['up']
                     
                 if j > 0:
                     self.grid_env[i][j - 1]['right'] ^ node['left']
-                if j == self._n_cols - 1:
+                if j == self.n_cols - 1:
                     node['right'] ^  self.grid_env[i][0]['left']
                     
         # Virtual node
-        uniform_memory = node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0],
+        uniform_memory = node = ParamNode(shape=(in_dim, bond_dim[0], bond_dim[0],
                                                  bond_dim[1], bond_dim[1]),
                                           axes_names=('input', 'left', 'right',
                                                       'up', 'down'),
@@ -921,7 +972,7 @@ class UPEPS(TensorNetwork):
     def initialize(self, std: float = 1e-9) -> None:
         """Initializes all the nodes."""
         # Virtual node
-        tensor = torch.randn(self.uniform_memory._shape) * std
+        tensor = torch.randn(self.uniform_memory.shape) * std
         self.uniform_memory.tensor = tensor
         
         for lst in self.grid_env:
@@ -935,19 +986,19 @@ class UPEPS(TensorNetwork):
         """
         input_edges = []
         
-        for i in range(self._n_rows):
-            for j in range(self._n_cols):
+        for i in range(self.n_rows):
+            for j in range(self.n_cols):
                 input_edges.append(self.grid_env[i][j]['input'])
             
         super().set_data_nodes(input_edges=input_edges,
-                               num_batch_edges=self._num_batches)
+                               num_batch_edges=self.n_batches)
         
     def _input_contraction(self):
         """Contracts input data nodes with PEPS nodes."""
         full_grid = []
-        for _ in range(self._n_rows):
+        for _ in range(self.n_rows):
             full_grid.append([])
-            for _ in range(self._n_cols):
+            for _ in range(self.n_cols):
                 full_grid[-1].append(None)
         
         # Grid env
@@ -964,9 +1015,9 @@ class UPEPS(TensorNetwork):
             result_grid_env = stack_grid_env_data @ stack_grid_env
             result_grid_env = op.unbind(result_grid_env)
             
-            for i in range(self._n_rows):
-                for j in range(self._n_cols):
-                    full_grid[i][j] = result_grid_env[i * self._n_cols + j]
+            for i in range(self.n_rows):
+                for j in range(self.n_cols):
+                    full_grid[i][j] = result_grid_env[i * self.n_cols + j]
                     
         return full_grid
     
@@ -988,11 +1039,11 @@ class UPEPS(TensorNetwork):
             node1 = line1[0]
             node2 = line2[0]
             axes1, axes2 = [], []
-            for i1, edge1 in enumerate(node1._edges):
-                for edge2 in node2._edges:
+            for i1, edge1 in enumerate(node1.edges):
+                for edge2 in node2.edges:
                     if edge1 == edge2:
-                        axis1 = edge1._axes[1 - node1.is_node1(i1)]
-                        axis2 = edge1._axes[node1.is_node1(i1)]
+                        axis1 = edge1.axes[1 - node1.is_node1(i1)]
+                        axis2 = edge1.axes[node1.is_node1(i1)]
                         axes1.append(axis1)
                         axes2.append(axis2)
             
@@ -1013,12 +1064,12 @@ class UPEPS(TensorNetwork):
         neighbours and splits the result again, to reduce the bond dimension
         (keeping it bounded by ``max_bond``).
         """
-        nb = self._num_batches
+        nb = self.n_batches
         for i in range(len(line) - 1):
             contracted = line[i] @ line[i + 1]
             splitted1, splitted2 = contracted.split(
-                node1_axes=contracted._axes[nb:(line[i].rank - 2)],
-                node2_axes=contracted._axes[(line[i].rank - 2):],
+                node1_axes=contracted.axes[nb:(line[i].rank - 2)],
+                node2_axes=contracted.axes[(line[i].rank - 2):],
                 rank=max_bond)
             if (from_side == 'up') or (from_side == 'down'):
                 splitted1.get_axis('splitted').name = 'right'
@@ -1032,8 +1083,8 @@ class UPEPS(TensorNetwork):
         if len(line) > 2:
             contracted = line[-1] @ line[0]
             splitted1, splitted2 = contracted.split(
-                node1_axes=contracted._axes[nb:(line[-1].rank - 2)],
-                node2_axes=contracted._axes[(line[-1].rank - 2):],
+                node1_axes=contracted.axes[nb:(line[-1].rank - 2)],
+                node2_axes=contracted.axes[(line[-1].rank - 2):],
                 rank=max_bond)
             if (from_side == 'up') or (from_side == 'down'):
                 splitted1.get_axis('splitted').name = 'right'
@@ -1113,7 +1164,7 @@ class UPEPS(TensorNetwork):
         for node in full_grid[-1][1:]:
             result @= node
         
-        for edge in result._edges:
+        for edge in result.edges:
             if not edge.is_batch():
                 result @= result
                 break
@@ -1133,7 +1184,7 @@ class ConvPEPS(PEPS):
     Parameters
     ----------
     in_channels : int
-        Input channels. Same as ``d_phys`` in :class:`PEPS`.
+        Input channels. Same as ``in_dim`` in :class:`PEPS`.
     bond_dim : list[int] or tuple[int]
         Bond dimensions for horizontal and vertical edges (in that order). Thus
         it should also contain 2 elements
@@ -1155,7 +1206,7 @@ class ConvPEPS(PEPS):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
-    boundary : list[{'obc', 'pbc'}]
+    boundary : list[{"obc", "pbc"}]
         List of strings indicating whether periodic or open boundary conditions
         should be used in the horizontal (up and down) and vertical (left and
         right) boundaries.
@@ -1163,11 +1214,11 @@ class ConvPEPS(PEPS):
     Examples
     --------
     >>> conv_peps = tk.models.ConvPEPS(in_channels=2,
-    ...                         bond_dim=[5, 5],
-    ...                         kernel_size=2)
+    ...                                bond_dim=[5, 5],
+    ...                                kernel_size=2)
     >>> data = torch.ones(20, 2, 2, 2) # batch_size x in_channels x height x width
     >>> result = conv_peps(data)
-    >>> print(result.shape)
+    >>> result.shape
     torch.Size([20, 1, 1])
     """
     
@@ -1208,10 +1259,10 @@ class ConvPEPS(PEPS):
         
         super().__init__(n_rows=kernel_size[0],
                          n_cols=kernel_size[1],
-                         d_phys=in_channels,
+                         in_dim=in_channels,
                          bond_dim=bond_dim,
                          boundary=boundary,
-                         num_batches=2)
+                         n_batches=2)
         
         self.unfold = nn.Unfold(kernel_size=kernel_size,
                                 stride=stride,
@@ -1220,7 +1271,7 @@ class ConvPEPS(PEPS):
         
     @property
     def in_channels(self) -> int:
-        """Returns ``in_channels``. Same as ``d_phys`` in :class:`PEPS`."""
+        """Returns ``in_channels``. Same as ``in_dim`` in :class:`PEPS`."""
         return self._in_channels
     
     @property
@@ -1282,8 +1333,8 @@ class ConvPEPS(PEPS):
         patches = patches.view(*patches.shape[:-1], self.in_channels, -1)
         # batch_size x nb_windows x in_channels x nb_pixels
         
-        patches = patches.permute(3, 0, 1, 2)
-        # nb_pixels x batch_size x nb_windows x in_channels
+        patches = patches.transpose(2, 3)
+        # batch_size x nb_windows x nb_pixels x in_channels
         
         result = super().forward(patches, *args, **kwargs)
         # batch_size x nb_windows
@@ -1314,7 +1365,7 @@ class ConvUPEPS(UPEPS):
     Parameters
     ----------
     in_channels : int
-        Input channels. Same as ``d_phys`` in :class:`UPEPS`.
+        Input channels. Same as ``in_dim`` in :class:`UPEPS`.
     bond_dim : list[int] or tuple[int]
         Bond dimensions for horizontal and vertical edges (in that order). Thus
         it should also contain 2 elements
@@ -1336,6 +1387,19 @@ class ConvUPEPS(UPEPS):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
+        
+    Examples
+    --------
+    >>> conv_peps = tk.models.ConvPEPS(in_channels=2,
+    ...                                bond_dim=[5, 5],
+    ...                                kernel_size=2)
+    >>> for node in conv_peps.grid_env:
+    ...     assert node.tensor_address() == 'virtual_uniform'
+    ...
+    >>> data = torch.ones(20, 2, 2, 2) # batch_size x in_channels x height x width
+    >>> result = conv_peps(data)
+    >>> result.shape
+    torch.Size([20, 1, 1])
     """
     
     def __init__(self,
@@ -1374,9 +1438,9 @@ class ConvUPEPS(UPEPS):
         
         super().__init__(n_rows=kernel_size[0],
                          n_cols=kernel_size[1],
-                         d_phys=in_channels,
+                         in_dim=in_channels,
                          bond_dim=bond_dim,
-                         num_batches=2)
+                         n_batches=2)
         
         self.unfold = nn.Unfold(kernel_size=kernel_size,
                                 stride=stride,
@@ -1385,7 +1449,7 @@ class ConvUPEPS(UPEPS):
         
     @property
     def in_channels(self) -> int:
-        """Returns ``in_channels``. Same as ``d_phys`` in :class:`UPEPS`."""
+        """Returns ``in_channels``. Same as ``in_dim`` in :class:`UPEPS`."""
         return self._in_channels
     
     @property
@@ -1447,8 +1511,8 @@ class ConvUPEPS(UPEPS):
         patches = patches.view(*patches.shape[:-1], self.in_channels, -1)
         # batch_size x nb_windows x in_channels x nb_pixels
         
-        patches = patches.permute(3, 0, 1, 2)
-        # nb_pixels x batch_size x nb_windows x in_channels
+        patches = patches.transpose(2, 3)
+        # batch_size x nb_windows x nb_pixels x in_channels
         
         result = super().forward(patches, *args, **kwargs)
         # batch_size x nb_windows

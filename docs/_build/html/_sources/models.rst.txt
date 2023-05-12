@@ -1,7 +1,7 @@
 Models
 ======
 
-.. currentmodule:: tensorkrowch
+.. currentmodule:: tensorkrowch.models
 
 MPS
 ---

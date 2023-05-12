@@ -1,7 +1,7 @@
 Embeddings
 ==========
 
-.. currentmodule:: tensorkrowch
+.. currentmodule:: tensorkrowch.embeddings
 
 unit
 ^^^^

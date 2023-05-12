@@ -1,5 +1,21 @@
 """
-Tests for node_operations
+This script contains tests for operations:
+
+    * TestPermute
+    * TestBasicOps
+    * TestSplitSVD
+    * TestSplitSVDR
+    * TestSplitQR
+    * TestSplitRQ
+    * TestSVD
+    * TestSVDR
+    * TestQR
+    * TestRQ
+    * TestContractEdge
+    * TestContractBetween
+    * TestStackUnbind
+    * TestEinsum
+    * TestTNModels
 """
 
 import pytest
@@ -9,8 +25,6 @@ import torch.nn as nn
 import tensorkrowch as tk
 
 from typing import Sequence
-
-import time
 
 
 class TestPermute:

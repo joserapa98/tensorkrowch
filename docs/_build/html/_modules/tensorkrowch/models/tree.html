@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.tn_models.tree &#8212; TensorKrowch 00.00.01 documentation</title>
+    <title>tensorkrowch.models.tree &#8212; TensorKrowch 00.00.01 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -187,16 +187,6 @@
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../../initializers.html">
-     Initializers
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../../embeddings.html">
-     Embeddings
-    </a>
-   </li>
-   <li class="toctree-l2">
     <a class="reference internal" href="../../../operations.html">
      Operations
     </a>
@@ -204,6 +194,16 @@
    <li class="toctree-l2">
     <a class="reference internal" href="../../../models.html">
      Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../embeddings.html">
+     Embeddings
     </a>
    </li>
   </ul>
@@ -309,7 +309,7 @@ title="Source repository"
                 
               <div>
                 
-  <h1>Source code for tensorkrowch.tn_models.tree</h1><div class="highlight"><pre>
+  <h1>Source code for tensorkrowch.models.tree</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">This script contains:</span>
 <span class="sd">    *Tree</span>
@@ -329,7 +329,7 @@ title="Source repository"
 <span class="kn">import</span> <span class="nn">tensorkrowch.operations</span> <span class="k">as</span> <span class="nn">op</span>
 
 
-<div class="viewcode-block" id="Tree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.Tree">[docs]</a><span class="k">class</span> <span class="nc">Tree</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
+<div class="viewcode-block" id="Tree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.Tree">[docs]</a><span class="k">class</span> <span class="nc">Tree</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Tree States. These states form a tree structure where the ``data``</span>
 <span class="sd">    nodes are in the base. All nodes have a sequence of input edges and an</span>
@@ -472,7 +472,7 @@ title="Source repository"
             
             <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer_lst</span><span class="p">)</span>
 
-<div class="viewcode-block" id="Tree.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.Tree.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="Tree.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.Tree.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">layer</span><span class="p">:</span>
@@ -480,7 +480,7 @@ title="Source repository"
                 <span class="n">tensor</span><span class="p">[(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="n">node</span><span class="o">.</span><span class="n">rank</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">tensor</span></div>
 
-<div class="viewcode-block" id="Tree.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.Tree.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="Tree.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.Tree.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates data nodes and connects each of them to the physical edge of</span>
 <span class="sd">        an input node.</span>
@@ -530,7 +530,7 @@ title="Source repository"
             <span class="n">result_lst</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">result_lst</span>
 
-<div class="viewcode-block" id="Tree.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.Tree.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<div class="viewcode-block" id="Tree.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.Tree.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the whole Tree Tensor Network.</span>
 
@@ -595,7 +595,7 @@ title="Source repository"
             
         <span class="k">return</span> <span class="n">new_layer1</span><span class="p">,</span> <span class="n">new_layer2</span>
     
-<div class="viewcode-block" id="Tree.canonicalize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.Tree.canonicalize">[docs]</a>    <span class="k">def</span> <span class="nf">canonicalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="Tree.canonicalize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.Tree.canonicalize">[docs]</a>    <span class="k">def</span> <span class="nf">canonicalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                      <span class="n">mode</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;svd&#39;</span><span class="p">,</span>
                      <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -645,7 +645,7 @@ title="Source repository"
             <span class="bp">self</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="n">prev_auto_stack</span></div></div>
 
 
-<div class="viewcode-block" id="UTree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UTree">[docs]</a><span class="k">class</span> <span class="nc">UTree</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
+<div class="viewcode-block" id="UTree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UTree">[docs]</a><span class="k">class</span> <span class="nc">UTree</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Uniform Tree States where all nodes have the same shape. It is</span>
 <span class="sd">    the uniform version of :class:`Tree`, that is, all nodes share the same</span>
@@ -773,7 +773,7 @@ title="Source repository"
                                           <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">uniform_memory</span>
 
-<div class="viewcode-block" id="UTree.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UTree.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="UTree.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UTree.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
         <span class="c1"># Virtual node</span>
         <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">_shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
@@ -784,7 +784,7 @@ title="Source repository"
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">layer</span><span class="p">:</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="UTree.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UTree.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="UTree.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UTree.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates data nodes and connects each of them to the physical edge of</span>
 <span class="sd">        an input node.</span>
@@ -834,7 +834,7 @@ title="Source repository"
             <span class="n">result_lst</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">result_lst</span>
 
-<div class="viewcode-block" id="UTree.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UTree.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<div class="viewcode-block" id="UTree.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UTree.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the whole Tree Tensor Network.</span>
 
@@ -860,7 +860,7 @@ title="Source repository"
         <span class="k">return</span> <span class="n">result_lst</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div></div>
 
 
-<div class="viewcode-block" id="ConvTree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvTree">[docs]</a><span class="k">class</span> <span class="nc">ConvTree</span><span class="p">(</span><span class="n">Tree</span><span class="p">):</span>
+<div class="viewcode-block" id="ConvTree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvTree">[docs]</a><span class="k">class</span> <span class="nc">ConvTree</span><span class="p">(</span><span class="n">Tree</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Tree States where the input data is a batch of images. It is the</span>
 <span class="sd">    convolutional version of :class:`Tree`.</span>
@@ -991,7 +991,7 @@ title="Source repository"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>
     
-<div class="viewcode-block" id="ConvTree.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvTree.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="ConvTree.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvTree.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Overrides ``nn.Module``&#39;s forward to compute a convolution on the input</span>
 <span class="sd">        image.</span>
@@ -1041,7 +1041,7 @@ title="Source repository"
         <span class="k">return</span> <span class="n">result</span></div></div>
     
 
-<div class="viewcode-block" id="ConvUTree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvUTree">[docs]</a><span class="k">class</span> <span class="nc">ConvUTree</span><span class="p">(</span><span class="n">UTree</span><span class="p">):</span>
+<div class="viewcode-block" id="ConvUTree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvUTree">[docs]</a><span class="k">class</span> <span class="nc">ConvUTree</span><span class="p">(</span><span class="n">UTree</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Uniform Tree States where the input data is a batch of images. It</span>
 <span class="sd">    is the convolutional version of :class:`UTree`.</span>
@@ -1162,7 +1162,7 @@ title="Source repository"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>
     
-<div class="viewcode-block" id="ConvUTree.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvUTree.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="ConvUTree.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvUTree.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Overrides ``nn.Module``&#39;s forward to compute a convolution on the input</span>
 <span class="sd">        image.</span>

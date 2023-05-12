@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.tn_models.peps &#8212; TensorKrowch 00.00.01 documentation</title>
+    <title>tensorkrowch.models.peps &#8212; TensorKrowch 00.00.01 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -187,16 +187,6 @@
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../../initializers.html">
-     Initializers
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../../embeddings.html">
-     Embeddings
-    </a>
-   </li>
-   <li class="toctree-l2">
     <a class="reference internal" href="../../../operations.html">
      Operations
     </a>
@@ -204,6 +194,16 @@
    <li class="toctree-l2">
     <a class="reference internal" href="../../../models.html">
      Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../embeddings.html">
+     Embeddings
     </a>
    </li>
   </ul>
@@ -309,7 +309,7 @@ title="Source repository"
                 
               <div>
                 
-  <h1>Source code for tensorkrowch.tn_models.peps</h1><div class="highlight"><pre>
+  <h1>Source code for tensorkrowch.models.peps</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">This script contains:</span>
 <span class="sd">    *PEPS</span>
@@ -329,7 +329,7 @@ title="Source repository"
 <span class="kn">import</span> <span class="nn">tensorkrowch.operations</span> <span class="k">as</span> <span class="nn">op</span>
 
 
-<div class="viewcode-block" id="PEPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.PEPS">[docs]</a><span class="k">class</span> <span class="nc">PEPS</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
+<div class="viewcode-block" id="PEPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.PEPS">[docs]</a><span class="k">class</span> <span class="nc">PEPS</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Projected Entangled Pair States, where all nodes are input nodes,</span>
 <span class="sd">    that is, they are all connected to ``data`` nodes that will store the input</span>
@@ -736,12 +736,12 @@ title="Source repository"
                     <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_cols</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                         <span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span>  <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                     
-<div class="viewcode-block" id="PEPS.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.PEPS.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="PEPS.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.PEPS.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
             <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">_shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span></div>
     
-<div class="viewcode-block" id="PEPS.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.PEPS.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="PEPS.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.PEPS.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates data nodes and connects each of them to the physical edge of</span>
 <span class="sd">        an input node.</span>
@@ -1018,7 +1018,7 @@ title="Source repository"
             
         <span class="k">return</span> <span class="n">line</span>                      
         
-<div class="viewcode-block" id="PEPS.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.PEPS.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="PEPS.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.PEPS.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">from_side</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span><span class="p">,</span>
                  <span class="n">max_bond</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
                  <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
@@ -1106,7 +1106,7 @@ title="Source repository"
         <span class="k">return</span> <span class="n">result</span></div></div>
 
 
-<div class="viewcode-block" id="UPEPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UPEPS">[docs]</a><span class="k">class</span> <span class="nc">UPEPS</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
+<div class="viewcode-block" id="UPEPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UPEPS">[docs]</a><span class="k">class</span> <span class="nc">UPEPS</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Uniform (translationally invariant) Projected Entangled Pair</span>
 <span class="sd">    States, where all nodes are input nodes. It is the uniform version of</span>
@@ -1230,7 +1230,7 @@ title="Source repository"
                                           <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">uniform_memory</span>
                     
-<div class="viewcode-block" id="UPEPS.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UPEPS.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="UPEPS.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UPEPS.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
         <span class="c1"># Virtual node</span>
         <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">_shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
@@ -1240,7 +1240,7 @@ title="Source repository"
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">lst</span><span class="p">:</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="p">)</span></div>
     
-<div class="viewcode-block" id="UPEPS.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UPEPS.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="UPEPS.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UPEPS.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates data nodes and connects each of them to the physical edge of</span>
 <span class="sd">        an input node.</span>
@@ -1358,7 +1358,7 @@ title="Source repository"
             
         <span class="k">return</span> <span class="n">line</span>                      
         
-<div class="viewcode-block" id="UPEPS.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.UPEPS.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<div class="viewcode-block" id="UPEPS.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UPEPS.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">from_side</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span><span class="p">,</span>
                  <span class="n">max_bond</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
                  <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
@@ -1433,7 +1433,7 @@ title="Source repository"
         <span class="k">return</span> <span class="n">result</span></div></div>
 
 
-<div class="viewcode-block" id="ConvPEPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvPEPS">[docs]</a><span class="k">class</span> <span class="nc">ConvPEPS</span><span class="p">(</span><span class="n">PEPS</span><span class="p">):</span>
+<div class="viewcode-block" id="ConvPEPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvPEPS">[docs]</a><span class="k">class</span> <span class="nc">ConvPEPS</span><span class="p">(</span><span class="n">PEPS</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Projected Entangled Pair States, where all nodes are input nodes,</span>
 <span class="sd">    and where the input data is a batch of images. It is the convolutional</span>
@@ -1567,7 +1567,7 @@ title="Source repository"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>
     
-<div class="viewcode-block" id="ConvPEPS.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvPEPS.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="ConvPEPS.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvPEPS.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Overrides ``nn.Module``&#39;s forward to compute a convolution on the input</span>
 <span class="sd">        image.</span>
@@ -1614,7 +1614,7 @@ title="Source repository"
         <span class="k">return</span> <span class="n">result</span></div></div>
 
 
-<div class="viewcode-block" id="ConvUPEPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvUPEPS">[docs]</a><span class="k">class</span> <span class="nc">ConvUPEPS</span><span class="p">(</span><span class="n">UPEPS</span><span class="p">):</span>
+<div class="viewcode-block" id="ConvUPEPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvUPEPS">[docs]</a><span class="k">class</span> <span class="nc">ConvUPEPS</span><span class="p">(</span><span class="n">UPEPS</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Uniform Projected Entangled Pair States, where all nodes are input</span>
 <span class="sd">    nodes, and where the input data is a batch of images. It is the convolutional</span>
@@ -1732,7 +1732,7 @@ title="Source repository"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>
     
-<div class="viewcode-block" id="ConvUPEPS.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.ConvUPEPS.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="ConvUPEPS.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvUPEPS.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Overrides ``nn.Module``&#39;s forward to compute a convolution on the input</span>
 <span class="sd">        image.</span>

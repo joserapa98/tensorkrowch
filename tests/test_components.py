@@ -6,7 +6,15 @@ This script contains tests for components:
     * TestInitParamNode
     * TestNodeName
     * TestSetTensorNode
-    * TestSettensorparamNode
+    * TestSettensorParamNode
+    * TestMoveToNetwork
+    * TestMeasures
+    * TestConnect
+    * TestChangeSizeEdge
+    * TestParameterize
+    * TestCopy
+    * TestStack
+    * TestTensorNetwork
 """
 
 import pytest

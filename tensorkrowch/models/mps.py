@@ -713,6 +713,19 @@ class UMPS(TensorNetwork):
         (where the batch edge is used for the data batched) but it could also
         be ``n_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
+        
+    Examples
+    --------
+    >>> mps = tk.models.UMPS(n_features=4,
+    ...                      in_dim=2,
+    ...                      bond_dim=5)
+    >>> for node in mps.mats_env:
+    ...     assert node.tensor_address() == 'virtual_uniform'
+    ...
+    >>> data = torch.ones(20, 4, 2) # batch_size x n_features x feature_size
+    >>> result = mps(data)
+    >>> result.shape
+    torch.Size([20])
     """
 
     def __init__(self,
@@ -1186,6 +1199,19 @@ class ConvUMPS(UMPS):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
+    
+    Examples
+    --------
+    >>> conv_mps = tk.models.ConvMPS(in_channels=2,
+    ...                              bond_dim=5,
+    ...                              kernel_size=2)
+    >>> for node in mps.mats_env:
+    ...     assert node.tensor_address() == 'virtual_uniform'
+    ...
+    >>> data = torch.ones(20, 2, 2, 2) # batch_size x in_channels x height x width
+    >>> result = conv_mps(data)
+    >>> print(result.shape)
+    torch.Size([20, 1, 1])
     """
     
     def __init__(self,

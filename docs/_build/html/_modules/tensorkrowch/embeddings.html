@@ -320,24 +320,42 @@ title="Source repository"
 <span class="kn">from</span> <span class="nn">tensorkrowch.utils</span> <span class="kn">import</span> <span class="n">binomial_coeffs</span>
 
 
-<div class="viewcode-block" id="unit"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.unit">[docs]</a><span class="k">def</span> <span class="nf">unit</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="unit"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.unit">[docs]</a><span class="k">def</span> <span class="nf">unit</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Embedds the data tensor using the local feature map defined in the original</span>
 <span class="sd">    `paper &lt;https://arxiv.org/abs/1605.05775&gt;`_ by E. Miles Stoudenmire and David</span>
 <span class="sd">    J. Schwab.</span>
 <span class="sd">    </span>
+<span class="sd">    Given a vector :math:`x` with :math:`N` components, the embedding</span>
+<span class="sd">    will be</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+<span class="sd">    </span>
+<span class="sd">        \Phi^{s_1...s_N}(x) = \phi^{s_1}(x_1)\otimes\cdots\otimes\phi^{s_N}(x_N)</span>
+<span class="sd">        </span>
+<span class="sd">    where each :math:`\phi^{s_j}(x_j)` is</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+<span class="sd">    </span>
+<span class="sd">        \phi^{s_j}(x_j) = \sqrt{\binom{d-1}{s_j-1}}</span>
+<span class="sd">            (\cos{\frac{\pi}{2}x_j})^{d-s_j}(\sin{\frac{\pi}{2}x_j})^{s_j-1}</span>
+<span class="sd">            </span>
+<span class="sd">    being :math:`d` the desired output dimension (``dim``).</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    data : torch.Tensor</span>
-<span class="sd">        Data tensor with shape</span>
+<span class="sd">        Data tensor with shape </span>
 <span class="sd">        </span>
 <span class="sd">        .. math::</span>
 <span class="sd">        </span>
-<span class="sd">            n_{features} \times batch\_size \times feature\_size</span>
-<span class="sd">            </span>
-<span class="sd">        where :math:`feature\_size = 1`.</span>
-<span class="sd">    size : int</span>
-<span class="sd">        New feature size.</span>
+<span class="sd">            batch\_size \times n_{features}</span>
+<span class="sd">        </span>
+<span class="sd">        That is, ``data`` is a (batch) vector with :math:`n_{features}`</span>
+<span class="sd">        components. The :math:`batch\_size` is optional.</span>
+<span class="sd">    dim : int</span>
+<span class="sd">        New feature dimension.</span>
 <span class="sd">            </span>
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -346,50 +364,179 @@ title="Source repository"
 <span class="sd">        </span>
 <span class="sd">        .. math::</span>
 <span class="sd">        </span>
-<span class="sd">            n_{features} \times batch\_size \times size</span>
+<span class="sd">            batch\_size \times n_{features} \times dim</span>
+<span class="sd">            </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; a = torch.ones(5)</span>
+<span class="sd">    &gt;&gt;&gt; a</span>
+<span class="sd">    tensor([1., 1., 1., 1., 1.])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; emb_a = tk.embeddings.unit(a)</span>
+<span class="sd">    &gt;&gt;&gt; emb_a</span>
+<span class="sd">    tensor([[-4.3711e-08,  1.0000e+00],</span>
+<span class="sd">            [-4.3711e-08,  1.0000e+00],</span>
+<span class="sd">            [-4.3711e-08,  1.0000e+00],</span>
+<span class="sd">            [-4.3711e-08,  1.0000e+00],</span>
+<span class="sd">            [-4.3711e-08,  1.0000e+00]])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; b = torch.randn(100, 5)</span>
+<span class="sd">    &gt;&gt;&gt; emb_b = tk.embeddings.unit(b)</span>
+<span class="sd">    &gt;&gt;&gt; emb_b.shape</span>
+<span class="sd">    torch.Size([100, 5, 2])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">lst_tensors</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
-        <span class="n">aux</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">binomial_coeffs</span><span class="p">(</span><span class="n">size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span> <span class="o">*</span> \
-                <span class="p">(</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">cos</span><span class="p">()</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">size</span> <span class="o">-</span> <span class="n">i</span><span class="p">)</span> <span class="o">*</span> \
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">aux</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">binomial_coeffs</span><span class="p">(</span><span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span> <span class="o">*</span> \
+                <span class="p">(</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">cos</span><span class="p">()</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">dim</span> <span class="o">-</span> <span class="n">i</span><span class="p">)</span> <span class="o">*</span> \
                 <span class="p">(</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">sin</span><span class="p">()</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
         <span class="n">lst_tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">aux</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">lst_tensors</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="add_ones"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.add_ones">[docs]</a><span class="k">def</span> <span class="nf">add_ones</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="add_ones"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.add_ones">[docs]</a><span class="k">def</span> <span class="nf">add_ones</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Embedds the data tensor adding 1&#39;s as the first component of each vector.</span>
+<span class="sd">    That is, given a vector</span>
 <span class="sd">    </span>
 <span class="sd">    .. math::</span>
 
-<span class="sd">        \hat{x}_i = \begin{bmatrix}</span>
-<span class="sd">                        1 \\</span>
-<span class="sd">                        x_i</span>
-<span class="sd">                    \end{bmatrix}</span>
+<span class="sd">        x = \begin{bmatrix}</span>
+<span class="sd">                x_1\\</span>
+<span class="sd">                \vdots\\</span>
+<span class="sd">                x_N</span>
+<span class="sd">            \end{bmatrix}</span>
+<span class="sd">            </span>
+<span class="sd">    returns a matrix</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \hat{x} = \begin{bmatrix}</span>
+<span class="sd">                        1 &amp; x_1\\</span>
+<span class="sd">                        \vdots &amp; \vdots\\</span>
+<span class="sd">                        1 &amp; x_N</span>
+<span class="sd">                  \end{bmatrix}</span>
 <span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    data : torch.Tensor</span>
-<span class="sd">        Data tensor with shape</span>
+<span class="sd">        Data tensor with shape  </span>
 <span class="sd">        </span>
 <span class="sd">        .. math::</span>
 <span class="sd">        </span>
-<span class="sd">            n_{features} \times batch\_size</span>
-<span class="sd">    dim : int</span>
-<span class="sd">        New dimension (axis) to insert. Should be between 0 and the rank of</span>
-<span class="sd">        ``data``.</span>
+<span class="sd">            batch\_size \times n_{features}</span>
+<span class="sd">            </span>
+<span class="sd">        That is, ``data`` is a (batch) vector with :math:`n_{features}`</span>
+<span class="sd">        components. The :math:`batch\_size` is optional.</span>
+<span class="sd">    axis : int</span>
+<span class="sd">        Axis where the ``data`` tensor is &#39;expanded&#39; with the 1&#39;s. Should be</span>
+<span class="sd">        between 0 and the rank of ``data``. By default it is -1, which returns</span>
+<span class="sd">        a tensor with shape  </span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">        </span>
+<span class="sd">            batch\_size \times n_{features} \times 2</span>
 <span class="sd">            </span>
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    torch.Tensor</span>
-<span class="sd">        New data tensor with shape</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; a = 2 * torch.ones(5)</span>
+<span class="sd">    &gt;&gt;&gt; a</span>
+<span class="sd">    tensor([2., 2., 2., 2., 2.])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; emb_a = tk.embeddings.add_ones(a)</span>
+<span class="sd">    &gt;&gt;&gt; emb_a</span>
+<span class="sd">    tensor([[1., 2.],</span>
+<span class="sd">            [1., 2.],</span>
+<span class="sd">            [1., 2.],</span>
+<span class="sd">            [1., 2.],</span>
+<span class="sd">            [1., 2.]])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; b = torch.randn(100, 5)</span>
+<span class="sd">    &gt;&gt;&gt; emb_b = tk.embeddings.add_ones(b)</span>
+<span class="sd">    &gt;&gt;&gt; emb_b.shape</span>
+<span class="sd">    torch.Size([100, 5, 2])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">data</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="poly"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.poly">[docs]</a><span class="k">def</span> <span class="nf">poly</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">degree</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Embedds the data tensor stacking powers of it. That is, given the vector</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+
+<span class="sd">        x = \begin{bmatrix}</span>
+<span class="sd">                x_1\\</span>
+<span class="sd">                \vdots\\</span>
+<span class="sd">                x_N</span>
+<span class="sd">            \end{bmatrix}</span>
+<span class="sd">            </span>
+<span class="sd">    returns a matrix</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \hat{x} = \begin{bmatrix}</span>
+<span class="sd">                        1 &amp; x_1 &amp; x_1^2 &amp; \cdots &amp; x_1^n\\</span>
+<span class="sd">                        \vdots &amp; \vdots &amp; \vdots &amp; \ddots &amp; \vdots\\</span>
+<span class="sd">                        1 &amp; x_N &amp; x_N^2 &amp; \cdots &amp; x_N^n</span>
+<span class="sd">                  \end{bmatrix}</span>
+<span class="sd">        </span>
+<span class="sd">    being :math:`n` the ``degree`` of the monomials.</span>
+<span class="sd">    </span>
+<span class="sd">    If ``degree = 1``, it is equivalent to :func:`add_ones`.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : torch.Tensor</span>
+<span class="sd">        Data tensor with shape </span>
 <span class="sd">        </span>
 <span class="sd">        .. math::</span>
 <span class="sd">        </span>
-<span class="sd">            n_{features} \times batch\_size \times 2</span>
+<span class="sd">            batch\_size \times n_{features}</span>
+<span class="sd">            </span>
+<span class="sd">        That is, ``data`` is a (batch) vector with :math:`n_{features}`</span>
+<span class="sd">        components. The :math:`batch\_size` is optional.</span>
+<span class="sd">    degree : int</span>
+<span class="sd">        Maximum degree of the monomials.</span>
+<span class="sd">    axis : int</span>
+<span class="sd">        Axis where the ``data`` tensor is &#39;expanded&#39; with monomials. Should be</span>
+<span class="sd">        between 0 and the rank of ``data``. By default it is -1, which returns</span>
+<span class="sd">        a tensor with shape </span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">        </span>
+<span class="sd">            batch\_size \times n_{features} \times (degree + 1)</span>
+<span class="sd">            </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    torch.Tensor</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; a = 2 * torch.ones(5)</span>
+<span class="sd">    &gt;&gt;&gt; a</span>
+<span class="sd">    tensor([2., 2., 2., 2., 2.])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; emb_a = tk.embeddings.poly(a)</span>
+<span class="sd">    &gt;&gt;&gt; emb_a</span>
+<span class="sd">    tensor([[1., 2., 4.],</span>
+<span class="sd">            [1., 2., 4.],</span>
+<span class="sd">            [1., 2., 4.],</span>
+<span class="sd">            [1., 2., 4.],</span>
+<span class="sd">            [1., 2., 4.]])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; b = torch.randn(100, 5)</span>
+<span class="sd">    &gt;&gt;&gt; emb_b = tk.embeddings.poly(b)</span>
+<span class="sd">    &gt;&gt;&gt; emb_b.shape</span>
+<span class="sd">    torch.Size([100, 5, 3])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">data</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="n">dim</span><span class="p">)</span></div>
+    <span class="n">lst_powers</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">degree</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">lst_powers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">lst_powers</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span></div>
 </pre></div>
 
               </div>

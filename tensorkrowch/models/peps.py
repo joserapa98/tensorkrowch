@@ -32,7 +32,7 @@ class PEPS(TensorNetwork):
         Number of columns of the 2D grid
     d_phys : int
         Physical dimension.
-    d_bond : list[int] or tuple[int]
+    bond_dim : list[int] or tuple[int]
         Bond dimensions for horizontal and vertical edges (in that order). Thus
         it should also contain 2 elements
     boundary : list[{'obc', 'pbc'}]
@@ -47,10 +47,10 @@ class PEPS(TensorNetwork):
     
     Examples
     --------
-    >>> peps = tk.PEPS(n_rows=2,
+    >>> peps = tk.models.PEPS(n_rows=2,
     ...                n_cols=2,
     ...                d_phys=3,
-    ...                d_bond=[5, 5])
+    ...                bond_dim=[5, 5])
     >>> data = torch.ones(20, 4, 3) # batch_size x n_features x feature_size
     >>> result = peps(data)
     >>> print(result.shape)
@@ -61,7 +61,7 @@ class PEPS(TensorNetwork):
                  n_rows: int,
                  n_cols: int,
                  d_phys: int,
-                 d_bond: Sequence[int],
+                 bond_dim: Sequence[int],
                  boundary: Sequence[Text] = ['obc', 'obc'],
                  num_batches: int = 1) -> None:
 
@@ -106,13 +106,13 @@ class PEPS(TensorNetwork):
             raise ValueError('`d_phys` should be int type')
         self._d_phys = d_phys
             
-        # d_bond
-        if isinstance(d_bond, (list, tuple)):
-            if len(d_bond) != 2:
-                raise ValueError('`d_bond` should be a pair of ints')
-            self._d_bond = list(d_bond)
+        # bond_dim
+        if isinstance(bond_dim, (list, tuple)):
+            if len(bond_dim) != 2:
+                raise ValueError('`bond_dim` should be a pair of ints')
+            self._bond_dim = list(bond_dim)
         else:
-            raise TypeError('`d_bond` should be a pair of ints')
+            raise TypeError('`bond_dim` should be a pair of ints')
 
         self._make_nodes()
         self.initialize()
@@ -143,9 +143,9 @@ class PEPS(TensorNetwork):
         return self._d_phys
 
     @property
-    def d_bond(self) -> List[int]:
+    def bond_dim(self) -> List[int]:
         """Returns bond dimensions for horizontal and vertical edges."""
-        return self._d_bond
+        return self._bond_dim
             
     def _make_nodes(self) -> None:
         """Creates all the nodes of the PEPS."""
@@ -166,11 +166,11 @@ class PEPS(TensorNetwork):
         self.grid_env = []
         
         d_phys = self._d_phys
-        d_bond = self._d_bond
+        bond_dim = self._bond_dim
         
         if self._boundary == ['obc', 'obc']:
             # Left up corner
-            node = ParamNode(shape=(d_phys, d_bond[0], d_bond[1]),
+            node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[1]),
                              axes_names=('input', 'right', 'down'),
                              name=f'left_up_corner_node',
                              network=self)
@@ -178,7 +178,7 @@ class PEPS(TensorNetwork):
             
             # Up border
             for j in range(self._n_cols - 2):
-                node = ParamNode(shape=(d_phys, d_bond[0], d_bond[0], d_bond[1]),
+                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0], bond_dim[1]),
                                  axes_names=('input', 'left', 'right', 'down'),
                                  name=f'up_border_node_({j})',
                                  network=self)
@@ -190,7 +190,7 @@ class PEPS(TensorNetwork):
                     self.up_border[-2]['right'] ^ node['left']
                     
             # Right up corner
-            node = ParamNode(shape=(d_phys, d_bond[0], d_bond[1]),
+            node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[1]),
                              axes_names=('input', 'left', 'down'),
                              name=f'right_up_corner_node',
                              network=self)
@@ -203,7 +203,7 @@ class PEPS(TensorNetwork):
                 
             # Left border
             for i in range(self._n_rows - 2):
-                node = ParamNode(shape=(d_phys, d_bond[0], d_bond[1], d_bond[1]),
+                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[1], bond_dim[1]),
                                  axes_names=('input', 'right', 'up', 'down'),
                                  name=f'left_border_node_({i})',
                                  network=self)
@@ -216,7 +216,7 @@ class PEPS(TensorNetwork):
                     
             # Right border
             for i in range(self._n_rows - 2):
-                node = ParamNode(shape=(d_phys, d_bond[0], d_bond[1], d_bond[1]),
+                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[1], bond_dim[1]),
                                  axes_names=('input', 'left', 'up', 'down'),
                                  name=f'right_border_node_({i})',
                                  network=self)
@@ -228,7 +228,7 @@ class PEPS(TensorNetwork):
                     self.right_border[-2]['down'] ^ node['up']
                     
             # Left down corner
-            node = ParamNode(shape=(d_phys, d_bond[0], d_bond[1]),
+            node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[1]),
                              axes_names=('input', 'right', 'up'),
                              name=f'left_down_corner_node',
                              network=self)
@@ -241,7 +241,7 @@ class PEPS(TensorNetwork):
                 
             # Down border
             for j in range(self._n_cols - 2):
-                node = ParamNode(shape=(d_phys, d_bond[0], d_bond[0], d_bond[1]),
+                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0], bond_dim[1]),
                                  axes_names=('input', 'left', 'right', 'up'),
                                  name=f'down_border_node_({j})',
                                  network=self)
@@ -253,7 +253,7 @@ class PEPS(TensorNetwork):
                     self.down_border[-2]['right'] ^ node['left']
                     
             # Right down corner
-            node = ParamNode(shape=(d_phys, d_bond[0], d_bond[1]),
+            node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[1]),
                              axes_names=('input', 'left', 'up'),
                              name=f'right_down_corner_node',
                              network=self)
@@ -273,8 +273,8 @@ class PEPS(TensorNetwork):
             for i in range(self._n_rows - 2):
                 self.grid_env.append([])
                 for j in range(self._n_cols - 2):
-                    node = ParamNode(shape=(d_phys, d_bond[0], d_bond[0],
-                                            d_bond[1], d_bond[1]),
+                    node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0],
+                                            bond_dim[1], bond_dim[1]),
                                      axes_names=('input', 'left', 'right',
                                                  'up', 'down'),
                                      name=f'grid_env_node_({i},{j})',
@@ -298,7 +298,7 @@ class PEPS(TensorNetwork):
         elif self._boundary == ['obc', 'pbc']:
             # Up border
             for j in range(self._n_cols):
-                node = ParamNode(shape=(d_phys, d_bond[0], d_bond[0], d_bond[1]),
+                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0], bond_dim[1]),
                                  axes_names=('input', 'left', 'right', 'down'),
                                  name=f'up_border_node_({j})',
                                  network=self)
@@ -311,7 +311,7 @@ class PEPS(TensorNetwork):
                 
             # Down border
             for j in range(self._n_cols):
-                node = ParamNode(shape=(d_phys, d_bond[0], d_bond[0], d_bond[1]),
+                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0], bond_dim[1]),
                                  axes_names=('input', 'left', 'right', 'up'),
                                  name=f'down_border_node_({j})',
                                  network=self)
@@ -328,8 +328,8 @@ class PEPS(TensorNetwork):
             for i in range(self._n_rows - 2):
                 self.grid_env.append([])
                 for j in range(self._n_cols):
-                    node = ParamNode(shape=(d_phys, d_bond[0], d_bond[0],
-                                            d_bond[1], d_bond[1]),
+                    node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0],
+                                            bond_dim[1], bond_dim[1]),
                                      axes_names=('input', 'left', 'right',
                                                  'up', 'down'),
                                      name=f'grid_env_node_({i},{j})',
@@ -351,7 +351,7 @@ class PEPS(TensorNetwork):
         elif self._boundary == ['pbc', 'obc']:
             # Left border
             for i in range(self._n_rows):
-                node = ParamNode(shape=(d_phys, d_bond[0], d_bond[1], d_bond[1]),
+                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[1], bond_dim[1]),
                                  axes_names=('input', 'right', 'up', 'down'),
                                  name=f'left_border_node_({i})',
                                  network=self)
@@ -364,7 +364,7 @@ class PEPS(TensorNetwork):
                     
             # Right border
             for i in range(self._n_rows):
-                node = ParamNode(shape=(d_phys, d_bond[0], d_bond[1], d_bond[1]),
+                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[1], bond_dim[1]),
                                  axes_names=('input', 'left', 'up', 'down'),
                                  name=f'right_border_node_({i})',
                                  network=self)
@@ -381,8 +381,8 @@ class PEPS(TensorNetwork):
             for i in range(self._n_rows):
                 self.grid_env.append([])
                 for j in range(self._n_cols - 2):
-                    node = ParamNode(shape=(d_phys, d_bond[0], d_bond[0],
-                                            d_bond[1], d_bond[1]),
+                    node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0],
+                                            bond_dim[1], bond_dim[1]),
                                      axes_names=('input', 'left', 'right',
                                                  'up', 'down'),
                                      name=f'grid_env_node_({i},{j})',
@@ -406,8 +406,8 @@ class PEPS(TensorNetwork):
             for i in range(self._n_rows):
                 self.grid_env.append([])
                 for j in range(self._n_cols):
-                    node = ParamNode(shape=(d_phys, d_bond[0], d_bond[0],
-                                            d_bond[1], d_bond[1]),
+                    node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0],
+                                            bond_dim[1], bond_dim[1]),
                                      axes_names=('input', 'left', 'right',
                                                  'up', 'down'),
                                      name=f'grid_env_node_({i},{j})',
@@ -809,7 +809,7 @@ class UPEPS(TensorNetwork):
         Number of columns of the 2D grid
     d_phys : int
         Physical dimension.
-    d_bond : list[int] or tuple[int]
+    bond_dim : list[int] or tuple[int]
         Bond dimensions for horizontal and vertical edges (in that order). Thus
         it should also contain 2 elements
     num_batches : int
@@ -823,7 +823,7 @@ class UPEPS(TensorNetwork):
                  n_rows: int,
                  n_cols: int,
                  d_phys: int,
-                 d_bond: Sequence[int],
+                 bond_dim: Sequence[int],
                  num_batches: int = 1) -> None:
 
         super().__init__(name='peps')
@@ -842,13 +842,13 @@ class UPEPS(TensorNetwork):
             raise ValueError('`d_phys` should be int type')
         self._d_phys = d_phys
             
-        # d_bond
-        if isinstance(d_bond, (list, tuple)):
-            if len(d_bond) != 2:
-                raise ValueError('`d_bond` should be a pair of ints')
-            self._d_bond = list(d_bond)
+        # bond_dim
+        if isinstance(bond_dim, (list, tuple)):
+            if len(bond_dim) != 2:
+                raise ValueError('`bond_dim` should be a pair of ints')
+            self._bond_dim = list(bond_dim)
         else:
-            raise TypeError('`d_bond` should be a pair of ints')
+            raise TypeError('`bond_dim` should be a pair of ints')
 
         self._make_nodes()
         self.initialize()
@@ -871,9 +871,9 @@ class UPEPS(TensorNetwork):
         return self._d_phys
 
     @property
-    def d_bond(self) -> List[int]:
+    def bond_dim(self) -> List[int]:
         """Returns bond dimensions for horizontal and vertical edges."""
-        return self._d_bond
+        return self._bond_dim
             
     def _make_nodes(self) -> None:
         """Creates all the nodes of the PEPS."""
@@ -884,14 +884,14 @@ class UPEPS(TensorNetwork):
         self.grid_env = []
         
         d_phys = self._d_phys
-        d_bond = self._d_bond
+        bond_dim = self._bond_dim
         
         # Grid env
         for i in range(self._n_rows):
             self.grid_env.append([])
             for j in range(self._n_cols):
-                node = ParamNode(shape=(d_phys, d_bond[0], d_bond[0],
-                                        d_bond[1], d_bond[1]),
+                node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0],
+                                        bond_dim[1], bond_dim[1]),
                                  axes_names=('input', 'left', 'right',
                                              'up', 'down'),
                                  name=f'grid_env_node_({i},{j})',
@@ -909,8 +909,8 @@ class UPEPS(TensorNetwork):
                     node['right'] ^  self.grid_env[i][0]['left']
                     
         # Virtual node
-        uniform_memory = node = ParamNode(shape=(d_phys, d_bond[0], d_bond[0],
-                                                 d_bond[1], d_bond[1]),
+        uniform_memory = node = ParamNode(shape=(d_phys, bond_dim[0], bond_dim[0],
+                                                 bond_dim[1], bond_dim[1]),
                                           axes_names=('input', 'left', 'right',
                                                       'up', 'down'),
                                           name='virtual_uniform',
@@ -1134,7 +1134,7 @@ class ConvPEPS(PEPS):
     ----------
     in_channels : int
         Input channels. Same as ``d_phys`` in :class:`PEPS`.
-    d_bond : list[int] or tuple[int]
+    bond_dim : list[int] or tuple[int]
         Bond dimensions for horizontal and vertical edges (in that order). Thus
         it should also contain 2 elements
     kernel_size : int, list[int] or tuple[int]
@@ -1162,8 +1162,8 @@ class ConvPEPS(PEPS):
         
     Examples
     --------
-    >>> conv_peps = tk.ConvPEPS(in_channels=2,
-    ...                         d_bond=[5, 5],
+    >>> conv_peps = tk.models.ConvPEPS(in_channels=2,
+    ...                         bond_dim=[5, 5],
     ...                         kernel_size=2)
     >>> data = torch.ones(20, 2, 2, 2) # batch_size x in_channels x height x width
     >>> result = conv_peps(data)
@@ -1173,7 +1173,7 @@ class ConvPEPS(PEPS):
     
     def __init__(self,
                  in_channels: int,
-                 d_bond: Sequence[int],
+                 bond_dim: Sequence[int],
                  kernel_size: Union[int, Sequence],
                  stride: int = 1,
                  padding: int = 0,
@@ -1209,7 +1209,7 @@ class ConvPEPS(PEPS):
         super().__init__(n_rows=kernel_size[0],
                          n_cols=kernel_size[1],
                          d_phys=in_channels,
-                         d_bond=d_bond,
+                         bond_dim=bond_dim,
                          boundary=boundary,
                          num_batches=2)
         
@@ -1315,7 +1315,7 @@ class ConvUPEPS(UPEPS):
     ----------
     in_channels : int
         Input channels. Same as ``d_phys`` in :class:`UPEPS`.
-    d_bond : list[int] or tuple[int]
+    bond_dim : list[int] or tuple[int]
         Bond dimensions for horizontal and vertical edges (in that order). Thus
         it should also contain 2 elements
     kernel_size : int, list[int] or tuple[int]
@@ -1340,7 +1340,7 @@ class ConvUPEPS(UPEPS):
     
     def __init__(self,
                  in_channels: int,
-                 d_bond: Union[int, Sequence[int]],
+                 bond_dim: Union[int, Sequence[int]],
                  kernel_size: Union[int, Sequence],
                  stride: int = 1,
                  padding: int = 0,
@@ -1375,7 +1375,7 @@ class ConvUPEPS(UPEPS):
         super().__init__(n_rows=kernel_size[0],
                          n_cols=kernel_size[1],
                          d_phys=in_channels,
-                         d_bond=d_bond,
+                         bond_dim=bond_dim,
                          num_batches=2)
         
         self.unfold = nn.Unfold(kernel_size=kernel_size,

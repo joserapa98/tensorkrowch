@@ -367,6 +367,11 @@ title="Print to PDF"
    add_ones
   </a>
  </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#poly">
+   poly
+  </a>
+ </li>
 </ul>
 
     </nav>
@@ -396,6 +401,11 @@ title="Print to PDF"
    add_ones
   </a>
  </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#poly">
+   poly
+  </a>
+ </li>
 </ul>
 
                         </nav>
@@ -412,31 +422,62 @@ title="Print to PDF"
 <h2>unit<a class="headerlink" href="#unit" title="Permalink to this headline">#</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.embeddings.unit">
-<span class="sig-prename descclassname"><span class="pre">tensorkrowch.embeddings.</span></span><span class="sig-name descname"><span class="pre">unit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/embeddings.html#unit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.embeddings.unit" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.embeddings.</span></span><span class="sig-name descname"><span class="pre">unit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/embeddings.html#unit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.embeddings.unit" title="Permalink to this definition">#</a></dt>
 <dd><p>Embedds the data tensor using the local feature map defined in the original
 <a class="reference external" href="https://arxiv.org/abs/1605.05775">paper</a> by E. Miles Stoudenmire and David
 J. Schwab.</p>
+<p>Given a vector <span class="math notranslate nohighlight">\(x\)</span> with <span class="math notranslate nohighlight">\(N\)</span> components, the embedding
+will be</p>
+<div class="math notranslate nohighlight">
+\[\Phi^{s_1...s_N}(x) = \phi^{s_1}(x_1)\otimes\cdots\otimes\phi^{s_N}(x_N)\]</div>
+<p>where each <span class="math notranslate nohighlight">\(\phi^{s_j}(x_j)\)</span> is</p>
+<div class="math notranslate nohighlight">
+\[\phi^{s_j}(x_j) = \sqrt{\binom{d-1}{s_j-1}}
+    (\cos{\frac{\pi}{2}x_j})^{d-s_j}(\sin{\frac{\pi}{2}x_j})^{s_j-1}\]</div>
+<p>being <span class="math notranslate nohighlight">\(d\)</span> the desired output dimension (<code class="docutils literal notranslate"><span class="pre">dim</span></code>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> (<em>torch.Tensor</em>) – <p>Data tensor with shape</p>
 <div class="math notranslate nohighlight">
-\[n_{features} \times batch\_size \times feature\_size\]</div>
-<p>where <span class="math notranslate nohighlight">\(feature\_size = 1\)</span>.</p>
+\[batch\_size \times n_{features}\]</div>
+<p>That is, <code class="docutils literal notranslate"><span class="pre">data</span></code> is a (batch) vector with <span class="math notranslate nohighlight">\(n_{features}\)</span>
+components. The <span class="math notranslate nohighlight">\(batch\_size\)</span> is optional.</p>
 </p></li>
-<li><p><strong>size</strong> (<em>int</em>) – New feature size.</p></li>
+<li><p><strong>dim</strong> (<em>int</em>) – New feature dimension.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p><p>New data tensor with shape</p>
 <div class="math notranslate nohighlight">
-\[n_{features} \times batch\_size \times size\]</div>
+\[batch\_size \times n_{features} \times dim\]</div>
 </p>
 </dd>
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p>torch.Tensor</p>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span>
+<span class="go">tensor([1., 1., 1., 1., 1.])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span>
+<span class="go">tensor([[-4.3711e-08,  1.0000e+00],</span>
+<span class="go">        [-4.3711e-08,  1.0000e+00],</span>
+<span class="go">        [-4.3711e-08,  1.0000e+00],</span>
+<span class="go">        [-4.3711e-08,  1.0000e+00],</span>
+<span class="go">        [-4.3711e-08,  1.0000e+00]])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_b</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_b</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([100, 5, 2])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>
@@ -444,34 +485,131 @@ J. Schwab.</p>
 <h2>add_ones<a class="headerlink" href="#add-ones" title="Permalink to this headline">#</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.embeddings.add_ones">
-<span class="sig-prename descclassname"><span class="pre">tensorkrowch.embeddings.</span></span><span class="sig-name descname"><span class="pre">add_ones</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/embeddings.html#add_ones"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.embeddings.add_ones" title="Permalink to this definition">#</a></dt>
-<dd><p>Embedds the data tensor adding 1’s as the first component of each vector.</p>
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.embeddings.</span></span><span class="sig-name descname"><span class="pre">add_ones</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/embeddings.html#add_ones"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.embeddings.add_ones" title="Permalink to this definition">#</a></dt>
+<dd><p>Embedds the data tensor adding 1’s as the first component of each vector.
+That is, given a vector</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\hat{x}_i = \begin{bmatrix}
-                1 \\
-                x_i
-            \end{bmatrix}\end{split}\]</div>
+\[\begin{split}x = \begin{bmatrix}
+        x_1\\
+        \vdots\\
+        x_N
+    \end{bmatrix}\end{split}\]</div>
+<p>returns a matrix</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\hat{x} = \begin{bmatrix}
+                1 &amp; x_1\\
+                \vdots &amp; \vdots\\
+                1 &amp; x_N
+          \end{bmatrix}\end{split}\]</div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> (<em>torch.Tensor</em>) – <p>Data tensor with shape</p>
 <div class="math notranslate nohighlight">
-\[n_{features} \times batch\_size\]</div>
+\[batch\_size \times n_{features}\]</div>
+<p>That is, <code class="docutils literal notranslate"><span class="pre">data</span></code> is a (batch) vector with <span class="math notranslate nohighlight">\(n_{features}\)</span>
+components. The <span class="math notranslate nohighlight">\(batch\_size\)</span> is optional.</p>
 </p></li>
-<li><p><strong>dim</strong> (<em>int</em>) – New dimension (axis) to insert. Should be between 0 and the rank of
-<code class="docutils literal notranslate"><span class="pre">data</span></code>.</p></li>
+<li><p><strong>axis</strong> (<em>int</em>) – <p>Axis where the <code class="docutils literal notranslate"><span class="pre">data</span></code> tensor is ‘expanded’ with the 1’s. Should be
+between 0 and the rank of <code class="docutils literal notranslate"><span class="pre">data</span></code>. By default it is -1, which returns
+a tensor with shape</p>
+<div class="math notranslate nohighlight">
+\[batch\_size \times n_{features} \times 2\]</div>
+</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p><p>New data tensor with shape</p>
-<div class="math notranslate nohighlight">
-\[n_{features} \times batch\_size \times 2\]</div>
-</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>torch.Tensor</p>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>torch.Tensor</p>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span>
+<span class="go">tensor([2., 2., 2., 2., 2.])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">add_ones</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span>
+<span class="go">tensor([[1., 2.],</span>
+<span class="go">        [1., 2.],</span>
+<span class="go">        [1., 2.],</span>
+<span class="go">        [1., 2.],</span>
+<span class="go">        [1., 2.]])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_b</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">add_ones</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_b</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([100, 5, 2])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+<section id="poly">
+<h2>poly<a class="headerlink" href="#poly" title="Permalink to this headline">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="tensorkrowch.embeddings.poly">
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.embeddings.</span></span><span class="sig-name descname"><span class="pre">poly</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">degree</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/embeddings.html#poly"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.embeddings.poly" title="Permalink to this definition">#</a></dt>
+<dd><p>Embedds the data tensor stacking powers of it. That is, given the vector</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}x = \begin{bmatrix}
+        x_1\\
+        \vdots\\
+        x_N
+    \end{bmatrix}\end{split}\]</div>
+<p>returns a matrix</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\hat{x} = \begin{bmatrix}
+                1 &amp; x_1 &amp; x_1^2 &amp; \cdots &amp; x_1^n\\
+                \vdots &amp; \vdots &amp; \vdots &amp; \ddots &amp; \vdots\\
+                1 &amp; x_N &amp; x_N^2 &amp; \cdots &amp; x_N^n
+          \end{bmatrix}\end{split}\]</div>
+<p>being <span class="math notranslate nohighlight">\(n\)</span> the <code class="docutils literal notranslate"><span class="pre">degree</span></code> of the monomials.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">degree</span> <span class="pre">=</span> <span class="pre">1</span></code>, it is equivalent to <a class="reference internal" href="#tensorkrowch.embeddings.add_ones" title="tensorkrowch.embeddings.add_ones"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_ones()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>torch.Tensor</em>) – <p>Data tensor with shape</p>
+<div class="math notranslate nohighlight">
+\[batch\_size \times n_{features}\]</div>
+<p>That is, <code class="docutils literal notranslate"><span class="pre">data</span></code> is a (batch) vector with <span class="math notranslate nohighlight">\(n_{features}\)</span>
+components. The <span class="math notranslate nohighlight">\(batch\_size\)</span> is optional.</p>
+</p></li>
+<li><p><strong>degree</strong> (<em>int</em>) – Maximum degree of the monomials.</p></li>
+<li><p><strong>axis</strong> (<em>int</em>) – <p>Axis where the <code class="docutils literal notranslate"><span class="pre">data</span></code> tensor is ‘expanded’ with monomials. Should be
+between 0 and the rank of <code class="docutils literal notranslate"><span class="pre">data</span></code>. By default it is -1, which returns
+a tensor with shape</p>
+<div class="math notranslate nohighlight">
+\[batch\_size \times n_{features} \times (degree + 1)\]</div>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>torch.Tensor</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span>
+<span class="go">tensor([2., 2., 2., 2., 2.])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">poly</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span>
+<span class="go">tensor([[1., 2., 4.],</span>
+<span class="go">        [1., 2., 4.],</span>
+<span class="go">        [1., 2., 4.],</span>
+<span class="go">        [1., 2., 4.],</span>
+<span class="go">        [1., 2., 4.]])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_b</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">poly</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_b</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([100, 5, 3])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>

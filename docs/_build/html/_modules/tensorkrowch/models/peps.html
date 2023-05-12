@@ -344,7 +344,7 @@ title="Source repository"
 <span class="sd">        Number of columns of the 2D grid</span>
 <span class="sd">    d_phys : int</span>
 <span class="sd">        Physical dimension.</span>
-<span class="sd">    d_bond : list[int] or tuple[int]</span>
+<span class="sd">    bond_dim : list[int] or tuple[int]</span>
 <span class="sd">        Bond dimensions for horizontal and vertical edges (in that order). Thus</span>
 <span class="sd">        it should also contain 2 elements</span>
 <span class="sd">    boundary : list[{&#39;obc&#39;, &#39;pbc&#39;}]</span>
@@ -359,10 +359,10 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; peps = tk.PEPS(n_rows=2,</span>
+<span class="sd">    &gt;&gt;&gt; peps = tk.models.PEPS(n_rows=2,</span>
 <span class="sd">    ...                n_cols=2,</span>
 <span class="sd">    ...                d_phys=3,</span>
-<span class="sd">    ...                d_bond=[5, 5])</span>
+<span class="sd">    ...                bond_dim=[5, 5])</span>
 <span class="sd">    &gt;&gt;&gt; data = torch.ones(20, 4, 3) # batch_size x n_features x feature_size</span>
 <span class="sd">    &gt;&gt;&gt; result = peps(data)</span>
 <span class="sd">    &gt;&gt;&gt; print(result.shape)</span>
@@ -373,7 +373,7 @@ title="Source repository"
                  <span class="n">n_rows</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                  <span class="n">n_cols</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                  <span class="n">d_phys</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-                 <span class="n">d_bond</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                 <span class="n">bond_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
                  <span class="n">boundary</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;obc&#39;</span><span class="p">,</span> <span class="s1">&#39;obc&#39;</span><span class="p">],</span>
                  <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
@@ -418,13 +418,13 @@ title="Source repository"
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`d_phys` should be int type&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_d_phys</span> <span class="o">=</span> <span class="n">d_phys</span>
             
-        <span class="c1"># d_bond</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d_bond</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">d_bond</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`d_bond` should be a pair of ints&#39;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">d_bond</span><span class="p">)</span>
+        <span class="c1"># bond_dim</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` should be a pair of ints&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_bond` should be a pair of ints&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` should be a pair of ints&#39;</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
@@ -455,9 +455,9 @@ title="Source repository"
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_phys</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimensions for horizontal and vertical edges.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span>
             
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the PEPS.&quot;&quot;&quot;</span>
@@ -478,11 +478,11 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span> <span class="o">=</span> <span class="p">[]</span>
         
         <span class="n">d_phys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_phys</span>
-        <span class="n">d_bond</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span>
+        <span class="n">bond_dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span>
         
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="p">[</span><span class="s1">&#39;obc&#39;</span><span class="p">,</span> <span class="s1">&#39;obc&#39;</span><span class="p">]:</span>
             <span class="c1"># Left up corner</span>
-            <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                              <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;down&#39;</span><span class="p">),</span>
                              <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;left_up_corner_node&#39;</span><span class="p">,</span>
                              <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
@@ -490,7 +490,7 @@ title="Source repository"
             
             <span class="c1"># Up border</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_cols</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
-                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;down&#39;</span><span class="p">),</span>
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;up_border_node_(</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
@@ -502,7 +502,7 @@ title="Source repository"
                     <span class="bp">self</span><span class="o">.</span><span class="n">up_border</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                     
             <span class="c1"># Right up corner</span>
-            <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                              <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;down&#39;</span><span class="p">),</span>
                              <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;right_up_corner_node&#39;</span><span class="p">,</span>
                              <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
@@ -515,7 +515,7 @@ title="Source repository"
                 
             <span class="c1"># Left border</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_rows</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
-                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;up&#39;</span><span class="p">,</span> <span class="s1">&#39;down&#39;</span><span class="p">),</span>
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;left_border_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
@@ -528,7 +528,7 @@ title="Source repository"
                     
             <span class="c1"># Right border</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_rows</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
-                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;up&#39;</span><span class="p">,</span> <span class="s1">&#39;down&#39;</span><span class="p">),</span>
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;right_border_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
@@ -540,7 +540,7 @@ title="Source repository"
                     <span class="bp">self</span><span class="o">.</span><span class="n">right_border</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
                     
             <span class="c1"># Left down corner</span>
-            <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                              <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;up&#39;</span><span class="p">),</span>
                              <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;left_down_corner_node&#39;</span><span class="p">,</span>
                              <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
@@ -553,7 +553,7 @@ title="Source repository"
                 
             <span class="c1"># Down border</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_cols</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
-                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;up&#39;</span><span class="p">),</span>
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;down_border_node_(</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
@@ -565,7 +565,7 @@ title="Source repository"
                     <span class="bp">self</span><span class="o">.</span><span class="n">down_border</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                     
             <span class="c1"># Right down corner</span>
-            <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                              <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;up&#39;</span><span class="p">),</span>
                              <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;right_down_corner_node&#39;</span><span class="p">,</span>
                              <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
@@ -585,8 +585,8 @@ title="Source repository"
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_rows</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
                 <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_cols</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
-                    <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                                            <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                    <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                            <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                                      <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span>
                                                  <span class="s1">&#39;up&#39;</span><span class="p">,</span> <span class="s1">&#39;down&#39;</span><span class="p">),</span>
                                      <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;grid_env_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">,</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
@@ -610,7 +610,7 @@ title="Source repository"
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="p">[</span><span class="s1">&#39;obc&#39;</span><span class="p">,</span> <span class="s1">&#39;pbc&#39;</span><span class="p">]:</span>
             <span class="c1"># Up border</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_cols</span><span class="p">):</span>
-                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;down&#39;</span><span class="p">),</span>
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;up_border_node_(</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
@@ -623,7 +623,7 @@ title="Source repository"
                 
             <span class="c1"># Down border</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_cols</span><span class="p">):</span>
-                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;up&#39;</span><span class="p">),</span>
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;down_border_node_(</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
@@ -640,8 +640,8 @@ title="Source repository"
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_rows</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
                 <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_cols</span><span class="p">):</span>
-                    <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                                            <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                    <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                            <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                                      <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span>
                                                  <span class="s1">&#39;up&#39;</span><span class="p">,</span> <span class="s1">&#39;down&#39;</span><span class="p">),</span>
                                      <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;grid_env_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">,</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
@@ -663,7 +663,7 @@ title="Source repository"
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="p">[</span><span class="s1">&#39;pbc&#39;</span><span class="p">,</span> <span class="s1">&#39;obc&#39;</span><span class="p">]:</span>
             <span class="c1"># Left border</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_rows</span><span class="p">):</span>
-                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;up&#39;</span><span class="p">,</span> <span class="s1">&#39;down&#39;</span><span class="p">),</span>
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;left_border_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
@@ -676,7 +676,7 @@ title="Source repository"
                     
             <span class="c1"># Right border</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_rows</span><span class="p">):</span>
-                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;up&#39;</span><span class="p">,</span> <span class="s1">&#39;down&#39;</span><span class="p">),</span>
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;right_border_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
@@ -693,8 +693,8 @@ title="Source repository"
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_rows</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
                 <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_cols</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
-                    <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                                            <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                    <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                            <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                                      <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span>
                                                  <span class="s1">&#39;up&#39;</span><span class="p">,</span> <span class="s1">&#39;down&#39;</span><span class="p">),</span>
                                      <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;grid_env_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">,</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
@@ -718,8 +718,8 @@ title="Source repository"
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_rows</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
                 <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_cols</span><span class="p">):</span>
-                    <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                                            <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                    <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                            <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                                      <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span>
                                                  <span class="s1">&#39;up&#39;</span><span class="p">,</span> <span class="s1">&#39;down&#39;</span><span class="p">),</span>
                                      <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;grid_env_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">,</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
@@ -1121,7 +1121,7 @@ title="Source repository"
 <span class="sd">        Number of columns of the 2D grid</span>
 <span class="sd">    d_phys : int</span>
 <span class="sd">        Physical dimension.</span>
-<span class="sd">    d_bond : list[int] or tuple[int]</span>
+<span class="sd">    bond_dim : list[int] or tuple[int]</span>
 <span class="sd">        Bond dimensions for horizontal and vertical edges (in that order). Thus</span>
 <span class="sd">        it should also contain 2 elements</span>
 <span class="sd">    num_batches : int</span>
@@ -1135,7 +1135,7 @@ title="Source repository"
                  <span class="n">n_rows</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                  <span class="n">n_cols</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                  <span class="n">d_phys</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-                 <span class="n">d_bond</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                 <span class="n">bond_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
                  <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;peps&#39;</span><span class="p">)</span>
@@ -1154,13 +1154,13 @@ title="Source repository"
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`d_phys` should be int type&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_d_phys</span> <span class="o">=</span> <span class="n">d_phys</span>
             
-        <span class="c1"># d_bond</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d_bond</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">d_bond</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`d_bond` should be a pair of ints&#39;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">d_bond</span><span class="p">)</span>
+        <span class="c1"># bond_dim</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` should be a pair of ints&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_bond` should be a pair of ints&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` should be a pair of ints&#39;</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
@@ -1183,9 +1183,9 @@ title="Source repository"
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_phys</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimensions for horizontal and vertical edges.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span>
             
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the PEPS.&quot;&quot;&quot;</span>
@@ -1196,14 +1196,14 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span> <span class="o">=</span> <span class="p">[]</span>
         
         <span class="n">d_phys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_phys</span>
-        <span class="n">d_bond</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span>
+        <span class="n">bond_dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span>
         
         <span class="c1"># Grid env</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_rows</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_cols</span><span class="p">):</span>
-                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                                        <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                        <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span>
                                              <span class="s1">&#39;up&#39;</span><span class="p">,</span> <span class="s1">&#39;down&#39;</span><span class="p">),</span>
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;grid_env_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">,</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
@@ -1221,8 +1221,8 @@ title="Source repository"
                     <span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span>  <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                     
         <span class="c1"># Virtual node</span>
-        <span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                                                 <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+        <span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                                 <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                                           <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span>
                                                       <span class="s1">&#39;up&#39;</span><span class="p">,</span> <span class="s1">&#39;down&#39;</span><span class="p">),</span>
                                           <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_uniform&#39;</span><span class="p">,</span>
@@ -1446,7 +1446,7 @@ title="Source repository"
 <span class="sd">    ----------</span>
 <span class="sd">    in_channels : int</span>
 <span class="sd">        Input channels. Same as ``d_phys`` in :class:`PEPS`.</span>
-<span class="sd">    d_bond : list[int] or tuple[int]</span>
+<span class="sd">    bond_dim : list[int] or tuple[int]</span>
 <span class="sd">        Bond dimensions for horizontal and vertical edges (in that order). Thus</span>
 <span class="sd">        it should also contain 2 elements</span>
 <span class="sd">    kernel_size : int, list[int] or tuple[int]</span>
@@ -1474,8 +1474,8 @@ title="Source repository"
 <span class="sd">        </span>
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; conv_peps = tk.ConvPEPS(in_channels=2,</span>
-<span class="sd">    ...                         d_bond=[5, 5],</span>
+<span class="sd">    &gt;&gt;&gt; conv_peps = tk.models.ConvPEPS(in_channels=2,</span>
+<span class="sd">    ...                         bond_dim=[5, 5],</span>
 <span class="sd">    ...                         kernel_size=2)</span>
 <span class="sd">    &gt;&gt;&gt; data = torch.ones(20, 2, 2, 2) # batch_size x in_channels x height x width</span>
 <span class="sd">    &gt;&gt;&gt; result = conv_peps(data)</span>
@@ -1485,7 +1485,7 @@ title="Source repository"
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">in_channels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-                 <span class="n">d_bond</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                 <span class="n">bond_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
                  <span class="n">kernel_size</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">],</span>
                  <span class="n">stride</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                  <span class="n">padding</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
@@ -1521,7 +1521,7 @@ title="Source repository"
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">n_rows</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                          <span class="n">n_cols</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
                          <span class="n">d_phys</span><span class="o">=</span><span class="n">in_channels</span><span class="p">,</span>
-                         <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
+                         <span class="n">bond_dim</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">,</span>
                          <span class="n">boundary</span><span class="o">=</span><span class="n">boundary</span><span class="p">,</span>
                          <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         
@@ -1627,7 +1627,7 @@ title="Source repository"
 <span class="sd">    ----------</span>
 <span class="sd">    in_channels : int</span>
 <span class="sd">        Input channels. Same as ``d_phys`` in :class:`UPEPS`.</span>
-<span class="sd">    d_bond : list[int] or tuple[int]</span>
+<span class="sd">    bond_dim : list[int] or tuple[int]</span>
 <span class="sd">        Bond dimensions for horizontal and vertical edges (in that order). Thus</span>
 <span class="sd">        it should also contain 2 elements</span>
 <span class="sd">    kernel_size : int, list[int] or tuple[int]</span>
@@ -1652,7 +1652,7 @@ title="Source repository"
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">in_channels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-                 <span class="n">d_bond</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+                 <span class="n">bond_dim</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
                  <span class="n">kernel_size</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">],</span>
                  <span class="n">stride</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                  <span class="n">padding</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
@@ -1687,7 +1687,7 @@ title="Source repository"
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">n_rows</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                          <span class="n">n_cols</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
                          <span class="n">d_phys</span><span class="o">=</span><span class="n">in_channels</span><span class="p">,</span>
-                         <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
+                         <span class="n">bond_dim</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">,</span>
                          <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">unfold</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Unfold</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span>

@@ -10,3 +10,7 @@ unit
 add_ones
 ^^^^^^^^
 .. autofunction:: add_ones
+
+poly
+^^^^
+.. autofunction:: poly

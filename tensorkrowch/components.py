@@ -211,7 +211,7 @@ class Axis:
     @name.setter
     def name(self, name: Text) -> None:
         """
-        Set axis name. The name should not contain blank spaces or special
+        Sets axis name. The name should not contain blank spaces or special
         characters.
         """
         if not isinstance(name, str):

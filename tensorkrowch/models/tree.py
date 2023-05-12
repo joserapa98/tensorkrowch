@@ -30,7 +30,7 @@ class Tree(TensorNetwork):
         have the same shape. Number of nodes in each layer times the number of
         input edges these have should match the number ot output edges in the
         previous layer.
-    d_bond : list[list[int]] or tuple[tuple[int]]
+    bond_dim : list[list[int]] or tuple[tuple[int]]
         Bond dimensions of nodes in each layer. Each sequence corresponds to the
         shape of the nodes in each layer (some input edges and an output edge in
         the last position).
@@ -42,8 +42,8 @@ class Tree(TensorNetwork):
     
     Examples
     --------
-    >>> tree = tk.Tree(sites_per_layer=[4, 2, 1],
-    ...                d_bond=[[3, 3, 4], [4, 4, 2], [2, 2, 2]])
+    >>> tree = tk.models.Tree(sites_per_layer=[4, 2, 1],
+    ...                bond_dim=[[3, 3, 4], [4, 4, 2], [2, 2, 2]])
     >>> data = torch.ones(20, 8, 3) # batch_size x n_features x feature_size
     >>> result = tree(data)
     >>> print(result.shape)
@@ -52,7 +52,7 @@ class Tree(TensorNetwork):
 
     def __init__(self,
                  sites_per_layer: Sequence[int],
-                 d_bond: Sequence[Sequence[int]],
+                 bond_dim: Sequence[Sequence[int]],
                  num_batches: int = 1) -> None:
 
         super().__init__(name='tree')
@@ -77,30 +77,30 @@ class Tree(TensorNetwork):
                             '(list or tuple type)')
         self._sites_per_layer = sites_per_layer
 
-        # d_bond
-        if isinstance(d_bond, (list, tuple)):
-            aux_d_bond = []
-            for lst in d_bond:
+        # bond_dim
+        if isinstance(bond_dim, (list, tuple)):
+            aux_bond_dim = []
+            for lst in bond_dim:
                 if isinstance(lst, (list, tuple)):
                     if len(lst) < 2:
-                        raise ValueError('`d_bond` sequences should have at '
+                        raise ValueError('`bond_dim` sequences should have at '
                                          'least two elements, one for input '
                                          'and one for output')
                     for el in lst:
                         if not isinstance(el, int):
-                            raise TypeError('`d_bond` should be a sequence of '
+                            raise TypeError('`bond_dim` should be a sequence of '
                                             'sequences of ints')
                 else:
-                    raise TypeError('`d_bond` should be a sequence of '
+                    raise TypeError('`bond_dim` should be a sequence of '
                                     'sequences of ints')
-                aux_d_bond.append(list(lst))
+                aux_bond_dim.append(list(lst))
         else:
-            raise TypeError('`d_bond` should be a sequence of sequences of '
+            raise TypeError('`bond_dim` should be a sequence of sequences of '
                             'ints')
-        self._d_bond = aux_d_bond
+        self._bond_dim = aux_bond_dim
         
-        if len(sites_per_layer) != len(d_bond):
-            raise ValueError('`sites_per_layer` and `d_bond` should have the '
+        if len(sites_per_layer) != len(bond_dim):
+            raise ValueError('`sites_per_layer` and `bond_dim` should have the '
                              'same number of elements')
 
         self._make_nodes()
@@ -114,13 +114,13 @@ class Tree(TensorNetwork):
         return self._sites_per_layer
 
     @property
-    def d_bond(self) -> Sequence[Sequence[int]]:
+    def bond_dim(self) -> Sequence[Sequence[int]]:
         """
         Returns bond dimensions of nodes in each layer. Each sequence
         corresponds to the shape of the nodes in each layer (some input edges
         and an output edge in the last position).
         """
-        return self._d_bond
+        return self._bond_dim
 
     def _make_nodes(self) -> None:
         """Creates all the nodes of the Tree."""
@@ -133,9 +133,9 @@ class Tree(TensorNetwork):
         for i, n_sites in enumerate(self._sites_per_layer):
             layer_lst = []
             for j in range(n_sites):
-                node = ParamNode(shape=(*self._d_bond[i],),
+                node = ParamNode(shape=(*self._bond_dim[i],),
                                  axes_names=(*(['input'] * (
-                                     len(self._d_bond[i]) - 1)),
+                                     len(self._bond_dim[i]) - 1)),
                                              'output'),
                                  name=f'tree_node_({i},{j})',
                                  network=self)
@@ -346,7 +346,7 @@ class UTree(TensorNetwork):
         shape. Number of nodes in each layer times the number of input edges
         these have should match the number ot output edges in the previous
         layer.
-    d_bond : list[int] or tuple[int]
+    bond_dim : list[int] or tuple[int]
         Bond dimensions of nodes in each layer. Since all nodes have the same
         shape, it is enough to pass a single sequence of dimensions (some input
         edges and an output edge in the last position).
@@ -359,7 +359,7 @@ class UTree(TensorNetwork):
 
     def __init__(self,
                  sites_per_layer: Sequence[int],
-                 d_bond: Sequence[int],
+                 bond_dim: Sequence[int],
                  num_batches: int = 1) -> None:
 
         super().__init__(name='tree')
@@ -384,17 +384,17 @@ class UTree(TensorNetwork):
                             '(list or tuple type)')
         self._sites_per_layer = sites_per_layer
 
-        # d_bond
-        if isinstance(d_bond, (list, tuple)):
-            if len(d_bond) < 2:
-                raise ValueError('`d_bond` should have at least two elements, '
+        # bond_dim
+        if isinstance(bond_dim, (list, tuple)):
+            if len(bond_dim) < 2:
+                raise ValueError('`bond_dim` should have at least two elements, '
                                  'one for input and one for output')
-            for el in d_bond:
+            for el in bond_dim:
                 if not isinstance(el, int):
-                    raise TypeError('`d_bond` should be a sequence of ints')
+                    raise TypeError('`bond_dim` should be a sequence of ints')
         else:
-            raise TypeError('`d_bond` should be a sequence of ints')
-        self._d_bond = list(d_bond)
+            raise TypeError('`bond_dim` should be a sequence of ints')
+        self._bond_dim = list(bond_dim)
 
         self._make_nodes()
         self.initialize()
@@ -407,12 +407,12 @@ class UTree(TensorNetwork):
         return self._sites_per_layer
 
     @property
-    def d_bond(self) -> Sequence[int]:
+    def bond_dim(self) -> Sequence[int]:
         """Returns bond dimensions of nodes in each layer. Since all nodes have
         the same shape, it is a single sequence of dimensions (some input edges
         and an output edge in the last position).
         """
-        return self._d_bond
+        return self._bond_dim
 
     def _make_nodes(self) -> None:
         """Creates all the nodes of the Tree."""
@@ -425,8 +425,8 @@ class UTree(TensorNetwork):
         for i, n_sites in enumerate(self._sites_per_layer):
             layer_lst = []
             for j in range(n_sites):
-                node = ParamNode(shape=(*self._d_bond,),
-                                 axes_names=(*(['input'] * (len(self._d_bond) - 1)),
+                node = ParamNode(shape=(*self._bond_dim,),
+                                 axes_names=(*(['input'] * (len(self._bond_dim) - 1)),
                                              'output'),
                                  name=f'tree_node_({i},{j})',
                                  network=self)
@@ -452,9 +452,9 @@ class UTree(TensorNetwork):
             self.layers.append(layer_lst)
             
         # Virtual node
-        uniform_memory = node = ParamNode(shape=(*self._d_bond,),
+        uniform_memory = node = ParamNode(shape=(*self._bond_dim,),
                                           axes_names=(*(['input'] * (
-                                              len(self._d_bond) - 1)),
+                                              len(self._bond_dim) - 1)),
                                                       'output'),
                                           name='virtual_uniform',
                                           network=self,
@@ -563,7 +563,7 @@ class ConvTree(Tree):
         have the same shape. Number of nodes in each layer times the number of
         input edges these have should match the number ot output edges in the
         previous layer.
-    d_bond : list[list[int]] or tuple[tuple[int]]
+    bond_dim : list[list[int]] or tuple[tuple[int]]
         Bond dimensions of nodes in each layer. Each sequence corresponds to the
         shape of the nodes in each layer (some input edges and an output edge in
         the last position).
@@ -588,8 +588,8 @@ class ConvTree(Tree):
         
     Examples
     --------
-    >>> conv_tree = tk.ConvTree(sites_per_layer=[2, 1],
-    ...                         d_bond=[[2, 2, 3], [3, 3, 5]],
+    >>> conv_tree = tk.models.ConvTree(sites_per_layer=[2, 1],
+    ...                         bond_dim=[[2, 2, 3], [3, 3, 5]],
     ...                         kernel_size=2)
     >>> data = torch.ones(20, 2, 2, 2) # batch_size x in_channels x height x width
     >>> result = conv_tree(data)
@@ -599,7 +599,7 @@ class ConvTree(Tree):
     
     def __init__(self,
                  sites_per_layer: Sequence[int],
-                 d_bond: Sequence[Sequence[int]],
+                 bond_dim: Sequence[Sequence[int]],
                  kernel_size: Union[int, Sequence],
                  stride: int = 1,
                  padding: int = 0,
@@ -631,9 +631,9 @@ class ConvTree(Tree):
         self._dilation = dilation
         
         super().__init__(sites_per_layer=sites_per_layer,
-                         d_bond=d_bond,
+                         bond_dim=bond_dim,
                          num_batches=2)
-        self._in_channels = d_bond[0][0]
+        self._in_channels = bond_dim[0][0]
         
         self.unfold = nn.Unfold(kernel_size=kernel_size,
                                 stride=stride,
@@ -643,7 +643,7 @@ class ConvTree(Tree):
     @property
     def in_channels(self) -> int:
         """
-        Returns ``in_channels``. Same as the first elements in ``d_bond``
+        Returns ``in_channels``. Same as the first elements in ``bond_dim``
         from :class:`Tree`, corresponding to dimensions of the input.
         """
         return self._in_channels
@@ -744,7 +744,7 @@ class ConvUTree(UTree):
         shape. Number of nodes in each layer times the number of input edges
         these have should match the number ot output edges in the previous
         layer.
-    d_bond : list[int] or tuple[int]
+    bond_dim : list[int] or tuple[int]
         Bond dimensions of nodes in each layer. Since all nodes have the same
         shape, it is enough to pass a single sequence of dimensions (some input
         edges and an output edge in the last position).
@@ -770,7 +770,7 @@ class ConvUTree(UTree):
     
     def __init__(self,
                  sites_per_layer: Sequence[int],
-                 d_bond: Sequence[int],
+                 bond_dim: Sequence[int],
                  kernel_size: Union[int, Sequence],
                  stride: int = 1,
                  padding: int = 0,
@@ -802,9 +802,9 @@ class ConvUTree(UTree):
         self._dilation = dilation
         
         super().__init__(sites_per_layer=sites_per_layer,
-                         d_bond=d_bond,
+                         bond_dim=bond_dim,
                          num_batches=2)
-        self._in_channels = d_bond[0]
+        self._in_channels = bond_dim[0]
         
         self.unfold = nn.Unfold(kernel_size=kernel_size,
                                 stride=stride,
@@ -814,7 +814,7 @@ class ConvUTree(UTree):
     @property
     def in_channels(self) -> int:
         """
-        Returns ``in_channels``. Same as the first elements in ``d_bond``
+        Returns ``in_channels``. Same as the first elements in ``bond_dim``
         from :class:`UTree`, corresponding to dimensions of the input.
         """
         return self._in_channels

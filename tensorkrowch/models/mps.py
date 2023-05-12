@@ -30,14 +30,14 @@ class MPS(TensorNetwork):
 
     Parameters
     ----------
-    n_sites : int
+    n_features : int
         Number of sites.
     d_phys : int, list[int] or tuple[int]
         Physical dimension(s). If given as a sequence, its length should be
-        equal to ``n_sites``.
-    d_bond : int, list[int] or tuple[int]
+        equal to ``n_features``.
+    bond_dim : int, list[int] or tuple[int]
         Bond dimension(s). If given as a sequence, its length should be equal
-        to ``n_sites`` (if ``boundary = "pbc"``) or ``n_sites - 1`` (if
+        to ``n_features`` (if ``boundary = "pbc"``) or ``n_features - 1`` (if
         ``boundary = "obc"``). The i-th bond dimension is always the dimension
         of the right edge of the i-th node.
     boundary : {'obc', 'pbc'}
@@ -53,9 +53,9 @@ class MPS(TensorNetwork):
     --------
     ``MPS`` with same physical dimensions:
     
-    >>> mps = tk.MPS(n_sites=5,
+    >>> mps = tk.MPS(n_features=5,
     ...              d_phys=2,
-    ...              d_bond=5)
+    ...              bond_dim=5)
     >>> data = torch.ones(20, 5, 2) # batch_size x n_features x feature_size
     >>> result = mps(data)
     >>> print(result.shape)
@@ -63,9 +63,9 @@ class MPS(TensorNetwork):
     
     ``MPS`` with different physical dimensions:
     
-    >>> mps = tk.MPS(n_sites=5,
+    >>> mps = tk.MPS(n_features=5,
     ...              d_phys=list(range(2, 7)),
-    ...              d_bond=5)
+    ...              bond_dim=5)
     >>> data = [torch.ones(20, i)
     ...         for i in range(2, 7)] # n_features * [batch_size x feature_size]
     >>> result = mps(data)
@@ -74,9 +74,9 @@ class MPS(TensorNetwork):
     """
 
     def __init__(self,
-                 n_sites: int,
+                 n_features: int,
                  d_phys: Union[int, Sequence[int]],
-                 d_bond: Union[int, Sequence[int]],
+                 bond_dim: Union[int, Sequence[int]],
                  boundary: Text = 'obc',
                  num_batches: int = 1) -> None:
 
@@ -84,50 +84,50 @@ class MPS(TensorNetwork):
 
         # boundary
         if boundary == 'obc':
-            if n_sites < 2:
+            if n_features < 2:
                 raise ValueError('If `boundary` is "obc", at least '
                                  'there has to be 2 sites')
         elif boundary == 'pbc':
-            if n_sites < 1:
+            if n_features < 1:
                 raise ValueError('If `boundary` is "pbc", at least '
                                  'there has to be one site')
         else:
             raise ValueError('`boundary` should be one of "obc" or "pbc"')
-        self._n_sites = n_sites
+        self._n_features = n_features
         self._boundary = boundary
 
         # d_phys
         if isinstance(d_phys, (list, tuple)):
-            if len(d_phys) != n_sites:
+            if len(d_phys) != n_features:
                 raise ValueError('If `d_phys` is given as a sequence of int, '
-                                 'its length should be equal to `n_sites`')
+                                 'its length should be equal to `n_features`')
             self._d_phys = list(d_phys)
         elif isinstance(d_phys, int):
-            self._d_phys = [d_phys] * n_sites
+            self._d_phys = [d_phys] * n_features
         else:
             raise TypeError('`d_phys` should be `int` type or a list/tuple '
                             'of ints')
 
-        # d_bond
-        if isinstance(d_bond, (list, tuple)):
+        # bond_dim
+        if isinstance(bond_dim, (list, tuple)):
             if boundary == 'obc':
-                if len(d_bond) != n_sites - 1:
-                    raise ValueError('If `d_bond` is given as a sequence of int,'
+                if len(bond_dim) != n_features - 1:
+                    raise ValueError('If `bond_dim` is given as a sequence of int,'
                                      ' and `boundary` is "obc", its length '
-                                     'should be equal to `n_sites` - 1')
+                                     'should be equal to `n_features` - 1')
             elif boundary == 'pbc':
-                if len(d_bond) != n_sites:
-                    raise ValueError('If `d_bond` is given as a sequence of int,'
+                if len(bond_dim) != n_features:
+                    raise ValueError('If `bond_dim` is given as a sequence of int,'
                                      ' and `boundary` is "pbc", its length '
-                                     'should be equal to `n_sites`')
-            self._d_bond = list(d_bond)
-        elif isinstance(d_bond, int):
+                                     'should be equal to `n_features`')
+            self._bond_dim = list(bond_dim)
+        elif isinstance(bond_dim, int):
             if boundary == 'obc':
-                self._d_bond = [d_bond] * (n_sites - 1)
+                self._bond_dim = [bond_dim] * (n_features - 1)
             elif boundary == 'pbc':
-                self._d_bond = [d_bond] * n_sites
+                self._bond_dim = [bond_dim] * n_features
         else:
-            raise TypeError('`d_bond` should be `int` type or a list/tuple '
+            raise TypeError('`bond_dim` should be `int` type or a list/tuple '
                             'of ints')
 
         self._make_nodes()
@@ -136,9 +136,9 @@ class MPS(TensorNetwork):
         self._num_batches = num_batches
 
     @property
-    def n_sites(self) -> int:
+    def n_features(self) -> int:
         """Returns number of nodes."""
-        return self._n_sites
+        return self._n_features
 
     @property
     def boundary(self) -> Text:
@@ -151,9 +151,9 @@ class MPS(TensorNetwork):
         return self._d_phys
 
     @property
-    def d_bond(self) -> List[int]:
+    def bond_dim(self) -> List[int]:
         """Returns bond dimension."""
-        return self._d_bond
+        return self._bond_dim
 
     def _make_nodes(self) -> None:
         """Creates all the nodes of the MPS."""
@@ -166,15 +166,15 @@ class MPS(TensorNetwork):
         self.mats_env = []
         
         if self.boundary == 'obc':
-            self.left_node = ParamNode(shape=(self.d_phys[0], self.d_bond[0]),
+            self.left_node = ParamNode(shape=(self.d_phys[0], self.bond_dim[0]),
                                        axes_names=('input', 'right'),
                                        name='left_node',
                                        network=self)
             
-            for i in range(self._n_sites - 2):
-                node = ParamNode(shape=(self.d_bond[i],
+            for i in range(self._n_features - 2):
+                node = ParamNode(shape=(self.bond_dim[i],
                                         self.d_phys[i + 1],
-                                        self.d_bond[i + 1]),
+                                        self.bond_dim[i + 1]),
                                  axes_names=('left', 'input', 'right'),
                                  name=f'mats_env_node_({i})',
                                  network=self)
@@ -186,21 +186,21 @@ class MPS(TensorNetwork):
                     self.mats_env[-2]['right'] ^ self.mats_env[-1]['left']
                     
                 
-            self.right_node = ParamNode(shape=(self.d_bond[-1], self.d_phys[-1]),
+            self.right_node = ParamNode(shape=(self.bond_dim[-1], self.d_phys[-1]),
                                         axes_names=('left', 'input'),
                                         name='right_node',
                                         network=self)
             
-            if self._n_sites > 2:
+            if self._n_features > 2:
                 self.mats_env[-1]['right'] ^ self.right_node['left']
             else:
                 self.left_node['right'] ^ self.right_node['left']
                 
         else:
-            for i in range(self._n_sites):
-                node = ParamNode(shape=(self.d_bond[i - 1],
+            for i in range(self._n_features):
+                node = ParamNode(shape=(self.bond_dim[i - 1],
                                         self.d_phys[i],
-                                        self.d_bond[i]),
+                                        self.bond_dim[i]),
                                  axes_names=('left', 'input', 'right'),
                                  name=f'mats_env_node_({i})',
                                  network=self)
@@ -211,7 +211,7 @@ class MPS(TensorNetwork):
                 else:
                     self.mats_env[-2]['right'] ^ self.mats_env[-1]['left']
                 
-                if i == self._n_sites - 1:
+                if i == self._n_features - 1:
                     self.mats_env[-1]['right'] ^ periodic_edge
 
     def initialize(self, std: float = 1e-9) -> None:
@@ -397,7 +397,7 @@ class MPS(TensorNetwork):
         ----------
         oc : int
             Position of the orthogonality center. It should be between 0 and 
-            ``n_sites -1``.
+            ``n_features -1``.
         mode : {"svd", "svdr", "qr"}
             Indicates which decomposition should be used to split a node after
             contracting it. See more at :func:`svd_`, :func:`svdr_`, :func:`qr_`.
@@ -421,10 +421,10 @@ class MPS(TensorNetwork):
         self.auto_stack = False
         
         if oc is None:
-            oc = self._n_sites - 1
-        elif oc >= self._n_sites:
+            oc = self._n_features - 1
+        elif oc >= self._n_features:
             raise ValueError(f'Orthogonality center position `oc` should be '
-                             f'between 0 and {self._n_sites - 1}')
+                             f'between 0 and {self._n_features - 1}')
         
         nodes = self.mats_env
         if self.boundary == 'obc':
@@ -483,19 +483,19 @@ class MPS(TensorNetwork):
         else:
             self.mats_env = nodes
         
-        d_bond = []
+        bond_dim = []
         for node in nodes:
             if 'right' in node.axes_names:
-                d_bond.append(node['right'].size())
-        self._d_bond = d_bond
+                bond_dim.append(node['right'].size())
+        self._bond_dim = bond_dim
         
         self.auto_stack = prev_auto_stack
         
-    def _project_to_d_bond(self,
+    def _project_to_bond_dim(self,
                            nodes: List[AbstractNode],
-                           d_bond: int,
+                           bond_dim: int,
                            side: Text = 'right'):
-        """Projects all nodes into a space of dimension ``d_bond``."""
+        """Projects all nodes into a space of dimension ``bond_dim``."""
         device = nodes[0].tensor.device
         
         if side == 'left':
@@ -512,36 +512,36 @@ class MPS(TensorNetwork):
         proj_mat_node = None
         for j in range(len(nodes)):
             d_phys_lst.append(nodes[j]['input'].size())
-            if d_bond <= torch.tensor(d_phys_lst).prod().item():
-                proj_mat_node = Node(shape=(*d_phys_lst,d_bond),
+            if bond_dim <= torch.tensor(d_phys_lst).prod().item():
+                proj_mat_node = Node(shape=(*d_phys_lst,bond_dim),
                                      axes_names=(*(['input'] * len(d_phys_lst)),
-                                                 'd_bond'),
+                                                 'bond_dim'),
                                      name=f'proj_mat_node_{side}',
                                      network=self)
                 
                 proj_mat_node.tensor = torch.eye(
                     torch.tensor(d_phys_lst).prod().int().item(),
-                    d_bond).view(*d_phys_lst, -1).to(device)
+                    bond_dim).view(*d_phys_lst, -1).to(device)
                 for k in range(j + 1):
                     nodes[k]['input'] ^ proj_mat_node[k]
                     
                 aux_result = proj_mat_node
                 for k in range(j + 1):
                     aux_result @= nodes[k]
-                line_mat_nodes.append(aux_result)  # d_bond x left x right
+                line_mat_nodes.append(aux_result)  # bond_dim x left x right
                 break
             
         if proj_mat_node is None:
-            d_bond = torch.tensor(d_phys_lst).prod().int().item()
-            proj_mat_node = Node(shape=(*d_phys_lst, d_bond),
+            bond_dim = torch.tensor(d_phys_lst).prod().int().item()
+            proj_mat_node = Node(shape=(*d_phys_lst, bond_dim),
                                  axes_names=(*(['input'] * len(d_phys_lst)),
-                                             'd_bond'),
+                                             'bond_dim'),
                                  name=f'proj_mat_node_{side}',
                                  network=self)
             
             proj_mat_node.tensor = torch.eye(
                 torch.tensor(d_phys_lst).prod().int().item(),
-                d_bond).view(*d_phys_lst, -1).to(device)
+                bond_dim).view(*d_phys_lst, -1).to(device)
             for k in range(j + 1):
                 nodes[k]['input'] ^ proj_mat_node[k]
                 
@@ -569,7 +569,7 @@ class MPS(TensorNetwork):
         for node in line_mat_nodes[1:]:
             result @= node
             
-        return result  # d_bond x left/right
+        return result  # bond_dim x left/right
     
     def _aux_canonicalize_univocal(self,
                                    nodes: List[AbstractNode],
@@ -580,43 +580,43 @@ class MPS(TensorNetwork):
         left_nodeC = None
         
         if idx > 0:
-            # d_bond[-1] x input  x right  /  d_bond[-1] x input
+            # bond_dim[-1] x input  x right  /  bond_dim[-1] x input
             L = left_nodeL @ L
         
         L = L.tensor
         
-        if idx < self._n_sites - 1:
-            d_bond = self._d_bond[idx]
+        if idx < self._n_features - 1:
+            bond_dim = self._bond_dim[idx]
             
             prod_phys_left = 1
             for i in range(idx + 1):
                 prod_phys_left *= self._d_phys[i]
-            d_bond = min(d_bond, prod_phys_left)
+            bond_dim = min(bond_dim, prod_phys_left)
             
             prod_phys_right = 1
-            for i in range(idx + 1, self._n_sites):
+            for i in range(idx + 1, self._n_features):
                 prod_phys_right *= self._d_phys[i]
-            d_bond = min(d_bond, prod_phys_right)
+            bond_dim = min(bond_dim, prod_phys_right)
             
-            if d_bond < self._d_bond[idx]:
-                self._d_bond[idx] = d_bond
+            if bond_dim < self._bond_dim[idx]:
+                self._bond_dim[idx] = bond_dim
             
-            left_nodeC = self._project_to_d_bond(nodes=nodes[:idx + 1],
-                                                 d_bond=d_bond,
-                                                 side='left')  # d_bond x right
-            right_node = self._project_to_d_bond(nodes=nodes[idx + 1:],
-                                                 d_bond=d_bond,
-                                                 side='right')  # d_bond x left
+            left_nodeC = self._project_to_bond_dim(nodes=nodes[:idx + 1],
+                                                 bond_dim=bond_dim,
+                                                 side='left')  # bond_dim x right
+            right_node = self._project_to_bond_dim(nodes=nodes[idx + 1:],
+                                                 bond_dim=bond_dim,
+                                                 side='right')  # bond_dim x left
             
-            C = left_nodeC @ right_node  # d_bond x d_bond
+            C = left_nodeC @ right_node  # bond_dim x bond_dim
             C = torch.linalg.inv(C.tensor)
             
             if idx == 0:
-                L @= right_node.tensor.t()  # input x d_bond
+                L @= right_node.tensor.t()  # input x bond_dim
                 L @= C
             else:
                 shape_L = L.shape
-                # (d_bond[-1] * input) x d_bond
+                # (bond_dim[-1] * input) x bond_dim
                 L = (L.view(-1, L.shape[-1]) @ right_node.tensor.t())
                 L @= C
                 L = L.view(*shape_L[:-1], right_node.shape[0])
@@ -642,7 +642,7 @@ class MPS(TensorNetwork):
         
         new_tensors = []
         left_nodeC = None
-        for i in range(self._n_sites):
+        for i in range(self._n_features):
             tensor, left_nodeC = self._aux_canonicalize_univocal(
                 nodes=nodes,
                 idx=i,
@@ -650,9 +650,9 @@ class MPS(TensorNetwork):
             new_tensors.append(tensor)
         
         for i, (node, tensor) in enumerate(zip(nodes, new_tensors)):
-            if i < self._n_sites - 1:
-                if self._d_bond[i] < node['right'].size():
-                    node['right'].change_size(self._d_bond[i])
+            if i < self._n_features - 1:
+                if self._bond_dim[i] < node['right'].size():
+                    node['right'].change_size(self._bond_dim[i])
             node.tensor = tensor
             
             if not node['input'].is_dangling():
@@ -675,11 +675,11 @@ class UMPS(TensorNetwork):
 
     Parameters
     ----------
-    n_sites : int
+    n_features : int
         Number of sites.
     d_phys : int
         Physical dimension.
-    d_bond : int
+    bond_dim : int
         Bond dimension.
     num_batches : int
         Number of batch edges of input data nodes. Usually ``num_batches = 1``
@@ -689,18 +689,18 @@ class UMPS(TensorNetwork):
     """
 
     def __init__(self,
-                 n_sites: int,
+                 n_features: int,
                  d_phys: int,
-                 d_bond: int,
+                 bond_dim: int,
                  num_batches: int = 1) -> None:
 
         super().__init__(name='mps')
 
         # boundary
-        if n_sites < 1:
+        if n_features < 1:
             raise ValueError('If `boundary` is "pbc", at least '
                              'there has to be one site')
-        self._n_sites = n_sites
+        self._n_features = n_features
 
         # d_phys
         if isinstance(d_phys, int):
@@ -708,11 +708,11 @@ class UMPS(TensorNetwork):
         else:
             raise TypeError('`d_phys` should be `int` type')
 
-        # d_bond
-        if isinstance(d_bond, int):
-            self._d_bond = d_bond
+        # bond_dim
+        if isinstance(bond_dim, int):
+            self._bond_dim = bond_dim
         else:
-            raise TypeError('`d_bond` should be `int` type')
+            raise TypeError('`bond_dim` should be `int` type')
 
         self._make_nodes()
         self.initialize()
@@ -720,9 +720,9 @@ class UMPS(TensorNetwork):
         self._num_batches = num_batches
 
     @property
-    def n_sites(self) -> int:
+    def n_features(self) -> int:
         """Returns number of nodes."""
-        return self._n_sites
+        return self._n_features
 
     @property
     def d_phys(self) -> int:
@@ -730,9 +730,9 @@ class UMPS(TensorNetwork):
         return self._d_phys
 
     @property
-    def d_bond(self) -> int:
+    def bond_dim(self) -> int:
         """Returns bond dimension."""
-        return self._d_bond
+        return self._bond_dim
 
     def _make_nodes(self) -> None:
         """Creates all the nodes of the MPS."""
@@ -744,8 +744,8 @@ class UMPS(TensorNetwork):
         self.right_node = None
         self.mats_env = []
         
-        for i in range(self._n_sites):
-            node = ParamNode(shape=(self.d_bond, self.d_phys, self.d_bond),
+        for i in range(self._n_features):
+            node = ParamNode(shape=(self.bond_dim, self.d_phys, self.bond_dim),
                              axes_names=('left', 'input', 'right'),
                              name=f'mats_env_node_({i})',
                              network=self)
@@ -756,11 +756,11 @@ class UMPS(TensorNetwork):
             else:
                 self.mats_env[-2]['right'] ^ self.mats_env[-1]['left']
             
-            if i == self._n_sites - 1:
+            if i == self._n_features - 1:
                 self.mats_env[-1]['right'] ^ periodic_edge
                         
         # Virtual node
-        uniform_memory = ParamNode(shape=(self.d_bond, self.d_phys, self.d_bond),
+        uniform_memory = ParamNode(shape=(self.bond_dim, self.d_phys, self.bond_dim),
                                    axes_names=('left', 'input', 'right'),
                                    name='virtual_uniform',
                                    network=self,
@@ -925,7 +925,7 @@ class ConvMPS(MPS):
     ----------
     in_channels : int
         Input channels. Same as ``d_phys`` in :class:`MPS`.
-    d_bond : int, list[int] or tuple[int]
+    bond_dim : int, list[int] or tuple[int]
         Bond dimension(s). If given as a sequence, its length should be equal
         to :math:`kernel\_size_0 \cdot kernel\_size_1` (if ``boundary = "pbc"``)
         or :math:`kernel\_size_0 \cdot kernel\_size_1 - 1` (if
@@ -955,8 +955,8 @@ class ConvMPS(MPS):
         
     Examples
     --------
-    >>> conv_mps = tk.ConvMPS(in_channels=2,
-    ...                       d_bond=5,
+    >>> conv_mps = tk.models.ConvMPS(in_channels=2,
+    ...                       bond_dim=5,
     ...                       kernel_size=2)
     >>> data = torch.ones(20, 2, 2, 2) # batch_size x in_channels x height x width
     >>> result = conv_mps(data)
@@ -966,7 +966,7 @@ class ConvMPS(MPS):
     
     def __init__(self,
                  in_channels: int,
-                 d_bond: Union[int, Sequence[int]],
+                 bond_dim: Union[int, Sequence[int]],
                  kernel_size: Union[int, Sequence],
                  stride: int = 1,
                  padding: int = 0,
@@ -999,9 +999,9 @@ class ConvMPS(MPS):
         self._padding = padding
         self._dilation = dilation
         
-        super().__init__(n_sites=kernel_size[0] * kernel_size[1],
+        super().__init__(n_features=kernel_size[0] * kernel_size[1],
                          d_phys=in_channels,
-                         d_bond=d_bond,
+                         bond_dim=bond_dim,
                          boundary=boundary,
                          num_batches=2)
         
@@ -1131,7 +1131,7 @@ class ConvUMPS(UMPS):
     ----------
     in_channels : int
         Input channels. Same as ``d_phys`` in :class:`UMPS`.
-    d_bond : int
+    bond_dim : int
         Bond dimension.
     kernel_size : int, list[int] or tuple[int]
         Kernel size used in `nn.Unfold
@@ -1155,7 +1155,7 @@ class ConvUMPS(UMPS):
     
     def __init__(self,
                     in_channels: int,
-                    d_bond: int,
+                    bond_dim: int,
                     kernel_size: Union[int, Sequence],
                     stride: int = 1,
                     padding: int = 0,
@@ -1187,9 +1187,9 @@ class ConvUMPS(UMPS):
         self._padding = padding
         self._dilation = dilation
         
-        super().__init__(n_sites=kernel_size[0] * kernel_size[1],
+        super().__init__(n_features=kernel_size[0] * kernel_size[1],
                          d_phys=in_channels,
-                         d_bond=d_bond,
+                         bond_dim=bond_dim,
                          num_batches=2)
         
         self.unfold = nn.Unfold(kernel_size=kernel_size,

@@ -342,7 +342,7 @@ title="Source repository"
 <span class="sd">        have the same shape. Number of nodes in each layer times the number of</span>
 <span class="sd">        input edges these have should match the number ot output edges in the</span>
 <span class="sd">        previous layer.</span>
-<span class="sd">    d_bond : list[list[int]] or tuple[tuple[int]]</span>
+<span class="sd">    bond_dim : list[list[int]] or tuple[tuple[int]]</span>
 <span class="sd">        Bond dimensions of nodes in each layer. Each sequence corresponds to the</span>
 <span class="sd">        shape of the nodes in each layer (some input edges and an output edge in</span>
 <span class="sd">        the last position).</span>
@@ -354,8 +354,8 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; tree = tk.Tree(sites_per_layer=[4, 2, 1],</span>
-<span class="sd">    ...                d_bond=[[3, 3, 4], [4, 4, 2], [2, 2, 2]])</span>
+<span class="sd">    &gt;&gt;&gt; tree = tk.models.Tree(sites_per_layer=[4, 2, 1],</span>
+<span class="sd">    ...                bond_dim=[[3, 3, 4], [4, 4, 2], [2, 2, 2]])</span>
 <span class="sd">    &gt;&gt;&gt; data = torch.ones(20, 8, 3) # batch_size x n_features x feature_size</span>
 <span class="sd">    &gt;&gt;&gt; result = tree(data)</span>
 <span class="sd">    &gt;&gt;&gt; print(result.shape)</span>
@@ -364,7 +364,7 @@ title="Source repository"
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">sites_per_layer</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
-                 <span class="n">d_bond</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+                 <span class="n">bond_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
                  <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;tree&#39;</span><span class="p">)</span>
@@ -389,30 +389,30 @@ title="Source repository"
                             <span class="s1">&#39;(list or tuple type)&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_sites_per_layer</span> <span class="o">=</span> <span class="n">sites_per_layer</span>
 
-        <span class="c1"># d_bond</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d_bond</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
-            <span class="n">aux_d_bond</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="k">for</span> <span class="n">lst</span> <span class="ow">in</span> <span class="n">d_bond</span><span class="p">:</span>
+        <span class="c1"># bond_dim</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="n">aux_bond_dim</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">lst</span> <span class="ow">in</span> <span class="n">bond_dim</span><span class="p">:</span>
                 <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">lst</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
                     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">lst</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`d_bond` sequences should have at &#39;</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` sequences should have at &#39;</span>
                                          <span class="s1">&#39;least two elements, one for input &#39;</span>
                                          <span class="s1">&#39;and one for output&#39;</span><span class="p">)</span>
                     <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">lst</span><span class="p">:</span>
                         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">el</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-                            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_bond` should be a sequence of &#39;</span>
+                            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` should be a sequence of &#39;</span>
                                             <span class="s1">&#39;sequences of ints&#39;</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_bond` should be a sequence of &#39;</span>
+                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` should be a sequence of &#39;</span>
                                     <span class="s1">&#39;sequences of ints&#39;</span><span class="p">)</span>
-                <span class="n">aux_d_bond</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">lst</span><span class="p">))</span>
+                <span class="n">aux_bond_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">lst</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_bond` should be a sequence of sequences of &#39;</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` should be a sequence of sequences of &#39;</span>
                             <span class="s1">&#39;ints&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span> <span class="o">=</span> <span class="n">aux_d_bond</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="n">aux_bond_dim</span>
         
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sites_per_layer</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">d_bond</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`sites_per_layer` and `d_bond` should have the &#39;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sites_per_layer</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`sites_per_layer` and `bond_dim` should have the &#39;</span>
                              <span class="s1">&#39;same number of elements&#39;</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
@@ -426,13 +426,13 @@ title="Source repository"
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sites_per_layer</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
+    <span class="k">def</span> <span class="nf">bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns bond dimensions of nodes in each layer. Each sequence</span>
 <span class="sd">        corresponds to the shape of the nodes in each layer (some input edges</span>
 <span class="sd">        and an output edge in the last position).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the Tree.&quot;&quot;&quot;</span>
@@ -445,9 +445,9 @@ title="Source repository"
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">n_sites</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sites_per_layer</span><span class="p">):</span>
             <span class="n">layer_lst</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_sites</span><span class="p">):</span>
-                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span><span class="p">[</span><span class="n">i</span><span class="p">],),</span>
+                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="p">[</span><span class="n">i</span><span class="p">],),</span>
                                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="p">([</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
-                                     <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)),</span>
+                                     <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)),</span>
                                              <span class="s1">&#39;output&#39;</span><span class="p">),</span>
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;tree_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">,</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
@@ -658,7 +658,7 @@ title="Source repository"
 <span class="sd">        shape. Number of nodes in each layer times the number of input edges</span>
 <span class="sd">        these have should match the number ot output edges in the previous</span>
 <span class="sd">        layer.</span>
-<span class="sd">    d_bond : list[int] or tuple[int]</span>
+<span class="sd">    bond_dim : list[int] or tuple[int]</span>
 <span class="sd">        Bond dimensions of nodes in each layer. Since all nodes have the same</span>
 <span class="sd">        shape, it is enough to pass a single sequence of dimensions (some input</span>
 <span class="sd">        edges and an output edge in the last position).</span>
@@ -671,7 +671,7 @@ title="Source repository"
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">sites_per_layer</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
-                 <span class="n">d_bond</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                 <span class="n">bond_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
                  <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;tree&#39;</span><span class="p">)</span>
@@ -696,17 +696,17 @@ title="Source repository"
                             <span class="s1">&#39;(list or tuple type)&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_sites_per_layer</span> <span class="o">=</span> <span class="n">sites_per_layer</span>
 
-        <span class="c1"># d_bond</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d_bond</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">d_bond</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`d_bond` should have at least two elements, &#39;</span>
+        <span class="c1"># bond_dim</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` should have at least two elements, &#39;</span>
                                  <span class="s1">&#39;one for input and one for output&#39;</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">d_bond</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">bond_dim</span><span class="p">:</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">el</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_bond` should be a sequence of ints&#39;</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` should be a sequence of ints&#39;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_bond` should be a sequence of ints&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">d_bond</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` should be a sequence of ints&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
@@ -719,12 +719,12 @@ title="Source repository"
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sites_per_layer</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">d_bond</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimensions of nodes in each layer. Since all nodes have</span>
 <span class="sd">        the same shape, it is a single sequence of dimensions (some input edges</span>
 <span class="sd">        and an output edge in the last position).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the Tree.&quot;&quot;&quot;</span>
@@ -737,8 +737,8 @@ title="Source repository"
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">n_sites</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sites_per_layer</span><span class="p">):</span>
             <span class="n">layer_lst</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_sites</span><span class="p">):</span>
-                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span><span class="p">,),</span>
-                                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="p">([</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)),</span>
+                <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="p">,),</span>
+                                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="p">([</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)),</span>
                                              <span class="s1">&#39;output&#39;</span><span class="p">),</span>
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;tree_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">,</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
@@ -764,9 +764,9 @@ title="Source repository"
             <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer_lst</span><span class="p">)</span>
             
         <span class="c1"># Virtual node</span>
-        <span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span><span class="p">,),</span>
+        <span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="p">,),</span>
                                           <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="p">([</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
-                                              <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_d_bond</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)),</span>
+                                              <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)),</span>
                                                       <span class="s1">&#39;output&#39;</span><span class="p">),</span>
                                           <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_uniform&#39;</span><span class="p">,</span>
                                           <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
@@ -875,7 +875,7 @@ title="Source repository"
 <span class="sd">        have the same shape. Number of nodes in each layer times the number of</span>
 <span class="sd">        input edges these have should match the number ot output edges in the</span>
 <span class="sd">        previous layer.</span>
-<span class="sd">    d_bond : list[list[int]] or tuple[tuple[int]]</span>
+<span class="sd">    bond_dim : list[list[int]] or tuple[tuple[int]]</span>
 <span class="sd">        Bond dimensions of nodes in each layer. Each sequence corresponds to the</span>
 <span class="sd">        shape of the nodes in each layer (some input edges and an output edge in</span>
 <span class="sd">        the last position).</span>
@@ -900,8 +900,8 @@ title="Source repository"
 <span class="sd">        </span>
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; conv_tree = tk.ConvTree(sites_per_layer=[2, 1],</span>
-<span class="sd">    ...                         d_bond=[[2, 2, 3], [3, 3, 5]],</span>
+<span class="sd">    &gt;&gt;&gt; conv_tree = tk.models.ConvTree(sites_per_layer=[2, 1],</span>
+<span class="sd">    ...                         bond_dim=[[2, 2, 3], [3, 3, 5]],</span>
 <span class="sd">    ...                         kernel_size=2)</span>
 <span class="sd">    &gt;&gt;&gt; data = torch.ones(20, 2, 2, 2) # batch_size x in_channels x height x width</span>
 <span class="sd">    &gt;&gt;&gt; result = conv_tree(data)</span>
@@ -911,7 +911,7 @@ title="Source repository"
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">sites_per_layer</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
-                 <span class="n">d_bond</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+                 <span class="n">bond_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
                  <span class="n">kernel_size</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">],</span>
                  <span class="n">stride</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                  <span class="n">padding</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
@@ -943,9 +943,9 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span> <span class="o">=</span> <span class="n">dilation</span>
         
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sites_per_layer</span><span class="o">=</span><span class="n">sites_per_layer</span><span class="p">,</span>
-                         <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
+                         <span class="n">bond_dim</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">,</span>
                          <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span> <span class="o">=</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span> <span class="o">=</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">unfold</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Unfold</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span>
                                 <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span>
@@ -955,7 +955,7 @@ title="Source repository"
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns ``in_channels``. Same as the first elements in ``d_bond``</span>
+<span class="sd">        Returns ``in_channels``. Same as the first elements in ``bond_dim``</span>
 <span class="sd">        from :class:`Tree`, corresponding to dimensions of the input.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span>
@@ -1056,7 +1056,7 @@ title="Source repository"
 <span class="sd">        shape. Number of nodes in each layer times the number of input edges</span>
 <span class="sd">        these have should match the number ot output edges in the previous</span>
 <span class="sd">        layer.</span>
-<span class="sd">    d_bond : list[int] or tuple[int]</span>
+<span class="sd">    bond_dim : list[int] or tuple[int]</span>
 <span class="sd">        Bond dimensions of nodes in each layer. Since all nodes have the same</span>
 <span class="sd">        shape, it is enough to pass a single sequence of dimensions (some input</span>
 <span class="sd">        edges and an output edge in the last position).</span>
@@ -1082,7 +1082,7 @@ title="Source repository"
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">sites_per_layer</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
-                 <span class="n">d_bond</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                 <span class="n">bond_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
                  <span class="n">kernel_size</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">],</span>
                  <span class="n">stride</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                  <span class="n">padding</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
@@ -1114,9 +1114,9 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span> <span class="o">=</span> <span class="n">dilation</span>
         
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sites_per_layer</span><span class="o">=</span><span class="n">sites_per_layer</span><span class="p">,</span>
-                         <span class="n">d_bond</span><span class="o">=</span><span class="n">d_bond</span><span class="p">,</span>
+                         <span class="n">bond_dim</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">,</span>
                          <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span> <span class="o">=</span> <span class="n">d_bond</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span> <span class="o">=</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">unfold</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Unfold</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span>
                                 <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span>
@@ -1126,7 +1126,7 @@ title="Source repository"
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns ``in_channels``. Same as the first elements in ``d_bond``</span>
+<span class="sd">        Returns ``in_channels``. Same as the first elements in ``bond_dim``</span>
 <span class="sd">        from :class:`UTree`, corresponding to dimensions of the input.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span>

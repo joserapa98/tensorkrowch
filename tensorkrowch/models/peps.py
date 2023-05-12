@@ -1127,7 +1127,7 @@ class ConvPEPS(PEPS):
     and where the input data is a batch of images. It is the convolutional
     version of :class:`PEPS`.
     
-    Input data as well as initialization parameters are described in `nn.Conv2d
+    Input data as well as initialization parameters are described in `torch.nn.Conv2d
     <https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html>`_.
 
     Parameters
@@ -1138,20 +1138,20 @@ class ConvPEPS(PEPS):
         Bond dimensions for horizontal and vertical edges (in that order). Thus
         it should also contain 2 elements
     kernel_size : int, list[int] or tuple[int]
-        Kernel size used in `nn.Unfold
+        Kernel size used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
     stride : int
-        Stride used in `nn.Unfold
+        Stride used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
     padding : int
-        Padding used in `nn.Unfold
+        Padding used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
     dilation : int
-        Dilation used in `nn.Unfold
+        Dilation used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
@@ -1234,7 +1234,7 @@ class ConvPEPS(PEPS):
     @property
     def stride(self) -> Tuple[int, int]:
         """
-        Returns stride used in `nn.Unfold
+        Returns stride used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._stride
@@ -1242,7 +1242,7 @@ class ConvPEPS(PEPS):
     @property
     def padding(self) -> Tuple[int, int]:
         """
-        Returns padding used in `nn.Unfold
+        Returns padding used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._padding
@@ -1250,14 +1250,14 @@ class ConvPEPS(PEPS):
     @property
     def dilation(self) -> Tuple[int, int]:
         """
-        Returns dilation used in `nn.Unfold
+        Returns dilation used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._dilation
     
     def forward(self, image, *args, **kwargs):
         r"""
-        Overrides ``nn.Module``'s forward to compute a convolution on the input
+        Overrides ``torch.nn.Module``'s forward to compute a convolution on the input
         image.
         
         Parameters
@@ -1308,7 +1308,7 @@ class ConvUPEPS(UPEPS):
     nodes, and where the input data is a batch of images. It is the convolutional
     version of :class:`UPEPS`.
     
-    Input data as well as initialization parameters are described in `nn.Conv2d
+    Input data as well as initialization parameters are described in `torch.nn.Conv2d
     <https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html>`_.
 
     Parameters
@@ -1319,20 +1319,20 @@ class ConvUPEPS(UPEPS):
         Bond dimensions for horizontal and vertical edges (in that order). Thus
         it should also contain 2 elements
     kernel_size : int, list[int] or tuple[int]
-        Kernel size used in `nn.Unfold
+        Kernel size used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
     stride : int
-        Stride used in `nn.Unfold
+        Stride used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
     padding : int
-        Padding used in `nn.Unfold
+        Padding used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
     dilation : int
-        Dilation used in `nn.Unfold
+        Dilation used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
@@ -1399,7 +1399,7 @@ class ConvUPEPS(UPEPS):
     @property
     def stride(self) -> Tuple[int, int]:
         """
-        Returns stride used in `nn.Unfold
+        Returns stride used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._stride
@@ -1407,7 +1407,7 @@ class ConvUPEPS(UPEPS):
     @property
     def padding(self) -> Tuple[int, int]:
         """
-        Returns padding used in `nn.Unfold
+        Returns padding used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._padding
@@ -1415,14 +1415,14 @@ class ConvUPEPS(UPEPS):
     @property
     def dilation(self) -> Tuple[int, int]:
         """
-        Returns dilation used in `nn.Unfold
+        Returns dilation used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._dilation
     
     def forward(self, image, *args, **kwargs):
         r"""
-        Overrides ``nn.Module``'s forward to compute a convolution on the input
+        Overrides ``torch.nn.Module``'s forward to compute a convolution on the input
         image.
         
         Parameters

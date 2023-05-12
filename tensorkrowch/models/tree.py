@@ -1,9 +1,9 @@
 """
 This script contains:
-    *Tree
-    *UTree
-    *ConvTree
-    *ConvUTree
+    * Tree
+    * UTree
+    * ConvTree
+    * ConvUTree
 """
 
 from typing import (List, Optional, Sequence,
@@ -21,7 +21,10 @@ class Tree(TensorNetwork):
     """
     Class for Tree States. These states form a tree structure where the ``data``
     nodes are in the base. All nodes have a sequence of input edges and an
-    output edge. Thus the contraction of the Tree returns a vector.
+    output edge. Thus the contraction of the Tree returns a `vector` node.
+    
+    All nodes in the network are in ``self.layers``, a list containing the lists
+    of nodes in each layer (starting from the bottom).
 
     Parameters
     ----------
@@ -29,31 +32,32 @@ class Tree(TensorNetwork):
         Number of sites in each layer of the tree. All nodes in the same layer
         have the same shape. Number of nodes in each layer times the number of
         input edges these have should match the number ot output edges in the
-        previous layer.
+        previous layer. The last element of ``sites_per_layer`` should be always
+        1, which corresponds to the output node.
     bond_dim : list[list[int]] or tuple[tuple[int]]
         Bond dimensions of nodes in each layer. Each sequence corresponds to the
-        shape of the nodes in each layer (some input edges and an output edge in
-        the last position).
-    num_batches : int
-        Number of batch edges of input data nodes. Usually ``num_batches = 1``
+        shape of the nodes in each layer, starting from the bottom (some input
+        edges and an output edge in the last position).
+    n_batches : int
+        Number of batch edges of input ``data`` nodes. Usually ``n_batches = 1``
         (where the batch edge is used for the data batched) but it could also
-        be ``num_batches = 2`` (one edge for data batched, other edge for image
+        be ``n_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
     
     Examples
     --------
     >>> tree = tk.models.Tree(sites_per_layer=[4, 2, 1],
-    ...                bond_dim=[[3, 3, 4], [4, 4, 2], [2, 2, 2]])
+    ...                       bond_dim=[[3, 3, 4], [4, 4, 2], [2, 2, 2]])
     >>> data = torch.ones(20, 8, 3) # batch_size x n_features x feature_size
     >>> result = tree(data)
-    >>> print(result.shape)
+    >>> result.shape
     torch.Size([20, 2])
     """
 
     def __init__(self,
                  sites_per_layer: Sequence[int],
                  bond_dim: Sequence[Sequence[int]],
-                 num_batches: int = 1) -> None:
+                 n_batches: int = 1) -> None:
 
         super().__init__(name='tree')
 
@@ -103,10 +107,14 @@ class Tree(TensorNetwork):
             raise ValueError('`sites_per_layer` and `bond_dim` should have the '
                              'same number of elements')
 
+        # n_batches
+        if not isinstance(n_batches, int):
+            raise TypeError('`n_batches should be int type')
+        self._n_batches = n_batches
+
+        # Create Tensor Network
         self._make_nodes()
         self.initialize()
-        
-        self._num_batches = num_batches
 
     @property
     def sites_per_layer(self) -> Sequence[int]:
@@ -114,13 +122,25 @@ class Tree(TensorNetwork):
         return self._sites_per_layer
 
     @property
-    def bond_dim(self) -> Sequence[Sequence[int]]:
+    def bond_dim(self) -> Union[Sequence[Sequence[int]],
+                                Sequence[Sequence[Sequence[int]]]]:
         """
         Returns bond dimensions of nodes in each layer. Each sequence
         corresponds to the shape of the nodes in each layer (some input edges
         and an output edge in the last position).
+        
+        It can have two forms:
+        
+        1) ``[shape_all_nodes_layer_1, ..., shape_all_nodes_layer_N]``
+        2) ``[[shape_node_1_layer_1, ..., shape_node_i1_layer_1], ...,
+           [shape_node_1_layer_N, ..., shape_node_iN_layer_N]]``
         """
         return self._bond_dim
+    
+    @property
+    def n_batches(self) -> int:
+        """Returns number of batch edges of the ``data`` nodes."""
+        return self._n_batches
 
     def _make_nodes(self) -> None:
         """Creates all the nodes of the Tree."""
@@ -130,12 +150,12 @@ class Tree(TensorNetwork):
 
         self.layers = []
         
-        for i, n_sites in enumerate(self._sites_per_layer):
+        for i, n_sites in enumerate(self.sites_per_layer):
             layer_lst = []
             for j in range(n_sites):
-                node = ParamNode(shape=(*self._bond_dim[i],),
+                node = ParamNode(shape=(*self.bond_dim[i],),
                                  axes_names=(*(['input'] * (
-                                     len(self._bond_dim[i]) - 1)),
+                                     len(self.bond_dim[i]) - 1)),
                                              'output'),
                                  name=f'tree_node_({i},{j})',
                                  network=self)
@@ -164,7 +184,7 @@ class Tree(TensorNetwork):
         """Initializes all the nodes."""
         for layer in self.layers:
             for node in layer:
-                tensor = torch.randn(node._shape) * std
+                tensor = torch.randn(node.shape) * std
                 tensor[(0,) * node.rank] = 1.
                 node.tensor = tensor
 
@@ -175,10 +195,10 @@ class Tree(TensorNetwork):
         """
         input_edges = []
         for node in self.layers[0]:
-            input_edges += node._edges[:-1]
+            input_edges += node.edges[:-1]
             
         super().set_data_nodes(input_edges=input_edges,
-                               num_batch_edges=self._num_batches)
+                               num_batch_edges=self.n_batches)
 
     def _input_contraction(self,
                            layer1: List[Node],
@@ -274,7 +294,7 @@ class Tree(TensorNetwork):
                 elif mode == 'qr':
                     result1, node = layer1[i]['output'].qr_()
                 else:
-                    raise ValueError('`mode` can only be \'svd\', \'svdr\' or \'qr\'')
+                    raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
                 
                 new_layer1.append(result1.parameterize())
                 i += 1
@@ -312,6 +332,14 @@ class Tree(TensorNetwork):
                 cum\_percentage
         cutoff : float, optional
             Quantity that lower bounds singular values in order to be kept.
+            
+        Examples
+        --------
+        >>> tree = tk.models.Tree(sites_per_layer=[4, 2, 1],
+        ...                       bond_dim=[[3, 3, 4], [4, 4, 2], [2, 2, 2]])
+        >>> tree.canonicalize(rank=2)
+        >>> tree.bond_dim
+        [[[3, 3, 2], [3, 3, 2], [3, 3, 2], [3, 3, 2]], [[2, 2, 2], [2, 2, 2]], [[2, 2, 2]]]
         """
         if len(self.layers) > 1:
             
@@ -329,6 +357,14 @@ class Tree(TensorNetwork):
                     cutoff=cutoff)
                 self.layers[i] = layer1
                 self.layers[i + 1] = layer2
+            
+            bond_dim = []
+            for layer in self.layers:
+                layer_bond_dim = []
+                for node in layer:
+                    layer_bond_dim.append(list(node.shape))
+                bond_dim.append(layer_bond_dim)
+            self._bond_dim = bond_dim
                 
             self.auto_stack = prev_auto_stack
 
@@ -338,6 +374,9 @@ class UTree(TensorNetwork):
     Class for Uniform Tree States where all nodes have the same shape. It is
     the uniform version of :class:`Tree`, that is, all nodes share the same
     tensor.
+    
+    All nodes in the network are in ``self.layers``, a list containing the lists
+    of nodes in each layer (starting from the bottom).
 
     Parameters
     ----------
@@ -345,22 +384,36 @@ class UTree(TensorNetwork):
         Number of sites in each layer of the tree. All nodes have the same
         shape. Number of nodes in each layer times the number of input edges
         these have should match the number ot output edges in the previous
-        layer.
+        layer. The last element of ``sites_per_layer`` should be always 1,
+        which corresponds to the output node.
     bond_dim : list[int] or tuple[int]
         Bond dimensions of nodes in each layer. Since all nodes have the same
         shape, it is enough to pass a single sequence of dimensions (some input
         edges and an output edge in the last position).
-    num_batches : int
-        Number of batch edges of input data nodes. Usually ``num_batches = 1``
+    n_batches : int
+        Number of batch edges of input ``data`` nodes. Usually ``n_batches = 1``
         (where the batch edge is used for the data batched) but it could also
-        be ``num_batches = 2`` (one edge for data batched, other edge for image
+        be ``n_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
+        
+    Examples
+    --------
+    >>> tree = tk.models.UTree(sites_per_layer=[4, 2, 1],
+    ...                        bond_dim=[3, 3, 3])
+    >>> for layer in tree.layers:
+    ...     for node in layer:
+    ...         assert node.tensor_address() == 'virtual_uniform'
+    ...
+    >>> data = torch.ones(20, 8, 3) # batch_size x n_features x feature_size
+    >>> result = tree(data)
+    >>> result.shape
+    torch.Size([20, 3])
     """
 
     def __init__(self,
                  sites_per_layer: Sequence[int],
                  bond_dim: Sequence[int],
-                 num_batches: int = 1) -> None:
+                 n_batches: int = 1) -> None:
 
         super().__init__(name='tree')
 
@@ -396,10 +449,14 @@ class UTree(TensorNetwork):
             raise TypeError('`bond_dim` should be a sequence of ints')
         self._bond_dim = list(bond_dim)
 
+        # n_batches
+        if not isinstance(n_batches, int):
+            raise TypeError('`n_batches should be int type')
+        self._n_batches = n_batches
+
+        # Create Tensor Network
         self._make_nodes()
         self.initialize()
-        
-        self._num_batches = num_batches
 
     @property
     def sites_per_layer(self) -> Sequence[int]:
@@ -413,6 +470,11 @@ class UTree(TensorNetwork):
         and an output edge in the last position).
         """
         return self._bond_dim
+    
+    @property
+    def n_batches(self) -> int:
+        """Returns number of batch edges of the ``data`` nodes."""
+        return self._n_batches
 
     def _make_nodes(self) -> None:
         """Creates all the nodes of the Tree."""
@@ -425,8 +487,8 @@ class UTree(TensorNetwork):
         for i, n_sites in enumerate(self._sites_per_layer):
             layer_lst = []
             for j in range(n_sites):
-                node = ParamNode(shape=(*self._bond_dim,),
-                                 axes_names=(*(['input'] * (len(self._bond_dim) - 1)),
+                node = ParamNode(shape=(*self.bond_dim,),
+                                 axes_names=(*(['input'] * (len(self.bond_dim) - 1)),
                                              'output'),
                                  name=f'tree_node_({i},{j})',
                                  network=self)
@@ -452,9 +514,9 @@ class UTree(TensorNetwork):
             self.layers.append(layer_lst)
             
         # Virtual node
-        uniform_memory = node = ParamNode(shape=(*self._bond_dim,),
+        uniform_memory = node = ParamNode(shape=(*self.bond_dim,),
                                           axes_names=(*(['input'] * (
-                                              len(self._bond_dim) - 1)),
+                                              len(self.bond_dim) - 1)),
                                                       'output'),
                                           name='virtual_uniform',
                                           network=self,
@@ -482,7 +544,7 @@ class UTree(TensorNetwork):
             input_edges += node._edges[:-1]
             
         super().set_data_nodes(input_edges=input_edges,
-                               num_batch_edges=self._num_batches)
+                               num_batch_edges=self.n_batches)
 
     def _input_contraction(self,
                            layer1: List[Node],
@@ -553,7 +615,7 @@ class ConvTree(Tree):
     Class for Tree States where the input data is a batch of images. It is the
     convolutional version of :class:`Tree`.
     
-    Input data as well as initialization parameters are described in `nn.Conv2d
+    Input data as well as initialization parameters are described in `torch.nn.Conv2d
     <https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html>`_.
 
     Parameters
@@ -568,20 +630,20 @@ class ConvTree(Tree):
         shape of the nodes in each layer (some input edges and an output edge in
         the last position).
     kernel_size : int, list[int] or tuple[int]
-        Kernel size used in `nn.Unfold
+        Kernel size used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
     stride : int
-        Stride used in `nn.Unfold
+        Stride used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
     padding : int
-        Padding used in `nn.Unfold
+        Padding used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
     dilation : int
-        Dilation used in `nn.Unfold
+        Dilation used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
@@ -589,8 +651,8 @@ class ConvTree(Tree):
     Examples
     --------
     >>> conv_tree = tk.models.ConvTree(sites_per_layer=[2, 1],
-    ...                         bond_dim=[[2, 2, 3], [3, 3, 5]],
-    ...                         kernel_size=2)
+    ...                                bond_dim=[[2, 2, 3], [3, 3, 5]],
+    ...                                kernel_size=2)
     >>> data = torch.ones(20, 2, 2, 2) # batch_size x in_channels x height x width
     >>> result = conv_tree(data)
     >>> print(result.shape)
@@ -632,7 +694,7 @@ class ConvTree(Tree):
         
         super().__init__(sites_per_layer=sites_per_layer,
                          bond_dim=bond_dim,
-                         num_batches=2)
+                         n_batches=2)
         self._in_channels = bond_dim[0][0]
         
         self.unfold = nn.Unfold(kernel_size=kernel_size,
@@ -658,7 +720,7 @@ class ConvTree(Tree):
     @property
     def stride(self) -> Tuple[int, int]:
         """
-        Returns stride used in `nn.Unfold
+        Returns stride used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._stride
@@ -666,7 +728,7 @@ class ConvTree(Tree):
     @property
     def padding(self) -> Tuple[int, int]:
         """
-        Returns padding used in `nn.Unfold
+        Returns padding used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._padding
@@ -674,15 +736,15 @@ class ConvTree(Tree):
     @property
     def dilation(self) -> Tuple[int, int]:
         """
-        Returns dilation used in `nn.Unfold
+        Returns dilation used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._dilation
     
     def forward(self, image, *args, **kwargs):
         r"""
-        Overrides ``nn.Module``'s forward to compute a convolution on the input
-        image.
+        Overrides ``torch.nn.Module``'s forward to compute a convolution on the
+        input image.
         
         Parameters
         ----------
@@ -706,8 +768,8 @@ class ConvTree(Tree):
         patches = patches.view(*patches.shape[:-1], self.in_channels, -1)
         # batch_size x nb_windows x in_channels x nb_pixels
         
-        patches = patches.permute(3, 0, 1, 2)
-        # nb_pixels x batch_size x nb_windows x in_channels
+        patches = patches.transpose(2, 3)
+        # batch_size x nb_windows x nb_pixels x in_channels
         
         result = super().forward(patches, *args, **kwargs)
         # batch_size x nb_windows x out_channels
@@ -734,7 +796,7 @@ class ConvUTree(UTree):
     Class for Uniform Tree States where the input data is a batch of images. It
     is the convolutional version of :class:`UTree`.
     
-    Input data as well as initialization parameters are described in `nn.Conv2d
+    Input data as well as initialization parameters are described in `torch.nn.Conv2d
     <https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html>`_.
 
     Parameters
@@ -749,23 +811,37 @@ class ConvUTree(UTree):
         shape, it is enough to pass a single sequence of dimensions (some input
         edges and an output edge in the last position).
     kernel_size : int, list[int] or tuple[int]
-        Kernel size used in `nn.Unfold
+        Kernel size used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
     stride : int
-        Stride used in `nn.Unfold
+        Stride used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
     padding : int
-        Padding used in `nn.Unfold
+        Padding used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
     dilation : int
-        Dilation used in `nn.Unfold
+        Dilation used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
+        
+    Examples
+    --------
+    >>> conv_tree = tk.models.ConvUTree(sites_per_layer=[2, 1],
+    ...                                 bond_dim=[2, 2, 2],
+    ...                                 kernel_size=2)
+    >>> for layer in conv_tree.layers:
+    ...     for node in layer:
+    ...         assert node.tensor_address() == 'virtual_uniform'
+    ...
+    >>> data = torch.ones(20, 2, 2, 2) # batch_size x in_channels x height x width
+    >>> result = conv_tree(data)
+    >>> print(result.shape)
+    torch.Size([20, 2, 1, 1])
     """
     
     def __init__(self,
@@ -803,7 +879,7 @@ class ConvUTree(UTree):
         
         super().__init__(sites_per_layer=sites_per_layer,
                          bond_dim=bond_dim,
-                         num_batches=2)
+                         n_batches=2)
         self._in_channels = bond_dim[0]
         
         self.unfold = nn.Unfold(kernel_size=kernel_size,
@@ -829,7 +905,7 @@ class ConvUTree(UTree):
     @property
     def stride(self) -> Tuple[int, int]:
         """
-        Returns stride used in `nn.Unfold
+        Returns stride used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._stride
@@ -837,7 +913,7 @@ class ConvUTree(UTree):
     @property
     def padding(self) -> Tuple[int, int]:
         """
-        Returns padding used in `nn.Unfold
+        Returns padding used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._padding
@@ -845,15 +921,15 @@ class ConvUTree(UTree):
     @property
     def dilation(self) -> Tuple[int, int]:
         """
-        Returns dilation used in `nn.Unfold
+        Returns dilation used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._dilation
     
     def forward(self, image, *args, **kwargs):
         r"""
-        Overrides ``nn.Module``'s forward to compute a convolution on the input
-        image.
+        Overrides ``torch.nn.Module``'s forward to compute a convolution on the
+        input image.
         
         Parameters
         ----------
@@ -877,8 +953,8 @@ class ConvUTree(UTree):
         patches = patches.view(*patches.shape[:-1], self.in_channels, -1)
         # batch_size x nb_windows x in_channels x nb_pixels
         
-        patches = patches.permute(3, 0, 1, 2)
-        # nb_pixels x batch_size x nb_windows x in_channels
+        patches = patches.transpose(2, 3)
+        # batch_size x nb_windows x nb_pixels x in_channels
         
         result = super().forward(patches, *args, **kwargs)
         # batch_size x nb_windows x out_channels

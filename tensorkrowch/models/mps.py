@@ -49,7 +49,7 @@ class MPS(TensorNetwork):
         to ``n_features`` (if ``boundary = "pbc"``) or ``n_features - 1`` (if
         ``boundary = "obc"``). The i-th bond dimension is always the dimension
         of the right edge of the i-th node.
-    boundary : {'obc', 'pbc'}
+    boundary : {"obc", "pbc"}
         String indicating whether periodic or open boundary conditions should
         be used.
     n_batches : int
@@ -966,7 +966,7 @@ class ConvMPS(MPS):
     the input data is a batch of images. It is the convolutional version of
     :class:`MPS`.
     
-    Input data as well as initialization parameters are described in `nn.Conv2d
+    Input data as well as initialization parameters are described in `torch.nn.Conv2d
     <https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html>`_.
 
     Parameters
@@ -980,24 +980,24 @@ class ConvMPS(MPS):
         ``boundary = "obc"``). The i-th bond dimension is always the dimension
         of the right edge of the i-th node.
     kernel_size : int, list[int] or tuple[int]
-        Kernel size used in `nn.Unfold
+        Kernel size used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
     stride : int
-        Stride used in `nn.Unfold
+        Stride used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
     padding : int
-        Padding used in `nn.Unfold
+        Padding used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
     dilation : int
-        Dilation used in `nn.Unfold
+        Dilation used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
-    boundary : {'obc', 'pbc'}
+    boundary : {"obc", "pbc"}
         String indicating whether periodic or open boundary conditions should
         be used.
         
@@ -1074,7 +1074,7 @@ class ConvMPS(MPS):
     @property
     def stride(self) -> Tuple[int, int]:
         """
-        Returns stride used in `nn.Unfold
+        Returns stride used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._stride
@@ -1082,7 +1082,7 @@ class ConvMPS(MPS):
     @property
     def padding(self) -> Tuple[int, int]:
         """
-        Returns padding used in `nn.Unfold
+        Returns padding used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._padding
@@ -1090,7 +1090,7 @@ class ConvMPS(MPS):
     @property
     def dilation(self) -> Tuple[int, int]:
         """
-        Returns dilation used in `nn.Unfold
+        Returns dilation used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._dilation
@@ -1172,7 +1172,7 @@ class ConvUMPS(UMPS):
     version of :class:`UMPS`. This class cannot have different bond dimensions
     for each site and boundary conditions are always periodic.
     
-    Input data as well as initialization parameters are described in `nn.Conv2d
+    Input data as well as initialization parameters are described in `torch.nn.Conv2d
     <https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html>`_.
 
     Parameters
@@ -1182,20 +1182,20 @@ class ConvUMPS(UMPS):
     bond_dim : int
         Bond dimension.
     kernel_size : int, list[int] or tuple[int]
-        Kernel size used in `nn.Unfold
+        Kernel size used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
     stride : int
-        Stride used in `nn.Unfold
+        Stride used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
     padding : int
-        Padding used in `nn.Unfold
+        Padding used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
     dilation : int
-        Dilation used in `nn.Unfold
+        Dilation used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         If given as an ``int``, the actual kernel size will be
         ``(kernel_size, kernel_size)``.
@@ -1274,7 +1274,7 @@ class ConvUMPS(UMPS):
     @property
     def stride(self) -> Tuple[int, int]:
         """
-        Returns stride used in `nn.Unfold
+        Returns stride used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._stride
@@ -1282,7 +1282,7 @@ class ConvUMPS(UMPS):
     @property
     def padding(self) -> Tuple[int, int]:
         """
-        Returns padding used in `nn.Unfold
+        Returns padding used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._padding
@@ -1290,7 +1290,7 @@ class ConvUMPS(UMPS):
     @property
     def dilation(self) -> Tuple[int, int]:
         """
-        Returns dilation used in `nn.Unfold
+        Returns dilation used in `torch.nn.Unfold
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._dilation

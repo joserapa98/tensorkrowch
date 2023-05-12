@@ -312,10 +312,10 @@ title="Source repository"
   <h1>Source code for tensorkrowch.models.mps</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">This script contains:</span>
-<span class="sd">    *MPS</span>
-<span class="sd">    *UMPS</span>
-<span class="sd">    *ConvMPS</span>
-<span class="sd">    *ConvUMPS</span>
+<span class="sd">    * MPS</span>
+<span class="sd">    * UMPS</span>
+<span class="sd">    * ConvMPS</span>
+<span class="sd">    * ConvUMPS</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span><span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span>
@@ -336,16 +336,25 @@ title="Source repository"
 <span class="sd">    tensor(s). When contracting the MPS with new input data, the result will</span>
 <span class="sd">    be a just a number.</span>
 <span class="sd">    </span>
-<span class="sd">    If the physical dimensions of all the input nodes are equal, the input data</span>
+<span class="sd">    If the input dimensions of all the input nodes are equal, the input data</span>
 <span class="sd">    tensor can be passed as a single tensor. Otherwise, it would have to be</span>
 <span class="sd">    passed as a list of tensors with different sizes.</span>
+<span class="sd">    </span>
+<span class="sd">    An ``MPS`` is formed by the following nodes:</span>
+<span class="sd">    </span>
+<span class="sd">    * ``left_node``, ``right_node``: `Vector` nodes with axes ``(&quot;input&quot;, &quot;right&quot;)``</span>
+<span class="sd">      and ``(&quot;left&quot;, &quot;input&quot;)``, respectively. These are the nodes at the</span>
+<span class="sd">      extremes of the ``MPS``. If ``boundary`` is ``&quot;pbc&quot;&quot;``, both are ``None``.</span>
+<span class="sd">      </span>
+<span class="sd">    * ``mats_env``: Environment of `matrix` nodes that. These nodes have axes</span>
+<span class="sd">      ``(&quot;left&quot;, &quot;input&quot;, &quot;right&quot;)``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    n_features : int</span>
-<span class="sd">        Number of sites.</span>
-<span class="sd">    d_phys : int, list[int] or tuple[int]</span>
-<span class="sd">        Physical dimension(s). If given as a sequence, its length should be</span>
+<span class="sd">        Number of input nodes.</span>
+<span class="sd">    in_dim : int, list[int] or tuple[int]</span>
+<span class="sd">        Input dimension(s). If given as a sequence, its length should be</span>
 <span class="sd">        equal to ``n_features``.</span>
 <span class="sd">    bond_dim : int, list[int] or tuple[int]</span>
 <span class="sd">        Bond dimension(s). If given as a sequence, its length should be equal</span>
@@ -355,70 +364,74 @@ title="Source repository"
 <span class="sd">    boundary : {&#39;obc&#39;, &#39;pbc&#39;}</span>
 <span class="sd">        String indicating whether periodic or open boundary conditions should</span>
 <span class="sd">        be used.</span>
-<span class="sd">    num_batches : int</span>
-<span class="sd">        Number of batch edges of input data nodes. Usually ``num_batches = 1``</span>
+<span class="sd">    n_batches : int</span>
+<span class="sd">        Number of batch edges of input ``data`` nodes. Usually ``n_batches = 1``</span>
 <span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
-<span class="sd">        be ``num_batches = 2`` (one edge for data batched, other edge for image</span>
+<span class="sd">        be ``n_batches = 2`` (one edge for data batched, other edge for image</span>
 <span class="sd">        patches in convolutional layers).</span>
 <span class="sd">        </span>
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
 <span class="sd">    ``MPS`` with same physical dimensions:</span>
 <span class="sd">    </span>
-<span class="sd">    &gt;&gt;&gt; mps = tk.MPS(n_features=5,</span>
-<span class="sd">    ...              d_phys=2,</span>
-<span class="sd">    ...              bond_dim=5)</span>
+<span class="sd">    &gt;&gt;&gt; mps = tk.models.MPS(n_features=5,</span>
+<span class="sd">    ...                     in_dim=2,</span>
+<span class="sd">    ...                     bond_dim=5)</span>
 <span class="sd">    &gt;&gt;&gt; data = torch.ones(20, 5, 2) # batch_size x n_features x feature_size</span>
 <span class="sd">    &gt;&gt;&gt; result = mps(data)</span>
-<span class="sd">    &gt;&gt;&gt; print(result.shape)</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
 <span class="sd">    torch.Size([20])</span>
 <span class="sd">    </span>
 <span class="sd">    ``MPS`` with different physical dimensions:</span>
 <span class="sd">    </span>
-<span class="sd">    &gt;&gt;&gt; mps = tk.MPS(n_features=5,</span>
-<span class="sd">    ...              d_phys=list(range(2, 7)),</span>
-<span class="sd">    ...              bond_dim=5)</span>
+<span class="sd">    &gt;&gt;&gt; mps = tk.models.MPS(n_features=5,</span>
+<span class="sd">    ...                     in_dim=list(range(2, 7)),</span>
+<span class="sd">    ...                     bond_dim=5)</span>
 <span class="sd">    &gt;&gt;&gt; data = [torch.ones(20, i)</span>
 <span class="sd">    ...         for i in range(2, 7)] # n_features * [batch_size x feature_size]</span>
 <span class="sd">    &gt;&gt;&gt; result = mps(data)</span>
-<span class="sd">    &gt;&gt;&gt; print(result.shape)</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
 <span class="sd">    torch.Size([20])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">n_features</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-                 <span class="n">d_phys</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+                 <span class="n">in_dim</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
                  <span class="n">bond_dim</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
                  <span class="n">boundary</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span><span class="p">,</span>
-                 <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+                 <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;mps&#39;</span><span class="p">)</span>
-
+        
         <span class="c1"># boundary</span>
+        <span class="k">if</span> <span class="n">boundary</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;obc&#39;</span><span class="p">,</span> <span class="s1">&#39;pbc&#39;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`boundary` should be one of &quot;obc&quot; or &quot;pbc&quot;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">=</span> <span class="n">boundary</span>
+
+        <span class="c1"># n_features</span>
         <span class="k">if</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">n_features</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;If `boundary` is &quot;obc&quot;, at least &#39;</span>
-                                 <span class="s1">&#39;there has to be 2 sites&#39;</span><span class="p">)</span>
+                                 <span class="s1">&#39;there has to be 2 nodes&#39;</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">n_features</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;If `boundary` is &quot;pbc&quot;, at least &#39;</span>
-                                 <span class="s1">&#39;there has to be one site&#39;</span><span class="p">)</span>
+                                 <span class="s1">&#39;there has to be one node&#39;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`boundary` should be one of &quot;obc&quot; or &quot;pbc&quot;&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">=</span> <span class="n">n_features</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">=</span> <span class="n">boundary</span>
 
-        <span class="c1"># d_phys</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">d_phys</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_features</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;If `d_phys` is given as a sequence of int, &#39;</span>
+        <span class="c1"># in_dim</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">in_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_features</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;If `in_dim` is given as a sequence of int, &#39;</span>
                                  <span class="s1">&#39;its length should be equal to `n_features`&#39;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_d_phys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">d_phys</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_d_phys</span> <span class="o">=</span> <span class="p">[</span><span class="n">d_phys</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_features</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">in_dim</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">in_dim</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_features</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_phys` should be `int` type or a list/tuple &#39;</span>
-                            <span class="s1">&#39;of ints&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`in_dim` should be int, tuple[int] or list[int] &#39;</span>
+                            <span class="s1">&#39;type&#39;</span><span class="p">)</span>
 
         <span class="c1"># bond_dim</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
@@ -439,13 +452,17 @@ title="Source repository"
             <span class="k">elif</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">bond_dim</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_features</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` should be `int` type or a list/tuple &#39;</span>
-                            <span class="s1">&#39;of ints&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`in_dim` should be int, tuple[int] or list[int] &#39;</span>
+                            <span class="s1">&#39;type&#39;</span><span class="p">)</span>
 
+        <span class="c1"># n_batches</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_batches</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`n_batches should be int type&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span> <span class="o">=</span> <span class="n">n_batches</span>
+
+        <span class="c1"># Create Tensor Network</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
-        
-        <span class="bp">self</span><span class="o">.</span><span class="n">_num_batches</span> <span class="o">=</span> <span class="n">num_batches</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_features</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
@@ -458,18 +475,23 @@ title="Source repository"
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">d_phys</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">in_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns physical dimension.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_phys</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">n_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of batch edges of the ``data`` nodes.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the MPS.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">leaf_nodes</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create MPS nodes if the MPS already has &#39;</span>
                              <span class="s1">&#39;nodes&#39;</span><span class="p">)</span>
 
@@ -478,14 +500,14 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span> <span class="o">=</span> <span class="p">[]</span>
         
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d_phys</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
                                        <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
                                        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;left_node&#39;</span><span class="p">,</span>
                                        <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
             
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
                 <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
-                                        <span class="bp">self</span><span class="o">.</span><span class="n">d_phys</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span>
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span>
                                         <span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]),</span>
                                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;mats_env_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
@@ -498,7 +520,8 @@ title="Source repository"
                     <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                     
                 
-            <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">d_phys</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                                               <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span>
                                         <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">),</span>
                                         <span class="n">name</span><span class="o">=</span><span class="s1">&#39;right_node&#39;</span><span class="p">,</span>
                                         <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
@@ -511,7 +534,7 @@ title="Source repository"
         <span class="k">else</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">):</span>
                 <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span>
-                                        <span class="bp">self</span><span class="o">.</span><span class="n">d_phys</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
                                         <span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span>
                                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;mats_env_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
@@ -531,27 +554,17 @@ title="Source repository"
         <span class="c1"># Left node</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-                <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">std</span>
-                <span class="n">aux</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
-                <span class="n">tensor</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">aux</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                                <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
-                <span class="n">tensor</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">aux</span>
+            <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">std</span>
+            <span class="n">aux</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+            <span class="n">tensor</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">aux</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">tensor</span>
         
         <span class="c1"># Right node</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-                <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">std</span>
-                <span class="n">aux</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
-                <span class="n">tensor</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">aux</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                                <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
-                <span class="n">tensor</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">aux</span>
+            <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">std</span>
+            <span class="n">aux</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+            <span class="n">tensor</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">aux</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">tensor</span>
         
         <span class="c1"># Mats env</span>
@@ -563,8 +576,8 @@ title="Source repository"
 
 <div class="viewcode-block" id="MPS.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Creates data nodes and connects each of them to the physical edge of</span>
-<span class="sd">        an input node.</span>
+<span class="sd">        Creates ``data`` nodes and connects each of them to the physical edge of</span>
+<span class="sd">        each input node.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">input_edges</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -574,7 +587,7 @@ title="Source repository"
             <span class="n">input_edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
             
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">set_data_nodes</span><span class="p">(</span><span class="n">input_edges</span><span class="o">=</span><span class="n">input_edges</span><span class="p">,</span>
-                               <span class="n">num_batch_edges</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_batches</span><span class="p">)</span>
+                               <span class="n">num_batch_edges</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_batches</span><span class="p">)</span>
         
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">mats_env_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">node</span><span class="p">:</span> <span class="n">node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">),</span>
@@ -675,13 +688,13 @@ title="Source repository"
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        inline_input : bool</span>
-<span class="sd">            Boolean indicating whether input data nodes should be contracted</span>
-<span class="sd">            inline (one contraction at a time) or in a single stacked</span>
-<span class="sd">            contraction.</span>
+<span class="sd">            Boolean indicating whether input ``data`` nodes should be contracted</span>
+<span class="sd">            with the ``MPS`` nodes inline (one contraction at a time) or in a</span>
+<span class="sd">            single stacked contraction.</span>
 <span class="sd">        inline_mats : bool</span>
 <span class="sd">            Boolean indicating whether the sequence of matrices (resultant</span>
-<span class="sd">            after contracting the input data nodes) should be contracted inline</span>
-<span class="sd">            or as a sequence of pairwise stacked contrations.</span>
+<span class="sd">            after contracting the input ``data`` nodes) should be contracted</span>
+<span class="sd">            inline or as a sequence of pairwise stacked contrations.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -728,6 +741,15 @@ title="Source repository"
 <span class="sd">                cum\_percentage</span>
 <span class="sd">        cutoff : float, optional</span>
 <span class="sd">            Quantity that lower bounds singular values in order to be kept.</span>
+<span class="sd">            </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; mps = tk.models.MPS(n_features=4,</span>
+<span class="sd">        ...                     in_dim=2,</span>
+<span class="sd">        ...                     bond_dim=5)</span>
+<span class="sd">        &gt;&gt;&gt; mps.canonicalize(rank=3)</span>
+<span class="sd">        &gt;&gt;&gt; mps.bond_dim</span>
+<span class="sd">        [2, 3, 2]</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">prev_auto_stack</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="kc">False</span>
@@ -820,20 +842,20 @@ title="Source repository"
                 <span class="bp">self</span><span class="o">.</span><span class="n">delete_node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">))</span>
         
         <span class="n">line_mat_nodes</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">d_phys_lst</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">in_dim_lst</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">proj_mat_node</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)):</span>
-            <span class="n">d_phys_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nodes</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
-            <span class="k">if</span> <span class="n">bond_dim</span> <span class="o">&lt;=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">d_phys_lst</span><span class="p">)</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">():</span>
-                <span class="n">proj_mat_node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="n">d_phys_lst</span><span class="p">,</span><span class="n">bond_dim</span><span class="p">),</span>
-                                     <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="p">([</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">d_phys_lst</span><span class="p">)),</span>
+            <span class="n">in_dim_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nodes</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+            <span class="k">if</span> <span class="n">bond_dim</span> <span class="o">&lt;=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">in_dim_lst</span><span class="p">)</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">():</span>
+                <span class="n">proj_mat_node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="n">in_dim_lst</span><span class="p">,</span><span class="n">bond_dim</span><span class="p">),</span>
+                                     <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="p">([</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">in_dim_lst</span><span class="p">)),</span>
                                                  <span class="s1">&#39;bond_dim&#39;</span><span class="p">),</span>
                                      <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;proj_mat_node_</span><span class="si">{</span><span class="n">side</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
                                      <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
                 
                 <span class="n">proj_mat_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span>
-                    <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">d_phys_lst</span><span class="p">)</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span><span class="o">.</span><span class="n">int</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span>
-                    <span class="n">bond_dim</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">d_phys_lst</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                    <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">in_dim_lst</span><span class="p">)</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span><span class="o">.</span><span class="n">int</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span>
+                    <span class="n">bond_dim</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">in_dim_lst</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
                     <span class="n">nodes</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">proj_mat_node</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
                     
@@ -844,16 +866,16 @@ title="Source repository"
                 <span class="k">break</span>
             
         <span class="k">if</span> <span class="n">proj_mat_node</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">bond_dim</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">d_phys_lst</span><span class="p">)</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span><span class="o">.</span><span class="n">int</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
-            <span class="n">proj_mat_node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="n">d_phys_lst</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">),</span>
-                                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="p">([</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">d_phys_lst</span><span class="p">)),</span>
+            <span class="n">bond_dim</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">in_dim_lst</span><span class="p">)</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span><span class="o">.</span><span class="n">int</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+            <span class="n">proj_mat_node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="n">in_dim_lst</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">),</span>
+                                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="p">([</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">in_dim_lst</span><span class="p">)),</span>
                                              <span class="s1">&#39;bond_dim&#39;</span><span class="p">),</span>
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;proj_mat_node_</span><span class="si">{</span><span class="n">side</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
             
             <span class="n">proj_mat_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span>
-                <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">d_phys_lst</span><span class="p">)</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span><span class="o">.</span><span class="n">int</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span>
-                <span class="n">bond_dim</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">d_phys_lst</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">in_dim_lst</span><span class="p">)</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span><span class="o">.</span><span class="n">int</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span>
+                <span class="n">bond_dim</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">in_dim_lst</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
                 <span class="n">nodes</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">proj_mat_node</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
                 
@@ -864,13 +886,13 @@ title="Source repository"
             
         <span class="n">k</span> <span class="o">=</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">1</span>
         <span class="k">while</span> <span class="n">k</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">):</span>
-            <span class="n">d_phys</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
-            <span class="n">proj_vec_node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,),</span>
+            <span class="n">in_dim</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+            <span class="n">proj_vec_node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,),</span>
                                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,),</span>
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;proj_vec_node_</span><span class="si">{</span><span class="n">side</span><span class="si">}</span><span class="s1">_(</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
             
-            <span class="n">proj_vec_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">proj_vec_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
             <span class="n">nodes</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">proj_vec_node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
             <span class="n">line_mat_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">proj_vec_node</span> <span class="o">@</span> <span class="n">nodes</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
             
@@ -902,12 +924,12 @@ title="Source repository"
             
             <span class="n">prod_phys_left</span> <span class="o">=</span> <span class="mi">1</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
-                <span class="n">prod_phys_left</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_phys</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">prod_phys_left</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
             <span class="n">bond_dim</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">,</span> <span class="n">prod_phys_left</span><span class="p">)</span>
             
             <span class="n">prod_phys_right</span> <span class="o">=</span> <span class="mi">1</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">):</span>
-                <span class="n">prod_phys_right</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_phys</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">prod_phys_right</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
             <span class="n">bond_dim</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">,</span> <span class="n">prod_phys_right</span><span class="p">)</span>
             
             <span class="k">if</span> <span class="n">bond_dim</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="p">[</span><span class="n">idx</span><span class="p">]:</span>
@@ -982,54 +1004,62 @@ title="Source repository"
 <span class="sd">    Class for Uniform (translationally invariant) Matrix Product States where</span>
 <span class="sd">    all nodes are input nodes. It is the uniform version of :class:`MPS`, that</span>
 <span class="sd">    is, all nodes share the same tensor. Thus this class cannot have different</span>
-<span class="sd">    physical or bond dimensions for each site, and boundary conditions are</span>
-<span class="sd">    always periodic.</span>
+<span class="sd">    input or bond dimensions for each node, and boundary conditions are</span>
+<span class="sd">    always periodic (``&quot;pbc&quot;``).</span>
+<span class="sd">    </span>
+<span class="sd">    A ``UMPS`` is formed by the following nodes:</span>
+<span class="sd">      </span>
+<span class="sd">    * ``mats_env``: Environment of `matrix` nodes that. These nodes have axes</span>
+<span class="sd">      ``(&quot;left&quot;, &quot;input&quot;, &quot;right&quot;)``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    n_features : int</span>
-<span class="sd">        Number of sites.</span>
-<span class="sd">    d_phys : int</span>
-<span class="sd">        Physical dimension.</span>
+<span class="sd">        Number of input nodes.</span>
+<span class="sd">    in_dim : int</span>
+<span class="sd">        Input dimension. Equivalent to the physical dimension.</span>
 <span class="sd">    bond_dim : int</span>
 <span class="sd">        Bond dimension.</span>
-<span class="sd">    num_batches : int</span>
-<span class="sd">        Number of batch edges of input data nodes. Usually ``num_batches = 1``</span>
+<span class="sd">    n_batches : int</span>
+<span class="sd">        Number of batch edges of input ``data`` nodes. Usually ``n_batches = 1``</span>
 <span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
-<span class="sd">        be ``num_batches = 2`` (one edge for data batched, other edge for image</span>
+<span class="sd">        be ``n_batches = 2`` (one edge for data batched, other edge for image</span>
 <span class="sd">        patches in convolutional layers).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">n_features</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-                 <span class="n">d_phys</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">in_dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                  <span class="n">bond_dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-                 <span class="n">num_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+                 <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;mps&#39;</span><span class="p">)</span>
 
-        <span class="c1"># boundary</span>
+        <span class="c1"># n_features</span>
         <span class="k">if</span> <span class="n">n_features</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;If `boundary` is &quot;pbc&quot;, at least &#39;</span>
-                             <span class="s1">&#39;there has to be one site&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`n_features` cannot be lower than 1&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">=</span> <span class="n">n_features</span>
 
-        <span class="c1"># d_phys</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d_phys</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_d_phys</span> <span class="o">=</span> <span class="n">d_phys</span>
+        <span class="c1"># in_dim</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span> <span class="o">=</span> <span class="n">in_dim</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`d_phys` should be `int` type&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`in_dim` should be int type&#39;</span><span class="p">)</span>
 
         <span class="c1"># bond_dim</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="n">bond_dim</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` should be `int` type&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` should be int type&#39;</span><span class="p">)</span>
+        
+        <span class="c1"># n_batches</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_batches</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`n_batches should be int type&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span> <span class="o">=</span> <span class="n">n_batches</span>
 
+        <span class="c1"># Create Tensor Network</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
-        
-        <span class="bp">self</span><span class="o">.</span><span class="n">_num_batches</span> <span class="o">=</span> <span class="n">num_batches</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_features</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
@@ -1037,14 +1067,19 @@ title="Source repository"
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">d_phys</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns physical dimension.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_phys</span>
+    <span class="k">def</span> <span class="nf">in_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns input dimension.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">n_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of batch edges of the ``data`` nodes.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the MPS.&quot;&quot;&quot;</span>
@@ -1057,7 +1092,7 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span> <span class="o">=</span> <span class="p">[]</span>
         
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">):</span>
-            <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">d_phys</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span><span class="p">),</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span><span class="p">),</span>
                              <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
                              <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;mats_env_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                              <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
@@ -1072,7 +1107,7 @@ title="Source repository"
                 <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">periodic_edge</span>
                         
         <span class="c1"># Virtual node</span>
-        <span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">d_phys</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span><span class="p">),</span>
+        <span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span><span class="p">),</span>
                                    <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
                                    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_uniform&#39;</span><span class="p">,</span>
                                    <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
@@ -1094,8 +1129,8 @@ title="Source repository"
 
 <div class="viewcode-block" id="UMPS.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UMPS.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Creates data nodes and connects each of them to the physical edge of</span>
-<span class="sd">        an input node.</span>
+<span class="sd">        Creates ``data`` nodes and connects each of them to the physical edge of</span>
+<span class="sd">        each input node.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">input_edges</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -1105,7 +1140,7 @@ title="Source repository"
             <span class="n">input_edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
             
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">set_data_nodes</span><span class="p">(</span><span class="n">input_edges</span><span class="o">=</span><span class="n">input_edges</span><span class="p">,</span>
-                               <span class="n">num_batch_edges</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_batches</span><span class="p">)</span>
+                               <span class="n">num_batch_edges</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span><span class="p">)</span>
         
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">mats_env_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">node</span><span class="p">:</span> <span class="n">node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">),</span>
@@ -1202,13 +1237,13 @@ title="Source repository"
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        inline_input : bool</span>
-<span class="sd">            Boolean indicating whether input data nodes should be contracted</span>
-<span class="sd">            inline (one contraction at a time) or in a single stacked</span>
-<span class="sd">            contraction.</span>
+<span class="sd">            Boolean indicating whether input ``data`` nodes should be contracted</span>
+<span class="sd">            with the ``MPS`` nodes inline (one contraction at a time) or in a</span>
+<span class="sd">            single stacked contraction.</span>
 <span class="sd">        inline_mats : bool</span>
 <span class="sd">            Boolean indicating whether the sequence of matrices (resultant</span>
-<span class="sd">            after contracting the input data nodes) should be contracted inline</span>
-<span class="sd">            or as a sequence of pairwise stacked contrations.</span>
+<span class="sd">            after contracting the input ``data`` nodes) should be contracted</span>
+<span class="sd">            inline or as a sequence of pairwise stacked contrations.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -1236,7 +1271,7 @@ title="Source repository"
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    in_channels : int</span>
-<span class="sd">        Input channels. Same as ``d_phys`` in :class:`MPS`.</span>
+<span class="sd">        Input channels. Same as ``in_dim`` in :class:`MPS`.</span>
 <span class="sd">    bond_dim : int, list[int] or tuple[int]</span>
 <span class="sd">        Bond dimension(s). If given as a sequence, its length should be equal</span>
 <span class="sd">        to :math:`kernel\_size_0 \cdot kernel\_size_1` (if ``boundary = &quot;pbc&quot;``)</span>
@@ -1268,8 +1303,8 @@ title="Source repository"
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; conv_mps = tk.models.ConvMPS(in_channels=2,</span>
-<span class="sd">    ...                       bond_dim=5,</span>
-<span class="sd">    ...                       kernel_size=2)</span>
+<span class="sd">    ...                              bond_dim=5,</span>
+<span class="sd">    ...                              kernel_size=2)</span>
 <span class="sd">    &gt;&gt;&gt; data = torch.ones(20, 2, 2, 2) # batch_size x in_channels x height x width</span>
 <span class="sd">    &gt;&gt;&gt; result = conv_mps(data)</span>
 <span class="sd">    &gt;&gt;&gt; print(result.shape)</span>
@@ -1312,10 +1347,10 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span> <span class="o">=</span> <span class="n">dilation</span>
         
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">n_features</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
-                         <span class="n">d_phys</span><span class="o">=</span><span class="n">in_channels</span><span class="p">,</span>
+                         <span class="n">in_dim</span><span class="o">=</span><span class="n">in_channels</span><span class="p">,</span>
                          <span class="n">bond_dim</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">,</span>
                          <span class="n">boundary</span><span class="o">=</span><span class="n">boundary</span><span class="p">,</span>
-                         <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+                         <span class="n">n_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">unfold</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Unfold</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span>
                                 <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span>
@@ -1324,7 +1359,7 @@ title="Source repository"
         
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``in_channels``. Same as ``d_phys`` in :class:`MPS`.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``in_channels``. Same as ``in_dim`` in :class:`MPS`.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span>
     
     <span class="nd">@property</span>
@@ -1361,8 +1396,8 @@ title="Source repository"
     
 <div class="viewcode-block" id="ConvMPS.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvMPS.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;flat&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Overrides ``nn.Module``&#39;s forward to compute a convolution on the input</span>
-<span class="sd">        image.</span>
+<span class="sd">        Overrides ``torch.nn.Module``&#39;s forward to compute a convolution on the</span>
+<span class="sd">        input image.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1392,20 +1427,20 @@ title="Source repository"
         <span class="n">patches</span> <span class="o">=</span> <span class="n">patches</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">patches</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_channels</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
         <span class="c1"># batch_size x nb_windows x in_channels x nb_pixels</span>
         
-        <span class="n">patches</span> <span class="o">=</span> <span class="n">patches</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
-        <span class="c1"># nb_pixels x batch_size x nb_windows x in_channels</span>
+        <span class="n">patches</span> <span class="o">=</span> <span class="n">patches</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="c1"># batch_size x nb_windows x nb_pixels x in_channels</span>
         
         <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;snake&#39;</span><span class="p">:</span>
-            <span class="n">new_patches</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+            <span class="n">new_patches</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="p">:]</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
                 <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="n">aux</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[(</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
-                                  <span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+                    <span class="n">aux</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                        <span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">:]</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">aux</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[</span>
+                    <span class="n">aux</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[</span><span class="o">...</span><span class="p">,</span>
                         <span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
-                        <span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-                <span class="n">new_patches</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">new_patches</span><span class="p">,</span> <span class="n">aux</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                        <span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">:]</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">new_patches</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">new_patches</span><span class="p">,</span> <span class="n">aux</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
                 
             <span class="n">patches</span> <span class="o">=</span> <span class="n">new_patches</span>
             
@@ -1442,7 +1477,7 @@ title="Source repository"
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    in_channels : int</span>
-<span class="sd">        Input channels. Same as ``d_phys`` in :class:`UMPS`.</span>
+<span class="sd">        Input channels. Same as ``in_dim`` in :class:`UMPS`.</span>
 <span class="sd">    bond_dim : int</span>
 <span class="sd">        Bond dimension.</span>
 <span class="sd">    kernel_size : int, list[int] or tuple[int]</span>
@@ -1500,9 +1535,9 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span> <span class="o">=</span> <span class="n">dilation</span>
         
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">n_features</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
-                         <span class="n">d_phys</span><span class="o">=</span><span class="n">in_channels</span><span class="p">,</span>
+                         <span class="n">in_dim</span><span class="o">=</span><span class="n">in_channels</span><span class="p">,</span>
                          <span class="n">bond_dim</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">,</span>
-                         <span class="n">num_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+                         <span class="n">n_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">unfold</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Unfold</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span>
                                 <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span>
@@ -1511,7 +1546,7 @@ title="Source repository"
         
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``in_channels``. Same as ``d_phys`` in :class:`UMPS`.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``in_channels``. Same as ``in_dim`` in :class:`UMPS`.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span>
     
     <span class="nd">@property</span>
@@ -1548,8 +1583,8 @@ title="Source repository"
     
 <div class="viewcode-block" id="ConvUMPS.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvUMPS.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;flat&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Overrides ``nn.Module``&#39;s forward to compute a convolution on the input</span>
-<span class="sd">        image.</span>
+<span class="sd">        Overrides ``torch.nn.Module``&#39;s forward to compute a convolution on the</span>
+<span class="sd">        input image.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1579,20 +1614,20 @@ title="Source repository"
         <span class="n">patches</span> <span class="o">=</span> <span class="n">patches</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">patches</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_channels</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
         <span class="c1"># batch_size x nb_windows x in_channels x nb_pixels</span>
         
-        <span class="n">patches</span> <span class="o">=</span> <span class="n">patches</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
-        <span class="c1"># nb_pixels x batch_size x nb_windows x in_channels</span>
+        <span class="n">patches</span> <span class="o">=</span> <span class="n">patches</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="c1"># batch_size x nb_windows x nb_pixels x in_channels</span>
         
         <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;snake&#39;</span><span class="p">:</span>
-            <span class="n">new_patches</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+            <span class="n">new_patches</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="p">:]</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
                 <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="n">aux</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[(</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
-                                  <span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+                    <span class="n">aux</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                        <span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">:]</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">aux</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[</span>
+                    <span class="n">aux</span> <span class="o">=</span> <span class="n">patches</span><span class="p">[</span><span class="o">...</span><span class="p">,</span>
                         <span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
-                        <span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-                <span class="n">new_patches</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">new_patches</span><span class="p">,</span> <span class="n">aux</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                        <span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">:]</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">new_patches</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">new_patches</span><span class="p">,</span> <span class="n">aux</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
                 
             <span class="n">patches</span> <span class="o">=</span> <span class="n">new_patches</span>
             

@@ -33,12 +33,26 @@ class MPSLayer(TensorNetwork):
     If the physical dimensions of all the input nodes (``in_dim``) are equal,
     the input data tensor can be passed as a single tensor. Otherwise, it would
     have to be passed as a list of tensors with different sizes.
+    
+    An ``MPSLayer`` is formed by the following nodes:
+    
+    * ``left_node``, ``right_node``: `Vector` nodes with axes ``("input", "right")``
+      and ``("left", "input")``, respectively. These are the nodes at the
+      extremes of the ``MPSLayer``. If ``boundary`` is ``"pbc""``, both are
+      ``None``.
+      
+    * ``left_env``, ``right_env``: Environments of `matrix` nodes that are at
+      the left or right side of the ``output_node``. These nodes have axes
+      ``("left", "input", "right")``.
+      
+    * ``output_node``: Node dedicated to the output. It has axes
+      ``("left", "output", "right")``.
 
     Parameters
     ----------
     n_features : int
         Number of input nodes. The total number of nodes (including the output
-        node) will be ``n_features + 1``
+        node) will be ``n_features + 1``.
     in_dim : int, list[int] or tuple[int]
         Input dimension. Equivalent to the physical dimension. If given as a
         sequence, its length should be equal to ``n_features``, since these are
@@ -59,7 +73,7 @@ class MPSLayer(TensorNetwork):
         String indicating whether periodic or open boundary conditions should
         be used.
     n_batches : int
-        Number of batch edges of input data nodes. Usually ``n_batches = 1``
+        Number of batch edges of input ``data`` nodes. Usually ``n_batches = 1``
         (where the batch edge is used for the data batched) but it could also
         be ``n_batches = 2`` (e.g. one edge for data batched, other edge for
         image patches in convolutional layers).
@@ -419,8 +433,8 @@ class MPSLayer(TensorNetwork):
 
     def set_data_nodes(self) -> None:
         """
-        Creates data nodes and connects each of them to the input edge of each
-        input node.
+        Creates ``data`` nodes and connects each of them to the input edge of
+        each input node.
         """
         input_edges = []
         if self.left_node is not None:
@@ -809,13 +823,13 @@ class MPSLayer(TensorNetwork):
             
         k = j + 1
         while k < len(nodes):
-            d_phys = nodes[k]['input'].size()
-            proj_vec_node = Node(shape=(d_phys,),
+            in_dim = nodes[k]['input'].size()
+            proj_vec_node = Node(shape=(in_dim,),
                                  axes_names=('input',),
                                  name=f'proj_vec_node_{side}_({k})',
                                  network=self)
             
-            proj_vec_node.tensor = torch.eye(d_phys, 1).squeeze().to(device)
+            proj_vec_node.tensor = torch.eye(in_dim, 1).squeeze().to(device)
             nodes[k]['input'] ^ proj_vec_node['input']
             line_mat_nodes.append(proj_vec_node @ nodes[k])
             
@@ -941,8 +955,17 @@ class UMPSLayer(TensorNetwork):
     Class for Uniform (translationally invariant) Matrix Product States with an
     extra node that is dedicated to the output. It is the uniform version of
     :class:`MPSLayer`, that is, all input nodes share the same tensor. Thus
-    this class cannot have different physical or bond dimensions for each site,
-    and boundary conditions are always periodic.
+    this class cannot have different input or bond dimensions for each node,
+    and boundary conditions are always periodic (``"pbc"``).
+    
+    A ``UMPSLayer`` is formed by the following nodes:
+      
+    * ``left_env``, ``right_env``: Environments of `matrix` nodes that are at
+      the left or right side of the ``output_node``. These nodes have axes
+      ``("left", "input", "right")``.
+      
+    * ``output_node``: Node dedicated to the output. It has axes
+      ``("left", "output", "right")``.
 
     Parameters
     ----------
@@ -961,7 +984,7 @@ class UMPSLayer(TensorNetwork):
         ``n_features``. If ``None``, the output node will be located at the
         middle of the MPS.
     n_batches : int
-        Number of batch edges of input data nodes. Usually ``n_batches = 1``
+        Number of batch edges of input ``data`` nodes. Usually ``n_batches = 1``
         (where the batch edge is used for the data batched) but it could also
         be ``n_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
@@ -1024,6 +1047,7 @@ class UMPSLayer(TensorNetwork):
             raise TypeError('`n_batches should be int type')
         self._n_batches = n_batches
 
+        # Create Tensor Network
         self._make_nodes()
         self.initialize()
 
@@ -1187,8 +1211,8 @@ class UMPSLayer(TensorNetwork):
 
     def set_data_nodes(self) -> None:
         """
-        Creates data nodes and connects each of them to the physical edge of
-        an input node.
+        Creates ``data`` nodes and connects each of them to the physical edge of
+        each input node.
         """
         input_edges = list(map(lambda node: node['input'],
                                self.left_env + self.right_env))
@@ -1324,8 +1348,8 @@ class UMPSLayer(TensorNetwork):
             single stacked contraction.
         inline_mats : bool
             Boolean indicating whether the sequence of matrices (resultant
-            after contracting the input data nodes) should be contracted inline
-            or as a sequence of pairwise stacked contrations.
+            after contracting the input ``data`` nodes) should be contracted
+            inline or as a sequence of pairwise stacked contrations.
 
         Returns
         -------
@@ -1463,7 +1487,7 @@ class ConvMPSLayer(MPSLayer):
         
     @property
     def in_channels(self) -> int:
-        """Returns ``in_channels``. Same as ``d_phys`` in :class:`MPSLayer`."""
+        """Returns ``in_channels``. Same as ``in_dim`` in :class:`MPSLayer`."""
         return self._in_channels
     
     @property
@@ -1584,7 +1608,7 @@ class ConvUMPSLayer(UMPSLayer):
     Parameters
     ----------
     in_channels : int
-        Input channels. Same as ``d_phys`` in :class:`UMPSLayer`.
+        Input channels. Same as ``in_dim`` in :class:`UMPSLayer`.
     out_channels : int
         Output channels. Same as ``out_dim`` in :class:`UMPSLayer`.
     bond_dim : int
@@ -1677,7 +1701,7 @@ class ConvUMPSLayer(UMPSLayer):
         
     @property
     def in_channels(self) -> int:
-        """Returns ``in_channels``. Same as ``d_phys`` in :class:`UMPSLayer`."""
+        """Returns ``in_channels``. Same as ``in_dim`` in :class:`UMPSLayer`."""
         return self._in_channels
     
     @property
@@ -1714,8 +1738,8 @@ class ConvUMPSLayer(UMPSLayer):
     
     def forward(self, image, mode='flat', *args, **kwargs):
         r"""
-        Overrides ``nn.Module``'s forward to compute a convolution on the input
-        image.
+        Overrides ``torch.nn.Module``'s forward to compute a convolution on the
+        input image.
         
         Parameters
         ----------

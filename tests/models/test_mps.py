@@ -1,25 +1,27 @@
 """
-Tests for network_components
+Tests for mps:
+
+    * TestMPS
+    * TestUMPS
+    * TestConvMPS
+    * TestConvUMPS
 """
+
 
 import pytest
 
 import torch
-import torch.nn as nn
 import tensorkrowch as tk
-
-from typing import Sequence
-import time
 
 
 class TestMPS:
 
     def test_all_algorithms(self):
-        example = torch.randn(4, 1, 5)
-        data = torch.randn(4, 100, 5)
+        example = torch.randn(1, 4, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 4, 5)
 
         for boundary in ['obc', 'pbc']:
-            mps = tk.MPS(n_features=4,
+            mps = tk.models.MPS(n_features=4,
                          in_dim=5,
                          bond_dim=2,
                          boundary=boundary)
@@ -78,7 +80,7 @@ class TestMPS:
         data = [torch.randn(100, d) for d in in_dim]
 
         for boundary in ['obc', 'pbc']:
-            mps = tk.MPS(n_features=4,
+            mps = tk.models.MPS(n_features=4,
                          in_dim=in_dim,
                          bond_dim=2,
                          boundary=boundary)
@@ -133,11 +135,11 @@ class TestMPS:
 
     def test_all_algorithms_diff_bond_dim(self):
         bond_dim = torch.randint(low=2, high=7, size=(4,)).tolist()
-        example = torch.randn(4, 1, 5)
-        data = torch.randn(4, 100, 5)
+        example = torch.randn(1, 4, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 4, 5)
 
         for boundary in ['obc', 'pbc']:
-            mps = tk.MPS(n_features=4,
+            mps = tk.models.MPS(n_features=4,
                          in_dim=5,
                          bond_dim=bond_dim[:-1] if boundary == 'obc' else bond_dim,
                          boundary=boundary)
@@ -197,7 +199,7 @@ class TestMPS:
         data = [torch.randn(100, d) for d in in_dim]
 
         for boundary in ['obc', 'pbc']:
-            mps = tk.MPS(n_features=4,
+            mps = tk.models.MPS(n_features=4,
                          in_dim=in_dim,
                          bond_dim=bond_dim[:-1] if boundary == 'obc' else bond_dim,
                          boundary=boundary)
@@ -252,12 +254,12 @@ class TestMPS:
 
     def test_extreme_case_left_right(self):
         # Left node + Right node
-        mps = tk.MPS(n_features=2,
+        mps = tk.models.MPS(n_features=2,
                      in_dim=5,
                      bond_dim=2,
                      boundary='obc')
-        example = torch.randn(2, 1, 5)
-        data = torch.randn(2, 100, 5)
+        example = torch.randn(1, 2, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 2, 5)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -303,12 +305,12 @@ class TestMPS:
 
     def test_extreme_case_one_node(self):
         # One node
-        mps = tk.MPS(n_features=1,
+        mps = tk.models.MPS(n_features=1,
                      in_dim=5,
                      bond_dim=2,
                      boundary='pbc')
-        example = torch.randn(1, 1, 5)
-        data = torch.randn(1, 100, 5)
+        example = torch.randn(1, 1, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 1, 5)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -358,10 +360,10 @@ class TestMPS:
                                     assert len(mps.virtual_nodes) == 1
 
     def test_canonicalize_univocal(self):
-        example = torch.randn(5, 1, 2)
-        data = torch.randn(5, 100, 2)
+        example = torch.randn(1, 5, 2)  # batch x n_features x feature_dim
+        data = torch.randn(100, 5, 2)
 
-        mps = tk.MPS(n_features=5,
+        mps = tk.models.MPS(n_features=5,
                      in_dim=2,
                      bond_dim=5,
                      boundary='obc')
@@ -407,7 +409,7 @@ class TestMPS:
         example = [torch.randn(1, d) for d in in_dim]
         data = [torch.randn(100, d) for d in in_dim]
 
-        mps = tk.MPS(n_features=5,
+        mps = tk.models.MPS(n_features=5,
                      in_dim=in_dim,
                      bond_dim=bond_dim,
                      boundary='obc')
@@ -458,7 +460,7 @@ class TestMPS:
         example = [torch.randn(1, d) for d in in_dim]
         data = [torch.randn(100, d) for d in in_dim]
 
-        mps = tk.MPS(n_features=5,
+        mps = tk.models.MPS(n_features=5,
                      in_dim=in_dim,
                      bond_dim=bond_dim,
                      boundary='obc')
@@ -499,10 +501,10 @@ class TestMPS:
         assert norm.item() < 1e-4
 
     def test_canonicalize_univocal_bond_greater_than_phys(self):
-        example = torch.randn(5, 1, 2)
-        data = torch.randn(5, 100, 2)
+        example = torch.randn(1, 5, 2)  # batch x n_features x feature_dim
+        data = torch.randn(100, 5, 2)
 
-        mps = tk.MPS(n_features=5,
+        mps = tk.models.MPS(n_features=5,
                      in_dim=2,
                      bond_dim=20,
                      boundary='obc')
@@ -546,8 +548,8 @@ class TestMPS:
 class TestUMPS:
 
     def test_all_algorithms(self):
-        example = torch.randn(4, 1, 5)
-        data = torch.randn(4, 100, 5)
+        example = torch.randn(1, 4, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 4, 5)
 
         mps = tk.models.UMPS(n_features=4,
                       in_dim=5,
@@ -578,8 +580,8 @@ class TestUMPS:
         mps = tk.models.UMPS(n_features=2,
                       in_dim=5,
                       bond_dim=2)
-        example = torch.randn(2, 1, 5)
-        data = torch.randn(2, 100, 5)
+        example = torch.randn(1, 2, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 2, 5)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -606,8 +608,8 @@ class TestUMPS:
         mps = tk.models.UMPS(n_features=1,
                       in_dim=5,
                       bond_dim=2)
-        example = torch.randn(1, 1, 5)
-        data = torch.randn(1, 100, 5)
+        example = torch.randn(1, 1, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 1, 5)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -633,12 +635,8 @@ class TestUMPS:
 class TestConvMPS:
 
     def test_all_algorithms(self):
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         for boundary in ['obc', 'pbc']:
             mps = tk.models.ConvMPS(in_channels=2,
@@ -702,20 +700,16 @@ class TestConvMPS:
                                                     mps.virtual_nodes) == 1
 
     def test_all_algorithms_diff_bond_dim(self):
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
         bond_dim = torch.randint(low=2, high=7, size=(4,)).tolist()
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         for boundary in ['obc', 'pbc']:
-            mps = tk.models.ConvMPS(in_channels=2,
-                             bond_dim=bond_dim[:-
-                                           1] if boundary == 'obc' else bond_dim,
-                             kernel_size=2,
-                             boundary=boundary)
+            mps = tk.models.ConvMPS(
+                in_channels=2,
+                bond_dim=bond_dim[:-1] if boundary == 'obc' else bond_dim,
+                kernel_size=2,
+                boundary=boundary)
 
             for auto_stack in [True, False]:
                 for auto_unbind in [True, False]:
@@ -774,12 +768,8 @@ class TestConvMPS:
 
     def test_extreme_case_left_right(self):
         # Left node + Right node
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         mps = tk.models.ConvMPS(in_channels=2,
                          bond_dim=2,
@@ -835,12 +825,8 @@ class TestConvMPS:
 
     def test_extreme_case_one_node(self):
         # One node
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         mps = tk.models.ConvMPS(in_channels=2,
                          bond_dim=2,
@@ -903,12 +889,8 @@ class TestConvMPS:
 class TestConvUMPS:
 
     def test_all_algorithms(self):
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         mps = tk.models.ConvUMPS(in_channels=2,
                           bond_dim=2,
@@ -935,16 +917,12 @@ class TestConvUMPS:
                             assert len(mps.edges) == 0
                             assert len(mps.leaf_nodes) == 4
                             assert len(mps.data_nodes) == 4
-                            assert len(mps.virtual_nodes) == 4
+                            assert len(mps.virtual_nodes) == 2
 
     def test_extreme_case_mats_env_2_nodes(self):
         # Two nodes
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         mps = tk.models.ConvUMPS(in_channels=2,
                           bond_dim=2,
@@ -971,16 +949,12 @@ class TestConvUMPS:
                             assert len(mps.edges) == 0
                             assert len(mps.leaf_nodes) == 2
                             assert len(mps.data_nodes) == 2
-                            assert len(mps.virtual_nodes) == 4
+                            assert len(mps.virtual_nodes) == 2
 
     def test_extreme_case_mats_env_1_node(self):
         # One node
-        def embedding(data: torch.Tensor) -> torch.Tensor:
-            return torch.stack([torch.ones_like(data),
-                                data], dim=1)
-
-        example = embedding(torch.randn(1, 5, 5))
-        data = embedding(torch.randn(100, 5, 5))
+        example = tk.embeddings.add_ones(torch.randn(1, 5, 5), axis=1)
+        data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         mps = tk.models.ConvUMPS(in_channels=2,
                           bond_dim=2,
@@ -1007,4 +981,4 @@ class TestConvUMPS:
                             assert len(mps.edges) == 0
                             assert len(mps.leaf_nodes) == 1
                             assert len(mps.data_nodes) == 1
-                            assert len(mps.virtual_nodes) == 4
+                            assert len(mps.virtual_nodes) == 2

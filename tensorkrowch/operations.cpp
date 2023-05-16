@@ -91,8 +91,8 @@ at::Tensor contract(
     at::IntArrayRef aux_shape2_ref(aux_shape2, size);
     at::IntArrayRef new_shape_ref(new_shape, new_size);
 
-    auto reshape1 = permute1.reshape(aux_shape1_ref);
-    auto reshape2 = permute2.reshape(aux_shape2_ref);
+    auto reshape1 = permute1->reshape(aux_shape1_ref);
+    auto reshape2 = permute2->reshape(aux_shape2_ref);
 
     auto result = reshape1.matmul(reshape2).view(new_shape_ref);
 

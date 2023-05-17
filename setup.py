@@ -3,26 +3,38 @@ from torch.utils.cpp_extension import CppExtension, BuildExtension
 from pathlib import Path
 
 LIB_NAME = 'tensorkrowch'
-version = '1.0.0'
 
-root_dir = Path(LIB_NAME)
-include_dir = root_dir / 'include'
-ext_src = [str(x.absolute()) for x in root_dir.glob('csrc/*.cpp')]
+# Version
+with open('tensorkrowch/_version.py') as f:
+    exec(f.read())  # __version__
 
-cpp_extension = CppExtension(
-    LIB_NAME + '._C',
-    sources=ext_src,
-)
+# Pytorch Cpp Extension
+ext_src = [str(x.absolute()) for x in Path(LIB_NAME).glob('csrc/*.cpp')]
+
+cpp_extension = CppExtension(LIB_NAME + '._C', sources=ext_src)
+
 
 setup(
     name=LIB_NAME,
-    version=version,
+    version=__version__,
     description='Tensor Networks with PyTorch',
+    long_description=open('README.rst').read(),
+    long_description_content_type='text/x-rst',
+    url='https://github.com/joserapa98/tensorkrowch',
+    project_urls={'Documentation': 'https://joserapa98.github.io/tensorkrowch'},
     author='José Ramón Pareja Monturiol, David Pérez-García, Alejandro Pozas-Kerstjens',
-    author_email='joserapa@gmail.com',
+    author_email='joserapa98@gmail.com',
     license='MIT',
-    python_requires='>=3.6',
-    install_requires=['torch>=1.0'],
+    python_requires='>=3.7',
+    install_requires=['torch>=1.9',
+                      'opt_einsum>=3.0'],
+    extras_require={
+        'tests': ['pytest'],
+        'docs': ['sphinx>=4.5',
+                 'sphinx-book-theme',
+                 'sphinx-copybutton',
+                 'nbsphinx']
+    },
     packages=[LIB_NAME, 'tensorkrowch.models'],
     ext_modules=[cpp_extension],
     cmdclass={'build_ext': BuildExtension},

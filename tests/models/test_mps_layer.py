@@ -565,14 +565,16 @@ class TestMPSLayer:
         assert norm.item() < 1e-5
 
     def test_check_grad(self):
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        
         mps = tk.models.MPSLayer(n_features=1,
                                  in_dim=2,
                                  out_dim=2,
                                  bond_dim=2,
                                  out_position=1,
-                                 boundary='obc').cuda()
+                                 boundary='obc').to(device)
 
-        data = torch.randn(1, 1, 2).cuda()
+        data = torch.randn(1, 1, 2).to(device)
         result = mps.forward(data)
         result[0, 0].backward()
 
@@ -583,7 +585,7 @@ class TestMPSLayer:
         grad_B1 = mps.output_node.grad
 
         grad_A2 = I.t() @ B[:, 0].view(2, 1).t()
-        grad_B2 = (I @ A).t() @ torch.tensor([[1., 0.]]).cuda()
+        grad_B2 = (I @ A).t() @ torch.tensor([[1., 0.]]).to(device)
 
         assert torch.equal(grad_A1, grad_A2)
         assert torch.equal(grad_B1, grad_B2)

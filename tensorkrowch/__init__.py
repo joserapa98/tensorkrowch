@@ -1,6 +1,12 @@
 """
 TensorKrowch
+============
+
+Tensor Networks with PyTorch
 """
+
+# Version
+from tensorkrowch._version import __version__
 
 # Network components
 from tensorkrowch.components import Axis

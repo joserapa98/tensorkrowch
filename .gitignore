@@ -76,7 +76,7 @@ docs/_build/
 target/
 
 # Jupyter Notebook
-.ipynb
+*.ipynb
 .ipynb_checkpoints
 
 # IPython
@@ -150,7 +150,7 @@ cython_debug/
 .vscode
 
 # PyTorch models
-.pt
+*.pt
 
 # Project folders
 /training_scripts

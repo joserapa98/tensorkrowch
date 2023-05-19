@@ -439,6 +439,8 @@ class MPS(TensorNetwork):
         >>> mps.bond_dim
         [2, 3, 2]
         """
+        self.reset()
+        
         prev_auto_stack = self._auto_stack
         self.auto_stack = False
         
@@ -654,6 +656,8 @@ class MPS(TensorNetwork):
             raise ValueError('`canonicalize_univocal` can only be used if '
                              'boundary is `obc`')
             
+        self.reset()
+        
         prev_auto_stack = self._auto_stack
         self.auto_stack = False
         

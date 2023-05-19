@@ -342,6 +342,7 @@ class Tree(TensorNetwork):
         [[[3, 3, 2], [3, 3, 2], [3, 3, 2], [3, 3, 2]], [[2, 2, 2], [2, 2, 2]], [[2, 2, 2]]]
         """
         if len(self.layers) > 1:
+            self.reset()
             
             prev_auto_stack = self._auto_stack
             self.auto_stack = False

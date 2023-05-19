@@ -1,0 +1,666 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>The different Types of Nodes &#8212; TensorKrowch 00.00.01 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" href="../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="shortcut icon" href="../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="How to subclass TensorNetwork to build Custom Models" href="5_subclass_tensor_network.html" />
+    <link rel="prev" title="How to save Memory and Time with TensorKrowch" href="3_memory_management.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="current nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 current active has-children">
+  <a class="reference internal" href="../tutorials.html">
+   Tutorials
+  </a>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul class="current">
+   <li class="toctree-l2">
+    <a class="reference internal" href="1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="3_memory_management.html">
+     How to save Memory and Time with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
+     The different Types of Nodes
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+<div class="menu-dropdown menu-dropdown-download-buttons">
+  <button class="headerbtn menu-dropdown__trigger"
+      aria-label="Download this page">
+      <i class="fas fa-download"></i>
+  </button>
+  <div class="menu-dropdown__content">
+    <ul>
+      <li>
+        <a href="../_sources/tutorials/4_types_of_nodes.rst.txt"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="left"
+title="Download source file"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="headerbtn__text-container">.rst</span>
+</a>
+
+      </li>
+      
+      <li>
+        
+<button onclick="printPdf(this)"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="left"
+title="Print to PDF"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="headerbtn__text-container">.pdf</span>
+</button>
+
+      </li>
+      
+    </ul>
+  </div>
+</div>
+<label for="__page-toc"
+  class="headerbtn headerbtn-page-toc"
+  
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-list"></i>
+  </span>
+
+</label>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+    <div class="tocsection onthispage pt-5 pb-3">
+        <i class="fas fa-list"></i> Contents
+    </div>
+    <nav id="bd-toc-nav" aria-label="Page">
+        <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#introduction">
+   Introduction
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#steps">
+   Steps
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#types-of-nodes">
+     1. Types of Nodes
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#reserved-nodes-names">
+     2. Reserved Nodes’ Names
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </nav>
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1>The different Types of Nodes</h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                        <div>
+                            <h2> Contents </h2>
+                        </div>
+                        <nav aria-label="Page">
+                            <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#introduction">
+   Introduction
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#steps">
+   Steps
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#types-of-nodes">
+     1. Types of Nodes
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#reserved-nodes-names">
+     2. Reserved Nodes’ Names
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <section id="the-different-types-of-nodes">
+<span id="tutorial-4"></span><h1>The different Types of Nodes<a class="headerlink" href="#the-different-types-of-nodes" title="Permalink to this headline">#</a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">TensorKrowch</span></code> has different methods to distinguish between types of nodes
+that are used for different purposes. These types of nodes are not subclasses,
+of <code class="docutils literal notranslate"><span class="pre">Node</span></code>, but rather labels or names that <code class="docutils literal notranslate"><span class="pre">Nodes</span></code> and <code class="docutils literal notranslate"><span class="pre">ParamNodes</span></code> can
+have in order to indicate the role these nodes play in the model.</p>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">#</a></h2>
+<p>In previous tutorials you learned how to create a <code class="docutils literal notranslate"><span class="pre">TensorNetwork</span></code>. In this
+<a class="reference internal" href="2_contracting_tensor_network.html#tutorial-2"><span class="std std-ref">tutorial</span></a> you learned that some nodes can be used just to
+hold the input data tensors, and in this other <a class="reference internal" href="3_memory_management.html#tutorial-3"><span class="std std-ref">tutorial</span></a> you
+learned how to create uniform tensor networks by using a node that stores the
+tensor that will be shared by all other nodes in the network.</p>
+<p>In this tutorial you will learn how to create nodes with specific roles, like
+<code class="docutils literal notranslate"><span class="pre">data</span></code> and <code class="docutils literal notranslate"><span class="pre">virtual</span></code> nodes. Also, you will learn about a couple of reserved
+names that are used in specific situations.</p>
+</section>
+<section id="steps">
+<h2>Steps<a class="headerlink" href="#steps" title="Permalink to this headline">#</a></h2>
+<ol class="arabic simple">
+<li><p>Types of Nodes.</p></li>
+<li><p>Reserved Nodes’ Names.</p></li>
+</ol>
+<section id="types-of-nodes">
+<h3>1. Types of Nodes<a class="headerlink" href="#types-of-nodes" title="Permalink to this headline">#</a></h3>
+<p>In <code class="docutils literal notranslate"><span class="pre">TensorKrowch</span></code> there are <strong>4 excluding types</strong> of nodes that will have
+different roles in the <code class="docutils literal notranslate"><span class="pre">TensorNetwork</span></code>:</p>
+<ul>
+<li><p><strong>leaf</strong>: These are the nodes that form the <code class="docutils literal notranslate"><span class="pre">TensorNetwork</span></code> (together
+with the <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes). Usually, these will be the <cite>trainable</cite> nodes.
+These nodes can store their own tensors or use other node’s tensor.</p>
+<p>Both <code class="docutils literal notranslate"><span class="pre">Nodes</span></code> and <code class="docutils literal notranslate"><span class="pre">ParamNodes</span></code> can be <code class="docutils literal notranslate"><span class="pre">leaf</span></code>. In fact, all nodes
+will be <code class="docutils literal notranslate"><span class="pre">leaf</span></code> by default:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">tensorkrowch</span> <span class="k">as</span> <span class="nn">tk</span>
+
+<span class="n">node</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+<span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">is_leaf</span><span class="p">()</span>
+
+<span class="n">paramnode</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                      <span class="n">param_node</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">paramnode</span><span class="o">.</span><span class="n">is_leaf</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes of the network can be retrieved via:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">net</span><span class="o">.</span><span class="n">leaf_nodes</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>data</strong>: These are similar to <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes, but they are never <cite>trainable</cite>,
+and are used to store the temporary tensors coming from input data. These
+nodes can store their own tensors or use other node’s tensor.</p>
+<p><code class="docutils literal notranslate"><span class="pre">data</span></code> nodes can be instantiated explicitly or via
+<a class="reference internal" href="../components.html#tensorkrowch.TensorNetwork.set_data_nodes" title="tensorkrowch.TensorNetwork.set_data_nodes"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_data_nodes()</span></code></a>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Data node instantiated explicitly</span>
+<span class="n">data_node</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+                    <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;batch&#39;</span><span class="p">,</span> <span class="s1">&#39;feature&#39;</span><span class="p">),</span>
+                    <span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Data nodes created specifying to which edges</span>
+<span class="c1"># they should be connected</span>
+<span class="n">net</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">()</span>
+<span class="n">input_edges</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                    <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
+                    <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">,</span>
+                    <span class="n">param_node</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">input_edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
+
+<span class="n">net</span><span class="o">.</span><span class="n">set_data_nodes</span><span class="p">(</span><span class="n">input_edges</span><span class="p">,</span>
+                    <span class="n">num_batch_edges</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">data</span></code> nodes of the network can be retrieved via:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">net</span><span class="o">.</span><span class="n">data_nodes</span>
+<span class="k">assert</span> <span class="n">net</span><span class="p">[</span><span class="s1">&#39;data_0&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">is_data</span><span class="p">()</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>virtual</strong>: These nodes are a sort of ancillary, <cite>hidden</cite> nodes that
+accomplish some useful task (e.g. in uniform tensor networks a virtual
+node can store the shared tensor, while all the other nodes in the
+network just have a reference to it). These nodes always store their own
+tensors:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mps</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;mps&#39;</span><span class="p">)</span>
+<span class="n">nodes</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="n">uniform_node</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                        <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
+                        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_uniform&#39;</span><span class="p">,</span>
+                        <span class="n">network</span><span class="o">=</span><span class="n">mps</span><span class="p">,</span>
+                        <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">uniform_node</span><span class="o">.</span><span class="n">is_virtual</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                    <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
+                    <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
+                    <span class="n">network</span><span class="o">=</span><span class="n">mps</span><span class="p">)</span>
+    <span class="n">node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="n">uniform_node</span><span class="p">)</span>
+
+    <span class="n">nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+    <span class="n">mps</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">mps</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;node_(</span><span class="si">{</span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">100</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+
+<span class="c1"># Check that all nodes share tensor with uniform_node</span>
+<span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+    <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor_address</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;virtual_uniform&#39;</span>
+</pre></div>
+</div>
+<p>giving the <code class="docutils literal notranslate"><span class="pre">uniform_node</span></code> the role of <code class="docutils literal notranslate"><span class="pre">virtual</span></code> makes more sense,
+since it is a node that one wouldn’t desire to see as a <code class="docutils literal notranslate"><span class="pre">leaf</span></code> node
+of the network. Instead it is <cite>hidden</cite>.</p>
+<p>In the next section you will see that the name <code class="docutils literal notranslate"><span class="pre">&quot;virtual_uniform&quot;</span></code> that
+we chose for the <code class="docutils literal notranslate"><span class="pre">uniform_node</span></code> is convenient for the case of uniform
+tensor networks.</p>
+<p><code class="docutils literal notranslate"><span class="pre">virtual</span></code> nodes of the network can be retrieved via:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">net</span><span class="o">.</span><span class="n">virtual_nodes</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>resultant</strong>: These are nodes that result from an <a class="reference internal" href="../operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operation</span></code></a>.
+They are intermediate nodes that (almost always) inherit edges from <code class="docutils literal notranslate"><span class="pre">leaf</span></code>
+and <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes, the ones that really form the network. These nodes can
+store their own tensors or use other node’s tensor. The names of the
+<code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes are the name of the <code class="docutils literal notranslate"><span class="pre">Operation</span></code> that originated
+it:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">node1</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="n">node2</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">node1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">^</span> <span class="n">node2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">node1</span> <span class="o">@</span> <span class="n">node2</span>
+<span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">is_resultant</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes cannot be instantiated directly, they can only be
+originated from <code class="docutils literal notranslate"><span class="pre">Operations</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes of the network can be retrieved via:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">net</span><span class="o">.</span><span class="n">resultant_nodes</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<p>To retrieve all the nodes in the network you can do it with:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">net</span><span class="o">.</span><span class="n">nodes</span>
+</pre></div>
+</div>
+</section>
+<section id="reserved-nodes-names">
+<h3>2. Reserved Nodes’ Names<a class="headerlink" href="#reserved-nodes-names" title="Permalink to this headline">#</a></h3>
+<p>Other thing one should take into account are <strong>reserved nodes’ names</strong>:</p>
+<ul>
+<li><p><strong>“stack_data_memory”</strong>: Name of the <code class="docutils literal notranslate"><span class="pre">virtual</span></code> <a class="reference internal" href="../components.html#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">StackNode</span></code></a> that
+is created in <a class="reference internal" href="../components.html#tensorkrowch.TensorNetwork.set_data_nodes" title="tensorkrowch.TensorNetwork.set_data_nodes"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_data_nodes()</span></code></a> to store the whole data
+tensor from which each <code class="docutils literal notranslate"><span class="pre">data</span></code> node might take just one <cite>slice</cite>. There should
+be at most one <code class="docutils literal notranslate"><span class="pre">&quot;stack_data_memory&quot;</span></code> in the network. To learn more about
+this, see <a class="reference internal" href="../components.html#tensorkrowch.TensorNetwork.set_data_nodes" title="tensorkrowch.TensorNetwork.set_data_nodes"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_data_nodes()</span></code></a> and
+<a class="reference internal" href="../components.html#tensorkrowch.TensorNetwork.add_data" title="tensorkrowch.TensorNetwork.add_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_data()</span></code></a>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">net</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">()</span>
+<span class="n">input_edges</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                    <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
+                    <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">,</span>
+                    <span class="n">param_node</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">input_edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
+
+<span class="n">net</span><span class="o">.</span><span class="n">set_data_nodes</span><span class="p">(</span><span class="n">input_edges</span><span class="p">,</span>
+                    <span class="n">num_batch_edges</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="c1"># Batch edge has size 1 when created</span>
+<span class="k">assert</span> <span class="n">net</span><span class="p">[</span><span class="s1">&#39;stack_data_memory&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>“virtual_stack”</strong>: Name of the <code class="docutils literal notranslate"><span class="pre">virtual</span></code> <a class="reference internal" href="../components.html#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a> that
+results from stacking <code class="docutils literal notranslate"><span class="pre">ParamNodes</span></code> as the first operation in the network
+contraction, if <code class="docutils literal notranslate"><span class="pre">auto_stack</span></code> mode is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>. There might be as
+much <code class="docutils literal notranslate"><span class="pre">&quot;virtual_stack&quot;</span></code> nodes as stacks are created from <code class="docutils literal notranslate"><span class="pre">ParamNodes</span></code>. To
+learn more about this, see <a class="reference internal" href="../components.html#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">net</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">()</span>
+<span class="n">net</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="n">nodes</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                    <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">,</span>
+                    <span class="n">param_node</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+<span class="n">stack_node</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+
+<span class="c1"># All ParamNodes use a slice of the tensor in stack_node</span>
+<span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+    <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor_address</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;virtual_stack&#39;</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>“virtual_uniform”</strong>: Name of the <code class="docutils literal notranslate"><span class="pre">virtual</span></code> <code class="docutils literal notranslate"><span class="pre">Node</span></code> or <code class="docutils literal notranslate"><span class="pre">ParamNode</span></code> that
+is used in uniform (translationally invariant) tensor networks to store the
+tensor that will be shared by all <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes. There might be as much
+<code class="docutils literal notranslate"><span class="pre">&quot;virtual_uniform&quot;</span></code> nodes as shared memories are used for the <code class="docutils literal notranslate"><span class="pre">leaf</span></code>
+nodes in the network (usually just one). An example of this can be seen in
+the previous section, when <code class="docutils literal notranslate"><span class="pre">virtual</span></code> nodes were defined.</p></li>
+</ul>
+<p>Although these names can in principle be used for other nodes, this can lead
+to undesired behaviour.</p>
+<p>The <strong>4 types of nodes</strong> and the <strong>reserved nodes’ names</strong> will also play a
+role when <a class="reference internal" href="../components.html#tensorkrowch.TensorNetwork.trace" title="tensorkrowch.TensorNetwork.trace"><code class="xref py py-meth docutils literal notranslate"><span class="pre">tracing</span></code></a> of
+<a class="reference internal" href="../components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">resetting</span></code></a> the <code class="docutils literal notranslate"><span class="pre">TensorNetwork</span></code>. See the next
+<a class="reference internal" href="5_subclass_tensor_network.html#tutorial-5"><span class="std std-ref">tutorial</span></a> to learn more.</p>
+</section>
+</section>
+</section>
+
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+    <a class='left-prev' id="prev-link" href="3_memory_management.html" title="previous page">
+        <i class="fas fa-angle-left"></i>
+        <div class="prev-next-info">
+            <p class="prev-next-subtitle">previous</p>
+            <p class="prev-next-title">How to save Memory and Time with TensorKrowch</p>
+        </div>
+    </a>
+    <a class='right-next' id="next-link" href="5_subclass_tensor_network.html" title="next page">
+    <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">How to subclass TensorNetwork to build Custom Models</p>
+    </div>
+    <i class="fas fa-angle-right"></i>
+    </a>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

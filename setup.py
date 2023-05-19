@@ -19,7 +19,7 @@ setup(
     version=__version__,
     description='Tensor Networks with PyTorch',
     long_description=open('README.md').read(),
-    long_description_content_type='text/x-rst',
+    long_description_content_type='text/markdown',
     url='https://github.com/joserapa98/tensorkrowch',
     project_urls={'Documentation': 'https://joserapa98.github.io/tensorkrowch'},
     author='José Ramón Pareja Monturiol, David Pérez-García, Alejandro Pozas-Kerstjens',

@@ -108,65 +108,33 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../tutorials/basics.html">
-     Basics
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../../examples.html">
-   Experiments
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
-  <label for="toctree-checkbox-2">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../examples/jose_mps_mnist.html">
-     MPS and Canonical Form - MNIST
+    <a class="reference internal" href="../../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../examples/jose_mps_canonical_mnist.html">
-     MPS and Canonical Form initializing also in canonical form - MNIST
+    <a class="reference internal" href="../../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../examples/jose_mps_fashion_mnist.html">
-     MPS and Canonical Form - FashionMNIST
+    <a class="reference internal" href="../../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../examples/cirac_snake_sbs_fashion_mnist.html">
-     SnakeSBS - FashionMNIST
+    <a class="reference internal" href="../../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../examples/cirac_cnn_snake_sbs_fashion_mnist.html">
-     CNN-SnakeSBS - FashionMNIST
+    <a class="reference internal" href="../../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="../../examples/jose_convmps_fashion_mnist.html">
-     ConvMPS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../examples/jose_convtree_fashion_mnist.html">
-     ConvTree - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../examples/miles_mps_dmrg_mnist.html">
-     MPS with DMRG - MNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="../../examples/jose_mps_mnist_binarized.html">
-     MPS - MNIST Binarized
+    <a class="reference internal" href="../../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
     </a>
    </li>
   </ul>
@@ -175,8 +143,8 @@
   <a class="reference internal" href="../../api.html">
    API Reference
   </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
-  <label for="toctree-checkbox-3">
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
    <i class="fas fa-chevron-down">
    </i>
   </label>
@@ -386,6 +354,19 @@ title="Source repository"
 <span class="sd">    Even though we can create ``Axis`` instances, that will not be usually the</span>
 <span class="sd">    case, since axes are automatically created when instantiating a new</span>
 <span class="sd">    :class:`node &lt;AbstractNode&gt;`.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
+<span class="sd">    </span>
+<span class="sd">    Other thing one must take into account is the naming of ``Axes``. Since</span>
+<span class="sd">    the name of an ``Axis`` is used to access it from the ``Node``, the</span>
+<span class="sd">    same name cannot be used by more than one ``Axis``. In that case, repeated</span>
+<span class="sd">    names get an automatic enumeration of the form ``&quot;name_{number}&quot;``</span>
+<span class="sd">    (underscore followed by number).</span>
+<span class="sd">    </span>
+<span class="sd">    To add a custom enumeration in a user-defined way, one may use brackets or</span>
+<span class="sd">    parenthesis: ``&quot;name_({number})&quot;``.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -588,7 +569,7 @@ title="Source repository"
 <div class="viewcode-block" id="AbstractNode"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode">[docs]</a><span class="k">class</span> <span class="nc">AbstractNode</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Abstract class for all types of nodes. Defines what a node is and most of its</span>
-<span class="sd">    properties and methods. Since it is an abstract class, cannot be instantiated. </span>
+<span class="sd">    properties and methods. Since it is an abstract class, cannot be instantiated.</span>
 <span class="sd">      </span>
 <span class="sd">    Nodes are the elements that make up a :class:`TensorNetwork`. At its most</span>
 <span class="sd">    basic level, a node is a container for a ``torch.Tensor`` that stores other</span>
@@ -676,20 +657,21 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    Other thing one should take into account are **reserved nodes&#39; names**:</span>
 <span class="sd">    </span>
-<span class="sd">    * ``&quot;stack_data_memory&quot;``: Name of the ``virtual`` :class:`StackNode` that</span>
+<span class="sd">    * **&quot;stack_data_memory&quot;**: Name of the ``virtual`` :class:`StackNode` that</span>
 <span class="sd">      is created in :meth:`~TensorNetwork.set_data_nodes` to store the whole</span>
 <span class="sd">      data tensor from which each ``data`` node might take just one `slice`.</span>
 <span class="sd">      There should be at most one ``&quot;stack_data_memory&quot;`` in the network.</span>
 <span class="sd">      To learn more about this, see :meth:`~TensorNetwork.set_data_nodes` and</span>
 <span class="sd">      :meth:`~TensorNetwork.add_data`.</span>
 <span class="sd">    </span>
-<span class="sd">    * ``&quot;virtual_stack&quot;``: Name of the ``virtual`` :class:`ParamStackNode` that</span>
+<span class="sd">    * **&quot;virtual_stack&quot;**: Name of the ``virtual`` :class:`ParamStackNode` that</span>
 <span class="sd">      results from stacking :class:`ParamNodes &lt;ParamNode&gt;` as the first</span>
-<span class="sd">      operation in the network contraction. There might be as much</span>
-<span class="sd">      ``&quot;virtual_stack&quot;`` nodes as stacks are created from ``ParamNodes``. To</span>
-<span class="sd">      learn more about this, see :class:`ParamStackNode`.</span>
+<span class="sd">      operation in the network contraction, if ``auto_stack`` mode is set to</span>
+<span class="sd">      ``True``. There might be as much ``&quot;virtual_stack&quot;`` nodes as stacks are</span>
+<span class="sd">      created from ``ParamNodes``. To learn more about this, see</span>
+<span class="sd">      :class:`ParamStackNode`.</span>
 <span class="sd">    </span>
-<span class="sd">    * ``&quot;virtual_uniform&quot;``: Name of the ``virtual`` :class:`Node` or</span>
+<span class="sd">    * **&quot;virtual_uniform&quot;**: Name of the ``virtual`` :class:`Node` or</span>
 <span class="sd">      :class:`ParamNode` that is used in uniform (translationally invariant)</span>
 <span class="sd">      tensor networks to store the tensor that will be shared by all ``leaf``</span>
 <span class="sd">      nodes. There might be as much ``&quot;virtual_uniform&quot;`` nodes as shared</span>
@@ -703,6 +685,20 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    |</span>
 <span class="sd">    </span>
+<span class="sd">    Other thing one must take into account is the naming of ``Nodes``. Since</span>
+<span class="sd">    the name of a ``Node`` is used to access it from the ``TensorNetwork``, the</span>
+<span class="sd">    same name cannot be used by more than one ``Node``. In that case, repeated</span>
+<span class="sd">    names get an automatic enumeration of the form ``&quot;name_{number}&quot;`` (underscore</span>
+<span class="sd">    followed by number).</span>
+<span class="sd">    </span>
+<span class="sd">    To add a custom enumeration to keep track of the nodes of the network in a</span>
+<span class="sd">    user-defined way, one may use brackets or parenthesis: ``&quot;name_({number})&quot;``.</span>
+<span class="sd">    </span>
+<span class="sd">    The same automatic enumeration of names occurs for :class:`Axes &lt;Axis&gt;`&#39;</span>
+<span class="sd">    names in a ``Node``.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
+<span class="sd">    </span>
 <span class="sd">    Refer to the subclasses of ``AbstractNode`` to see how to instantiate nodes:</span>
 
 <span class="sd">    * :class:`Node`</span>
@@ -712,7 +708,6 @@ title="Source repository"
 <span class="sd">    * :class:`StackNode`</span>
 
 <span class="sd">    * :class:`ParamStackNode`</span>
-<span class="sd">    </span>
 <span class="sd">    </span>
 <span class="sd">    |</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -2152,6 +2147,8 @@ title="Source repository"
 <span class="sd">    |</span>
 
 <span class="sd">    For a complete list of properties and methods, see also :class:`AbstractNode`.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2423,6 +2420,8 @@ title="Source repository"
 <span class="sd">    |</span>
 
 <span class="sd">    For a complete list of properties and methods, see also :class:`AbstractNode`.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 <span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2785,6 +2784,8 @@ title="Source repository"
 <span class="sd">    For the rest of the axes, a list of the edges corresponding to all nodes in</span>
 <span class="sd">    the stack is stored, so that, when :func:`unbinding &lt;unbind&gt;` the stack, it</span>
 <span class="sd">    can be inferred to which nodes the unbinded nodes have to be connected.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -3009,6 +3010,8 @@ title="Source repository"
 <span class="sd">    |</span>
 
 <span class="sd">    ``ParamStackNodes`` can only be instantiated by providing a sequence of nodes.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -3183,6 +3186,8 @@ title="Source repository"
 <span class="sd">    Furthermore, edges have specific operations like :meth:`contract_` or</span>
 <span class="sd">    :meth:`svd_` (and its variations) that allow in-place modification of the</span>
 <span class="sd">    :class:`TensorNetwork`.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -3520,6 +3525,8 @@ title="Source repository"
 <span class="sd">    this, all edges of the stacked nodes must be kept, since they have the</span>
 <span class="sd">    information regarding the nodes&#39; neighbours, which will be used when :func:</span>
 <span class="sd">    `unbinding &lt;unbind&gt;` the stack.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -3876,43 +3883,47 @@ title="Source repository"
 <span class="sd">    by defining a subclass where the ``__init__`` and ``forward`` methods are</span>
 <span class="sd">    overriden:</span>
 
-<span class="sd">    * ``__init__``: Defines the model itself (its layers, attributes, etc.).</span>
+<span class="sd">    * **__init__**: Defines the model itself (its layers, attributes, etc.).</span>
 <span class="sd">    </span>
-<span class="sd">    * ``forward``: Defines the way the model operates, that is, how the different</span>
+<span class="sd">    * **forward**: Defines the way the model operates, that is, how the different</span>
 <span class="sd">      parts of the model might combine to get an output from a particular input.</span>
 
 
 <span class="sd">    With ``TensorNetwork``, the workflow is similar, though there are other</span>
 <span class="sd">    methods that should be overriden:</span>
 <span class="sd">    </span>
-<span class="sd">    * ``__init__``: Defines the graph of the tensor network and initializes the</span>
+<span class="sd">    * **__init__**: Defines the graph of the tensor network and initializes the</span>
 <span class="sd">      tensors of the nodes. See :class:`AbstractNode` and :class:`Edge` to learn</span>
 <span class="sd">      how to create nodes and connect them.</span>
 <span class="sd">      </span>
-<span class="sd">    * ``set_data_nodes`` (optional): Creates the data nodes where the data</span>
+<span class="sd">    * **set_data_nodes** (optional): Creates the data nodes where the data</span>
 <span class="sd">      tensor(s) will be placed. Usually, it will just select the edges to which</span>
-<span class="sd">      the data nodes should be connected, and call the parent method. See</span>
+<span class="sd">      the ``data`` nodes should be connected, and call the parent method. See</span>
 <span class="sd">      :meth:`set_data_nodes` to learn good practices to override it. See also</span>
 <span class="sd">      :meth:`add_data`.</span>
 <span class="sd">      </span>
-<span class="sd">    * ``add_data`` (optional): Adds new data tensors that will be stored in</span>
+<span class="sd">    * **add_data** (optional): Adds new data tensors that will be stored in</span>
 <span class="sd">      ``data`` nodes. Usually it will not be necessary to override this method,</span>
 <span class="sd">      but if one wants to customize how data is set into the ``data`` nodes,</span>
 <span class="sd">      :meth:`add_data` can be overriden.</span>
 <span class="sd">      </span>
-<span class="sd">    * ``contract``: Defines the contraction algorithm of the whole tensor network,</span>
+<span class="sd">    * **contract**: Defines the contraction algorithm of the whole tensor network,</span>
 <span class="sd">      thus returning a single node. Very much like ``forward`` this is the main</span>
 <span class="sd">      method that describes how the components of the network are combined.</span>
 <span class="sd">      Hence, in ``TensorNetwork`` the :meth:`forward` method shall not be</span>
 <span class="sd">      overriden, since it will just call :meth:`set_data_nodes`, if needed,</span>
-<span class="sd">      and :meth:`contract`.</span>
+<span class="sd">      :meth:`add_data` and :meth:`contract` and then it will return the tensor</span>
+<span class="sd">      corresponding to the last ``resultant`` node. Hence, the order in which</span>
+<span class="sd">      ``Operations`` are called from ``contract`` is important. The last</span>
+<span class="sd">      operation must be the one returning the final node.</span>
 <span class="sd">      </span>
 <span class="sd">    |</span>
 
-<span class="sd">    Although one can define how the network is going to be contracted, there a</span>
-<span class="sd">    couple of modes that can change how this contraction behaves at a lower level:</span>
+<span class="sd">    Although one can define how the network is going to be contracted, there</span>
+<span class="sd">    are a couple of modes that can change how this contraction behaves at a</span>
+<span class="sd">    lower level:</span>
 
-<span class="sd">    * ``auto_stack`` (``False`` by default): This mode indicates whether the</span>
+<span class="sd">    * **auto_stack** (``False`` by default): This mode indicates whether the</span>
 <span class="sd">      operation :func:`stack` can take control of the memory management of the</span>
 <span class="sd">      network to skip some steps in future computations. If ``auto_stack`` is</span>
 <span class="sd">      set to ``True`` and a collection of :class:`ParamNodes &lt;ParamNode&gt;` are</span>
@@ -3927,7 +3938,7 @@ title="Source repository"
 <span class="sd">      and **training**. However, while experimenting with ``TensorNetwork``&#39;s</span>
 <span class="sd">      one might want that all nodes store their own tensors to avoid problems.</span>
 
-<span class="sd">    * ``auto_unbind`` (``False`` by default): This mode indicates whether the</span>
+<span class="sd">    * **auto_unbind** (``False`` by default): This mode indicates whether the</span>
 <span class="sd">      operation :func:`unbind` has to actually `unbind` the stacked tensor or</span>
 <span class="sd">      just generate a collection of references. That is, if ``auto_unbind`` is</span>
 <span class="sd">      set to ``False``, :func:`unbind` creates a collection of nodes, each of</span>
@@ -3971,6 +3982,23 @@ title="Source repository"
 <span class="sd">    **reserved nodes&#39; names**, and :meth:`reset` to learn about how these</span>
 <span class="sd">    nodes are treated differently.</span>
 <span class="sd">    </span>
+<span class="sd">    |</span>
+<span class="sd">    </span>
+<span class="sd">    Other thing one must take into account is the naming of ``Nodes``. Since</span>
+<span class="sd">    the name of a ``Node`` is used to access it from the ``TensorNetwork``, the</span>
+<span class="sd">    same name cannot be used by more than one ``Node``. In that case, repeated</span>
+<span class="sd">    names get an automatic enumeration of the form ``&quot;name_{number}&quot;`` (underscore</span>
+<span class="sd">    followed by number).</span>
+<span class="sd">    </span>
+<span class="sd">    To add a custom enumeration to keep track of the nodes of the network in a</span>
+<span class="sd">    user-defined way, one may use brackets or parenthesis: ``&quot;name_({number})&quot;``.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
+<span class="sd">    </span>
+<span class="sd">    For an example, check this :ref:`tutorial &lt;tutorial_5&gt;`.</span>
+<span class="sd">    </span>
+<span class="sd">    |</span>
+<span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    name : str, optional</span>
@@ -3979,8 +4007,6 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    </span>
 <span class="sd">    |</span>
-<span class="sd">    </span>
-<span class="sd">    # TODO: add reference to example in other file</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">operations</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>  <span class="c1"># References to the Operations defined for nodes</span>
@@ -4832,7 +4858,7 @@ title="Source repository"
 <span class="sd">        See :class:`AbstractNode` to learn more about the **4 types** of nodes</span>
 <span class="sd">        and the **reserved names**.</span>
 <span class="sd">        </span>
-<span class="sd">        # TODO: include example from other file</span>
+<span class="sd">        For an example, check this :ref:`tutorial &lt;tutorial_5&gt;`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_seq_ops</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_inverse_memory</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
@@ -4910,6 +4936,8 @@ title="Source repository"
 <span class="sd">        that would be required in the forward call. In case the tensor network</span>
 <span class="sd">        is contracted with some input data, an example tensor with batch dimension</span>
 <span class="sd">        1 and filled with zeros would be enough to trace the contraction.</span>
+<span class="sd">        </span>
+<span class="sd">        For an example, check this :ref:`tutorial &lt;tutorial_5&gt;`.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -4922,8 +4950,6 @@ title="Source repository"
 <span class="sd">            Arguments that might be used in :meth:`contract`.</span>
 <span class="sd">        kwargs :</span>
 <span class="sd">            Keyword arguments that might be used in :meth:`contract`.</span>
-<span class="sd">            </span>
-<span class="sd">        # TODO: include example from other file</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
 
@@ -4964,6 +4990,8 @@ title="Source repository"
 <span class="sd">        used in :meth:`contract` in the same order they appeared in the code.</span>
 <span class="sd">        Hence, the **last operation** in :meth:`contract` should be the one that</span>
 <span class="sd">        **returns the single output** :class:`Node`.</span>
+<span class="sd">        </span>
+<span class="sd">        For an example, check this :ref:`tutorial &lt;tutorial_5&gt;`.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -4988,8 +5016,6 @@ title="Source repository"
 <span class="sd">            Arguments that might be used in :meth:`contract`.</span>
 <span class="sd">        kwargs :</span>
 <span class="sd">            Keyword arguments that might be used in :meth:`contract`.</span>
-<span class="sd">            </span>
-<span class="sd">        # TODO: include example from other file</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_nodes</span><span class="p">:</span>

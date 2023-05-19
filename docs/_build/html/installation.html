@@ -111,65 +111,33 @@
   </label>
   <ul>
    <li class="toctree-l2">
-    <a class="reference internal" href="tutorials/basics.html">
-     Basics
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toctree-l1 has-children">
-  <a class="reference internal" href="examples.html">
-   Experiments
-  </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
-  <label for="toctree-checkbox-2">
-   <i class="fas fa-chevron-down">
-   </i>
-  </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="examples/jose_mps_mnist.html">
-     MPS and Canonical Form - MNIST
+    <a class="reference internal" href="tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="examples/jose_mps_canonical_mnist.html">
-     MPS and Canonical Form initializing also in canonical form - MNIST
+    <a class="reference internal" href="tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="examples/jose_mps_fashion_mnist.html">
-     MPS and Canonical Form - FashionMNIST
+    <a class="reference internal" href="tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="examples/cirac_snake_sbs_fashion_mnist.html">
-     SnakeSBS - FashionMNIST
+    <a class="reference internal" href="tutorials/4_types_of_nodes.html">
+     The different Types of Nodes
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="examples/cirac_cnn_snake_sbs_fashion_mnist.html">
-     CNN-SnakeSBS - FashionMNIST
+    <a class="reference internal" href="tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
     </a>
    </li>
    <li class="toctree-l2">
-    <a class="reference internal" href="examples/jose_convmps_fashion_mnist.html">
-     ConvMPS - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="examples/jose_convtree_fashion_mnist.html">
-     ConvTree - FashionMNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="examples/miles_mps_dmrg_mnist.html">
-     MPS with DMRG - MNIST
-    </a>
-   </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="examples/jose_mps_mnist_binarized.html">
-     MPS - MNIST Binarized
+    <a class="reference internal" href="tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
     </a>
    </li>
   </ul>
@@ -178,8 +146,8 @@
   <a class="reference internal" href="api.html">
    API Reference
   </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
-  <label for="toctree-checkbox-3">
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
    <i class="fas fa-chevron-down">
    </i>
   </label>
@@ -360,6 +328,30 @@ title="Print to PDF"
                 
   <section id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">#</a></h1>
+<p>To install the package, run the following command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install tensorkrowch
+</pre></div>
+</div>
+<p>You can also install directly from GitHub with:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install git+https://github.com/joserapa98/tensorkrowch.git@master
+</pre></div>
+</div>
+<p>or download the repository on your computer and run</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install .
+</pre></div>
+</div>
+<p>in the repository folder.</p>
+<p>Since <strong>TensorKrowch</strong> has a <a class="reference external" href="https://pytorch.org/tutorials/advanced/cpp_extension.html">PyTorch C++ Extension</a>,
+it has to be built from source, so make sure you have installed on your system
+a C++ compiler compatible with C++14, and that you have <strong>PyTorch</strong> installed
+before trying to install <strong>TensorKrowch</strong>.</p>
+<p>Tests are written outside the Python module, therefore they are not installed
+together with the package. To test the installation, clone the repository and
+run, in a Unix terminal</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python -m pytest
+</pre></div>
+</div>
+<p>inside the repository folder.</p>
 </section>
 
 

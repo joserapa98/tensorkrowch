@@ -155,6 +155,8 @@ cython_debug/
 # Project folders
 /training_scripts
 /data
+/tutorials
+/examples
 
 # Distribute package instructions
 /dist_pkg

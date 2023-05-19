@@ -3593,7 +3593,8 @@ def stacked_einsum(string: Text,
     Applies the same :func:`einsum` operation (same ``string``) to a sequence
     of groups of nodes (all groups having the same amount of nodes, with the
     same properties, etc.). That is, it stacks these groups of nodes into a
-    single collection of nodes that is then contracted via :func:`einsum`, and
+    single collection of ``StackNodes`` that is then contracted via
+    :func:`einsum` (using the stack dimensions as **batch**), and
     :func:`unbinded <unbind>` afterwards.
 
     Parameters

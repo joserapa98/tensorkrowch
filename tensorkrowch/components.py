@@ -74,6 +74,19 @@ class Axis:
     Even though we can create ``Axis`` instances, that will not be usually the
     case, since axes are automatically created when instantiating a new
     :class:`node <AbstractNode>`.
+    
+    |
+    
+    Other thing one must take into account is the naming of ``Axes``. Since
+    the name of an ``Axis`` is used to access it from the ``Node``, the
+    same name cannot be used by more than one ``Axis``. In that case, repeated
+    names get an automatic enumeration of the form ``"name_{number}"``
+    (underscore followed by number).
+    
+    To add a custom enumeration in a user-defined way, one may use brackets or
+    parenthesis: ``"name_({number})"``.
+    
+    |
 
     Parameters
     ----------
@@ -276,7 +289,7 @@ Shape = Union[Sequence[int], Size]
 class AbstractNode(ABC):
     """
     Abstract class for all types of nodes. Defines what a node is and most of its
-    properties and methods. Since it is an abstract class, cannot be instantiated. 
+    properties and methods. Since it is an abstract class, cannot be instantiated.
       
     Nodes are the elements that make up a :class:`TensorNetwork`. At its most
     basic level, a node is a container for a ``torch.Tensor`` that stores other
@@ -364,20 +377,21 @@ class AbstractNode(ABC):
     
     Other thing one should take into account are **reserved nodes' names**:
     
-    * ``"stack_data_memory"``: Name of the ``virtual`` :class:`StackNode` that
+    * **"stack_data_memory"**: Name of the ``virtual`` :class:`StackNode` that
       is created in :meth:`~TensorNetwork.set_data_nodes` to store the whole
       data tensor from which each ``data`` node might take just one `slice`.
       There should be at most one ``"stack_data_memory"`` in the network.
       To learn more about this, see :meth:`~TensorNetwork.set_data_nodes` and
       :meth:`~TensorNetwork.add_data`.
     
-    * ``"virtual_stack"``: Name of the ``virtual`` :class:`ParamStackNode` that
+    * **"virtual_stack"**: Name of the ``virtual`` :class:`ParamStackNode` that
       results from stacking :class:`ParamNodes <ParamNode>` as the first
-      operation in the network contraction. There might be as much
-      ``"virtual_stack"`` nodes as stacks are created from ``ParamNodes``. To
-      learn more about this, see :class:`ParamStackNode`.
+      operation in the network contraction, if ``auto_stack`` mode is set to
+      ``True``. There might be as much ``"virtual_stack"`` nodes as stacks are
+      created from ``ParamNodes``. To learn more about this, see
+      :class:`ParamStackNode`.
     
-    * ``"virtual_uniform"``: Name of the ``virtual`` :class:`Node` or
+    * **"virtual_uniform"**: Name of the ``virtual`` :class:`Node` or
       :class:`ParamNode` that is used in uniform (translationally invariant)
       tensor networks to store the tensor that will be shared by all ``leaf``
       nodes. There might be as much ``"virtual_uniform"`` nodes as shared
@@ -391,6 +405,20 @@ class AbstractNode(ABC):
     
     |
     
+    Other thing one must take into account is the naming of ``Nodes``. Since
+    the name of a ``Node`` is used to access it from the ``TensorNetwork``, the
+    same name cannot be used by more than one ``Node``. In that case, repeated
+    names get an automatic enumeration of the form ``"name_{number}"`` (underscore
+    followed by number).
+    
+    To add a custom enumeration to keep track of the nodes of the network in a
+    user-defined way, one may use brackets or parenthesis: ``"name_({number})"``.
+    
+    The same automatic enumeration of names occurs for :class:`Axes <Axis>`'
+    names in a ``Node``.
+    
+    |
+    
     Refer to the subclasses of ``AbstractNode`` to see how to instantiate nodes:
 
     * :class:`Node`
@@ -400,7 +428,6 @@ class AbstractNode(ABC):
     * :class:`StackNode`
 
     * :class:`ParamStackNode`
-    
     
     |
     """
@@ -1840,6 +1867,8 @@ class Node(AbstractNode):
     |
 
     For a complete list of properties and methods, see also :class:`AbstractNode`.
+    
+    |
 
     Parameters
     ----------
@@ -2111,6 +2140,8 @@ class ParamNode(AbstractNode):
     |
 
     For a complete list of properties and methods, see also :class:`AbstractNode`.
+    
+    |
     
     Parameters
     ----------
@@ -2473,6 +2504,8 @@ class StackNode(Node):
     For the rest of the axes, a list of the edges corresponding to all nodes in
     the stack is stored, so that, when :func:`unbinding <unbind>` the stack, it
     can be inferred to which nodes the unbinded nodes have to be connected.
+    
+    |
 
     Parameters
     ----------
@@ -2697,6 +2730,8 @@ class ParamStackNode(ParamNode):
     |
 
     ``ParamStackNodes`` can only be instantiated by providing a sequence of nodes.
+    
+    |
 
     Parameters
     ----------
@@ -2871,6 +2906,8 @@ class Edge:
     Furthermore, edges have specific operations like :meth:`contract_` or
     :meth:`svd_` (and its variations) that allow in-place modification of the
     :class:`TensorNetwork`.
+    
+    |
 
     Parameters
     ----------
@@ -3208,6 +3245,8 @@ class StackEdge(Edge):
     this, all edges of the stacked nodes must be kept, since they have the
     information regarding the nodes' neighbours, which will be used when :func:
     `unbinding <unbind>` the stack.
+    
+    |
 
     Parameters
     ----------
@@ -3564,43 +3603,47 @@ class TensorNetwork(nn.Module):
     by defining a subclass where the ``__init__`` and ``forward`` methods are
     overriden:
 
-    * ``__init__``: Defines the model itself (its layers, attributes, etc.).
+    * **__init__**: Defines the model itself (its layers, attributes, etc.).
     
-    * ``forward``: Defines the way the model operates, that is, how the different
+    * **forward**: Defines the way the model operates, that is, how the different
       parts of the model might combine to get an output from a particular input.
 
 
     With ``TensorNetwork``, the workflow is similar, though there are other
     methods that should be overriden:
     
-    * ``__init__``: Defines the graph of the tensor network and initializes the
+    * **__init__**: Defines the graph of the tensor network and initializes the
       tensors of the nodes. See :class:`AbstractNode` and :class:`Edge` to learn
       how to create nodes and connect them.
       
-    * ``set_data_nodes`` (optional): Creates the data nodes where the data
+    * **set_data_nodes** (optional): Creates the data nodes where the data
       tensor(s) will be placed. Usually, it will just select the edges to which
-      the data nodes should be connected, and call the parent method. See
+      the ``data`` nodes should be connected, and call the parent method. See
       :meth:`set_data_nodes` to learn good practices to override it. See also
       :meth:`add_data`.
       
-    * ``add_data`` (optional): Adds new data tensors that will be stored in
+    * **add_data** (optional): Adds new data tensors that will be stored in
       ``data`` nodes. Usually it will not be necessary to override this method,
       but if one wants to customize how data is set into the ``data`` nodes,
       :meth:`add_data` can be overriden.
       
-    * ``contract``: Defines the contraction algorithm of the whole tensor network,
+    * **contract**: Defines the contraction algorithm of the whole tensor network,
       thus returning a single node. Very much like ``forward`` this is the main
       method that describes how the components of the network are combined.
       Hence, in ``TensorNetwork`` the :meth:`forward` method shall not be
       overriden, since it will just call :meth:`set_data_nodes`, if needed,
-      and :meth:`contract`.
+      :meth:`add_data` and :meth:`contract` and then it will return the tensor
+      corresponding to the last ``resultant`` node. Hence, the order in which
+      ``Operations`` are called from ``contract`` is important. The last
+      operation must be the one returning the final node.
       
     |
 
-    Although one can define how the network is going to be contracted, there a
-    couple of modes that can change how this contraction behaves at a lower level:
+    Although one can define how the network is going to be contracted, there
+    are a couple of modes that can change how this contraction behaves at a
+    lower level:
 
-    * ``auto_stack`` (``False`` by default): This mode indicates whether the
+    * **auto_stack** (``False`` by default): This mode indicates whether the
       operation :func:`stack` can take control of the memory management of the
       network to skip some steps in future computations. If ``auto_stack`` is
       set to ``True`` and a collection of :class:`ParamNodes <ParamNode>` are
@@ -3615,7 +3658,7 @@ class TensorNetwork(nn.Module):
       and **training**. However, while experimenting with ``TensorNetwork``'s
       one might want that all nodes store their own tensors to avoid problems.
 
-    * ``auto_unbind`` (``False`` by default): This mode indicates whether the
+    * **auto_unbind** (``False`` by default): This mode indicates whether the
       operation :func:`unbind` has to actually `unbind` the stacked tensor or
       just generate a collection of references. That is, if ``auto_unbind`` is
       set to ``False``, :func:`unbind` creates a collection of nodes, each of
@@ -3659,6 +3702,23 @@ class TensorNetwork(nn.Module):
     **reserved nodes' names**, and :meth:`reset` to learn about how these
     nodes are treated differently.
     
+    |
+    
+    Other thing one must take into account is the naming of ``Nodes``. Since
+    the name of a ``Node`` is used to access it from the ``TensorNetwork``, the
+    same name cannot be used by more than one ``Node``. In that case, repeated
+    names get an automatic enumeration of the form ``"name_{number}"`` (underscore
+    followed by number).
+    
+    To add a custom enumeration to keep track of the nodes of the network in a
+    user-defined way, one may use brackets or parenthesis: ``"name_({number})"``.
+    
+    |
+    
+    For an example, check this :ref:`tutorial <tutorial_5>`.
+    
+    |
+    
     Parameters
     ----------
     name : str, optional
@@ -3667,8 +3727,6 @@ class TensorNetwork(nn.Module):
     
     
     |
-    
-    # TODO: add reference to example in other file
     """
 
     operations = dict()  # References to the Operations defined for nodes
@@ -4520,7 +4578,7 @@ class TensorNetwork(nn.Module):
         See :class:`AbstractNode` to learn more about the **4 types** of nodes
         and the **reserved names**.
         
-        # TODO: include example from other file
+        For an example, check this :ref:`tutorial <tutorial_5>`.
         """
         self._seq_ops = []
         self._inverse_memory = dict()
@@ -4598,6 +4656,8 @@ class TensorNetwork(nn.Module):
         that would be required in the forward call. In case the tensor network
         is contracted with some input data, an example tensor with batch dimension
         1 and filled with zeros would be enough to trace the contraction.
+        
+        For an example, check this :ref:`tutorial <tutorial_5>`.
 
         Parameters
         ----------
@@ -4610,8 +4670,6 @@ class TensorNetwork(nn.Module):
             Arguments that might be used in :meth:`contract`.
         kwargs :
             Keyword arguments that might be used in :meth:`contract`.
-            
-        # TODO: include example from other file
         """
         self.reset()
 
@@ -4652,6 +4710,8 @@ class TensorNetwork(nn.Module):
         used in :meth:`contract` in the same order they appeared in the code.
         Hence, the **last operation** in :meth:`contract` should be the one that
         **returns the single output** :class:`Node`.
+        
+        For an example, check this :ref:`tutorial <tutorial_5>`.
 
         Parameters
         ----------
@@ -4676,8 +4736,6 @@ class TensorNetwork(nn.Module):
             Arguments that might be used in :meth:`contract`.
         kwargs :
             Keyword arguments that might be used in :meth:`contract`.
-            
-        # TODO: include example from other file
         """
         if data is not None:
             if not self._data_nodes:

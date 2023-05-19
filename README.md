@@ -49,24 +49,24 @@ to the official **TensorKrowch** [documentation](https://joserapa98.github.io/te
 To install the package, run the following command:
 
 ```
-$ pip install tensorkrowch
+pip install tensorkrowch
 ```
 
 You can also install directly from GitHub with:
 
 ```
-$ pip install git+https://github.com/joserapa98/tensorkrowch.git@master
+pip install git+https://github.com/joserapa98/tensorkrowch.git@master
 ```
 
 or download the repository on your computer and run 
 
 ```
-$ pip install .
+pip install .
 ```
 
 in the repository folder.
 
-Since **TensorKrowch** has a `PyTorch C++ Extension <https://pytorch.org/tutorials/advanced/cpp_extension.html>`_,
+Since **TensorKrowch** has a [PyTorch C++ Extension](https://pytorch.org/tutorials/advanced/cpp_extension.html),
 it has to be built from source, so make sure you have installed on your system
 a C++ compiler compatible with C++14, and that you have **PyTorch** installed
 before trying to install **TensorKrowch**.
@@ -76,7 +76,7 @@ together with the package. To test the installation, clone the repository and
 run, in a Unix terminal
 
 ```
-$ python -m pytest
+python -m pytest
 ```
 
 inside the repository folder.
@@ -86,7 +86,7 @@ inside the repository folder.
 
 With **TensorKrowch** you can experiment building Tensor Networks:
 
-```
+```python
 import torch
 import tensorkrowch as tk
 
@@ -109,7 +109,7 @@ node1['right'] ^ node2['right']
 
 It is also quite easy to contract the network and compute gradients:
 
-```
+```python
 result = node1 @ node2
 result.tensor.backward()
 
@@ -120,7 +120,7 @@ assert node2.grad is not None
 In **TensorKrowch** ``TensorNetworks`` work like **PyTorch** layers. Thus
 creating hybrid neural-tensor network models is straightforward:
 
-```
+```python
 import torch.nn as nn
 
 my_model = nn.Sequential(
@@ -149,12 +149,12 @@ define ``Nodes``, create connections between through their ``Edges``, and
 configure the ``TensorNetwork`` structure. This hands-on approach will greatly
 enhance your understanding and proficiency with **TensorKrowch**.
 
-* [Creating a Tensor Network in TensorKrowch]()
-* [Contracting and Differentiating the Tensor Network]()
-* [How to save Memory and Time with TensorKrowch]()
-* [The different Types of Nodes]()
-* [How to subclass TensorNetwork to build Custom Models]()
-* [Creating a Hybrid Neural-Tensor Network Model]()
+* [Creating a Tensor Network in TensorKrowch](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/1_creating_tensor_network.html)
+* [Contracting and Differentiating the Tensor Network](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/2_contracting_tensor_network.html)
+* [How to save Memory and Time with TensorKrowch](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/3_memory_management.html)
+* [The different Types of Nodes](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/4_types_of_nodes.html)
+* [How to subclass TensorNetwork to build Custom Models](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/5_subclass_tensor_network.html)
+* [Creating a Hybrid Neural-Tensor Network Model](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/6_mix_with_pytorch.html)
 
 
 ## License
@@ -163,3 +163,5 @@ TensorKrowch is licensed under the MIT License. Please see the [LICENSE](https:/
 
 
 ## Citing
+
+

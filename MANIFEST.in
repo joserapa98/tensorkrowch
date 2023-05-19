@@ -1,1 +1,2 @@
 graft tensorkrowch/csrc
+prune tests

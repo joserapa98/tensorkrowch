@@ -31,7 +31,7 @@ setup(
     extras_require={
         'tests': ['pytest'],
         'docs': ['sphinx>=4.5',
-                 'sphinx-book-theme',
+                 'sphinx-book-theme==0.3.3',
                  'sphinx-copybutton',
                  'nbsphinx']
     },

@@ -423,8 +423,8 @@ essential components like <code class="docutils literal notranslate"><span class
 even the included implementations of <code class="docutils literal notranslate"><span class="pre">MPS</span></code> or <code class="docutils literal notranslate"><span class="pre">PEPS</span></code> only rely on these
 fundamental components.</p>
 <p>As a result, users who grasp the basic tools of <strong>TensorKrowch</strong> gain the ability
-to build a wide range of networks, ranging from simple MPS to more intricate
-architectures.</p>
+to build a wide range of networks, ranging from simple Matrix Product States to
+more intricate architectures.</p>
 <p>The true strength of <strong>TensorKrowch</strong> lies in its support for rapid experimentation,
 enabling users to create and train different models with just a few lines of code
 changes.</p>
@@ -435,10 +435,6 @@ Once the ideal network is determined, users can develop further optimized code
 specifically tailored to that network.</p>
 <p>Nevertheless, <strong>TensorKrowch</strong> incorporates various optimizations to ensure
 efficient training performance.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>This project is under active development.</p>
-</div>
 <section id="requirements">
 <h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this headline">#</a></h2>
 <ul class="simple">
@@ -462,10 +458,12 @@ efficient training performance.</p>
 </pre></div>
 </div>
 <p>in the repository folder.</p>
-<p>Since <strong>TensorKrowch</strong> has a <a class="reference external" href="https://pytorch.org/tutorials/advanced/cpp_extension.html">PyTorch C++ Extension</a>,
-it has to be built from source, so make sure you have installed on your system
-a C++ compiler compatible with C++14, and that you have <strong>PyTorch</strong> installed
-before trying to install <strong>TensorKrowch</strong>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Since <strong>TensorKrowch</strong> has a <a class="reference external" href="https://pytorch.org/tutorials/advanced/cpp_extension.html">PyTorch C++ Extension</a>, it has to be
+built from source, so make sure you have installed on your system a C++
+compiler compatible with C++14.</p>
+</div>
 <p>Tests are written outside the Python module, therefore they are not installed
 together with the package. To test the installation, clone the repository and
 run, in a Unix terminal</p>

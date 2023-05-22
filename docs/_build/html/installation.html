@@ -341,10 +341,12 @@ title="Print to PDF"
 </pre></div>
 </div>
 <p>in the repository folder.</p>
-<p>Since <strong>TensorKrowch</strong> has a <a class="reference external" href="https://pytorch.org/tutorials/advanced/cpp_extension.html">PyTorch C++ Extension</a>,
-it has to be built from source, so make sure you have installed on your system
-a C++ compiler compatible with C++14, and that you have <strong>PyTorch</strong> installed
-before trying to install <strong>TensorKrowch</strong>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Since <strong>TensorKrowch</strong> has a <a class="reference external" href="https://pytorch.org/tutorials/advanced/cpp_extension.html">PyTorch C++ Extension</a>, it has to be
+built from source, so make sure you have installed on your system a C++
+compiler compatible with C++14.</p>
+</div>
 <p>Tests are written outside the Python module, therefore they are not installed
 together with the package. To test the installation, clone the repository and
 run, in a Unix terminal</p>

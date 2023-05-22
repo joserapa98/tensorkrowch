@@ -9,9 +9,7 @@ with open('tensorkrowch/_version.py') as f:
     exec(f.read())  # __version__
 
 # Pytorch Cpp Extension
-ext_src = [str(x.absolute()) for x in Path(LIB_NAME).glob('csrc/*.cpp')]
-
-cpp_extension = CppExtension(LIB_NAME + '._C', sources=ext_src)
+cpp_extension = CppExtension(LIB_NAME + '._C', sources=['tensorkrowch/csrc/operations.cpp'])
 
 
 setup(

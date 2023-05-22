@@ -14,8 +14,8 @@ even the included implementations of ``MPS`` or ``PEPS`` only rely on these
 fundamental components.
 
 As a result, users who grasp the basic tools of **TensorKrowch** gain the ability
-to build a wide range of networks, ranging from simple MPS to more intricate
-architectures.
+to build a wide range of networks, ranging from simple Matrix Product States to
+more intricate architectures.
 
 The true strength of **TensorKrowch** lies in its support for rapid experimentation,
 enabling users to create and train different models with just a few lines of code
@@ -29,11 +29,6 @@ specifically tailored to that network.
 
 Nevertheless, **TensorKrowch** incorporates various optimizations to ensure
 efficient training performance.
-
-
-.. note::
-
-   This project is under active development.
 
 
 Requirements

@@ -1,9 +1,9 @@
 .. currentmodule:: tensorkrowch
 .. _tutorial_3:
 
-=============================================
-How to save Memory and Time with TensorKrowch
-=============================================
+========================================================
+How to save Memory and Time with TensorKrowch (ADVANCED)
+========================================================
 
 Since ``TensorKrowch`` is devoted to construct tensor network models, many of
 the operations one can compute between nodes have to keep track of information

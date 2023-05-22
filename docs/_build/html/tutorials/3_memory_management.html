@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>How to save Memory and Time with TensorKrowch &#8212; TensorKrowch 00.00.01 documentation</title>
+    <title>How to save Memory and Time with TensorKrowch (ADVANCED) &#8212; TensorKrowch 1.0.0 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -38,7 +38,7 @@
     <link rel="shortcut icon" href="../_static/tensorkrowch_favicon_light.svg"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="The different Types of Nodes" href="4_types_of_nodes.html" />
+    <link rel="next" title="The different Types of Nodes (ADVANCED)" href="4_types_of_nodes.html" />
     <link rel="prev" title="Contracting and Differentiating the Tensor Network" href="2_contracting_tensor_network.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
@@ -111,6 +111,11 @@
   </label>
   <ul class="current">
    <li class="toctree-l2">
+    <a class="reference internal" href="0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
     <a class="reference internal" href="1_creating_tensor_network.html">
      Creating a Tensor Network in TensorKrowch
     </a>
@@ -122,12 +127,12 @@
    </li>
    <li class="toctree-l2 current active">
     <a class="current reference internal" href="#">
-     How to save Memory and Time with TensorKrowch
+     How to save Memory and Time with TensorKrowch (ADVANCED)
     </a>
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="4_types_of_nodes.html">
-     The different Types of Nodes
+     The different Types of Nodes (ADVANCED)
     </a>
    </li>
    <li class="toctree-l2">
@@ -360,7 +365,7 @@ title="Print to PDF"
         <div class="col pl-md-3 pl-lg-5 content-container">
             <!-- Table of contents that is only displayed when printing the page -->
             <div id="jb-print-docs-body" class="onlyprint">
-                <h1>How to save Memory and Time with TensorKrowch</h1>
+                <h1>How to save Memory and Time with TensorKrowch (ADVANCED)</h1>
                 <!-- Table of contents -->
                 <div id="print-main-content">
                     <div id="jb-print-toc">
@@ -407,8 +412,8 @@ title="Print to PDF"
                 
               <div>
                 
-  <section id="how-to-save-memory-and-time-with-tensorkrowch">
-<span id="tutorial-3"></span><h1>How to save Memory and Time with TensorKrowch<a class="headerlink" href="#how-to-save-memory-and-time-with-tensorkrowch" title="Permalink to this headline">#</a></h1>
+  <section id="how-to-save-memory-and-time-with-tensorkrowch-advanced">
+<span id="tutorial-3"></span><h1>How to save Memory and Time with TensorKrowch (ADVANCED)<a class="headerlink" href="#how-to-save-memory-and-time-with-tensorkrowch-advanced" title="Permalink to this headline">#</a></h1>
 <p>Since <code class="docutils literal notranslate"><span class="pre">TensorKrowch</span></code> is devoted to construct tensor network models, many of
 the operations one can compute between nodes have to keep track of information
 of the underlying graph. However, this could be very costly if we had to compute
@@ -514,7 +519,7 @@ Product State:</p>
     <span class="n">nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
 
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
-    <span class="n">mps</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">mps</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;node_(</span><span class="si">{</span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">100</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+    <span class="n">mps</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">mps</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;node_(</span><span class="si">{</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">100</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
 
 <span class="c1"># Check that all nodes share tensor with uniform_node</span>
 <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
@@ -653,7 +658,7 @@ next <a class="reference internal" href="4_types_of_nodes.html#tutorial-4"><span
     <a class='right-next' id="next-link" href="4_types_of_nodes.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">The different Types of Nodes</p>
+        <p class="prev-next-title">The different Types of Nodes (ADVANCED)</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>

@@ -1,9 +1,9 @@
 .. currentmodule:: tensorkrowch
 .. _tutorial_4:
 
-============================
-The different Types of Nodes
-============================
+=======================================
+The different Types of Nodes (ADVANCED)
+=======================================
 
 ``TensorKrowch`` has different methods to distinguish between types of nodes
 that are used for different purposes. These types of nodes are not subclasses,

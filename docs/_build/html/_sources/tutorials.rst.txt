@@ -4,6 +4,7 @@ Tutorials
 .. toctree::
    :maxdepth: 1
    
+   tutorials/0_first_steps
    tutorials/1_creating_tensor_network
    tutorials/2_contracting_tensor_network
    tutorials/3_memory_management

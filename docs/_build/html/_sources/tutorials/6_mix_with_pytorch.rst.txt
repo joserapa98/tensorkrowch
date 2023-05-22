@@ -82,6 +82,7 @@ Now we can define the model::
 
 Now we set the parameters for the training algorithm and our model::
 
+    # Miscellaneous initialization
     torch.manual_seed(0)
 
     # Training parameters
@@ -118,6 +119,10 @@ Set our loss function and optimizer::
                                  lr=learn_rate,
                                  weight_decay=l2_reg)
 
+It is important to trace the model before putting the parameters in the optimizer.
+Otherwise, we would be optimizing the parameters of a model that is not the one
+we are training.
+
 Download the ``FashionMNIST`` dataset and perform the appropiate
 transformations::
 
@@ -138,8 +143,8 @@ transformations::
 Put ``FashionMNIST`` data into dataloaders::
 
     samplers = {
-        "train": torch.utils.data.SubsetRandomSampler(range(num_train)),
-        "test": torch.utils.data.SubsetRandomSampler(range(num_test)),
+        'train': torch.utils.data.SubsetRandomSampler(range(num_train)),
+        'test': torch.utils.data.SubsetRandomSampler(range(num_test)),
     }
 
     loaders = {
@@ -232,9 +237,9 @@ Let's check how many parameters our model has::
     # Memory module: 0.5224 MB
 
 Since we are using tensor networks we can **prune** our model in 4 lines of
-code. The trick? Using canonical forms of MPS, that is, performing Singular
-Value Decompositions between every pair of nodes and cutting the least singular
-values, reducing the sizes of the edges in our network::
+code. The trick? Using **canonical forms** of MPS, that is, performing Singular
+Value Decompositions between every pair of nodes and cutting off the least
+singular values, reducing the sizes of the edges in our network::
 
     for mps in cnn_snake.layers:
         mps.canonicalize(cum_percentage=0.98)
@@ -243,7 +248,7 @@ values, reducing the sizes of the edges in our network::
         mps.trace(torch.zeros(
             1, 7, image_size[0]//2, image_size[1]//2).to(device))
 
-Let's see how much our model has changed after pruning with canonical forms::
+Let's see how much our model has changed after pruning with **canonical forms**::
 
     # New test accuracy
     with torch.no_grad():

@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.operations &#8212; TensorKrowch 00.00.01 documentation</title>
+    <title>tensorkrowch.operations &#8212; TensorKrowch 1.0.0 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -108,6 +108,11 @@
   </label>
   <ul>
    <li class="toctree-l2">
+    <a class="reference internal" href="../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
     <a class="reference internal" href="../../tutorials/1_creating_tensor_network.html">
      Creating a Tensor Network in TensorKrowch
     </a>
@@ -119,12 +124,12 @@
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="../../tutorials/3_memory_management.html">
-     How to save Memory and Time with TensorKrowch
+     How to save Memory and Time with TensorKrowch (ADVANCED)
     </a>
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="../../tutorials/4_types_of_nodes.html">
-     The different Types of Nodes
+     The different Types of Nodes (ADVANCED)
     </a>
    </li>
    <li class="toctree-l2">
@@ -327,7 +332,7 @@ title="Source repository"
 
 
 <span class="k">def</span> <span class="nf">copy_func</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns a function with the same code, defaults, closure and name.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Returns a function with the same code, defaults, closure and name.&quot;&quot;&quot;</span>
     <span class="n">fn</span> <span class="o">=</span> <span class="n">types</span><span class="o">.</span><span class="n">FunctionType</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="vm">__code__</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="vm">__globals__</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
                             <span class="n">f</span><span class="o">.</span><span class="vm">__defaults__</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="vm">__closure__</span><span class="p">)</span>
 
@@ -341,7 +346,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="Operation"><a class="viewcode-back" href="../../operations.html#tensorkrowch.Operation">[docs]</a><span class="k">class</span> <span class="nc">Operation</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for node operations.</span>
 <span class="sd">    </span>
 <span class="sd">    A node operation is made up of two functions, the one that is executed the</span>
@@ -466,7 +471,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="permute"><a class="viewcode-back" href="../../operations.html#tensorkrowch.permute">[docs]</a><span class="k">def</span> <span class="nf">permute</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">axes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Permutes the nodes&#39; tensor, as well as its axes and edges to match the new</span>
 <span class="sd">    shape.</span>
 
@@ -498,7 +503,7 @@ title="Source repository"
 
 <span class="n">permute_node</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">permute</span><span class="p">)</span>
 <span class="n">permute_node</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Permutes the nodes&#39; tensor, as well as its axes and edges to match the new</span>
 <span class="sd">    shape.</span>
 <span class="sd">    </span>
@@ -528,7 +533,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="permute_"><a class="viewcode-back" href="../../operations.html#tensorkrowch.permute_">[docs]</a><span class="k">def</span> <span class="nf">permute_</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">axes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Permutes the nodes&#39; tensor, as well as its axes and edges to match the new</span>
 <span class="sd">    shape (in-place).</span>
 
@@ -581,7 +586,7 @@ title="Source repository"
 
 <span class="n">permute_node_</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">permute_</span><span class="p">)</span>
 <span class="n">permute_node_</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Permutes the nodes&#39; tensor, as well as its axes and edges to match the new</span>
 <span class="sd">    shape (in-place).</span>
 
@@ -683,7 +688,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="tprod"><a class="viewcode-back" href="../../operations.html#tensorkrowch.tprod">[docs]</a><span class="k">def</span> <span class="nf">tprod</span><span class="p">(</span><span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">node2</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Tensor product between two nodes. It can also be performed using the</span>
 <span class="sd">    operator ``%``.</span>
 <span class="sd">    </span>
@@ -717,7 +722,7 @@ title="Source repository"
 
 <span class="n">tprod_node</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">tprod</span><span class="p">)</span>
 <span class="n">tprod_node</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Tensor product between two nodes. It can also be performed using the</span>
 <span class="sd">    operator ``%``.</span>
 <span class="sd">    </span>
@@ -812,7 +817,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="mul"><a class="viewcode-back" href="../../operations.html#tensorkrowch.mul">[docs]</a><span class="k">def</span> <span class="nf">mul</span><span class="p">(</span><span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">node2</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Element-wise product between two nodes. It can also be performed using the</span>
 <span class="sd">    operator ``*``.</span>
 <span class="sd">    </span>
@@ -844,7 +849,7 @@ title="Source repository"
 
 <span class="n">mul_node</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">mul</span><span class="p">)</span>
 <span class="n">mul_node</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Element-wise product between two nodes. It can also be performed using the</span>
 <span class="sd">    operator ``*``.</span>
 <span class="sd">    </span>
@@ -938,7 +943,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="add"><a class="viewcode-back" href="../../operations.html#tensorkrowch.add">[docs]</a><span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">node2</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Element-wise addition between two nodes. It can also be performed using the</span>
 <span class="sd">    operator ``+``.</span>
 <span class="sd">    </span>
@@ -970,7 +975,7 @@ title="Source repository"
 
 <span class="n">add_node</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">add</span><span class="p">)</span>
 <span class="n">add_node</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Element-wise addition between two nodes. It can also be performed using the</span>
 <span class="sd">    operator ``+``.</span>
 <span class="sd">    </span>
@@ -1064,7 +1069,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="sub"><a class="viewcode-back" href="../../operations.html#tensorkrowch.sub">[docs]</a><span class="k">def</span> <span class="nf">sub</span><span class="p">(</span><span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">node2</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Element-wise subtraction between two nodes. It can also be performed using</span>
 <span class="sd">    the operator ``-``.</span>
 <span class="sd">    </span>
@@ -1096,7 +1101,7 @@ title="Source repository"
 
 <span class="n">sub_node</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">sub</span><span class="p">)</span>
 <span class="n">sub_node</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Element-wise subtraction between two nodes. It can also be performed using</span>
 <span class="sd">    the operator ``-``.</span>
 <span class="sd">    </span>
@@ -1536,7 +1541,7 @@ title="Source repository"
           <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
           <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
           <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">Node</span><span class="p">]:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Splits one node in two via the decomposition specified in ``mode``. To</span>
 <span class="sd">    perform this operation the set of edges has to be split in two sets,</span>
 <span class="sd">    corresponding to the edges of the first and second ``resultant nodes``.</span>
@@ -1652,7 +1657,7 @@ title="Source repository"
 
 <span class="n">split_node</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">split</span><span class="p">)</span>
 <span class="n">split_node</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Splits one node in two via the decomposition specified in ``mode``. See</span>
 <span class="sd">    :func:`split` for a more complete explanation.</span>
 <span class="sd">    </span>
@@ -1723,7 +1728,7 @@ title="Source repository"
            <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
            <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
            <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">Node</span><span class="p">]:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    In-place version of :func:`split`.</span>
 
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
@@ -1830,7 +1835,7 @@ title="Source repository"
 
 <span class="n">split_node_</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">split_</span><span class="p">)</span>
 <span class="n">split_node_</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    In-place version of :func:`~AbstractNode.split`.</span>
 <span class="sd">    </span>
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
@@ -1908,7 +1913,7 @@ title="Source repository"
          <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
          <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
          <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">Node</span><span class="p">]:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts an edge in-place via :func:`contract_` and splits it in-place via</span>
 <span class="sd">    :func:`split_` using ``mode = &quot;svd&quot;``. See :func:`split` for a more complete</span>
 <span class="sd">    explanation.</span>
@@ -2033,7 +2038,7 @@ title="Source repository"
 
 <span class="n">svd_edge_</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">svd_</span><span class="p">)</span>
 <span class="n">svd_edge_</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts an edge in-place via :func:`~Edge.contract_` and splits</span>
 <span class="sd">    it in-place via :func:`~AbstractNode.split_` using ``mode = &quot;svd&quot;``. See</span>
 <span class="sd">    :func:`split` for a more complete explanation.</span>
@@ -2102,7 +2107,7 @@ title="Source repository"
           <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
           <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
           <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">Node</span><span class="p">]:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts an edge in-place via :func:`contract_` and splits it in-place via</span>
 <span class="sd">    :func:`split_` using ``mode = &quot;svdr&quot;``. See :func:`split` for a more complete</span>
 <span class="sd">    explanation.</span>
@@ -2227,7 +2232,7 @@ title="Source repository"
 
 <span class="n">svdr_edge_</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">svdr_</span><span class="p">)</span>
 <span class="n">svdr_edge_</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts an edge in-place via :func:`~Edge.contract_` and splits</span>
 <span class="sd">    it in-place via :func:`~AbstractNode.split_` using ``mode = &quot;svdr&quot;``. See</span>
 <span class="sd">    :func:`split` for a more complete explanation.</span>
@@ -2292,7 +2297,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="qr_"><a class="viewcode-back" href="../../operations.html#tensorkrowch.qr_">[docs]</a><span class="k">def</span> <span class="nf">qr_</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">Node</span><span class="p">]:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts an edge in-place via :func:`contract_` and splits it in-place via</span>
 <span class="sd">    :func:`split_` using ``mode = &quot;qr&quot;``. See :func:`split` for a more complete</span>
 <span class="sd">    explanation.</span>
@@ -2395,7 +2400,7 @@ title="Source repository"
 
 <span class="n">qr_edge_</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">qr_</span><span class="p">)</span>
 <span class="n">qr_edge_</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts an edge in-place via :func:`~Edge.contract_` and splits</span>
 <span class="sd">    it in-place via :func:`~AbstractNode.split_` using ``mode = &quot;qr&quot;``. See</span>
 <span class="sd">    :func:`split` for a more complete explanation.</span>
@@ -2439,7 +2444,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="rq_"><a class="viewcode-back" href="../../operations.html#tensorkrowch.rq_">[docs]</a><span class="k">def</span> <span class="nf">rq_</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">Node</span><span class="p">]:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts an edge in-place via :func:`contract_` and splits it in-place via</span>
 <span class="sd">    :func:`split_` using ``mode = &quot;rq&quot;``. See :func:`split` for a more complete</span>
 <span class="sd">    explanation.</span>
@@ -2542,7 +2547,7 @@ title="Source repository"
 
 <span class="n">rq_edge_</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">rq_</span><span class="p">)</span>
 <span class="n">rq_edge_</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts an edge in-place via :func:`~Edge.contract_` and splits</span>
 <span class="sd">    it in-place via :func:`~AbstractNode.split_` using ``mode = &quot;qr&quot;``. See</span>
 <span class="sd">    :func:`split` for a more complete explanation.</span>
@@ -2849,7 +2854,7 @@ title="Source repository"
 <div class="viewcode-block" id="contract_edges"><a class="viewcode-back" href="../../operations.html#tensorkrowch.contract_edges">[docs]</a><span class="k">def</span> <span class="nf">contract_edges</span><span class="p">(</span><span class="n">edges</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Edge</span><span class="p">],</span>
                    <span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
                    <span class="n">node2</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts all selected edges between two nodes.</span>
 <span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;contract_edges&quot;``.</span>
@@ -2899,7 +2904,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="contract_"><a class="viewcode-back" href="../../operations.html#tensorkrowch.contract_">[docs]</a><span class="k">def</span> <span class="nf">contract_</span><span class="p">(</span><span class="n">edge</span><span class="p">:</span> <span class="n">Edge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts in-place the nodes that are connected through the edge. See</span>
 <span class="sd">    :func:`contract` for a more complete explanation.</span>
 
@@ -2978,7 +2983,7 @@ title="Source repository"
 
 <span class="k">def</span> <span class="nf">get_shared_edges</span><span class="p">(</span><span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
                      <span class="n">node2</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Edge</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns list of edges shared between two nodes.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Returns list of edges shared between two nodes.&quot;&quot;&quot;</span>
     <span class="n">edges</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">i1</span><span class="p">,</span> <span class="n">edge1</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">_edges</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">i2</span><span class="p">,</span> <span class="n">edge2</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">node2</span><span class="o">.</span><span class="n">_edges</span><span class="p">):</span>
@@ -2991,7 +2996,7 @@ title="Source repository"
 
 <div class="viewcode-block" id="contract_between"><a class="viewcode-back" href="../../operations.html#tensorkrowch.contract_between">[docs]</a><span class="k">def</span> <span class="nf">contract_between</span><span class="p">(</span><span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
                      <span class="n">node2</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts all edges shared between two nodes. Batch contraction is</span>
 <span class="sd">    automatically performed when both nodes have batch edges with the same</span>
 <span class="sd">    names.</span>
@@ -3031,7 +3036,7 @@ title="Source repository"
 
 <span class="n">contract_between_node</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">contract_between</span><span class="p">)</span>
 <span class="n">contract_between_node</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts all edges shared between two nodes. Batch contraction is</span>
 <span class="sd">    automatically performed when both nodes have batch edges with the same</span>
 <span class="sd">    names. It can also be performed using the operator ``@``.</span>
@@ -3070,7 +3075,7 @@ title="Source repository"
 
 <div class="viewcode-block" id="contract_between_"><a class="viewcode-back" href="../../operations.html#tensorkrowch.contract_between_">[docs]</a><span class="k">def</span> <span class="nf">contract_between_</span><span class="p">(</span><span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
                       <span class="n">node2</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    In-place version of :func:`contract_between`.</span>
 
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
@@ -3146,7 +3151,7 @@ title="Source repository"
 
 <span class="n">contract_between_node_</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">contract_between_</span><span class="p">)</span>
 <span class="n">contract_between_node_</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    In-place version of :func:`~AbstractNode.contract_between`.</span>
 <span class="sd">    </span>
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
@@ -3353,7 +3358,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="stack"><a class="viewcode-back" href="../../operations.html#tensorkrowch.stack">[docs]</a><span class="k">def</span> <span class="nf">stack</span><span class="p">(</span><span class="n">nodes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">]):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Creates a :class:`StackNode` or :class:`ParamStackNode` by stacking a</span>
 <span class="sd">    collection of :class:`Nodes &lt;Nodes&gt;` or :class:`ParamNodes &lt;ParamNode&gt;`,</span>
 <span class="sd">    respectively. Restrictions that are applied to the nodes in order to be</span>
@@ -3556,7 +3561,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="unbind"><a class="viewcode-back" href="../../operations.html#tensorkrowch.unbind">[docs]</a><span class="k">def</span> <span class="nf">unbind</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">AbstractStackNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Unbinds a :class:`StackNode` or :class:`ParamStackNode`, where the first</span>
 <span class="sd">    dimension is assumed to be the stack dimension.</span>
 
@@ -3804,7 +3809,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="einsum"><a class="viewcode-back" href="../../operations.html#tensorkrowch.einsum">[docs]</a><span class="k">def</span> <span class="nf">einsum</span><span class="p">(</span><span class="n">string</span><span class="p">:</span> <span class="n">Text</span><span class="p">,</span> <span class="o">*</span><span class="n">nodes</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Performs einsum contraction based on `opt_einsum</span>
 <span class="sd">    &lt;https://optimized-einsum.readthedocs.io/en/stable/autosummary/opt_einsum.contract.html&gt;`_.</span>
 <span class="sd">    This operation facilitates contracting several nodes at once, specifying</span>
@@ -3869,7 +3874,7 @@ title="Source repository"
 <span class="c1">##############################   STACKED EINSUM   #############################</span>
 <div class="viewcode-block" id="stacked_einsum"><a class="viewcode-back" href="../../operations.html#tensorkrowch.stacked_einsum">[docs]</a><span class="k">def</span> <span class="nf">stacked_einsum</span><span class="p">(</span><span class="n">string</span><span class="p">:</span> <span class="n">Text</span><span class="p">,</span>
                    <span class="o">*</span><span class="n">nodes_lists</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Applies the same :func:`einsum` operation (same ``string``) to a sequence</span>
 <span class="sd">    of groups of nodes (all groups having the same amount of nodes, with the</span>
 <span class="sd">    same properties, etc.). That is, it stacks these groups of nodes into a</span>

@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Creating a Tensor Network in TensorKrowch &#8212; TensorKrowch 00.00.01 documentation</title>
+    <title>Creating a Tensor Network in TensorKrowch &#8212; TensorKrowch 1.0.0 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -39,7 +39,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Contracting and Differentiating the Tensor Network" href="2_contracting_tensor_network.html" />
-    <link rel="prev" title="Tutorials" href="../tutorials.html" />
+    <link rel="prev" title="First Steps with TensorKrowch" href="0_first_steps.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -110,6 +110,11 @@
    </i>
   </label>
   <ul class="current">
+   <li class="toctree-l2">
+    <a class="reference internal" href="0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
    <li class="toctree-l2 current active">
     <a class="current reference internal" href="#">
      Creating a Tensor Network in TensorKrowch
@@ -122,12 +127,12 @@
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="3_memory_management.html">
-     How to save Memory and Time with TensorKrowch
+     How to save Memory and Time with TensorKrowch (ADVANCED)
     </a>
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="4_types_of_nodes.html">
-     The different Types of Nodes
+     The different Types of Nodes (ADVANCED)
     </a>
    </li>
    <li class="toctree-l2">
@@ -632,7 +637,7 @@ Let’s finish showing how you can build a Matrix Product State (MPS):</p>
                  <span class="n">network</span><span class="o">=</span><span class="n">mps</span><span class="p">)</span>
 
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
-    <span class="n">mps</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">mps</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;node_(</span><span class="si">{</span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">100</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+    <span class="n">mps</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">mps</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;node_(</span><span class="si">{</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">100</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
 </pre></div>
 </div>
 </section>
@@ -647,11 +652,11 @@ Let’s finish showing how you can build a Matrix Product State (MPS):</p>
                 
     <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-    <a class='left-prev' id="prev-link" href="../tutorials.html" title="previous page">
+    <a class='left-prev' id="prev-link" href="0_first_steps.html" title="previous page">
         <i class="fas fa-angle-left"></i>
         <div class="prev-next-info">
             <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">Tutorials</p>
+            <p class="prev-next-title">First Steps with TensorKrowch</p>
         </div>
     </a>
     <a class='right-next' id="next-link" href="2_contracting_tensor_network.html" title="next page">

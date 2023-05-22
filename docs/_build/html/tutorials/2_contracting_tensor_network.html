@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Contracting and Differentiating the Tensor Network &#8212; TensorKrowch 00.00.01 documentation</title>
+    <title>Contracting and Differentiating the Tensor Network &#8212; TensorKrowch 1.0.0 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -38,7 +38,7 @@
     <link rel="shortcut icon" href="../_static/tensorkrowch_favicon_light.svg"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="How to save Memory and Time with TensorKrowch" href="3_memory_management.html" />
+    <link rel="next" title="How to save Memory and Time with TensorKrowch (ADVANCED)" href="3_memory_management.html" />
     <link rel="prev" title="Creating a Tensor Network in TensorKrowch" href="1_creating_tensor_network.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
@@ -111,6 +111,11 @@
   </label>
   <ul class="current">
    <li class="toctree-l2">
+    <a class="reference internal" href="0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
     <a class="reference internal" href="1_creating_tensor_network.html">
      Creating a Tensor Network in TensorKrowch
     </a>
@@ -122,12 +127,12 @@
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="3_memory_management.html">
-     How to save Memory and Time with TensorKrowch
+     How to save Memory and Time with TensorKrowch (ADVANCED)
     </a>
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="4_types_of_nodes.html">
-     The different Types of Nodes
+     The different Types of Nodes (ADVANCED)
     </a>
    </li>
    <li class="toctree-l2">
@@ -659,7 +664,7 @@ result with respect to the MPS nodes:</p>
     <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">data_node</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
 
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
-    <span class="n">mps</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">mps</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;node_(</span><span class="si">{</span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">100</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+    <span class="n">mps</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">mps</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;node_(</span><span class="si">{</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">100</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
 </pre></div>
 </div>
 <p>With this, we have already created our MPS where nodes can be trained. We have
@@ -719,7 +724,7 @@ gradient descent methods.</p>
     <a class='right-next' id="next-link" href="3_memory_management.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">How to save Memory and Time with TensorKrowch</p>
+        <p class="prev-next-title">How to save Memory and Time with TensorKrowch (ADVANCED)</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>

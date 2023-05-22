@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.models.peps &#8212; TensorKrowch 00.00.01 documentation</title>
+    <title>tensorkrowch.models.peps &#8212; TensorKrowch 1.0.0 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -108,6 +108,11 @@
   </label>
   <ul>
    <li class="toctree-l2">
+    <a class="reference internal" href="../../../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
     <a class="reference internal" href="../../../tutorials/1_creating_tensor_network.html">
      Creating a Tensor Network in TensorKrowch
     </a>
@@ -119,12 +124,12 @@
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="../../../tutorials/3_memory_management.html">
-     How to save Memory and Time with TensorKrowch
+     How to save Memory and Time with TensorKrowch (ADVANCED)
     </a>
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="../../../tutorials/4_types_of_nodes.html">
-     The different Types of Nodes
+     The different Types of Nodes (ADVANCED)
     </a>
    </li>
    <li class="toctree-l2">
@@ -298,7 +303,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="PEPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.PEPS">[docs]</a><span class="k">class</span> <span class="nc">PEPS</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Projected Entangled Pair States, where all nodes are input nodes,</span>
 <span class="sd">    that is, they are all connected to ``data`` nodes that will store the input</span>
 <span class="sd">    data tensor(s). When contracting the PEPS with new input data, the result</span>
@@ -419,17 +424,17 @@ title="Source repository"
         
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of rows of the 2D grid.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Returns number of rows of the 2D grid.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_rows</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_cols</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of columns of the 2D grid.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Returns number of columns of the 2D grid.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_cols</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">boundary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Text</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns boundary conditions in the horizontal (up and down) and</span>
 <span class="sd">        vertical (left and right) boundaries.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -437,21 +442,21 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns input dimension.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Returns input dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimensions for horizontal and vertical edges.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Returns bond dimensions for horizontal and vertical edges.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of batch edges of the ``data`` nodes.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Returns number of batch edges of the ``data`` nodes.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span>
             
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the PEPS.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Creates all the nodes of the PEPS.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">leaf_nodes</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create PEPS nodes if the PEPS already has&#39;</span>
                              <span class="s1">&#39; nodes&#39;</span><span class="p">)</span>
@@ -728,12 +733,12 @@ title="Source repository"
                         <span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span>  <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                     
 <div class="viewcode-block" id="PEPS.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.PEPS.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">leaf_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
             <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span></div>
     
 <div class="viewcode-block" id="PEPS.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.PEPS.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates data nodes and connects each of them to the physical edge of</span>
 <span class="sd">        an input node.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -786,7 +791,7 @@ title="Source repository"
                                <span class="n">num_batch_edges</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_batches</span><span class="p">)</span></div>
         
     <span class="k">def</span> <span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts input data nodes with PEPS nodes.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Contracts input data nodes with PEPS nodes.&quot;&quot;&quot;</span>
         <span class="n">full_grid</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span><span class="p">):</span>
             <span class="n">full_grid</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
@@ -901,7 +906,7 @@ title="Source repository"
                           <span class="n">line2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                           <span class="n">from_side</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span><span class="p">,</span>
                           <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts two consecutive lines (rows or columns) of the PEPS.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Contracts two consecutive lines (rows or columns) of the PEPS.&quot;&quot;&quot;</span>
         <span class="n">result_list</span> <span class="o">=</span> <span class="p">[]</span>
         
         <span class="k">if</span> <span class="n">inline</span><span class="p">:</span>
@@ -971,7 +976,7 @@ title="Source repository"
                     <span class="n">pbc</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                     <span class="n">from_side</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span><span class="p">,</span>
                     <span class="n">max_bond</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        After two lines have been contracted, contracts each node with its</span>
 <span class="sd">        neighbours and splits the result again, to reduce the bond dimension</span>
 <span class="sd">        (keeping it bounded by ``max_bond``).</span>
@@ -1013,7 +1018,7 @@ title="Source repository"
                  <span class="n">from_side</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span><span class="p">,</span>
                  <span class="n">max_bond</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
                  <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the whole PEPS.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
@@ -1098,7 +1103,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="UPEPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UPEPS">[docs]</a><span class="k">class</span> <span class="nc">UPEPS</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Uniform (translationally invariant) Projected Entangled Pair</span>
 <span class="sd">    States, where all nodes are input nodes. It is the uniform version of</span>
 <span class="sd">    :class:`PEPS`, that is, all nodes share the same tensor. Thus boundary</span>
@@ -1183,31 +1188,31 @@ title="Source repository"
         
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of rows of the 2D grid.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Returns number of rows of the 2D grid.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_rows</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_cols</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of columns of the 2D grid.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Returns number of columns of the 2D grid.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_cols</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns input dimension.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Returns input dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimensions for horizontal and vertical edges.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Returns bond dimensions for horizontal and vertical edges.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of batch edges of the ``data`` nodes.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Returns number of batch edges of the ``data`` nodes.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span>
             
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the PEPS.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Creates all the nodes of the PEPS.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create PEPS nodes if the PEPS already has&#39;</span>
                              <span class="s1">&#39; nodes&#39;</span><span class="p">)</span>
@@ -1250,7 +1255,7 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">uniform_memory</span>
                     
 <div class="viewcode-block" id="UPEPS.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UPEPS.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
         <span class="c1"># Virtual node</span>
         <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">tensor</span>
@@ -1260,7 +1265,7 @@ title="Source repository"
                 <span class="n">node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="p">)</span></div>
     
 <div class="viewcode-block" id="UPEPS.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UPEPS.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates data nodes and connects each of them to the physical edge of</span>
 <span class="sd">        an input node.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1274,7 +1279,7 @@ title="Source repository"
                                <span class="n">num_batch_edges</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_batches</span><span class="p">)</span></div>
         
     <span class="k">def</span> <span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts input data nodes with PEPS nodes.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Contracts input data nodes with PEPS nodes.&quot;&quot;&quot;</span>
         <span class="n">full_grid</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span><span class="p">):</span>
             <span class="n">full_grid</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
@@ -1305,7 +1310,7 @@ title="Source repository"
                           <span class="n">line1</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                           <span class="n">line2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                           <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts two consecutive lines (rows or columns) of the PEPS.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Contracts two consecutive lines (rows or columns) of the PEPS.&quot;&quot;&quot;</span>
         <span class="n">result_list</span> <span class="o">=</span> <span class="p">[]</span>
         
         <span class="k">if</span> <span class="n">inline</span><span class="p">:</span>
@@ -1339,7 +1344,7 @@ title="Source repository"
                     <span class="n">line</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                     <span class="n">from_side</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span><span class="p">,</span>
                     <span class="n">max_bond</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        After two lines have been contracted, contracts each node with its</span>
 <span class="sd">        neighbours and splits the result again, to reduce the bond dimension</span>
 <span class="sd">        (keeping it bounded by ``max_bond``).</span>
@@ -1381,7 +1386,7 @@ title="Source repository"
                  <span class="n">from_side</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span><span class="p">,</span>
                  <span class="n">max_bond</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
                  <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the whole PEPS.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
@@ -1453,7 +1458,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="ConvPEPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvPEPS">[docs]</a><span class="k">class</span> <span class="nc">ConvPEPS</span><span class="p">(</span><span class="n">PEPS</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Projected Entangled Pair States, where all nodes are input nodes,</span>
 <span class="sd">    and where the input data is a batch of images. It is the convolutional</span>
 <span class="sd">    version of :class:`PEPS`.</span>
@@ -1551,12 +1556,12 @@ title="Source repository"
         
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``in_channels``. Same as ``in_dim`` in :class:`PEPS`.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Returns ``in_channels``. Same as ``in_dim`` in :class:`PEPS`.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">kernel_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns ``kernel_size``. Number of rows and columns in the 2D grid is</span>
 <span class="sd">        given by :math:`kernel\_size_0` and :math:`kernel\_size_1`, respectively.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1564,7 +1569,7 @@ title="Source repository"
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">stride</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns stride used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1572,7 +1577,7 @@ title="Source repository"
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">padding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns padding used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1580,14 +1585,14 @@ title="Source repository"
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dilation</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns dilation used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>
     
 <div class="viewcode-block" id="ConvPEPS.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvPEPS.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Overrides ``torch.nn.Module``&#39;s forward to compute a convolution on the input</span>
 <span class="sd">        image.</span>
 <span class="sd">        </span>
@@ -1634,7 +1639,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="ConvUPEPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvUPEPS">[docs]</a><span class="k">class</span> <span class="nc">ConvUPEPS</span><span class="p">(</span><span class="n">UPEPS</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Uniform Projected Entangled Pair States, where all nodes are input</span>
 <span class="sd">    nodes, and where the input data is a batch of images. It is the convolutional</span>
 <span class="sd">    version of :class:`UPEPS`.</span>
@@ -1729,12 +1734,12 @@ title="Source repository"
         
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``in_channels``. Same as ``in_dim`` in :class:`UPEPS`.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Returns ``in_channels``. Same as ``in_dim`` in :class:`UPEPS`.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span>
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">kernel_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns ``kernel_size``. Number of rows and columns in the 2D grid is</span>
 <span class="sd">        given by :math:`kernel\_size_0` and :math:`kernel\_size_1`, respectively.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1742,7 +1747,7 @@ title="Source repository"
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">stride</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns stride used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1750,7 +1755,7 @@ title="Source repository"
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">padding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns padding used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1758,14 +1763,14 @@ title="Source repository"
     
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dilation</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns dilation used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>
     
 <div class="viewcode-block" id="ConvUPEPS.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvUPEPS.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Overrides ``torch.nn.Module``&#39;s forward to compute a convolution on the input</span>
 <span class="sd">        image.</span>
 <span class="sd">        </span>

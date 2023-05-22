@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>How to subclass TensorNetwork to build Custom Models &#8212; TensorKrowch 00.00.01 documentation</title>
+    <title>How to subclass TensorNetwork to build Custom Models &#8212; TensorKrowch 1.0.0 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -39,7 +39,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Creating a Hybrid Neural-Tensor Network Model" href="6_mix_with_pytorch.html" />
-    <link rel="prev" title="The different Types of Nodes" href="4_types_of_nodes.html" />
+    <link rel="prev" title="The different Types of Nodes (ADVANCED)" href="4_types_of_nodes.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -111,6 +111,11 @@
   </label>
   <ul class="current">
    <li class="toctree-l2">
+    <a class="reference internal" href="0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
     <a class="reference internal" href="1_creating_tensor_network.html">
      Creating a Tensor Network in TensorKrowch
     </a>
@@ -122,12 +127,12 @@
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="3_memory_management.html">
-     How to save Memory and Time with TensorKrowch
+     How to save Memory and Time with TensorKrowch (ADVANCED)
     </a>
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="4_types_of_nodes.html">
-     The different Types of Nodes
+     The different Types of Nodes (ADVANCED)
     </a>
    </li>
    <li class="toctree-l2 current active">
@@ -479,7 +484,7 @@ images:</p>
 <span class="k">class</span> <span class="nc">MPS</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">):</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image_size</span><span class="p">,</span> <span class="n">uniform</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        In the __init__ method we define the tensor network</span>
 <span class="sd">        structure and initialize all the nodes</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -569,7 +574,7 @@ images:</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">output_node</span> <span class="o">=</span> <span class="n">output_node</span>
 
     <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        This method is optional. If overriden, it should not have</span>
 <span class="sd">        arguments other than self. Furthermore, we won&#39;t have to</span>
 <span class="sd">        call it explicitly, since it will be called from forward.</span>
@@ -591,7 +596,7 @@ images:</p>
                                 <span class="n">num_batch_edges</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        In this method we define the contraction algorithm</span>
 <span class="sd">        for the tensor network.</span>
 
@@ -723,7 +728,7 @@ above.</p>
         <i class="fas fa-angle-left"></i>
         <div class="prev-next-info">
             <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">The different Types of Nodes</p>
+            <p class="prev-next-title">The different Types of Nodes (ADVANCED)</p>
         </div>
     </a>
     <a class='right-next' id="next-link" href="6_mix_with_pytorch.html" title="next page">

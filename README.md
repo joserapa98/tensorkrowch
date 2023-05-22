@@ -76,7 +76,7 @@ together with the package. To test the installation, clone the repository and
 run, in a Unix terminal
 
 ```
-python -m pytest
+python -m pytest -v
 ```
 
 inside the repository folder.

@@ -35,6 +35,6 @@ run, in a Unix terminal
 
 ::
     
-    $ python -m pytest
+    $ python -m pytest -v
 
 inside the repository folder.

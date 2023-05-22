@@ -22,7 +22,9 @@ copyright = '2023, José Ramón Pareja Monturiol'
 author = 'José Ramón Pareja Monturiol'
 
 # The full version, including alpha/beta/rc tags
-release = '00.00.01'
+with open('../tensorkrowch/_version.py') as f:
+    exec(f.read())
+    release = __version__
 
 
 # -- General configuration ---------------------------------------------------

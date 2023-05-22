@@ -25,7 +25,7 @@ setup(
     author='José Ramón Pareja Monturiol, David Pérez-García, Alejandro Pozas-Kerstjens',
     author_email='joserapa98@gmail.com',
     license='MIT',
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     install_requires=['torch>=1.9',
                       'opt_einsum>=3.0'],
     extras_require={

@@ -149,10 +149,11 @@ define ``Nodes``, create connections between through their ``Edges``, and
 configure the ``TensorNetwork`` structure. This hands-on approach will greatly
 enhance your understanding and proficiency with **TensorKrowch**.
 
+* [First Steps with TensorKrowch](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/0_first_steps.html)
 * [Creating a Tensor Network in TensorKrowch](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/1_creating_tensor_network.html)
 * [Contracting and Differentiating the Tensor Network](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/2_contracting_tensor_network.html)
-* [How to save Memory and Time with TensorKrowch](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/3_memory_management.html)
-* [The different Types of Nodes](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/4_types_of_nodes.html)
+* [How to save Memory and Time with TensorKrowch (ADVANCED)](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/3_memory_management.html)
+* [The different Types of Nodes (ADVANCED)](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/4_types_of_nodes.html)
 * [How to subclass TensorNetwork to build Custom Models](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/5_subclass_tensor_network.html)
 * [Creating a Hybrid Neural-Tensor Network Model](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/6_mix_with_pytorch.html)
 

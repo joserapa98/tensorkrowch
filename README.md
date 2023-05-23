@@ -39,7 +39,7 @@ to the official **TensorKrowch** [documentation](https://joserapa98.github.io/te
 
 ## Requirements
 
-* python >= 3.7
+* python >= 3.8
 * torch >= 1.9
 * opt_einsum >= 3.0
 

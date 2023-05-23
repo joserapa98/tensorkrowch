@@ -34,7 +34,7 @@ efficient training performance.
 Requirements
 ============
 
-* python >= 3.7
+* python >= 3.8
 * torch >= 1.9
 * opt_einsum >= 3.0
 

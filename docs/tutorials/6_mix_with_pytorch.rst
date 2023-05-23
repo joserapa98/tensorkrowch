@@ -17,7 +17,7 @@ In this tutorial we will implement a model that was presented in this
 `paper <https://arxiv.org/abs/1806.05964>`_. It has a convolutional layer
 that works as a feature extractor. That is, instead of embedding each pixel
 value of the input images in a 3-dimensional vector space as we did in the
-last section of the previous :ref:`tutorial <tutorial_5>`, we will `learn``
+last section of the previous :ref:`tutorial <tutorial_5>`, we will `learn`
 the appropiate embedding.
 
 From there, 4 :class:`ConvMPSLayer` will be fed with the embedded vectors. Each

@@ -1,4 +1,5 @@
-![logo](https://github.com/joserapa98/tensorkrowch/blob/master/docs/figures/svg/tensorkrowch_logo_dark.svg)
+![logo](https://github.com/joserapa98/tensorkrowch/blob/master/docs/figures/svg/tensorkrowch_logo_dark.svg#gh-dark-mode-only)
+![logo](https://github.com/joserapa98/tensorkrowch/blob/master/docs/figures/svg/tensorkrowch_logo_light.svg#gh-light-mode-only)
 
 # Tensor Networks with PyTorch
 

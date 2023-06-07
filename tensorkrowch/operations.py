@@ -68,7 +68,7 @@ class Operation:
     first time the operation is called and the one that is executed in every
     other call (with the same arguments). Both functions are usually similar,
     though the former computes extra things regarding the creation of the
-    ``resultant`` nodes and some auxilliary operations whose result will be the
+    ``resultant`` nodes and some auxiliary operations whose result will be the
     same in every call (e.g. when contracting two nodes, maybe a permutation of
     the tensors should be first performed; how this permutation is carried out
     is always the same, though the tensors themselves are different).

@@ -4338,7 +4338,7 @@ class TensorNetwork(nn.Module):
                 num_batch_edges = m
                 
                 # Call parent method
-                super().set_data_nodes(input, edges, num_batch_edges)
+                super().set_data_nodes(input_edges, num_batch_edges)
                 
         ::
         

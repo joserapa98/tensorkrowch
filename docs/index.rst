@@ -127,9 +127,10 @@ Citing
 If you use TensorKrowch in your work, please cite `TensorKrowch's paper
 <https://www.arxiv.org/abs/2306.08595>`_:
 
-- J. R. Pareja Monturiol, D. Pérez-García, and A. Pozas-Kerstjens, TensorKrowch: Smooth integration of tensor networks in machine learning, arXiv:2306.08595.
+  J. R. Pareja Monturiol, D. Pérez-García, and A. Pozas-Kerstjens, TensorKrowch:
+  Smooth integration of tensor networks in machine learning, arXiv:2306.08595.
 
-::
+.. code-block:: html
 
    @misc{pareja2023tensorkrowch,
      title={Tensor{K}rowch: {S}mooth integration of tensor networks in machine learning},
@@ -137,12 +138,3 @@ If you use TensorKrowch in your work, please cite `TensorKrowch's paper
      archivePrefix={arXiv},
      eprint={2306.08595}
    }
-
-
-..
-   Indices and tables
-   ==================
-
-   * :ref:`genindex`
-   * :ref:`modindex`
-   * :ref:`search`

@@ -46,8 +46,6 @@ Operation Class
 .. autoclass:: Operation
 
 
-.. _tensor-like-ops:
-
 Tensor-like Operations
 ----------------------
 

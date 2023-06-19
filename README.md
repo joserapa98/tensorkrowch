@@ -173,7 +173,7 @@ If you use TensorKrowch in your work, please cite [TensorKrowch's paper](https:/
 ```
 @misc{pareja2023tensorkrowch,
   title={Tensor{K}rowch: {S}mooth integration of tensor networks in machine learning},
-  author={Pareja Monturiol, Jos{\'e} Ram{\'o}n and P{\'e}rez-Garc{\'\i}a, David and Pozas-Kerstjens, Alejandro},
+  author={Pareja Monturiol, Jos{\'e} Ram{\'o}n and P{\'e}rez-Garc{\'i}a, David and Pozas-Kerstjens, Alejandro},
   archivePrefix={arXiv},
   eprint={2306.08595}
 }

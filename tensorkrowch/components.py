@@ -3386,6 +3386,12 @@ def connect(edge1: Edge, edge2: Edge) -> Edge:
     >>> print(new_edge.name)
     nodeA[right] <-> nodeB[left]
     """
+    if isinstance(edge1, StackEdge) or isinstance(edge2, StackEdge):
+        raise TypeError('No edge should be StackEdge type. '
+                        'Use connect_stack in that case')
+    if not isinstance(edge1, Edge) or not isinstance(edge2, Edge):
+        raise TypeError('Both edges should be Edge type')
+
     # Case edge is already connected
     if edge1 == edge2:
         return edge1
@@ -3413,14 +3419,8 @@ def connect(edge1: Edge, edge2: Edge) -> Edge:
     net1._remove_edge(edge1)
     net1._remove_edge(edge2)
 
-    if isinstance(edge1, StackEdge):
-        new_edge = StackEdge(edges=edge1._edges,
-                             node1_list=edge1._node1_list,
-                             node1=node1, axis1=axis1,
-                             node2=node2, axis2=axis2)
-    else:
-        new_edge = Edge(node1=node1, axis1=axis1,
-                        node2=node2, axis2=axis2)
+    new_edge = Edge(node1=node1, axis1=axis1,
+                    node2=node2, axis2=axis2)
 
     node1._add_edge(new_edge, axis1, True)
     node2._add_edge(new_edge, axis2, False)
@@ -3455,7 +3455,31 @@ def connect_stack(edge1: StackEdge, edge2: StackEdge) -> StackEdge:
                          'not the same. They will be the same when both lists '
                          'contain edges connecting the nodes that formed the '
                          'stack nodes.')
-    return connect(edge1=edge1, edge2=edge2)
+    # Case edge is already connected
+    if edge1 == edge2:
+        return edge1
+
+    for edge in [edge1, edge2]:
+        if not edge.is_dangling():
+            raise ValueError(f'Edge {edge!s} is not a dangling edge. '
+                             f'This edge points to nodes: {edge.node1!s} and '
+                             f'{edge.node2!s}')
+
+    node1, axis1 = edge1.node1, edge1.axis1
+    node2, axis2 = edge2.node1, edge2.axis1
+    net1, net2 = node1._network, node2._network
+
+    net1._remove_edge(edge1)
+    net1._remove_edge(edge2)
+
+    new_edge = StackEdge(edges=edge1._edges,
+                         node1_list=edge1._node1_list,
+                         node1=node1, axis1=axis1,
+                         node2=node2, axis2=axis2)
+
+    node1._add_edge(new_edge, axis1, True)
+    node2._add_edge(new_edge, axis2, False)
+    return new_edge
 
 
 def disconnect(edge: Union[Edge, StackEdge]) -> Union[Tuple[Edge, Edge],

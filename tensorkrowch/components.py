@@ -3514,15 +3514,15 @@ def disconnect(edge: Union[Edge, StackEdge]) -> Union[Tuple[Edge, Edge],
             axes.append(axis)
 
     new_edges = []
-    for axis, node in zip(axes, nodes):
-        if isinstance(edge, StackEdge):
+    if isinstance(edge, StackEdge):
+        for axis, node in zip(axes, nodes):
             new_edge = StackEdge(edges=edge._edges,
                                  node1_list=edge._node1_list,
                                  node1=node,
                                  axis1=axis)
             new_edges.append(new_edge)
-
-        else:
+    else:
+        for axis, node in zip(axes, nodes):
             new_edge = Edge(node1=node, axis1=axis)
             new_edges.append(new_edge)
 

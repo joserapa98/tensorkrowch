@@ -16,13 +16,14 @@ This script contains:
 """
 
 from typing import List, Sequence, Text, Union
+
 import torch
 import torch.nn as nn
 
 
 def print_list(lst: List) -> Text:
     return '[' + '\n '.join(f'{item}' for item in lst) + ']'
-    
+
 
 def tab_string(string: Text, num_tabs: int = 1) -> Text:
     """
@@ -74,7 +75,7 @@ def erase_enum(name: Text) -> Text:
             i -= 1
         else:
             break
-    new_name = '_'.join(name_list[:i+1])
+    new_name = '_'.join(name_list[:i + 1])
     return new_name
 
 
@@ -218,8 +219,8 @@ def stack_unequal_tensors(lst_tensors: List[torch.Tensor]) -> torch.Tensor:
                     pad.reverse()
                     lst_tensors[idx] = nn.functional.pad(tensor, pad)
         return torch.stack(lst_tensors)
-    
-    
+
+
 def list2slice(lst: List) -> Union[List, slice]:
     """
     Given a list (of indices) returns, if possible, an object ``slice``
@@ -227,10 +228,10 @@ def list2slice(lst: List) -> Union[List, slice]:
     """
     aux_slice = [None, None, None]
     use_slice = False
-    
+
     if len(lst) >= 1:
         use_slice = True
-        
+
         for el in lst:
             if aux_slice[0] is None:
                 aux_slice[0] = el
@@ -244,7 +245,7 @@ def list2slice(lst: List) -> Union[List, slice]:
                 else:
                     use_slice = False
                     break
-            
+
     if use_slice:
         aux_slice[1] += 1
         return slice(*aux_slice)

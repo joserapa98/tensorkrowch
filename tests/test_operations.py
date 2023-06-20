@@ -37,18 +37,18 @@ class TestPermute:
         permuted_node = node.permute((0, 2, 1))
 
         assert permuted_node['left']._nodes[permuted_node.is_node1('left')] == \
-            node['left']._nodes[node.is_node1('left')]
+               node['left']._nodes[node.is_node1('left')]
         assert permuted_node['input']._nodes[permuted_node.is_node1('left')] == \
-            node['input']._nodes[node.is_node1('left')]
+               node['input']._nodes[node.is_node1('left')]
         assert permuted_node['right']._nodes[permuted_node.is_node1('left')] == \
-            node['right']._nodes[node.is_node1('left')]
+               node['right']._nodes[node.is_node1('left')]
 
         assert permuted_node[0]._nodes[permuted_node.is_node1('left')] == \
-            node[0]._nodes[node.is_node1('left')]
+               node[0]._nodes[node.is_node1('left')]
         assert permuted_node[1]._nodes[permuted_node.is_node1('left')] == \
-            node[2]._nodes[node.is_node1('left')]
+               node[2]._nodes[node.is_node1('left')]
         assert permuted_node[2]._nodes[permuted_node.is_node1('left')] == \
-            node[1]._nodes[node.is_node1('left')]
+               node[1]._nodes[node.is_node1('left')]
 
         assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
 
@@ -61,18 +61,18 @@ class TestPermute:
         permuted_node = node.permute_((0, 2, 1))
 
         assert permuted_node['left']._nodes[permuted_node.is_node1('left')] == \
-            node['left']._nodes[node.is_node1('left')]
+               node['left']._nodes[node.is_node1('left')]
         assert permuted_node['input']._nodes[permuted_node.is_node1('left')] == \
-            node['input']._nodes[node.is_node1('left')]
+               node['input']._nodes[node.is_node1('left')]
         assert permuted_node['right']._nodes[permuted_node.is_node1('left')] == \
-            node['right']._nodes[node.is_node1('left')]
+               node['right']._nodes[node.is_node1('left')]
 
         assert permuted_node[0]._nodes[permuted_node.is_node1('left')] == \
-            node[0]._nodes[node.is_node1('left')]
+               node[0]._nodes[node.is_node1('left')]
         assert permuted_node[1]._nodes[permuted_node.is_node1('left')] == \
-            node[2]._nodes[node.is_node1('left')]
+               node[2]._nodes[node.is_node1('left')]
         assert permuted_node[2]._nodes[permuted_node.is_node1('left')] == \
-            node[1]._nodes[node.is_node1('left')]
+               node[1]._nodes[node.is_node1('left')]
 
         assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
 
@@ -84,25 +84,25 @@ class TestPermute:
         permuted_node = node.permute((0, 2, 1))
 
         assert permuted_node['left']._nodes[permuted_node.is_node1('left')] == \
-            node['left']._nodes[node.is_node1('left')]
+               node['left']._nodes[node.is_node1('left')]
         assert permuted_node['input']._nodes[permuted_node.is_node1('left')] == \
-            node['input']._nodes[node.is_node1('left')]
+               node['input']._nodes[node.is_node1('left')]
         assert permuted_node['right']._nodes[permuted_node.is_node1('left')] == \
-            node['right']._nodes[node.is_node1('left')]
+               node['right']._nodes[node.is_node1('left')]
 
         assert permuted_node[0]._nodes[permuted_node.is_node1('left')] == \
-            node[0]._nodes[node.is_node1('left')]
+               node[0]._nodes[node.is_node1('left')]
         assert permuted_node[1]._nodes[permuted_node.is_node1('left')] == \
-            node[2]._nodes[node.is_node1('left')]
+               node[2]._nodes[node.is_node1('left')]
         assert permuted_node[2]._nodes[permuted_node.is_node1('left')] == \
-            node[1]._nodes[node.is_node1('left')]
+               node[1]._nodes[node.is_node1('left')]
 
         assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
 
         # Compute gradients
         permuted_node.sum().backward()
         assert not torch.equal(node.grad, torch.zeros(node.shape))
-        node.network.zero_grad()
+        node.network.zero_grad(set_to_none=False)
         assert torch.equal(node.grad, torch.zeros(node.shape))
 
     def test_permute_paramnode_in_place(self):
@@ -114,18 +114,18 @@ class TestPermute:
         permuted_node = node.permute_((0, 2, 1))
 
         assert permuted_node['left']._nodes[permuted_node.is_node1('left')] == \
-            node['left']._nodes[node.is_node1('left')]
+               node['left']._nodes[node.is_node1('left')]
         assert permuted_node['input']._nodes[permuted_node.is_node1('left')] == \
-            node['input']._nodes[node.is_node1('left')]
+               node['input']._nodes[node.is_node1('left')]
         assert permuted_node['right']._nodes[permuted_node.is_node1('left')] == \
-            node['right']._nodes[node.is_node1('left')]
+               node['right']._nodes[node.is_node1('left')]
 
         assert permuted_node[0]._nodes[permuted_node.is_node1('left')] == \
-            node[0]._nodes[node.is_node1('left')]
+               node[0]._nodes[node.is_node1('left')]
         assert permuted_node[1]._nodes[permuted_node.is_node1('left')] == \
-            node[2]._nodes[node.is_node1('left')]
+               node[2]._nodes[node.is_node1('left')]
         assert permuted_node[2]._nodes[permuted_node.is_node1('left')] == \
-            node[1]._nodes[node.is_node1('left')]
+               node[1]._nodes[node.is_node1('left')]
 
         assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
 
@@ -364,7 +364,7 @@ class TestBasicOps:
         node3.sum().backward()
         assert not torch.equal(node1.grad, torch.zeros(node1.shape))
         assert not torch.equal(node2.grad, torch.zeros(node2.shape))
-        net.zero_grad()
+        net.zero_grad(set_to_none=False)
         assert torch.equal(node1.grad, torch.zeros(node1.shape))
         assert torch.equal(node2.grad, torch.zeros(node2.shape))
 
@@ -418,7 +418,7 @@ class TestBasicOps:
         node3.sum().backward()
         assert not torch.equal(node1.grad, torch.zeros(node1.shape))
         assert not torch.equal(node2.grad, torch.zeros(node2.shape))
-        net.zero_grad()
+        net.zero_grad(set_to_none=False)
         assert torch.equal(node1.grad, torch.zeros(node1.shape))
         assert torch.equal(node2.grad, torch.zeros(node2.shape))
 
@@ -471,7 +471,7 @@ class TestBasicOps:
         node3.sum().backward()
         assert not torch.equal(node1.grad, torch.zeros(node1.shape))
         assert not torch.equal(node2.grad, torch.zeros(node2.shape))
-        net.zero_grad()
+        net.zero_grad(set_to_none=False)
         assert torch.equal(node1.grad, torch.zeros(node1.shape))
         assert torch.equal(node2.grad, torch.zeros(node2.shape))
 
@@ -524,7 +524,7 @@ class TestBasicOps:
         node3.sum().backward()
         assert not torch.equal(node1.grad, torch.zeros(node1.shape))
         assert not torch.equal(node2.grad, torch.zeros(node2.shape))
-        net.zero_grad()
+        net.zero_grad(set_to_none=False)
         assert torch.equal(node1.grad, torch.zeros(node1.shape))
         assert torch.equal(node2.grad, torch.zeros(node2.shape))
 
@@ -573,11 +573,11 @@ class TestSplitSVD:
         assert new_node1['batch'].size() == 10
         assert new_node1['left'].size() == 2
         assert new_node1['input'].size() == 5
-        assert new_node1['splitted'].size() == 10
+        assert new_node1['split'].size() == 10
 
         assert new_node2.shape == (10, 10, 5, 3)
         assert new_node2['batch'].size() == 10
-        assert new_node2['splitted'].size() == 10
+        assert new_node2['split'].size() == 10
         assert new_node2['input'].size() == 5
         assert new_node2['right'].size() == 3
 
@@ -589,13 +589,13 @@ class TestSplitSVD:
         assert net.edges == [node1['left'], node1['input'],
                              node2['input'], node2['right']]
 
-        # If a splitted node is deleted (or just the splitted edge is
-        # disconnected), the neighbour node's splitted edge joins the
+        # If a split node is deleted (or just the split edge is
+        # disconnected), the neighbour node's split edge joins the
         # network's set of edges. This is something people shouldn't do
         net.delete_node(new_node1)
         assert net.edges == [node1['left'], node1['input'],
                              node2['input'], node2['right'],
-                             new_node2['splitted']]
+                             new_node2['split']]
 
         net.delete_node(new_node2)
         assert net.edges == [node1['left'], node1['input'],
@@ -627,11 +627,11 @@ class TestSplitSVD:
                                             node2_axes=['right', 'batch2', 'input_1'])
 
         assert new_node1.shape == (10, 5, 2, 10)
-        assert new_node1.axes_names == ['batch1', 'input', 'left', 'splitted']
+        assert new_node1.axes_names == ['batch1', 'input', 'left', 'split']
 
         assert new_node2.shape == (10, 10, 3, 20, 5)
         assert new_node2.axes_names == [
-            'batch1', 'splitted', 'right', 'batch2', 'input']
+            'batch1', 'split', 'right', 'batch2', 'input']
 
     def test_split_contracted_node_rank(self):
         net = tk.TensorNetwork()
@@ -657,11 +657,11 @@ class TestSplitSVD:
         assert new_node1['batch'].size() == 10
         assert new_node1['left'].size() == 2
         assert new_node1['input'].size() == 5
-        assert new_node1['splitted'].size() == 7
+        assert new_node1['split'].size() == 7
 
         assert new_node2.shape == (10, 7, 5, 3)
         assert new_node2['batch'].size() == 10
-        assert new_node2['splitted'].size() == 7
+        assert new_node2['split'].size() == 7
         assert new_node2['input'].size() == 5
         assert new_node2['right'].size() == 3
 
@@ -701,11 +701,11 @@ class TestSplitSVD:
         assert new_node1['batch'].size() == 10
         assert new_node1['left'].size() == 2
         assert new_node1['input'].size() == 5
-        assert new_node1['splitted'].size() == 9
+        assert new_node1['split'].size() == 9
 
         assert new_node2.shape == (10, 9, 5, 3)
         assert new_node2['batch'].size() == 10
-        assert new_node2['splitted'].size() == 9
+        assert new_node2['split'].size() == 9
         assert new_node2['input'].size() == 5
         assert new_node2['right'].size() == 3
 
@@ -721,7 +721,7 @@ class TestSplitSVD:
                                             cum_percentage=0.9)
 
         # When using cum_percentage, if the tensor rank changes,
-        # the dimension of the splitted edge changes with it
+        # the dimension of the split edge changes with it
         assert new_node1.shape == (10, 2, 5, 1)
         assert new_node2.shape == (10, 1, 5, 3)
 
@@ -753,11 +753,11 @@ class TestSplitSVD:
         assert new_node1['batch'].size() == 10
         assert new_node1['left'].size() == 2
         assert new_node1['input'].size() == 5
-        assert new_node1['splitted'].size() == 9
+        assert new_node1['split'].size() == 9
 
         assert new_node2.shape == (10, 9, 5, 3)
         assert new_node2['batch'].size() == 10
-        assert new_node2['splitted'].size() == 9
+        assert new_node2['split'].size() == 9
         assert new_node2['input'].size() == 5
         assert new_node2['right'].size() == 3
 
@@ -773,7 +773,7 @@ class TestSplitSVD:
                                             cum_percentage=0.9)
 
         # When using cum_percentage, if the tensor rank changes,
-        # the dimension of the splitted edge changes with it
+        # the dimension of the split edge changes with it
         assert new_node1.shape == (10, 2, 5, 1)
         assert new_node2.shape == (10, 1, 5, 3)
 
@@ -817,11 +817,11 @@ class TestSplitSVD:
         assert new_node1['batch'].size() == 10
         assert new_node1['left'].size() == 2
         assert new_node1['input'].size() == 5
-        assert new_node1['splitted'].size() == 10
+        assert new_node1['split'].size() == 10
 
         assert new_node2.shape == (10, 10, 5, 3)
         assert new_node2['batch'].size() == 10
-        assert new_node2['splitted'].size() == 10
+        assert new_node2['split'].size() == 10
         assert new_node2['input'].size() == 5
         assert new_node2['right'].size() == 3
 
@@ -1006,11 +1006,11 @@ class TestSplitSVDR:
         assert new_node1['batch'].size() == 10
         assert new_node1['left'].size() == 2
         assert new_node1['input'].size() == 5
-        assert new_node1['splitted'].size() == 10
+        assert new_node1['split'].size() == 10
 
         assert new_node2.shape == (10, 10, 5, 3)
         assert new_node2['batch'].size() == 10
-        assert new_node2['splitted'].size() == 10
+        assert new_node2['split'].size() == 10
         assert new_node2['input'].size() == 5
         assert new_node2['right'].size() == 3
 
@@ -1022,13 +1022,13 @@ class TestSplitSVDR:
         assert net.edges == [node1['left'], node1['input'],
                              node2['input'], node2['right']]
 
-        # If a splitted node is deleted (or just the splitted edge is
-        # disconnected), the neighbour node's splitted edge joins the
+        # If a split node is deleted (or just the split edge is
+        # disconnected), the neighbour node's split edge joins the
         # network's set of edges. This is something people shouldn't do
         net.delete_node(new_node1)
         assert net.edges == [node1['left'], node1['input'],
                              node2['input'], node2['right'],
-                             new_node2['splitted']]
+                             new_node2['split']]
 
         net.delete_node(new_node2)
         assert net.edges == [node1['left'], node1['input'],
@@ -1062,11 +1062,11 @@ class TestSplitSVDR:
                                             mode='svdr')
 
         assert new_node1.shape == (10, 5, 2, 10)
-        assert new_node1.axes_names == ['batch1', 'input', 'left', 'splitted']
+        assert new_node1.axes_names == ['batch1', 'input', 'left', 'split']
 
         assert new_node2.shape == (10, 10, 3, 20, 5)
         assert new_node2.axes_names == [
-            'batch1', 'splitted', 'right', 'batch2', 'input']
+            'batch1', 'split', 'right', 'batch2', 'input']
 
     def test_split_contracted_node_rank(self):
         net = tk.TensorNetwork()
@@ -1093,11 +1093,11 @@ class TestSplitSVDR:
         assert new_node1['batch'].size() == 10
         assert new_node1['left'].size() == 2
         assert new_node1['input'].size() == 5
-        assert new_node1['splitted'].size() == 7
+        assert new_node1['split'].size() == 7
 
         assert new_node2.shape == (10, 7, 5, 3)
         assert new_node2['batch'].size() == 10
-        assert new_node2['splitted'].size() == 7
+        assert new_node2['split'].size() == 7
         assert new_node2['input'].size() == 5
         assert new_node2['right'].size() == 3
 
@@ -1139,11 +1139,11 @@ class TestSplitSVDR:
         assert new_node1['batch'].size() == 10
         assert new_node1['left'].size() == 2
         assert new_node1['input'].size() == 5
-        assert new_node1['splitted'].size() == 9
+        assert new_node1['split'].size() == 9
 
         assert new_node2.shape == (10, 9, 5, 3)
         assert new_node2['batch'].size() == 10
-        assert new_node2['splitted'].size() == 9
+        assert new_node2['split'].size() == 9
         assert new_node2['input'].size() == 5
         assert new_node2['right'].size() == 3
 
@@ -1160,7 +1160,7 @@ class TestSplitSVDR:
                                             cum_percentage=0.9)
 
         # When using cum_percentage, if the tensor rank changes,
-        # the dimension of the splitted edge changes with it
+        # the dimension of the split edge changes with it
         assert new_node1.shape == (10, 2, 5, 1)
         assert new_node2.shape == (10, 1, 5, 3)
 
@@ -1193,11 +1193,11 @@ class TestSplitSVDR:
         assert new_node1['batch'].size() == 10
         assert new_node1['left'].size() == 2
         assert new_node1['input'].size() == 5
-        assert new_node1['splitted'].size() == 9
+        assert new_node1['split'].size() == 9
 
         assert new_node2.shape == (10, 9, 5, 3)
         assert new_node2['batch'].size() == 10
-        assert new_node2['splitted'].size() == 9
+        assert new_node2['split'].size() == 9
         assert new_node2['input'].size() == 5
         assert new_node2['right'].size() == 3
 
@@ -1214,7 +1214,7 @@ class TestSplitSVDR:
                                             cum_percentage=0.9)
 
         # When using cum_percentage, if the tensor rank changes,
-        # the dimension of the splitted edge changes with it
+        # the dimension of the split edge changes with it
         assert new_node1.shape == (10, 2, 5, 1)
         assert new_node2.shape == (10, 1, 5, 3)
 
@@ -1259,11 +1259,11 @@ class TestSplitSVDR:
         assert new_node1['batch'].size() == 10
         assert new_node1['left'].size() == 2
         assert new_node1['input'].size() == 5
-        assert new_node1['splitted'].size() == 10
+        assert new_node1['split'].size() == 10
 
         assert new_node2.shape == (10, 10, 5, 3)
         assert new_node2['batch'].size() == 10
-        assert new_node2['splitted'].size() == 10
+        assert new_node2['split'].size() == 10
         assert new_node2['input'].size() == 5
         assert new_node2['right'].size() == 3
 
@@ -1454,11 +1454,11 @@ class TestSplitQR:
         assert new_node1['batch'].size() == 10
         assert new_node1['left'].size() == 2
         assert new_node1['input'].size() == 5
-        assert new_node1['splitted'].size() == 10
+        assert new_node1['split'].size() == 10
 
         assert new_node2.shape == (10, 10, 5, 3)
         assert new_node2['batch'].size() == 10
-        assert new_node2['splitted'].size() == 10
+        assert new_node2['split'].size() == 10
         assert new_node2['input'].size() == 5
         assert new_node2['right'].size() == 3
 
@@ -1470,13 +1470,13 @@ class TestSplitQR:
         assert net.edges == [node1['left'], node1['input'],
                              node2['input'], node2['right']]
 
-        # If a splitted node is deleted (or just the splitted edge is
-        # disconnected), the neighbour node's splitted edge joins the
+        # If a split node is deleted (or just the split edge is
+        # disconnected), the neighbour node's split edge joins the
         # network's set of edges. This is something people shouldn't do
         net.delete_node(new_node1)
         assert net.edges == [node1['left'], node1['input'],
                              node2['input'], node2['right'],
-                             new_node2['splitted']]
+                             new_node2['split']]
 
         net.delete_node(new_node2)
         assert net.edges == [node1['left'], node1['input'],
@@ -1510,11 +1510,11 @@ class TestSplitQR:
                                             mode='qr')
 
         assert new_node1.shape == (10, 5, 2, 10)
-        assert new_node1.axes_names == ['batch1', 'input', 'left', 'splitted']
+        assert new_node1.axes_names == ['batch1', 'input', 'left', 'split']
 
         assert new_node2.shape == (10, 10, 3, 20, 5)
         assert new_node2.axes_names == [
-            'batch1', 'splitted', 'right', 'batch2', 'input']
+            'batch1', 'split', 'right', 'batch2', 'input']
 
     def test_split_in_place(self):
         net = tk.TensorNetwork()
@@ -1557,11 +1557,11 @@ class TestSplitQR:
         assert new_node1['batch'].size() == 10
         assert new_node1['left'].size() == 2
         assert new_node1['input'].size() == 5
-        assert new_node1['splitted'].size() == 10
+        assert new_node1['split'].size() == 10
 
         assert new_node2.shape == (10, 10, 5, 3)
         assert new_node2['batch'].size() == 10
-        assert new_node2['splitted'].size() == 10
+        assert new_node2['split'].size() == 10
         assert new_node2['input'].size() == 5
         assert new_node2['right'].size() == 3
 
@@ -1752,11 +1752,11 @@ class TestSplitRQ:
         assert new_node1['batch'].size() == 10
         assert new_node1['left'].size() == 2
         assert new_node1['input'].size() == 5
-        assert new_node1['splitted'].size() == 10
+        assert new_node1['split'].size() == 10
 
         assert new_node2.shape == (10, 10, 5, 3)
         assert new_node2['batch'].size() == 10
-        assert new_node2['splitted'].size() == 10
+        assert new_node2['split'].size() == 10
         assert new_node2['input'].size() == 5
         assert new_node2['right'].size() == 3
 
@@ -1768,13 +1768,13 @@ class TestSplitRQ:
         assert net.edges == [node1['left'], node1['input'],
                              node2['input'], node2['right']]
 
-        # If a splitted node is deleted (or just the splitted edge is
-        # disconnected), the neighbour node's splitted edge joins the
+        # If a split node is deleted (or just the split edge is
+        # disconnected), the neighbour node's split edge joins the
         # network's set of edges. This is something people shouldn't do
         net.delete_node(new_node1)
         assert net.edges == [node1['left'], node1['input'],
                              node2['input'], node2['right'],
-                             new_node2['splitted']]
+                             new_node2['split']]
 
         net.delete_node(new_node2)
         assert net.edges == [node1['left'], node1['input'],
@@ -1808,11 +1808,11 @@ class TestSplitRQ:
                                             mode='rq')
 
         assert new_node1.shape == (10, 5, 2, 10)
-        assert new_node1.axes_names == ['batch1', 'input', 'left', 'splitted']
+        assert new_node1.axes_names == ['batch1', 'input', 'left', 'split']
 
         assert new_node2.shape == (10, 10, 3, 20, 5)
         assert new_node2.axes_names == [
-            'batch1', 'splitted', 'right', 'batch2', 'input']
+            'batch1', 'split', 'right', 'batch2', 'input']
 
     def test_split_in_place(self):
         net = tk.TensorNetwork()
@@ -1855,11 +1855,11 @@ class TestSplitRQ:
         assert new_node1['batch'].size() == 10
         assert new_node1['left'].size() == 2
         assert new_node1['input'].size() == 5
-        assert new_node1['splitted'].size() == 10
+        assert new_node1['split'].size() == 10
 
         assert new_node2.shape == (10, 10, 5, 3)
         assert new_node2['batch'].size() == 10
-        assert new_node2['splitted'].size() == 10
+        assert new_node2['split'].size() == 10
         assert new_node2['input'].size() == 5
         assert new_node2['right'].size() == 3
 
@@ -2051,9 +2051,9 @@ class TestSVD:
         new_node1, new_node2 = node1['right'].svd_(rank=2)
 
         assert tk.utils.erase_enum(new_node1.name) == \
-            tk.utils.erase_enum(edge.node1.name)
+               tk.utils.erase_enum(edge.node1.name)
         assert tk.utils.erase_enum(new_node2.name) == \
-            tk.utils.erase_enum(edge.node2.name)
+               tk.utils.erase_enum(edge.node2.name)
         assert new_node1.axes_names == edge.node1.axes_names
         assert new_node1.axes_names == edge.node1.axes_names
 
@@ -2064,16 +2064,16 @@ class TestSVD:
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 0
-        
+
     def test_svd_batch_edge_rank_inplace(self, setup):
         net, edge, node1 = setup
-        
+
         edge.node1.get_axis('input').name = 'batch'
         edge.node2.get_axis('input').name = 'batch'
-        
+
         assert edge.node1['batch'].is_batch()
         assert edge.node2['batch'].is_batch()
-        
+
         assert isinstance(edge, tk.Edge)
         assert edge.size() == 3
 
@@ -2084,9 +2084,9 @@ class TestSVD:
         new_node1, new_node2 = node1['right'].svd_(rank=2)
 
         assert tk.utils.erase_enum(new_node1.name) == \
-            tk.utils.erase_enum(edge.node1.name)
+               tk.utils.erase_enum(edge.node1.name)
         assert tk.utils.erase_enum(new_node2.name) == \
-            tk.utils.erase_enum(edge.node2.name)
+               tk.utils.erase_enum(edge.node2.name)
         assert new_node1.axes_names == edge.node1.axes_names
         assert new_node1.axes_names == edge.node1.axes_names
 
@@ -2116,9 +2116,9 @@ class TestSVD:
         new_node1, new_node2 = node1['right'].svd_(cum_percentage=0.5)
 
         assert tk.utils.erase_enum(new_node1.name) == \
-            tk.utils.erase_enum(edge.node1.name)
+               tk.utils.erase_enum(edge.node1.name)
         assert tk.utils.erase_enum(new_node2.name) == \
-            tk.utils.erase_enum(edge.node2.name)
+               tk.utils.erase_enum(edge.node2.name)
         assert new_node1.axes_names == edge.node1.axes_names
         assert new_node1.axes_names == edge.node1.axes_names
 
@@ -2148,8 +2148,8 @@ class TestSVD:
                                                 rank=2)
         new_node1.name = 'svd'
         new_node2.name = 'svd'
-        new_node1.get_axis('splitted').name = 'right'
-        new_node2.get_axis('splitted').name = 'left'
+        new_node1.get_axis('split').name = 'right'
+        new_node2.get_axis('split').name = 'left'
 
         assert tk.utils.erase_enum(new_node1.name) == 'svd'
         assert tk.utils.erase_enum(new_node2.name) == 'svd'
@@ -2174,16 +2174,16 @@ class TestSVD:
                                                 node2_axes=[
                                                     'input_1', 'right'],
                                                 rank=2)
-        
+
     def test_svd_batch_edge_rank(self, setup):
         net, edge, node1 = setup
-        
+
         edge.node1.get_axis('input').name = 'batch'
         edge.node2.get_axis('input').name = 'batch'
-        
+
         assert edge.node1['batch'].is_batch()
         assert edge.node2['batch'].is_batch()
-        
+
         assert isinstance(edge, tk.Edge)
         assert edge.size() == 3
 
@@ -2198,8 +2198,8 @@ class TestSVD:
                                                 rank=2)
         new_node1.name = 'svd'
         new_node2.name = 'svd'
-        new_node1.get_axis('splitted').name = 'right'
-        new_node2.get_axis('splitted').name = 'left'
+        new_node1.get_axis('split').name = 'right'
+        new_node2.get_axis('split').name = 'left'
 
         assert tk.utils.erase_enum(new_node1.name) == 'svd'
         assert tk.utils.erase_enum(new_node2.name) == 'svd'
@@ -2249,8 +2249,8 @@ class TestSVD:
                                                 cum_percentage=0.5)
         new_node1.name = 'svd'
         new_node2.name = 'svd'
-        new_node1.get_axis('splitted').name = 'right'
-        new_node2.get_axis('splitted').name = 'left'
+        new_node1.get_axis('split').name = 'right'
+        new_node2.get_axis('split').name = 'left'
 
         assert tk.utils.erase_enum(new_node1.name) == 'svd'
         assert tk.utils.erase_enum(new_node2.name) == 'svd'
@@ -2287,31 +2287,31 @@ class TestSVD:
         node2.tensor = tensor2
 
         stacked = tk.stack([node1, node2])
-        unbinded = tk.unbind(stacked)
+        unbound = tk.unbind(stacked)
 
-        contracted = unbinded[0] @ unbinded[1]
+        contracted = unbound[0] @ unbound[1]
         new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
                                                 node2_axes=[
                                                     'input_1', 'right'],
                                                 cum_percentage=0.5)
         new_node1.name = 'svd'
         new_node2.name = 'svd'
-        new_node1.get_axis('splitted').name = 'right'
-        new_node2.get_axis('splitted').name = 'left'
+        new_node1.get_axis('split').name = 'right'
+        new_node2.get_axis('split').name = 'left'
 
         assert new_node1.shape == (3, 5, 2)
         assert new_node2.shape == (2, 5, 3)
         assert new_node1['right'].size() == 2
 
-        assert unbinded[0].shape == (3, 5, 3)
-        assert unbinded[1].shape == (3, 5, 3)
-        assert unbinded[0]['right'].size() == 3
+        assert unbound[0].shape == (3, 5, 3)
+        assert unbound[1].shape == (3, 5, 3)
+        assert unbound[0]['right'].size() == 3
 
         assert node1.shape == (3, 5, 3)
         assert node2.shape == (3, 5, 3)
         assert node1['right'].size() == 3
 
-        assert node1['right'] == unbinded[0]['right']
+        assert node1['right'] == unbound[0]['right']
         assert node1['right'] != new_node1['right']
 
 
@@ -2347,9 +2347,9 @@ class TestSVDR:
         new_node1, new_node2 = node1['right'].svdr_(rank=2)
 
         assert tk.utils.erase_enum(new_node1.name) == \
-            tk.utils.erase_enum(edge.node1.name)
+               tk.utils.erase_enum(edge.node1.name)
         assert tk.utils.erase_enum(new_node2.name) == \
-            tk.utils.erase_enum(edge.node2.name)
+               tk.utils.erase_enum(edge.node2.name)
         assert new_node1.axes_names == edge.node1.axes_names
         assert new_node1.axes_names == edge.node1.axes_names
 
@@ -2360,16 +2360,16 @@ class TestSVDR:
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 0
-        
+
     def test_svdr_batch_edge_rank_inplace(self, setup):
         net, edge, node1 = setup
-        
+
         edge.node1.get_axis('input').name = 'batch'
         edge.node2.get_axis('input').name = 'batch'
-        
+
         assert edge.node1['batch'].is_batch()
         assert edge.node2['batch'].is_batch()
-        
+
         assert isinstance(edge, tk.Edge)
         assert edge.size() == 3
 
@@ -2380,9 +2380,9 @@ class TestSVDR:
         new_node1, new_node2 = node1['right'].svdr_(rank=2)
 
         assert tk.utils.erase_enum(new_node1.name) == \
-            tk.utils.erase_enum(edge.node1.name)
+               tk.utils.erase_enum(edge.node1.name)
         assert tk.utils.erase_enum(new_node2.name) == \
-            tk.utils.erase_enum(edge.node2.name)
+               tk.utils.erase_enum(edge.node2.name)
         assert new_node1.axes_names == edge.node1.axes_names
         assert new_node1.axes_names == edge.node1.axes_names
 
@@ -2412,9 +2412,9 @@ class TestSVDR:
         new_node1, new_node2 = node1['right'].svdr_(cum_percentage=0.5)
 
         assert tk.utils.erase_enum(new_node1.name) == \
-            tk.utils.erase_enum(edge.node1.name)
+               tk.utils.erase_enum(edge.node1.name)
         assert tk.utils.erase_enum(new_node2.name) == \
-            tk.utils.erase_enum(edge.node2.name)
+               tk.utils.erase_enum(edge.node2.name)
         assert new_node1.axes_names == edge.node1.axes_names
         assert new_node1.axes_names == edge.node1.axes_names
 
@@ -2445,8 +2445,8 @@ class TestSVDR:
                                                 rank=2)
         new_node1.name = 'svd'
         new_node2.name = 'svd'
-        new_node1.get_axis('splitted').name = 'right'
-        new_node2.get_axis('splitted').name = 'left'
+        new_node1.get_axis('split').name = 'right'
+        new_node2.get_axis('split').name = 'left'
 
         assert tk.utils.erase_enum(new_node1.name) == 'svd'
         assert tk.utils.erase_enum(new_node2.name) == 'svd'
@@ -2472,16 +2472,16 @@ class TestSVDR:
                                                     'input_1', 'right'],
                                                 mode='svdr',
                                                 rank=2)
-        
+
     def test_svdr_batch_edge_rank(self, setup):
         net, edge, node1 = setup
-        
+
         edge.node1.get_axis('input').name = 'batch'
         edge.node2.get_axis('input').name = 'batch'
-        
+
         assert edge.node1['batch'].is_batch()
         assert edge.node2['batch'].is_batch()
-        
+
         assert isinstance(edge, tk.Edge)
         assert edge.size() == 3
 
@@ -2497,8 +2497,8 @@ class TestSVDR:
                                                 rank=2)
         new_node1.name = 'svd'
         new_node2.name = 'svd'
-        new_node1.get_axis('splitted').name = 'right'
-        new_node2.get_axis('splitted').name = 'left'
+        new_node1.get_axis('split').name = 'right'
+        new_node2.get_axis('split').name = 'left'
 
         assert tk.utils.erase_enum(new_node1.name) == 'svd'
         assert tk.utils.erase_enum(new_node2.name) == 'svd'
@@ -2550,8 +2550,8 @@ class TestSVDR:
                                                 cum_percentage=0.5)
         new_node1.name = 'svd'
         new_node2.name = 'svd'
-        new_node1.get_axis('splitted').name = 'right'
-        new_node2.get_axis('splitted').name = 'left'
+        new_node1.get_axis('split').name = 'right'
+        new_node2.get_axis('split').name = 'left'
 
         assert tk.utils.erase_enum(new_node1.name) == 'svd'
         assert tk.utils.erase_enum(new_node2.name) == 'svd'
@@ -2589,9 +2589,9 @@ class TestSVDR:
         node2.tensor = tensor2
 
         stacked = tk.stack([node1, node2])
-        unbinded = tk.unbind(stacked)
+        unbound = tk.unbind(stacked)
 
-        contracted = unbinded[0] @ unbinded[1]
+        contracted = unbound[0] @ unbound[1]
         new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
                                                 node2_axes=[
                                                     'input_1', 'right'],
@@ -2599,22 +2599,22 @@ class TestSVDR:
                                                 cum_percentage=0.5)
         new_node1.name = 'svd'
         new_node2.name = 'svd'
-        new_node1.get_axis('splitted').name = 'right'
-        new_node2.get_axis('splitted').name = 'left'
+        new_node1.get_axis('split').name = 'right'
+        new_node2.get_axis('split').name = 'left'
 
         assert new_node1.shape == (3, 5, 2)
         assert new_node2.shape == (2, 5, 3)
         assert new_node1['right'].size() == 2
 
-        assert unbinded[0].shape == (3, 5, 3)
-        assert unbinded[1].shape == (3, 5, 3)
-        assert unbinded[0]['right'].size() == 3
+        assert unbound[0].shape == (3, 5, 3)
+        assert unbound[1].shape == (3, 5, 3)
+        assert unbound[0]['right'].size() == 3
 
         assert node1.shape == (3, 5, 3)
         assert node2.shape == (3, 5, 3)
         assert node1['right'].size() == 3
 
-        assert node1['right'] == unbinded[0]['right']
+        assert node1['right'] == unbound[0]['right']
         assert node1['right'] != new_node1['right']
 
 
@@ -2650,9 +2650,9 @@ class TestQR:
         new_node1, new_node2 = node1['right'].qr_()
 
         assert tk.utils.erase_enum(new_node1.name) == \
-            tk.utils.erase_enum(edge.node1.name)
+               tk.utils.erase_enum(edge.node1.name)
         assert tk.utils.erase_enum(new_node2.name) == \
-            tk.utils.erase_enum(edge.node2.name)
+               tk.utils.erase_enum(edge.node2.name)
         assert new_node1.axes_names == edge.node1.axes_names
         assert new_node1.axes_names == edge.node1.axes_names
 
@@ -2663,16 +2663,16 @@ class TestQR:
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 0
-        
+
     def test_qr_batch_edge_inplace(self, setup):
         net, edge, node1 = setup
-        
+
         edge.node1.get_axis('input').name = 'batch'
         edge.node2.get_axis('input').name = 'batch'
-        
+
         assert edge.node1['batch'].is_batch()
         assert edge.node2['batch'].is_batch()
-        
+
         assert isinstance(edge, tk.Edge)
         assert edge.size() == 3
 
@@ -2683,9 +2683,9 @@ class TestQR:
         new_node1, new_node2 = node1['right'].qr_()
 
         assert tk.utils.erase_enum(new_node1.name) == \
-            tk.utils.erase_enum(edge.node1.name)
+               tk.utils.erase_enum(edge.node1.name)
         assert tk.utils.erase_enum(new_node2.name) == \
-            tk.utils.erase_enum(edge.node2.name)
+               tk.utils.erase_enum(edge.node2.name)
         assert new_node1.axes_names == edge.node1.axes_names
         assert new_node1.axes_names == edge.node1.axes_names
 
@@ -2715,8 +2715,8 @@ class TestQR:
                                                 mode='qr')
         new_node1.name = 'svd'
         new_node2.name = 'svd'
-        new_node1.get_axis('splitted').name = 'right'
-        new_node2.get_axis('splitted').name = 'left'
+        new_node1.get_axis('split').name = 'right'
+        new_node2.get_axis('split').name = 'left'
 
         assert tk.utils.erase_enum(new_node1.name) == 'svd'
         assert tk.utils.erase_enum(new_node2.name) == 'svd'
@@ -2741,16 +2741,16 @@ class TestQR:
                                                 node2_axes=[
                                                     'input_1', 'right'],
                                                 mode='qr')
-        
+
     def test_qr_batch_edge(self, setup):
         net, edge, node1 = setup
-        
+
         edge.node1.get_axis('input').name = 'batch'
         edge.node2.get_axis('input').name = 'batch'
-        
+
         assert edge.node1['batch'].is_batch()
         assert edge.node2['batch'].is_batch()
-        
+
         assert isinstance(edge, tk.Edge)
         assert edge.size() == 3
 
@@ -2765,8 +2765,8 @@ class TestQR:
                                                 mode='qr')
         new_node1.name = 'svd'
         new_node2.name = 'svd'
-        new_node1.get_axis('splitted').name = 'right'
-        new_node2.get_axis('splitted').name = 'left'
+        new_node1.get_axis('split').name = 'right'
+        new_node2.get_axis('split').name = 'left'
 
         assert tk.utils.erase_enum(new_node1.name) == 'svd'
         assert tk.utils.erase_enum(new_node2.name) == 'svd'
@@ -2798,31 +2798,31 @@ class TestQR:
         node2 = net['node2']
 
         stacked = tk.stack([node1, node2])
-        unbinded = tk.unbind(stacked)
+        unbound = tk.unbind(stacked)
 
-        contracted = unbinded[0] @ unbinded[1]
+        contracted = unbound[0] @ unbound[1]
         new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
                                                 node2_axes=[
                                                     'input_1', 'right'],
                                                 mode='qr')
         new_node1.name = 'svd'
         new_node2.name = 'svd'
-        new_node1.get_axis('splitted').name = 'right'
-        new_node2.get_axis('splitted').name = 'left'
+        new_node1.get_axis('split').name = 'right'
+        new_node2.get_axis('split').name = 'left'
 
         assert new_node1.shape == (3, 5, 15)
         assert new_node2.shape == (15, 5, 3)
         assert new_node1['right'].size() == 15
 
-        assert unbinded[0].shape == (3, 5, 3)
-        assert unbinded[1].shape == (3, 5, 3)
-        assert unbinded[0]['right'].size() == 3
+        assert unbound[0].shape == (3, 5, 3)
+        assert unbound[1].shape == (3, 5, 3)
+        assert unbound[0]['right'].size() == 3
 
         assert node1.shape == (3, 5, 3)
         assert node2.shape == (3, 5, 3)
         assert node1['right'].size() == 3
 
-        assert node1['right'] == unbinded[0]['right']
+        assert node1['right'] == unbound[0]['right']
         assert node1['right'] != new_node1['right']
 
 
@@ -2858,9 +2858,9 @@ class TestRQ:
         new_node1, new_node2 = node1['right'].rq_()
 
         assert tk.utils.erase_enum(new_node1.name) == \
-            tk.utils.erase_enum(edge.node1.name)
+               tk.utils.erase_enum(edge.node1.name)
         assert tk.utils.erase_enum(new_node2.name) == \
-            tk.utils.erase_enum(edge.node2.name)
+               tk.utils.erase_enum(edge.node2.name)
         assert new_node1.axes_names == edge.node1.axes_names
         assert new_node1.axes_names == edge.node1.axes_names
 
@@ -2871,16 +2871,16 @@ class TestRQ:
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 0
-        
+
     def test_rq_batch_edge_inplace(self, setup):
         net, edge, node1 = setup
-        
+
         edge.node1.get_axis('input').name = 'batch'
         edge.node2.get_axis('input').name = 'batch'
-        
+
         assert edge.node1['batch'].is_batch()
         assert edge.node2['batch'].is_batch()
-        
+
         assert isinstance(edge, tk.Edge)
         assert edge.size() == 3
 
@@ -2891,9 +2891,9 @@ class TestRQ:
         new_node1, new_node2 = node1['right'].rq_()
 
         assert tk.utils.erase_enum(new_node1.name) == \
-            tk.utils.erase_enum(edge.node1.name)
+               tk.utils.erase_enum(edge.node1.name)
         assert tk.utils.erase_enum(new_node2.name) == \
-            tk.utils.erase_enum(edge.node2.name)
+               tk.utils.erase_enum(edge.node2.name)
         assert new_node1.axes_names == edge.node1.axes_names
         assert new_node1.axes_names == edge.node1.axes_names
 
@@ -2923,8 +2923,8 @@ class TestRQ:
                                                 mode='rq')
         new_node1.name = 'svd'
         new_node2.name = 'svd'
-        new_node1.get_axis('splitted').name = 'right'
-        new_node2.get_axis('splitted').name = 'left'
+        new_node1.get_axis('split').name = 'right'
+        new_node2.get_axis('split').name = 'left'
 
         assert tk.utils.erase_enum(new_node1.name) == 'svd'
         assert tk.utils.erase_enum(new_node2.name) == 'svd'
@@ -2949,16 +2949,16 @@ class TestRQ:
                                                 node2_axes=[
                                                     'input_1', 'right'],
                                                 mode='rq')
-        
+
     def test_rq_batch_edge(self, setup):
         net, edge, node1 = setup
-        
+
         edge.node1.get_axis('input').name = 'batch'
         edge.node2.get_axis('input').name = 'batch'
-        
+
         assert edge.node1['batch'].is_batch()
         assert edge.node2['batch'].is_batch()
-        
+
         assert isinstance(edge, tk.Edge)
         assert edge.size() == 3
 
@@ -2973,8 +2973,8 @@ class TestRQ:
                                                 mode='rq')
         new_node1.name = 'svd'
         new_node2.name = 'svd'
-        new_node1.get_axis('splitted').name = 'right'
-        new_node2.get_axis('splitted').name = 'left'
+        new_node1.get_axis('split').name = 'right'
+        new_node2.get_axis('split').name = 'left'
 
         assert tk.utils.erase_enum(new_node1.name) == 'svd'
         assert tk.utils.erase_enum(new_node2.name) == 'svd'
@@ -3006,31 +3006,31 @@ class TestRQ:
         node2 = net['node2']
 
         stacked = tk.stack([node1, node2])
-        unbinded = tk.unbind(stacked)
+        unbound = tk.unbind(stacked)
 
-        contracted = unbinded[0] @ unbinded[1]
+        contracted = unbound[0] @ unbound[1]
         new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
                                                 node2_axes=[
                                                     'input_1', 'right'],
                                                 mode='rq')
         new_node1.name = 'svd'
         new_node2.name = 'svd'
-        new_node1.get_axis('splitted').name = 'right'
-        new_node2.get_axis('splitted').name = 'left'
+        new_node1.get_axis('split').name = 'right'
+        new_node2.get_axis('split').name = 'left'
 
         assert new_node1.shape == (3, 5, 15)
         assert new_node2.shape == (15, 5, 3)
         assert new_node1['right'].size() == 15
 
-        assert unbinded[0].shape == (3, 5, 3)
-        assert unbinded[1].shape == (3, 5, 3)
-        assert unbinded[0]['right'].size() == 3
+        assert unbound[0].shape == (3, 5, 3)
+        assert unbound[1].shape == (3, 5, 3)
+        assert unbound[0]['right'].size() == 3
 
         assert node1.shape == (3, 5, 3)
         assert node2.shape == (3, 5, 3)
         assert node1['right'].size() == 3
 
-        assert node1['right'] == unbinded[0]['right']
+        assert node1['right'] == unbound[0]['right']
         assert node1['right'] != new_node1['right']
 
 
@@ -3278,7 +3278,7 @@ class TestContractBetween:
         assert not torch.equal(node1.grad, torch.zeros(node1.shape))
         assert not torch.equal(node2.grad, torch.zeros(node2.shape))
 
-        net.zero_grad()
+        net.zero_grad(set_to_none=False)
         assert torch.equal(node1.grad, torch.zeros(node1.shape))
         assert torch.equal(node2.grad, torch.zeros(node2.shape))
 
@@ -3352,7 +3352,7 @@ class TestContractBetween:
         node2.sum().backward()
         assert not torch.equal(node1.grad, torch.zeros(node1.shape))
 
-        node1.network.zero_grad()
+        node1.network.zero_grad(set_to_none=False)
         assert torch.equal(node1.grad, torch.zeros(node1.shape))
 
     def test_trace_with_batch(self):
@@ -3704,20 +3704,20 @@ class TestStackUnbind:
             assert node._tensor_info['node_ref'] == stack
 
         # Unbind
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
         # Re-stack
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] == restack.name
         assert restack._tensor_info['node_ref'] is None
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] == node.name
@@ -3733,19 +3733,19 @@ class TestStackUnbind:
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] == restack.name
         assert restack._tensor_info['node_ref'] is None
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
@@ -3767,20 +3767,20 @@ class TestStackUnbind:
             assert node._tensor_info['node_ref'] is None
 
         # Unbind
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
         # Re-stack
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] == restack.name
         assert restack._tensor_info['node_ref'] is None
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] == node.name
@@ -3796,19 +3796,19 @@ class TestStackUnbind:
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] == restack.name
         assert restack._tensor_info['node_ref'] is None
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
@@ -3830,20 +3830,20 @@ class TestStackUnbind:
             assert node._tensor_info['node_ref'] == stack
 
         # Unbind
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
         # Re-stack
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] is None
@@ -3859,19 +3859,19 @@ class TestStackUnbind:
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
@@ -3893,20 +3893,20 @@ class TestStackUnbind:
             assert node._tensor_info['node_ref'] is None
 
         # Unbind
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
         # Re-stack
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] is None
@@ -3922,19 +3922,19 @@ class TestStackUnbind:
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
@@ -3973,20 +3973,20 @@ class TestStackUnbind:
             assert node._tensor_info['node_ref'] == stack
 
         # Unbind
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
         # Re-stack
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] == restack.name
         assert restack._tensor_info['node_ref'] is None
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] == node.name
@@ -4002,19 +4002,19 @@ class TestStackUnbind:
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] == restack.name
         assert restack._tensor_info['node_ref'] is None
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
@@ -4036,20 +4036,20 @@ class TestStackUnbind:
             assert node._tensor_info['node_ref'] is None
 
         # Unbind
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
         # Re-stack
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] == restack.name
         assert restack._tensor_info['node_ref'] is None
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] == node.name
@@ -4065,19 +4065,19 @@ class TestStackUnbind:
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] == restack.name
         assert restack._tensor_info['node_ref'] is None
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
@@ -4099,20 +4099,20 @@ class TestStackUnbind:
             assert node._tensor_info['node_ref'] == stack
 
         # Unbind
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
         # Re-stack
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] is None
@@ -4128,19 +4128,19 @@ class TestStackUnbind:
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
@@ -4162,20 +4162,20 @@ class TestStackUnbind:
             assert node._tensor_info['node_ref'] is None
 
         # Unbind
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
         # Re-stack
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are resultant nodes, so memory is not optimized
             assert node._tensor_info['address'] is None
@@ -4191,19 +4191,19 @@ class TestStackUnbind:
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
@@ -4257,21 +4257,21 @@ class TestStackUnbind:
                 assert shapes[i][j] <= stack.shape[j + 1]
 
         # Unbind
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
         # Re-stack
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] == restack.name
         assert restack._tensor_info['node_ref'] is None
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are resultant nodes, so memory is not optimized
@@ -4279,8 +4279,8 @@ class TestStackUnbind:
             assert node._tensor_info['node_ref'] is None
 
         # Re-unbind
-        reunbinded = tk.unbind(restack)
-        for i, node in enumerate(reunbinded):
+        reunbound = tk.unbind(restack)
+        for i, node in enumerate(reunbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
@@ -4300,27 +4300,27 @@ class TestStackUnbind:
             for j in range(node.rank):
                 assert shapes[i][j] <= stack.shape[j + 1]
 
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] == restack.name
         assert restack._tensor_info['node_ref'] is None
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
-        reunbinded = tk.unbind(restack)
-        for i, node in enumerate(reunbinded):
+        reunbound = tk.unbind(restack)
+        for i, node in enumerate(reunbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
@@ -4347,21 +4347,21 @@ class TestStackUnbind:
                 assert shapes[i][j] <= stack.shape[j + 1]
 
         # Unbind
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
         # Re-stack
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] == restack.name
         assert restack._tensor_info['node_ref'] is None
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are resultant nodes, so memory is not optimized
@@ -4369,8 +4369,8 @@ class TestStackUnbind:
             assert node._tensor_info['node_ref'] is None
 
         # Re-unbind
-        reunbinded = tk.unbind(restack)
-        for i, node in enumerate(reunbinded):
+        reunbound = tk.unbind(restack)
+        for i, node in enumerate(reunbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
@@ -4390,34 +4390,34 @@ class TestStackUnbind:
             for j in range(node.rank):
                 assert shapes[i][j] <= stack.shape[j + 1]
 
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] == restack.name
         assert restack._tensor_info['node_ref'] is None
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
-        reunbinded = tk.unbind(restack)
-        for i, node in enumerate(reunbinded):
+        reunbound = tk.unbind(restack)
+        for i, node in enumerate(reunbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] == node.name
             assert node._tensor_info['node_ref'] is None
 
     def test_stack_diff_shapes_all_leaf_all_param_auto_stack_auto_unbind(
-        self, setup_diff_shapes):
+            self, setup_diff_shapes):
         net, nodes, shapes = setup_diff_shapes
 
         net.auto_stack = True
@@ -4438,21 +4438,21 @@ class TestStackUnbind:
                 assert shapes[i][j] <= stack.shape[j + 1]
 
         # Unbind
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
         # Re-stack
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are resultant nodes, so memory is not optimized
@@ -4460,8 +4460,8 @@ class TestStackUnbind:
             assert node._tensor_info['node_ref'] == stack
 
         # Re-unbind
-        reunbinded = tk.unbind(restack)
-        for i, node in enumerate(reunbinded):
+        reunbound = tk.unbind(restack)
+        for i, node in enumerate(reunbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
@@ -4481,34 +4481,34 @@ class TestStackUnbind:
             for j in range(node.rank):
                 assert shapes[i][j] <= stack.shape[j + 1]
 
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
-        reunbinded = tk.unbind(restack)
-        for i, node in enumerate(reunbinded):
+        reunbound = tk.unbind(restack)
+        for i, node in enumerate(reunbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
     def test_stack_diff_shapes_all_leaf_all_param_auto_unbind(
-        self, setup_diff_shapes):
+            self, setup_diff_shapes):
         net, nodes, shapes = setup_diff_shapes
 
         net.auto_stack = False
@@ -4529,21 +4529,21 @@ class TestStackUnbind:
                 assert shapes[i][j] <= stack.shape[j + 1]
 
         # Unbind
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
         # Re-stack
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             # These are resultant nodes, so memory is not optimized
@@ -4551,8 +4551,8 @@ class TestStackUnbind:
             assert node._tensor_info['node_ref'] == stack
 
         # Re-unbind
-        reunbinded = tk.unbind(restack)
-        for i, node in enumerate(reunbinded):
+        reunbound = tk.unbind(restack)
+        for i, node in enumerate(reunbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
@@ -4572,34 +4572,34 @@ class TestStackUnbind:
             for j in range(node.rank):
                 assert shapes[i][j] <= stack.shape[j + 1]
 
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
-        restack = tk.stack(unbinded)
+        restack = tk.stack(unbound)
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
 
-        for i, node in enumerate(unbinded):
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
-        reunbinded = tk.unbind(restack)
-        for i, node in enumerate(reunbinded):
+        reunbound = tk.unbind(restack)
+        for i, node in enumerate(reunbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
     def test_stack_irregular_all_leaf_all_param_auto_stack_auto_unbind(
-        self, setup_diff_shapes):
+            self, setup_diff_shapes):
         net, nodes, shapes = setup_diff_shapes
 
         net.auto_stack = True
@@ -4613,15 +4613,15 @@ class TestStackUnbind:
         assert stack._tensor_info['address'] == stack.name
 
         # Unbind
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
         # Re-stack
-        restack = tk.stack(unbinded[::2])
+        restack = tk.stack(unbound[::2])
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
@@ -4631,16 +4631,16 @@ class TestStackUnbind:
         # smaller than the shape of the original stack
 
         # Re-unbind
-        reunbinded = tk.unbind(restack)
+        reunbound = tk.unbind(restack)
         new_index = range(0, 10, 2)
-        for i, node in enumerate(reunbinded):
+        for i, node in enumerate(reunbound):
             assert node.shape == shapes[new_index[i]]
             assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
         # Re-stack all
-        restack_all = tk.stack(unbinded[1::2] + reunbinded)
+        restack_all = tk.stack(unbound[1::2] + reunbound)
         new_index = list(range(1, 10, 2)) + list(range(0, 10, 2))
         assert isinstance(restack_all, tk.StackNode)
         assert restack_all.axes_names == ['stack', 'left', 'input', 'right']
@@ -4649,8 +4649,8 @@ class TestStackUnbind:
         assert restack_all._tensor_info['index'] == [new_index]
 
         # Re-unbind all
-        reunbinded_all = tk.unbind(restack_all)
-        for i, node in enumerate(reunbinded_all):
+        reunbound_all = tk.unbind(restack_all)
+        for i, node in enumerate(reunbound_all):
             assert node.shape == shapes[new_index[i]]
             assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
             assert node._tensor_info['address'] is None
@@ -4662,29 +4662,29 @@ class TestStackUnbind:
         assert stack.axes_names == ['stack', 'left', 'input', 'right']
         assert stack._tensor_info['address'] == stack.name
 
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
-        restack = tk.stack(unbinded[::2])
+        restack = tk.stack(unbound[::2])
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
         assert restack._tensor_info['index'][0] == slice(0, 9, 2)
 
-        reunbinded = tk.unbind(restack)
+        reunbound = tk.unbind(restack)
         new_index = range(0, 10, 2)
-        for i, node in enumerate(reunbinded):
+        for i, node in enumerate(reunbound):
             assert node.shape == shapes[new_index[i]]
             assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
-        restack_all = tk.stack(unbinded[1::2] + reunbinded)
+        restack_all = tk.stack(unbound[1::2] + reunbound)
         new_index = list(range(1, 10, 2)) + list(range(0, 10, 2))
         assert isinstance(restack_all, tk.StackNode)
         assert restack_all.axes_names == ['stack', 'left', 'input', 'right']
@@ -4692,8 +4692,8 @@ class TestStackUnbind:
         assert restack_all._tensor_info['node_ref'] == stack
         assert restack_all._tensor_info['index'] == [new_index]
 
-        reunbinded_all = tk.unbind(restack_all)
-        for i, node in enumerate(reunbinded_all):
+        reunbound_all = tk.unbind(restack_all)
+        for i, node in enumerate(reunbound_all):
             assert node.shape == shapes[new_index[i]]
             assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
             assert node._tensor_info['address'] is None
@@ -4713,15 +4713,15 @@ class TestStackUnbind:
         assert stack._tensor_info['address'] == stack.name
 
         # Unbind
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
         # Re-stack
-        restack = tk.stack(unbinded[::2])
+        restack = tk.stack(unbound[::2])
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
@@ -4729,16 +4729,16 @@ class TestStackUnbind:
         assert restack._tensor_info['index'][0] == slice(0, 9, 2)
 
         # Re-unbind
-        reunbinded = tk.unbind(restack)
+        reunbound = tk.unbind(restack)
         new_index = range(0, 10, 2)
-        for i, node in enumerate(reunbinded):
+        for i, node in enumerate(reunbound):
             assert node.shape == shapes[new_index[i]]
             assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
         # Re-stack all
-        restack_all = tk.stack(unbinded[1::2] + reunbinded)
+        restack_all = tk.stack(unbound[1::2] + reunbound)
         new_index = list(range(1, 10, 2)) + list(range(0, 10, 2))
         assert isinstance(restack_all, tk.StackNode)
         assert restack_all.axes_names == ['stack', 'left', 'input', 'right']
@@ -4747,8 +4747,8 @@ class TestStackUnbind:
         assert restack_all._tensor_info['index'] == [new_index]
 
         # Re-unbind all
-        reunbinded_all = tk.unbind(restack_all)
-        for i, node in enumerate(reunbinded_all):
+        reunbound_all = tk.unbind(restack_all)
+        for i, node in enumerate(reunbound_all):
             assert node.shape == shapes[new_index[i]]
             assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
             assert node._tensor_info['address'] is None
@@ -4760,29 +4760,29 @@ class TestStackUnbind:
         assert stack.axes_names == ['stack', 'left', 'input', 'right']
         assert stack._tensor_info['address'] == stack.name
 
-        unbinded = tk.unbind(stack)
-        for i, node in enumerate(unbinded):
+        unbound = tk.unbind(stack)
+        for i, node in enumerate(unbound):
             assert node.shape == shapes[i]
             assert torch.equal(node.tensor, nodes[i].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
-        restack = tk.stack(unbinded[::2])
+        restack = tk.stack(unbound[::2])
         assert isinstance(restack, tk.StackNode)
         assert restack.axes_names == ['stack', 'left', 'input', 'right']
         assert restack._tensor_info['address'] is None
         assert restack._tensor_info['node_ref'] == stack
         assert restack._tensor_info['index'][0] == slice(0, 9, 2)
 
-        reunbinded = tk.unbind(restack)
+        reunbound = tk.unbind(restack)
         new_index = range(0, 10, 2)
-        for i, node in enumerate(reunbinded):
+        for i, node in enumerate(reunbound):
             assert node.shape == shapes[new_index[i]]
             assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
             assert node._tensor_info['address'] is None
             assert node._tensor_info['node_ref'] == stack
 
-        restack_all = tk.stack(unbinded[1::2] + reunbinded)
+        restack_all = tk.stack(unbound[1::2] + reunbound)
         new_index = list(range(1, 10, 2)) + list(range(0, 10, 2))
         assert isinstance(restack_all, tk.StackNode)
         assert restack_all.axes_names == ['stack', 'left', 'input', 'right']
@@ -4790,8 +4790,8 @@ class TestStackUnbind:
         assert restack_all._tensor_info['node_ref'] == stack
         assert restack_all._tensor_info['index'] == [new_index]
 
-        reunbinded_all = tk.unbind(restack_all)
-        for i, node in enumerate(reunbinded_all):
+        reunbound_all = tk.unbind(restack_all)
+        for i, node in enumerate(reunbound_all):
             assert node.shape == shapes[new_index[i]]
             assert torch.equal(node.tensor, nodes[new_index[i]].tensor)
             assert node._tensor_info['address'] is None
@@ -4944,11 +4944,11 @@ class TestStackUnbind:
             'sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
         assert stack_result.shape == (5, 100, 2)
 
-        unbinded_nodes = tk.unbind(stack_result)
-        assert len(unbinded_nodes) == 5
-        assert unbinded_nodes[0].shape == (100, 2)
+        unbound_nodes = tk.unbind(stack_result)
+        assert len(unbound_nodes) == 5
+        assert unbound_nodes[0].shape == (100, 2)
 
-        second_stack = tk.stack(unbinded_nodes[0::2])
+        second_stack = tk.stack(unbound_nodes[0::2])
         assert second_stack.shape == (3, 100, 2)
 
         # Repeat operations second time
@@ -4968,7 +4968,7 @@ class TestStackUnbind:
         assert len(nodes) == 5
         assert nodes[0].shape == (100, 2)
 
-        second_stack = tk.stack(unbinded_nodes[0::2])
+        second_stack = tk.stack(unbound_nodes[0::2])
         assert second_stack.shape == (3, 100, 2)
 
     def test_einsum_with_paramstacks(self):
@@ -5000,11 +5000,11 @@ class TestStackUnbind:
             'sijk,sbi,sbj->sbk', stack_node, stack_input_0, stack_input_1)
         assert stack_result.shape == (5, 100, 2)
 
-        unbinded_nodes = tk.unbind(stack_result)
-        assert len(unbinded_nodes) == 5
-        assert unbinded_nodes[0].shape == (100, 2)
+        unbound_nodes = tk.unbind(stack_result)
+        assert len(unbound_nodes) == 5
+        assert unbound_nodes[0].shape == (100, 2)
 
-        second_stack = tk.stack(unbinded_nodes[0::2])
+        second_stack = tk.stack(unbound_nodes[0::2])
         assert second_stack.shape == (3, 100, 2)
 
         # Repeat operations second time
@@ -5024,7 +5024,7 @@ class TestStackUnbind:
         assert len(nodes) == 5
         assert nodes[0].shape == (100, 2)
 
-        second_stack = tk.stack(unbinded_nodes[0::2])
+        second_stack = tk.stack(unbound_nodes[0::2])
         assert second_stack.shape == (3, 100, 2)
 
     def test_einsum_autoconnect_stacks(self):
@@ -5121,65 +5121,65 @@ class TestStackUnbind:
         # Cannot unbind a node that is not a (Param)StackNode
         with pytest.raises(TypeError):
             result = tk.unbind(node)
-            
+
     def test_batches_auto_unbind(self):
         net = tk.TensorNetwork()
         net.auto_unbind = False
-        
+
         node1 = tk.Node(shape=(20, 30, 2),
-                       axes_names=('batch1', 'batch2', 'output'),
-                       init_method='randn',
-                       network=net)
+                        axes_names=('batch1', 'batch2', 'output'),
+                        init_method='randn',
+                        network=net)
         node2 = tk.Node(shape=(20, 30, 2),
-                       axes_names=('batch1', 'batch2', 'output'),
-                       init_method='randn',
-                       network=net)
-        
+                        axes_names=('batch1', 'batch2', 'output'),
+                        init_method='randn',
+                        network=net)
+
         # Stack
         stack = tk.stack([node1, node2])
-        
+
         # Unbind
-        unbinded = tk.unbind(stack)
-        for aux_node in unbinded:
+        unbound = tk.unbind(stack)
+        for aux_node in unbound:
             assert aux_node.shape == (20, 30, 2)
-            
+
         # Repeat changing batches
         node1.tensor = torch.randn(25, 35, 2)
         node2.tensor = torch.randn(25, 35, 2)
-        
+
         stack = tk.stack([node1, node2])
-        unbinded = tk.unbind(stack)
-        for aux_node in unbinded:
+        unbound = tk.unbind(stack)
+        for aux_node in unbound:
             assert aux_node.shape == (25, 35, 2)
-            
+
     def test_batches_index_mode(self):
         net = tk.TensorNetwork()
         net.auto_unbind = True
-        
+
         node1 = tk.Node(shape=(20, 30, 2),
-                       axes_names=('batch1', 'batch2', 'output'),
-                       init_method='randn',
-                       network=net)
+                        axes_names=('batch1', 'batch2', 'output'),
+                        init_method='randn',
+                        network=net)
         node2 = tk.Node(shape=(20, 30, 2),
-                       axes_names=('batch1', 'batch2', 'output'),
-                       init_method='randn',
-                       network=net)
-        
+                        axes_names=('batch1', 'batch2', 'output'),
+                        init_method='randn',
+                        network=net)
+
         # Stack
         stack = tk.stack([node1, node2])
-        
+
         # Unbind
-        unbinded = tk.unbind(stack)
-        for aux_node in unbinded:
+        unbound = tk.unbind(stack)
+        for aux_node in unbound:
             assert aux_node.shape == (20, 30, 2)
-            
+
         # Repeat changing batches
         node1.tensor = torch.randn(25, 35, 2)
         node2.tensor = torch.randn(25, 35, 2)
-        
+
         stack = tk.stack([node1, node2])
-        unbinded = tk.unbind(stack)
-        for aux_node in unbinded:
+        unbound = tk.unbind(stack)
+        for aux_node in unbound:
             assert aux_node.shape == (25, 35, 2)
 
 
@@ -5296,7 +5296,7 @@ class TestEinsum:
         net.add_data(data)
 
         out_node = tk.einsum('ijklm,bi,bj,bk,bl->bm', *
-                             ([node] + list(net.data_nodes.values())))
+        ([node] + list(net.data_nodes.values())))
         assert out_node.shape == (10, 2)
 
         net = tk.TensorNetwork(name='net')
@@ -5310,7 +5310,7 @@ class TestEinsum:
         net.add_data(data)
 
         out_node = tk.einsum('ijklm,bi,bj,bk,bl->bm', *
-                             ([node] + list(net.data_nodes.values())))
+        ([node] + list(net.data_nodes.values())))
         assert out_node.shape == (10, 2)
 
     def test_stacked_einsum_mps(self):
@@ -5475,7 +5475,7 @@ class TestTNModels:
                     random_eye = torch.randn(
                         tensor.shape[0], tensor.shape[2]) * std
                     random_eye = random_eye + \
-                        torch.eye(tensor.shape[0], tensor.shape[2])
+                                 torch.eye(tensor.shape[0], tensor.shape[2])
                     tensor[:, 0, :] = random_eye
 
                     uniform_memory.tensor = tensor
@@ -5492,12 +5492,12 @@ class TestTNModels:
                         random_eye = torch.randn(
                             tensor.shape[0], tensor.shape[2]) * std
                         random_eye = random_eye + \
-                            torch.eye(tensor.shape[0], tensor.shape[2])
+                                     torch.eye(tensor.shape[0], tensor.shape[2])
                         tensor[:, 0, :] = random_eye
 
                         node.tensor = tensor
 
-                eye_tensor = torch.eye(output_node.shape[0], output_node.shape[2])\
+                eye_tensor = torch.eye(output_node.shape[0], output_node.shape[2]) \
                     .view([output_node.shape[0], 1, output_node.shape[2]])
                 eye_tensor = eye_tensor.expand(output_node.shape)
                 tensor = eye_tensor + std * torch.randn(output_node.shape)
@@ -5685,14 +5685,15 @@ class TestTNModels:
                             if i < (n_rows - 1):
                                 if j == 0:
                                     aux_result = current_2_lines[0][j] @ current_2_lines[0][j + 1]
-                                    new_node1, new_node2 = aux_result.split(node1_axes=['left_0', 'left_1', 'up_0', 'down_0'],
-                                                                            node2_axes=[
-                                                                                'right_0', 'right_1', 'up_1', 'down_1'],
-                                                                            rank=2)
+                                    new_node1, new_node2 = aux_result.split(
+                                        node1_axes=['left_0', 'left_1', 'up_0', 'down_0'],
+                                        node2_axes=[
+                                            'right_0', 'right_1', 'up_1', 'down_1'],
+                                        rank=2)
                                     new_node1.get_axis(
-                                        'splitted').name = 'right'
+                                        'split').name = 'right'
                                     new_node2.get_axis(
-                                        'splitted').name = 'left'
+                                        'split').name = 'left'
                                     current_2_lines[0][j] = new_node1
                                     current_2_lines[0][j + 1] = new_node2
                                 elif j < (n_cols - 1):
@@ -5702,9 +5703,9 @@ class TestTNModels:
                                                                                 'right_0', 'right_1', 'up_1', 'down_1'],
                                                                             rank=2)
                                     new_node1.get_axis(
-                                        'splitted').name = 'right'
+                                        'split').name = 'right'
                                     new_node2.get_axis(
-                                        'splitted').name = 'left'
+                                        'split').name = 'left'
                                     current_2_lines[0][j] = new_node1
                                     current_2_lines[0][j + 1] = new_node2
                                 else:
@@ -5714,9 +5715,9 @@ class TestTNModels:
                                                                                 'right', 'up_1', 'down_1'],
                                                                             rank=2)
                                     new_node1.get_axis(
-                                        'splitted').name = 'right'
+                                        'split').name = 'right'
                                     new_node2.get_axis(
-                                        'splitted').name = 'left'
+                                        'split').name = 'left'
                                     current_2_lines[0][j] = new_node1
                                     current_2_lines[0][0] = new_node2
                             else:
@@ -5727,9 +5728,9 @@ class TestTNModels:
                                                                                 'right_0', 'right_1'],
                                                                             rank=2)
                                     new_node1.get_axis(
-                                        'splitted').name = 'right'
+                                        'split').name = 'right'
                                     new_node2.get_axis(
-                                        'splitted').name = 'left'
+                                        'split').name = 'left'
                                     current_2_lines[0][j] = new_node1
                                     current_2_lines[0][j + 1] = new_node2
                                 elif j < (n_cols - 1):
@@ -5739,9 +5740,9 @@ class TestTNModels:
                                                                                 'right_0', 'right_1'],
                                                                             rank=2)
                                     new_node1.get_axis(
-                                        'splitted').name = 'right'
+                                        'split').name = 'right'
                                     new_node2.get_axis(
-                                        'splitted').name = 'left'
+                                        'split').name = 'left'
                                     current_2_lines[0][j] = new_node1
                                     current_2_lines[0][j + 1] = new_node2
                                 else:
@@ -5751,9 +5752,9 @@ class TestTNModels:
                                                                                 'right'],
                                                                             rank=2)
                                     new_node1.get_axis(
-                                        'splitted').name = 'right'
+                                        'split').name = 'right'
                                     new_node2.get_axis(
-                                        'splitted').name = 'left'
+                                        'split').name = 'left'
                                     current_2_lines[0][j] = new_node1
                                     current_2_lines[0][0] = new_node2
                     if i < (n_rows - 1):
@@ -5763,7 +5764,7 @@ class TestTNModels:
                         current_2_lines[0] = current_2_lines[1]
                         if i < (n_rows - 2):
                             current_2_lines[1] = result[(
-                                i + 2) * n_cols:((i + 3) * n_cols)]
+                                                                i + 2) * n_cols:((i + 3) * n_cols)]
 
                 result = current_2_lines[0][0]
                 for node in current_2_lines[0][1:]:
@@ -5858,14 +5859,14 @@ class TestTNModels:
                 super().__init__(name='ConvTN')
 
                 num_input = kernel_size[0] * kernel_size[1]
-                node = tk.ParamNode(shape=(*([input_dim]*num_input), output_dim),
+                node = tk.ParamNode(shape=(*([input_dim] * num_input), output_dim),
                                     axes_names=(
-                                        *(['input']*num_input), 'output'),
+                                        *(['input'] * num_input), 'output'),
                                     network=self,
                                     name='node')
 
                 tensor = 1e-9 * torch.randn(node.shape)
-                tensor[(0,)*(num_input + 1)] = 1.
+                tensor[(0,) * (num_input + 1)] = 1.
                 node.tensor = tensor
 
             def set_data_nodes(self) -> None:
@@ -5927,7 +5928,7 @@ class TestTNModels:
                     random_eye = torch.randn(
                         tensor.shape[0], tensor.shape[2]) * std
                     random_eye = random_eye + \
-                        torch.eye(tensor.shape[0], tensor.shape[2])
+                                 torch.eye(tensor.shape[0], tensor.shape[2])
                     tensor[:, 0, :] = random_eye
 
                     node.tensor = tensor
@@ -6054,7 +6055,7 @@ class TestTNModels:
                 h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] *
                              (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
                 w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] *
-                            (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
+                             (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
 
                 result = result.view(*result.shape[:-1], h_out, w_out)
                 # batch_size x out_channels x height_out x width_out

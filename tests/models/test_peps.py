@@ -16,16 +16,16 @@ import tensorkrowch as tk
 class TestPEPS:
 
     def test_all_algorithms(self):
-        example = torch.randn(1, 3*4, 5)  # batch x n_features x feature_dim
-        data = torch.randn(100, 3*4, 5)
+        example = torch.randn(1, 3 * 4, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 3 * 4, 5)
 
         for boundary_0 in ['obc', 'pbc']:
             for boundary_1 in ['obc', 'pbc']:
                 peps = tk.models.PEPS(n_rows=3,
-                               n_cols=4,
-                               in_dim=5,
-                               bond_dim=[2, 3],
-                               boundary=[boundary_0, boundary_1],)
+                                      n_cols=4,
+                                      in_dim=5,
+                                      bond_dim=[2, 3],
+                                      boundary=[boundary_0, boundary_1], )
 
                 for auto_stack in [True, False]:
                     for auto_unbind in [True, False]:
@@ -43,8 +43,8 @@ class TestPEPS:
 
                                 assert result.shape == (100,)
                                 assert len(peps.edges) == 0
-                                assert len(peps.leaf_nodes) == 3*4
-                                assert len(peps.data_nodes) == 3*4
+                                assert len(peps.leaf_nodes) == 3 * 4
+                                assert len(peps.data_nodes) == 3 * 4
                                 if auto_stack:
                                     if boundary_0 == 'obc':
                                         if boundary_1 == 'obc':
@@ -65,10 +65,10 @@ class TestPEPS:
         boundary = ['obc', 'obc']
 
         peps = tk.models.PEPS(n_rows=n_rows,
-                       n_cols=n_cols,
-                       in_dim=5,
-                       bond_dim=[2, 3],
-                       boundary=boundary)
+                              n_cols=n_cols,
+                              in_dim=5,
+                              bond_dim=[2, 3],
+                              boundary=boundary)
         example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
         data = torch.randn(100, n_rows * n_cols, 5)
 
@@ -99,10 +99,10 @@ class TestPEPS:
         boundary = ['pbc', 'obc']
 
         peps = tk.models.PEPS(n_rows=n_rows,
-                       n_cols=n_cols,
-                       in_dim=5,
-                       bond_dim=[2, 3],
-                       boundary=boundary)
+                              n_cols=n_cols,
+                              in_dim=5,
+                              bond_dim=[2, 3],
+                              boundary=boundary)
         example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
         data = torch.randn(100, n_rows * n_cols, 5)
 
@@ -136,10 +136,10 @@ class TestPEPS:
         boundary = ['pbc', 'obc']
 
         peps = tk.models.PEPS(n_rows=n_rows,
-                       n_cols=n_cols,
-                       in_dim=5,
-                       bond_dim=[2, 3],
-                       boundary=boundary)
+                              n_cols=n_cols,
+                              in_dim=5,
+                              bond_dim=[2, 3],
+                              boundary=boundary)
         example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
         data = torch.randn(100, n_rows * n_cols, 5)
 
@@ -173,10 +173,10 @@ class TestPEPS:
         boundary = ['obc', 'pbc']
 
         peps = tk.models.PEPS(n_rows=n_rows,
-                       n_cols=n_cols,
-                       in_dim=5,
-                       bond_dim=[2, 3],
-                       boundary=boundary)
+                              n_cols=n_cols,
+                              in_dim=5,
+                              bond_dim=[2, 3],
+                              boundary=boundary)
         example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
         data = torch.randn(100, n_rows * n_cols, 5)
 
@@ -210,10 +210,10 @@ class TestPEPS:
         boundary = ['obc', 'pbc']
 
         peps = tk.models.PEPS(n_rows=n_rows,
-                       n_cols=n_cols,
-                       in_dim=5,
-                       bond_dim=[2, 3],
-                       boundary=boundary)
+                              n_cols=n_cols,
+                              in_dim=5,
+                              bond_dim=[2, 3],
+                              boundary=boundary)
         example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
         data = torch.randn(100, n_rows * n_cols, 5)
 
@@ -247,10 +247,10 @@ class TestPEPS:
         boundary = ['pbc', 'pbc']
 
         peps = tk.models.PEPS(n_rows=n_rows,
-                       n_cols=n_cols,
-                       in_dim=5,
-                       bond_dim=[2, 3],
-                       boundary=boundary)
+                              n_cols=n_cols,
+                              in_dim=5,
+                              bond_dim=[2, 3],
+                              boundary=boundary)
         example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
         data = torch.randn(100, n_rows * n_cols, 5)
 
@@ -282,13 +282,13 @@ class TestPEPS:
 class TestUPEPS:
 
     def test_all_algorithms(self):
-        example = torch.randn(1, 3*4, 5)  # batch x n_features x feature_dim
-        data = torch.randn(100, 3*4, 5)
+        example = torch.randn(1, 3 * 4, 5)  # batch x n_features x feature_dim
+        data = torch.randn(100, 3 * 4, 5)
 
         peps = tk.models.UPEPS(n_rows=3,
-                        n_cols=4,
-                        in_dim=5,
-                        bond_dim=[2, 3])
+                               n_cols=4,
+                               in_dim=5,
+                               bond_dim=[2, 3])
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -306,8 +306,8 @@ class TestUPEPS:
 
                         assert result.shape == (100,)
                         assert len(peps.edges) == 0
-                        assert len(peps.leaf_nodes) == 3*4
-                        assert len(peps.data_nodes) == 3*4
+                        assert len(peps.leaf_nodes) == 3 * 4
+                        assert len(peps.data_nodes) == 3 * 4
                         assert len(peps.virtual_nodes) == 2
 
     def test_extreme_case_2_rows_2_cols(self):
@@ -315,9 +315,9 @@ class TestUPEPS:
         n_cols = 2
 
         peps = tk.models.UPEPS(n_rows=n_rows,
-                        n_cols=n_cols,
-                        in_dim=5,
-                        bond_dim=[2, 3])
+                               n_cols=n_cols,
+                               in_dim=5,
+                               bond_dim=[2, 3])
         example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
         data = torch.randn(100, n_rows * n_cols, 5)
 
@@ -347,9 +347,9 @@ class TestUPEPS:
         n_cols = 2
 
         peps = tk.models.UPEPS(n_rows=n_rows,
-                        n_cols=n_cols,
-                        in_dim=5,
-                        bond_dim=[2, 3])
+                               n_cols=n_cols,
+                               in_dim=5,
+                               bond_dim=[2, 3])
         example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
         data = torch.randn(100, n_rows * n_cols, 5)
 
@@ -379,9 +379,9 @@ class TestUPEPS:
         n_cols = 1
 
         peps = tk.models.UPEPS(n_rows=n_rows,
-                        n_cols=n_cols,
-                        in_dim=5,
-                        bond_dim=[2, 3])
+                               n_cols=n_cols,
+                               in_dim=5,
+                               bond_dim=[2, 3])
         example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
         data = torch.randn(100, n_rows * n_cols, 5)
 
@@ -411,9 +411,9 @@ class TestUPEPS:
         n_cols = 1
 
         peps = tk.models.UPEPS(n_rows=n_rows,
-                        n_cols=n_cols,
-                        in_dim=5,
-                        bond_dim=[2, 3])
+                               n_cols=n_cols,
+                               in_dim=5,
+                               bond_dim=[2, 3])
         example = torch.randn(1, n_rows * n_cols, 5)  # batch x n_features x feature_dim
         data = torch.randn(100, n_rows * n_cols, 5)
 
@@ -448,9 +448,9 @@ class TestConvPEPS:
         for boundary_0 in ['obc', 'pbc']:
             for boundary_1 in ['obc', 'pbc']:
                 peps = tk.models.ConvPEPS(in_channels=2,
-                                   bond_dim=[2, 3],
-                                   kernel_size=3,
-                                   boundary=[boundary_0, boundary_1])
+                                          bond_dim=[2, 3],
+                                          kernel_size=3,
+                                          boundary=[boundary_0, boundary_1])
 
                 for auto_stack in [True, False]:
                     for auto_unbind in [True, False]:
@@ -470,8 +470,8 @@ class TestConvPEPS:
 
                                 assert result.shape == (100, 3, 3)
                                 assert len(peps.edges) == 0
-                                assert len(peps.leaf_nodes) == 3*3
-                                assert len(peps.data_nodes) == 3*3
+                                assert len(peps.leaf_nodes) == 3 * 3
+                                assert len(peps.data_nodes) == 3 * 3
                                 if auto_stack:
                                     if boundary_0 == 'obc':
                                         if boundary_1 == 'obc':
@@ -494,9 +494,9 @@ class TestConvPEPS:
         data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvPEPS(in_channels=2,
-                           bond_dim=[2, 3],
-                           kernel_size=(n_rows, n_cols),
-                           boundary=['obc', 'obc'])
+                                  bond_dim=[2, 3],
+                                  kernel_size=(n_rows, n_cols),
+                                  boundary=['obc', 'obc'])
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -527,9 +527,9 @@ class TestConvPEPS:
         data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvPEPS(in_channels=2,
-                           bond_dim=[2, 3],
-                           kernel_size=(n_rows, n_cols),
-                           boundary=['pbc', 'obc'])
+                                  bond_dim=[2, 3],
+                                  kernel_size=(n_rows, n_cols),
+                                  boundary=['pbc', 'obc'])
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -563,9 +563,9 @@ class TestConvPEPS:
         data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvPEPS(in_channels=2,
-                           bond_dim=[2, 3],
-                           kernel_size=(n_rows, n_cols),
-                           boundary=['pbc', 'obc'])
+                                  bond_dim=[2, 3],
+                                  kernel_size=(n_rows, n_cols),
+                                  boundary=['pbc', 'obc'])
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -599,9 +599,9 @@ class TestConvPEPS:
         data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvPEPS(in_channels=2,
-                           bond_dim=[2, 3],
-                           kernel_size=(n_rows, n_cols),
-                           boundary=['obc', 'pbc'])
+                                  bond_dim=[2, 3],
+                                  kernel_size=(n_rows, n_cols),
+                                  boundary=['obc', 'pbc'])
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -635,9 +635,9 @@ class TestConvPEPS:
         data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvPEPS(in_channels=2,
-                           bond_dim=[2, 3],
-                           kernel_size=(n_rows, n_cols),
-                           boundary=['obc', 'pbc'])
+                                  bond_dim=[2, 3],
+                                  kernel_size=(n_rows, n_cols),
+                                  boundary=['obc', 'pbc'])
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -671,9 +671,9 @@ class TestConvPEPS:
         data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvPEPS(in_channels=2,
-                           bond_dim=[2, 3],
-                           kernel_size=(n_rows, n_cols),
-                           boundary=['pbc', 'pbc'])
+                                  bond_dim=[2, 3],
+                                  kernel_size=(n_rows, n_cols),
+                                  boundary=['pbc', 'pbc'])
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -707,8 +707,8 @@ class TestConvUPEPS:
         data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvUPEPS(in_channels=2,
-                            bond_dim=[2, 3],
-                            kernel_size=3)
+                                   bond_dim=[2, 3],
+                                   kernel_size=3)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -728,8 +728,8 @@ class TestConvUPEPS:
 
                         assert result.shape == (100, 3, 3)
                         assert len(peps.edges) == 0
-                        assert len(peps.leaf_nodes) == 3*3
-                        assert len(peps.data_nodes) == 3*3
+                        assert len(peps.leaf_nodes) == 3 * 3
+                        assert len(peps.data_nodes) == 3 * 3
                         assert len(peps.virtual_nodes) == 2
 
     def test_extreme_case_2_rows_2_cols(self):
@@ -740,8 +740,8 @@ class TestConvUPEPS:
         data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvUPEPS(in_channels=2,
-                            bond_dim=[2, 3],
-                            kernel_size=(n_rows, n_cols))
+                                   bond_dim=[2, 3],
+                                   kernel_size=(n_rows, n_cols))
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -772,8 +772,8 @@ class TestConvUPEPS:
         data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvUPEPS(in_channels=2,
-                            bond_dim=[2, 3],
-                            kernel_size=(n_rows, n_cols))
+                                   bond_dim=[2, 3],
+                                   kernel_size=(n_rows, n_cols))
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -804,8 +804,8 @@ class TestConvUPEPS:
         data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvUPEPS(in_channels=2,
-                            bond_dim=[2, 3],
-                            kernel_size=(n_rows, n_cols))
+                                   bond_dim=[2, 3],
+                                   kernel_size=(n_rows, n_cols))
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -836,8 +836,8 @@ class TestConvUPEPS:
         data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         peps = tk.models.ConvUPEPS(in_channels=2,
-                            bond_dim=[2, 3],
-                            kernel_size=(n_rows, n_cols))
+                                   bond_dim=[2, 3],
+                                   kernel_size=(n_rows, n_cols))
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:

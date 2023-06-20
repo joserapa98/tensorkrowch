@@ -7,7 +7,6 @@ Tests for mps:
     * TestConvUMPS
 """
 
-
 import pytest
 
 import torch
@@ -22,9 +21,9 @@ class TestMPS:
 
         for boundary in ['obc', 'pbc']:
             mps = tk.models.MPS(n_features=4,
-                         in_dim=5,
-                         bond_dim=2,
-                         boundary=boundary)
+                                in_dim=5,
+                                bond_dim=2,
+                                boundary=boundary)
 
             for auto_stack in [True, False]:
                 for auto_unbind in [True, False]:
@@ -81,9 +80,9 @@ class TestMPS:
 
         for boundary in ['obc', 'pbc']:
             mps = tk.models.MPS(n_features=4,
-                         in_dim=in_dim,
-                         bond_dim=2,
-                         boundary=boundary)
+                                in_dim=in_dim,
+                                bond_dim=2,
+                                boundary=boundary)
 
             for auto_stack in [True, False]:
                 for auto_unbind in [True, False]:
@@ -140,9 +139,9 @@ class TestMPS:
 
         for boundary in ['obc', 'pbc']:
             mps = tk.models.MPS(n_features=4,
-                         in_dim=5,
-                         bond_dim=bond_dim[:-1] if boundary == 'obc' else bond_dim,
-                         boundary=boundary)
+                                in_dim=5,
+                                bond_dim=bond_dim[:-1] if boundary == 'obc' else bond_dim,
+                                boundary=boundary)
 
             for auto_stack in [True, False]:
                 for auto_unbind in [True, False]:
@@ -200,9 +199,9 @@ class TestMPS:
 
         for boundary in ['obc', 'pbc']:
             mps = tk.models.MPS(n_features=4,
-                         in_dim=in_dim,
-                         bond_dim=bond_dim[:-1] if boundary == 'obc' else bond_dim,
-                         boundary=boundary)
+                                in_dim=in_dim,
+                                bond_dim=bond_dim[:-1] if boundary == 'obc' else bond_dim,
+                                boundary=boundary)
 
             for auto_stack in [True, False]:
                 for auto_unbind in [True, False]:
@@ -255,9 +254,9 @@ class TestMPS:
     def test_extreme_case_left_right(self):
         # Left node + Right node
         mps = tk.models.MPS(n_features=2,
-                     in_dim=5,
-                     bond_dim=2,
-                     boundary='obc')
+                            in_dim=5,
+                            bond_dim=2,
+                            boundary='obc')
         example = torch.randn(1, 2, 5)  # batch x n_features x feature_dim
         data = torch.randn(100, 2, 5)
 
@@ -306,9 +305,9 @@ class TestMPS:
     def test_extreme_case_one_node(self):
         # One node
         mps = tk.models.MPS(n_features=1,
-                     in_dim=5,
-                     bond_dim=2,
-                     boundary='pbc')
+                            in_dim=5,
+                            bond_dim=2,
+                            boundary='pbc')
         example = torch.randn(1, 1, 5)  # batch x n_features x feature_dim
         data = torch.randn(100, 1, 5)
 
@@ -364,9 +363,9 @@ class TestMPS:
         data = torch.randn(100, 5, 2)
 
         mps = tk.models.MPS(n_features=5,
-                     in_dim=2,
-                     bond_dim=5,
-                     boundary='obc')
+                            in_dim=2,
+                            bond_dim=5,
+                            boundary='obc')
 
         # Contract with data
         mps.trace(example)
@@ -410,9 +409,9 @@ class TestMPS:
         data = [torch.randn(100, d) for d in in_dim]
 
         mps = tk.models.MPS(n_features=5,
-                     in_dim=in_dim,
-                     bond_dim=bond_dim,
-                     boundary='obc')
+                            in_dim=in_dim,
+                            bond_dim=bond_dim,
+                            boundary='obc')
 
         # Contract with data
         mps.trace(example)
@@ -461,9 +460,9 @@ class TestMPS:
         data = [torch.randn(100, d) for d in in_dim]
 
         mps = tk.models.MPS(n_features=5,
-                     in_dim=in_dim,
-                     bond_dim=bond_dim,
-                     boundary='obc')
+                            in_dim=in_dim,
+                            bond_dim=bond_dim,
+                            boundary='obc')
 
         # Contract with data
         mps.trace(example)
@@ -505,9 +504,9 @@ class TestMPS:
         data = torch.randn(100, 5, 2)
 
         mps = tk.models.MPS(n_features=5,
-                     in_dim=2,
-                     bond_dim=20,
-                     boundary='obc')
+                            in_dim=2,
+                            bond_dim=20,
+                            boundary='obc')
 
         # Contract with data
         mps.trace(example)
@@ -552,8 +551,8 @@ class TestUMPS:
         data = torch.randn(100, 4, 5)
 
         mps = tk.models.UMPS(n_features=4,
-                      in_dim=5,
-                      bond_dim=2)
+                             in_dim=5,
+                             bond_dim=2)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -578,8 +577,8 @@ class TestUMPS:
     def test_extreme_case_mats_env_2_nodes(self):
         # Two nodes
         mps = tk.models.UMPS(n_features=2,
-                      in_dim=5,
-                      bond_dim=2)
+                             in_dim=5,
+                             bond_dim=2)
         example = torch.randn(1, 2, 5)  # batch x n_features x feature_dim
         data = torch.randn(100, 2, 5)
 
@@ -606,8 +605,8 @@ class TestUMPS:
     def test_extreme_case_mats_env_1_node(self):
         # One node
         mps = tk.models.UMPS(n_features=1,
-                      in_dim=5,
-                      bond_dim=2)
+                             in_dim=5,
+                             bond_dim=2)
         example = torch.randn(1, 1, 5)  # batch x n_features x feature_dim
         data = torch.randn(100, 1, 5)
 
@@ -640,9 +639,9 @@ class TestConvMPS:
 
         for boundary in ['obc', 'pbc']:
             mps = tk.models.ConvMPS(in_channels=2,
-                             bond_dim=2,
-                             kernel_size=2,
-                             boundary=boundary)
+                                    bond_dim=2,
+                                    kernel_size=2,
+                                    boundary=boundary)
 
             for auto_stack in [True, False]:
                 for auto_unbind in [True, False]:
@@ -772,9 +771,9 @@ class TestConvMPS:
         data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         mps = tk.models.ConvMPS(in_channels=2,
-                         bond_dim=2,
-                         kernel_size=(1, 2),
-                         boundary='obc')
+                                bond_dim=2,
+                                kernel_size=(1, 2),
+                                boundary='obc')
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -829,9 +828,9 @@ class TestConvMPS:
         data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         mps = tk.models.ConvMPS(in_channels=2,
-                         bond_dim=2,
-                         kernel_size=1,
-                         boundary='pbc')
+                                bond_dim=2,
+                                kernel_size=1,
+                                boundary='pbc')
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -893,8 +892,8 @@ class TestConvUMPS:
         data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         mps = tk.models.ConvUMPS(in_channels=2,
-                          bond_dim=2,
-                          kernel_size=2)
+                                 bond_dim=2,
+                                 kernel_size=2)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -925,8 +924,8 @@ class TestConvUMPS:
         data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         mps = tk.models.ConvUMPS(in_channels=2,
-                          bond_dim=2,
-                          kernel_size=(1, 2))
+                                 bond_dim=2,
+                                 kernel_size=(1, 2))
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -957,8 +956,8 @@ class TestConvUMPS:
         data = tk.embeddings.add_ones(torch.randn(100, 5, 5), axis=1)
 
         mps = tk.models.ConvUMPS(in_channels=2,
-                          bond_dim=2,
-                          kernel_size=1)
+                                 bond_dim=2,
+                                 kernel_size=1)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:

@@ -30,18 +30,15 @@ This script contains:
         * stacked_einsum
 """
 
-from typing import Callable, List, Optional, Sequence, Text, Tuple, Union
 import types
+from typing import Callable
 
-import torch
 import opt_einsum
 
+from tensorkrowch import _C
 from tensorkrowch.components import *
 from tensorkrowch.utils import (inverse_permutation, is_permutation,
                                 list2slice, permute_list)
-
-from tensorkrowch import _C
-
 
 Ax = Union[int, Text, Axis]
 
@@ -54,6 +51,7 @@ def copy_func(f):
     # In case f was given attrs (note this dict is a shallow copy)
     fn.__dict__.update(f.__dict__)
     return fn
+
 
 ###############################################################################
 #                               OPERATION CLASS                               #
@@ -68,7 +66,7 @@ class Operation:
     first time the operation is called and the one that is executed in every
     other call (with the same arguments). Both functions are usually similar,
     though the former computes extra things regarding the creation of the
-    ``resultant`` nodes and some auxilliary operations whose result will be the
+    ``resultant`` nodes and some auxiliary operations whose result will be the
     same in every call (e.g. when contracting two nodes, maybe a permutation of
     the tensors should be first performed; how this permutation is carried out
     is always the same, though the tensors themselves are different).
@@ -907,6 +905,7 @@ def _split_first(node: AbstractNode,
         k = all_axes[0]
     else:
         k = node.rank
+
     for i in range(node.rank):
         if i < k:
             if not node._edges[i].is_batch():
@@ -931,13 +930,13 @@ def _split_first(node: AbstractNode,
         permutation_dims = []
 
     if permutation_dims:
-        node_tensor = node.tensor\
-            .permute(*(batch_axes + node1_axes + node2_axes))\
+        node_tensor = node.tensor \
+            .permute(*(batch_axes + node1_axes + node2_axes)) \
             .reshape(*(batch_shape +
                        [node1_shape.prod().item()] +
                        [node2_shape.prod().item()]))
     else:
-        node_tensor = node.tensor\
+        node_tensor = node.tensor \
             .reshape(*(batch_shape +
                        [node1_shape.prod().item()] +
                        [node2_shape.prod().item()]))
@@ -950,9 +949,9 @@ def _split_first(node: AbstractNode,
                 raise ValueError('Only one of `rank`, `cum_percentage` and '
                                  '`cutoff` should be provided')
 
-            percentages = s.cumsum(-1) / s.sum(-1)\
+            percentages = s.cumsum(-1) / s.sum(-1) \
                 .view(*s.shape[:-1], 1).expand(s.shape)
-            cum_percentage_tensor = torch.tensor(cum_percentage)\
+            cum_percentage_tensor = torch.tensor(cum_percentage) \
                 .repeat(percentages.shape[:-1])
             rank = 0
             for i in range(percentages.shape[-1]):
@@ -1030,15 +1029,13 @@ def _split_first(node: AbstractNode,
     net = node._network
 
     node1_axes_names = permute_list(node.axes_names,
-                                    batch_axes + node1_axes) + \
-        ['splitted']
+                                    batch_axes + node1_axes) + ['split']
     node1 = Node._create_resultant(axes_names=node1_axes_names,
                                    name='split',
                                    network=net,
                                    tensor=node1_tensor)
 
-    node2_axes_names = permute_list(node.axes_names, batch_axes) + \
-        ['splitted'] + \
+    node2_axes_names = permute_list(node.axes_names, batch_axes) + ['split'] + \
         permute_list(node.axes_names, node2_axes)
     node2 = Node._create_resultant(axes_names=node2_axes_names,
                                    name='split',
@@ -1092,8 +1089,8 @@ def _split_first(node: AbstractNode,
                             axis=n_batches + j + 1,
                             node1=node.is_node1(axis2))
 
-    splitted_edge = node1['splitted'] ^ node2['splitted']
-    net._remove_edge(splitted_edge)
+    split_edge = node1['split'] ^ node2['split']
+    net._remove_edge(split_edge)
 
     # Create successor
     successor = Successor(kwargs=kwargs,
@@ -1127,7 +1124,6 @@ def _split_next(successor: Successor,
                 rank: Optional[int] = None,
                 cum_percentage: Optional[float] = None,
                 cutoff: Optional[float] = None) -> Tuple[Node, Node]:
-
     batch_axes = successor.hints['batch_axes']
     node1_axes = successor.hints['node1_axes']
     node2_axes = successor.hints['node2_axes']
@@ -1138,13 +1134,13 @@ def _split_next(successor: Successor,
     node2_shape = torch.tensor(node.shape)[node2_axes]
 
     if permutation_dims:
-        node_tensor = node.tensor\
-            .permute(*(batch_axes + node1_axes + node2_axes))\
+        node_tensor = node.tensor \
+            .permute(*(batch_axes + node1_axes + node2_axes)) \
             .reshape(*(batch_shape +
                        [node1_shape.prod().item()] +
                        [node2_shape.prod().item()]))
     else:
-        node_tensor = node.tensor\
+        node_tensor = node.tensor \
             .reshape(*(batch_shape +
                        [node1_shape.prod().item()] +
                        [node2_shape.prod().item()]))
@@ -1157,7 +1153,7 @@ def _split_next(successor: Successor,
                 raise ValueError('Only one of `rank`, `cum_percentage` and '
                                  '`cutoff` should be provided')
 
-            percentages = s.cumsum(-1) / s.sum(-1)\
+            percentages = s.cumsum(-1) / s.sum(-1) \
                 .view(*s.shape[:-1], 1).expand(s.shape)
             cum_percentage_tensor = torch.tensor(
                 cum_percentage).repeat(percentages.shape[:-1])
@@ -1308,8 +1304,8 @@ def split(node: AbstractNode,
     If ``mode`` is "svd" or "svdr", ``side`` must be provided. Besides, one
     (and only one) of ``rank``, ``cum_percentage`` and ``cutoff`` is required.
     
-    Since the node is `splitted` in two, a new edge appears connecting both
-    nodes. The axis that corresponds to this edge has the name ``"splitted"``.
+    Since the node is `split` in two, a new edge appears connecting both
+    nodes. The axis that corresponds to this edge has the name ``"split"``.
     
     Nodes ``resultant`` from this operation are called ``"split"``. The node
     that keeps information about the :class:`Successor` is ``node``.
@@ -1317,7 +1313,7 @@ def split(node: AbstractNode,
     Parameters
     ----------
     node : AbstractNode
-        Node that is to be splitted.
+        Node that is to be split.
     node1_axes : list[int, str or Axis]
         First set of edges, will appear as the edges of the first (left)
         resultant node.
@@ -1363,8 +1359,8 @@ def split(node: AbstractNode,
     >>> node_right.shape
     torch.Size([100, 5, 15])
     
-    >>> node_left['splitted']
-    Edge( split_0[splitted] <-> split_1[splitted] )
+    >>> node_left['split']
+    Edge( split_0[split] <-> split_1[split] )
     """
     return split_op(node, node1_axes, node2_axes,
                     mode, side, rank, cum_percentage, cutoff)
@@ -1376,8 +1372,8 @@ split_node.__doc__ = \
     Splits one node in two via the decomposition specified in ``mode``. See
     :func:`split` for a more complete explanation.
     
-    Since the node is `splitted` in two, a new edge appears connecting both
-    nodes. The axis that corresponds to this edge has the name ``"splitted"``.
+    Since the node is `split` in two, a new edge appears connecting both
+    nodes. The axis that corresponds to this edge has the name ``"split"``.
     
     Nodes ``resultant`` from this operation are called ``"split"``. The node
     that keeps information about the :class:`Successor` is ``self``.
@@ -1428,8 +1424,8 @@ split_node.__doc__ = \
     >>> node_right.shape
     torch.Size([100, 5, 15])
     
-    >>> node_left['splitted']
-    Edge( split_0[splitted] <-> split_1[splitted] )
+    >>> node_left['split']
+    Edge( split_0[split] <-> split_1[split] )
     """
 
 AbstractNode.split = split_node
@@ -1449,15 +1445,15 @@ def split_(node: AbstractNode,
     Following the **PyTorch** convention, names of functions ended with an
     underscore indicate **in-place** operations.
     
-    Since the node is `splitted` in two, a new edge appears connecting both
-    nodes. The axis that corresponds to this edge has the name ``"splitted"``.
+    Since the node is `split` in two, a new edge appears connecting both
+    nodes. The axis that corresponds to this edge has the name ``"split"``.
     
     Nodes ``resultant`` from this operation are called ``"split_ip"``.
 
     Parameters
     ----------
     node : AbstractNode
-        Node that is to be splitted.
+        Node that is to be split.
     node1_axes : list[int, str or Axis]
         First set of edges, will appear as the edges of the first (left)
         resultant node.
@@ -1503,8 +1499,8 @@ def split_(node: AbstractNode,
     >>> node_right.shape
     torch.Size([100, 5, 15])
     
-    >>> node_left['splitted']
-    Edge( split_ip_0[splitted] <-> split_ip_1[splitted] )
+    >>> node_left['split']
+    Edge( split_ip_0[split] <-> split_ip_1[split] )
     
     ``node`` has been deleted (removed from the network), but it still exists
     until is deleted.
@@ -1556,8 +1552,8 @@ split_node_.__doc__ = \
     Following the **PyTorch** convention, names of functions ended with an
     underscore indicate **in-place** operations.
     
-    Since the node is `splitted` in two, a new edge appears connecting both
-    nodes. The axis that corresponds to this edge has the name ``"splitted"``.
+    Since the node is `split` in two, a new edge appears connecting both
+    nodes. The axis that corresponds to this edge has the name ``"split"``.
     
     Nodes ``resultant`` from this operation are called ``"split_ip"``.
 
@@ -1608,8 +1604,8 @@ split_node_.__doc__ = \
     >>> node_right.shape
     torch.Size([100, 5, 15])
     
-    >>> node_left['splitted']
-    Edge( split_ip_0[splitted] <-> split_ip_1[splitted] )
+    >>> node_left['split']
+    Edge( split_ip_0[split] <-> split_ip_1[split] )
     
     ``node`` has been deleted (removed from the network), but it still exists
     until is deleted.
@@ -1642,7 +1638,7 @@ def svd_(edge: Edge,
     Parameters
     ----------
     edge : Edge
-        Edge whose nodes are to be contracted and splitted.
+        Edge whose nodes are to be contracted and split.
     side : str, optional
         Indicates the side to which the diagonal matrix :math:`S` should be
         contracted. If "left", the first resultant node's tensor will be
@@ -1836,7 +1832,7 @@ def svdr_(edge: Edge,
     Parameters
     ----------
     edge : Edge
-        Edge whose nodes are to be contracted and splitted.
+        Edge whose nodes are to be contracted and split.
     side : str, optional
         Indicates the side to which the diagonal matrix :math:`S` should be
         contracted. If "left", the first resultant node's tensor will be
@@ -2026,7 +2022,7 @@ def qr_(edge) -> Tuple[Node, Node]:
     Parameters
     ----------
     edge : Edge
-        Edge whose nodes are to be contracted and splitted.
+        Edge whose nodes are to be contracted and split.
 
     Returns
     -------
@@ -2173,7 +2169,7 @@ def rq_(edge) -> Tuple[Node, Node]:
     Parameters
     ----------
     edge : Edge
-        Edge whose nodes are to be contracted and splitted.
+        Edge whose nodes are to be contracted and split.
 
     Returns
     -------
@@ -2319,18 +2315,18 @@ def _check_first_contract_edges(edges: List[Edge],
     return None
 
 
-def _contract_edges_first(edges: List[Edge],
+def _contract_edges_first(edges: Optional[List[Edge]],
                           node1: AbstractNode,
                           node2: AbstractNode) -> Node:
     shared_edges = get_shared_edges(node1, node2)
-    if shared_edges == []:
+    if not shared_edges:
         raise ValueError(f'No batch edges or shared edges between nodes '
                          f'{node1!s} and {node2!s} found')
 
-    edges_None = False
+    edges_none = False
     if edges is None:
         edges = shared_edges
-        edges_None = True
+        edges_none = True
     else:
         for edge in edges:
             if edge not in shared_edges:
@@ -2425,10 +2421,10 @@ def _contract_edges_first(edges: List[Edge],
         contract_edges_perm_1 = list(
             map(lambda l: l[1], contract_edges.values()))
 
-        permutation_dims[0] = batch_edges_perm_0 + \
-            non_contract_edges_perm_0 + contract_edges_perm_0
-        permutation_dims[1] = batch_edges_perm_1 + \
-            contract_edges_perm_1 + non_contract_edges_perm_1
+        permutation_dims[0] = batch_edges_perm_0 + non_contract_edges_perm_0 + \
+            contract_edges_perm_0
+        permutation_dims[1] = batch_edges_perm_1 + contract_edges_perm_1 + \
+            non_contract_edges_perm_1
 
         for i in [0, 1]:
             if permutation_dims[i] == list(range(len(permutation_dims[i]))):
@@ -2442,7 +2438,7 @@ def _contract_edges_first(edges: List[Edge],
                              permutation_dims,
                              shape_limits)
 
-        # Put batch dims at the beggining
+        # Put batch dims at the beginning
         indices = [None, None]
         indices[0] = list(map(lambda l: l[0], batch_edges.values())) + \
             list(non_contract_edges[0].values())
@@ -2487,7 +2483,7 @@ def _contract_edges_first(edges: List[Edge],
 
     # Create successor
     net = node1._network
-    successor = Successor(kwargs={'edges': edges if not edges_None else None,
+    successor = Successor(kwargs={'edges': edges if not edges_none else None,
                                   'node1': node1,
                                   'node2': node2},
                           child=new_node,
@@ -2506,7 +2502,7 @@ def _contract_edges_first(edges: List[Edge],
 
 
 def _contract_edges_next(successor: Successor,
-                         edges: List[Edge],
+                         edges: Optional[List[Edge]],
                          node1: AbstractNode,
                          node2: AbstractNode) -> Node:
     hints = successor.hints
@@ -2542,7 +2538,6 @@ def _contract_edges_next(successor: Successor,
         node1._record_in_inverse_memory()
 
     else:
-        nodes = [node1, node2]
         tensors = [node1.tensor, node2.tensor]
 
         result = _C.contract(tensors[0], tensors[1],
@@ -2566,7 +2561,7 @@ contract_edges_op = Operation('contract_edges',
                               _contract_edges_next)
 
 
-def contract_edges(edges: List[Edge],
+def contract_edges(edges: Optional[List[Edge]],
                    node1: AbstractNode,
                    node2: AbstractNode) -> Node:
     """
@@ -2928,18 +2923,17 @@ def _check_first_stack(nodes: Sequence[AbstractNode]) -> Optional[Successor]:
 
 
 def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
-    all_leaf = True          # Check if all the nodes are leaf
-    all_non_param = True     # Check if all the nodes are non-parametric
-    all_param = True         # Check if all the nodes are parametric
-    all_same_ref = True      # Check if all the nodes' memories are stored in the
+    all_leaf = True           # Check if all the nodes are leaf
+    all_non_param = True      # Check if all the nodes are non-parametric
+    all_param = True          # Check if all the nodes are parametric
+    all_same_ref = True       # Check if all the nodes' memories are stored in the
     # same reference node's memory
-    node_ref_is_stack = True  # Chech if the shared reference node is a stack
-    stack_node_ref = None    # In the case above, the reference node
-    stack_indices = []       # In the case above, stack indices of each node in
+    node_ref_is_stack = True  # Check if the shared reference node is a stack
+    stack_node_ref = None     # In the case above, the reference node
+    stack_indices = []        # In the case above, stack indices of each node in
     # the reference node's memory
 
-    if not (isinstance(nodes, (list, tuple)) and \
-        isinstance(nodes[0], AbstractNode)):
+    if not (isinstance(nodes, (list, tuple)) and isinstance(nodes[0], AbstractNode)):
         raise TypeError('`nodes` should be a list or tuple of AbstractNodes')
 
     net = nodes[0]._network
@@ -3034,9 +3028,10 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
     successor = Successor(kwargs={'nodes': nodes},
                           child=stack_node,
                           hints={'all_same_ref': all_same_ref,
-                                 'all_leaf': all_leaf and
-                                 (all_param or all_non_param) and
-                                 node_ref_is_stack,
+                                 'all_leaf':
+                                     all_leaf and
+                                     (all_param or all_non_param) and
+                                     node_ref_is_stack,
                                  'auto_stack': net._auto_stack})
 
     # Add successor to parent
@@ -3254,18 +3249,18 @@ def _unbind_next(successor: Successor, node: AbstractStackNode) -> List[Node]:
         children = successor.child
         batch_ids = successor.hints
         diff_batches = []
-        
+
         for i, j in enumerate(batch_ids):
             if children[0]._shape[j] != node._shape[j + 1]:
                 batch_ids[j] = i
                 diff_batches.append((i, node._shape[i + 1]))
-        
+
         for child in children:
             shape = list(child._shape)
             for i, size in diff_batches:
                 shape[i] = size
             child._shape = Size(shape)
-            
+
         return children[:]
 
 
@@ -3293,7 +3288,7 @@ def unbind(node: AbstractStackNode) -> List[Node]:
     Parameters
     ----------
     node : StackNode or ParamStackNode
-        Node that is to be unbinded.
+        Node that is to be unbound.
 
     Returns
     -------
@@ -3595,7 +3590,7 @@ def stacked_einsum(string: Text,
     same properties, etc.). That is, it stacks these groups of nodes into a
     single collection of ``StackNodes`` that is then contracted via
     :func:`einsum` (using the stack dimensions as **batch**), and
-    :func:`unbinded <unbind>` afterwards.
+    :func:`unbound <unbind>` afterwards.
 
     Parameters
     ----------
@@ -3611,9 +3606,9 @@ def stacked_einsum(string: Text,
         can be expressed as::
 
             string = 'ijk,klm,im->jl'
-    nodes : List[Node or ParamNode]...
-        Nodes that are involved in the contraction. Should appear in the same
-        order as it is specified in the ``string``.
+    nodes_lists : List[Node or ParamNode]...
+        Lists of nodes that are involved in the contraction. Should appear in
+        the same order as it is specified in the ``string``.
 
     Returns
     -------
@@ -3671,5 +3666,5 @@ def stacked_einsum(string: Text,
     string = input_string + '->' + output_string
 
     result = einsum(string, *stacks_list)
-    unbinded_result = unbind(result)
-    return unbinded_result
+    unbound_result = unbind(result)
+    return unbound_result

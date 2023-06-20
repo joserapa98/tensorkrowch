@@ -12,9 +12,9 @@ from typing import (List, Optional, Sequence,
 import torch
 import torch.nn as nn
 
+import tensorkrowch.operations as op
 from tensorkrowch.components import Node, ParamNode
 from tensorkrowch.components import TensorNetwork
-import tensorkrowch.operations as op
 
 
 class Tree(TensorNetwork):
@@ -102,7 +102,7 @@ class Tree(TensorNetwork):
             raise TypeError('`bond_dim` should be a sequence of sequences of '
                             'ints')
         self._bond_dim = aux_bond_dim
-        
+
         if len(sites_per_layer) != len(bond_dim):
             raise ValueError('`sites_per_layer` and `bond_dim` should have the '
                              'same number of elements')
@@ -136,7 +136,7 @@ class Tree(TensorNetwork):
            [shape_node_1_layer_N, ..., shape_node_iN_layer_N]]``
         """
         return self._bond_dim
-    
+
     @property
     def n_batches(self) -> int:
         """Returns number of batch edges of the ``data`` nodes."""
@@ -149,18 +149,18 @@ class Tree(TensorNetwork):
                              ' nodes')
 
         self.layers = []
-        
+
         for i, n_sites in enumerate(self.sites_per_layer):
             layer_lst = []
             for j in range(n_sites):
                 node = ParamNode(shape=(*self.bond_dim[i],),
                                  axes_names=(*(['input'] * (
-                                     len(self.bond_dim[i]) - 1)),
+                                         len(self.bond_dim[i]) - 1)),
                                              'output'),
                                  name=f'tree_node_({i},{j})',
                                  network=self)
                 layer_lst.append(node)
-                
+
             if i > 0:
                 idx_last_layer = 0
                 for node in layer_lst:
@@ -169,15 +169,15 @@ class Tree(TensorNetwork):
                             raise ValueError(f'There are more input edges in '
                                              f'layer {i} than output edges in '
                                              f'layer {i - 1}')
-                            
+
                         self.layers[-1][idx_last_layer]['output'] ^ edge
                         idx_last_layer += 1
-                    
+
                 if idx_last_layer < len(self.layers[-1]):
                     raise ValueError(f'There are more output edges in '
                                      f'layer {i - 1} than input edges in '
                                      f'layer {i}')
-            
+
             self.layers.append(layer_lst)
 
     def initialize(self, std: float = 1e-9) -> None:
@@ -196,7 +196,7 @@ class Tree(TensorNetwork):
         input_edges = []
         for node in self.layers[0]:
             input_edges += node.edges[:-1]
-            
+
         super().set_data_nodes(input_edges=input_edges,
                                num_batch_edges=self.n_batches)
 
@@ -214,27 +214,27 @@ class Tree(TensorNetwork):
                     node = layer1[i] @ node
                     i += 1
                 result_lst.append(node)
-                
+
             return result_lst
 
         else:
             n_input = layer2[0].rank - 1
             stack2 = op.stack(layer2)
-            
+
             layer1_stacks = []
             for i in range(n_input):
                 stack_lst = []
                 for j in range(i, len(layer1), n_input):
                     stack_lst.append(layer1[j])
                 layer1_stacks.append(op.stack(stack_lst))
-                
+
             for i in range(n_input):
                 stack2[i + 1] ^ layer1_stacks[i][-1]
-                
+
             result = stack2
             for i in range(n_input):
                 result = layer1_stacks[i] @ result
-                
+
             result_lst = op.unbind(result)
             return result_lst
 
@@ -262,14 +262,15 @@ class Tree(TensorNetwork):
             layers[i + 1] = result_lst
 
         return result_lst[0]
-    
+
     def _canonicalize_layer(self,
-                            layer1: List[Node],
-                            layer2: List[Node],
+                            layer1: List[ParamNode],
+                            layer2: List[ParamNode],
                             mode: Text = 'svd',
                             rank: Optional[int] = None,
                             cum_percentage: Optional[float] = None,
-                            cutoff: Optional[float] = None) -> None:
+                            cutoff: Optional[float] = None) -> Tuple[List[ParamNode],
+                                                                     List[ParamNode]]:
         """
         Turns each layer into canonical form, moving singular values matrices
         or non-isometries to the upper layer.
@@ -295,14 +296,14 @@ class Tree(TensorNetwork):
                     result1, node = layer1[i]['output'].qr_()
                 else:
                     raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
-                
+
                 new_layer1.append(result1.parameterize())
                 i += 1
-                
+
             new_layer2.append(node.parameterize())
-            
+
         return new_layer1, new_layer2
-    
+
     def canonicalize(self,
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
@@ -343,10 +344,10 @@ class Tree(TensorNetwork):
         """
         if len(self.layers) > 1:
             self.reset()
-            
+
             prev_auto_stack = self._auto_stack
             self.auto_stack = False
-            
+
             for i in range(len(self.layers) - 1):
                 layer1 = self.layers[i]
                 layer2 = self.layers[i + 1]
@@ -358,7 +359,7 @@ class Tree(TensorNetwork):
                     cutoff=cutoff)
                 self.layers[i] = layer1
                 self.layers[i + 1] = layer2
-            
+
             bond_dim = []
             for layer in self.layers:
                 layer_bond_dim = []
@@ -366,7 +367,7 @@ class Tree(TensorNetwork):
                     layer_bond_dim.append(list(node.shape))
                 bond_dim.append(layer_bond_dim)
             self._bond_dim = bond_dim
-                
+
             self.auto_stack = prev_auto_stack
 
 
@@ -471,7 +472,7 @@ class UTree(TensorNetwork):
         and an output edge in the last position).
         """
         return self._bond_dim
-    
+
     @property
     def n_batches(self) -> int:
         """Returns number of batch edges of the ``data`` nodes."""
@@ -484,7 +485,7 @@ class UTree(TensorNetwork):
                              ' nodes')
 
         self.layers = []
-        
+
         for i, n_sites in enumerate(self._sites_per_layer):
             layer_lst = []
             for j in range(n_sites):
@@ -494,7 +495,7 @@ class UTree(TensorNetwork):
                                  name=f'tree_node_({i},{j})',
                                  network=self)
                 layer_lst.append(node)
-                
+
             if i > 0:
                 idx_last_layer = 0
                 for node in layer_lst:
@@ -503,21 +504,21 @@ class UTree(TensorNetwork):
                             raise ValueError(f'There are more input edges in '
                                              f'layer {i} than output edges in '
                                              f'layer {i - 1}')
-                            
+
                         edge ^ self.layers[-1][idx_last_layer]['output']
                         idx_last_layer += 1
-                    
+
                 if idx_last_layer < len(self.layers[-1]):
                     raise ValueError(f'There are more output edges in '
                                      f'layer {i - 1} than input edges in '
                                      f'layer {i}')
-            
+
             self.layers.append(layer_lst)
-            
+
         # Virtual node
         uniform_memory = node = ParamNode(shape=(*self.bond_dim,),
                                           axes_names=(*(['input'] * (
-                                              len(self.bond_dim) - 1)),
+                                                  len(self.bond_dim) - 1)),
                                                       'output'),
                                           name='virtual_uniform',
                                           network=self,
@@ -530,7 +531,7 @@ class UTree(TensorNetwork):
         tensor = torch.randn(self.uniform_memory._shape) * std
         tensor[(0,) * len(tensor.shape)] = 1.
         self.uniform_memory.tensor = tensor
-        
+
         for layer in self.layers:
             for node in layer:
                 node.set_tensor_from(self.uniform_memory)
@@ -543,15 +544,14 @@ class UTree(TensorNetwork):
         input_edges = []
         for node in self.layers[0]:
             input_edges += node._edges[:-1]
-            
+
         super().set_data_nodes(input_edges=input_edges,
                                num_batch_edges=self.n_batches)
 
     def _input_contraction(self,
                            layer1: List[Node],
-                           layer2: List[Node],
-                           inline: bool) -> Tuple[Optional[List[Node]],
-                                                  Optional[List[Node]]]:
+                           layer2: List[ParamNode],
+                           inline: bool) -> List[Node]:
         """Contracts two consecutive layers of the tree."""
         if inline:
             result_lst = []
@@ -561,27 +561,27 @@ class UTree(TensorNetwork):
                     node = layer1[i] @ node
                     i += 1
                 result_lst.append(node)
-                
+
             return result_lst
 
         else:
             n_input = layer2[0].rank - 1
             stack2 = op.stack(layer2)
-            
+
             layer1_stacks = []
             for i in range(n_input):
                 stack_lst = []
                 for j in range(i, len(layer1), n_input):
                     stack_lst.append(layer1[j])
                 layer1_stacks.append(op.stack(stack_lst))
-                
+
             for i in range(n_input):
                 stack2[i + 1] ^ layer1_stacks[i][-1]
-                
+
             result = stack2
             for i in range(n_input):
                 result = layer1_stacks[i] @ result
-                
+
             result_lst = op.unbind(result)
             return result_lst
 
@@ -659,7 +659,7 @@ class ConvTree(Tree):
     >>> print(result.shape)
     torch.Size([20, 5, 1, 1])
     """
-    
+
     def __init__(self,
                  sites_per_layer: Sequence[int],
                  bond_dim: Sequence[Sequence[int]],
@@ -667,42 +667,42 @@ class ConvTree(Tree):
                  stride: int = 1,
                  padding: int = 0,
                  dilation: int = 1):
-        
+
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
         elif not isinstance(kernel_size, Sequence):
             raise TypeError('`kernel_size` must be int or Sequence')
-        
+
         if isinstance(stride, int):
             stride = (stride, stride)
         elif not isinstance(stride, Sequence):
             raise TypeError('`stride` must be int or Sequence')
-        
+
         if isinstance(padding, int):
             padding = (padding, padding)
         elif not isinstance(padding, Sequence):
             raise TypeError('`padding` must be int or Sequence')
-        
+
         if isinstance(dilation, int):
             dilation = (dilation, dilation)
         elif not isinstance(dilation, Sequence):
             raise TypeError('`dilation` must be int or Sequence')
-        
+
         self._kernel_size = kernel_size
         self._stride = stride
         self._padding = padding
         self._dilation = dilation
-        
+
         super().__init__(sites_per_layer=sites_per_layer,
                          bond_dim=bond_dim,
                          n_batches=2)
         self._in_channels = bond_dim[0][0]
-        
+
         self.unfold = nn.Unfold(kernel_size=kernel_size,
                                 stride=stride,
                                 padding=padding,
                                 dilation=dilation)
-    
+
     @property
     def in_channels(self) -> int:
         """
@@ -710,14 +710,14 @@ class ConvTree(Tree):
         from :class:`Tree`, corresponding to dimensions of the input.
         """
         return self._in_channels
-    
+
     @property
     def kernel_size(self) -> Tuple[int, int]:
         """
         Returns ``kernel_size``, corresponding to number of ``data`` nodes.
         """
         return self._kernel_size
-    
+
     @property
     def stride(self) -> Tuple[int, int]:
         """
@@ -725,7 +725,7 @@ class ConvTree(Tree):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._stride
-    
+
     @property
     def padding(self) -> Tuple[int, int]:
         """
@@ -733,7 +733,7 @@ class ConvTree(Tree):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._padding
-    
+
     @property
     def dilation(self) -> Tuple[int, int]:
         """
@@ -741,7 +741,7 @@ class ConvTree(Tree):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._dilation
-    
+
     def forward(self, image, *args, **kwargs):
         r"""
         Overrides ``torch.nn.Module``'s forward to compute a convolution on the
@@ -762,35 +762,35 @@ class ConvTree(Tree):
             like ``inline``.
         """
         # Input image shape: batch_size x in_channels x height x width
-        
+
         patches = self.unfold(image).transpose(1, 2)
         # batch_size x nb_windows x (in_channels * nb_pixels)
-        
+
         patches = patches.view(*patches.shape[:-1], self.in_channels, -1)
         # batch_size x nb_windows x in_channels x nb_pixels
-        
+
         patches = patches.transpose(2, 3)
         # batch_size x nb_windows x nb_pixels x in_channels
-        
+
         result = super().forward(patches, *args, **kwargs)
         # batch_size x nb_windows x out_channels
-        
+
         result = result.transpose(1, 2)
         # batch_size x out_channels x nb_windows
-        
+
         h_in = image.shape[2]
         w_in = image.shape[3]
-        
-        h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] * \
-            (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
-        w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] * \
-                    (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
-        
+
+        h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] *
+                     (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
+        w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] *
+                     (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
+
         result = result.view(*result.shape[:-1], h_out, w_out)
         # batch_size x out_channels x height_out x width_out
-        
+
         return result
-    
+
 
 class ConvUTree(UTree):
     """
@@ -844,7 +844,7 @@ class ConvUTree(UTree):
     >>> print(result.shape)
     torch.Size([20, 2, 1, 1])
     """
-    
+
     def __init__(self,
                  sites_per_layer: Sequence[int],
                  bond_dim: Sequence[int],
@@ -852,42 +852,42 @@ class ConvUTree(UTree):
                  stride: int = 1,
                  padding: int = 0,
                  dilation: int = 1):
-        
+
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
         elif not isinstance(kernel_size, Sequence):
             raise TypeError('`kernel_size` must be int or Sequence')
-        
+
         if isinstance(stride, int):
             stride = (stride, stride)
         elif not isinstance(stride, Sequence):
             raise TypeError('`stride` must be int or Sequence')
-        
+
         if isinstance(padding, int):
             padding = (padding, padding)
         elif not isinstance(padding, Sequence):
             raise TypeError('`padding` must be int or Sequence')
-        
+
         if isinstance(dilation, int):
             dilation = (dilation, dilation)
         elif not isinstance(dilation, Sequence):
             raise TypeError('`dilation` must be int or Sequence')
-        
+
         self._kernel_size = kernel_size
         self._stride = stride
         self._padding = padding
         self._dilation = dilation
-        
+
         super().__init__(sites_per_layer=sites_per_layer,
                          bond_dim=bond_dim,
                          n_batches=2)
         self._in_channels = bond_dim[0]
-        
+
         self.unfold = nn.Unfold(kernel_size=kernel_size,
                                 stride=stride,
                                 padding=padding,
                                 dilation=dilation)
-    
+
     @property
     def in_channels(self) -> int:
         """
@@ -895,14 +895,14 @@ class ConvUTree(UTree):
         from :class:`UTree`, corresponding to dimensions of the input.
         """
         return self._in_channels
-    
+
     @property
     def kernel_size(self) -> Tuple[int, int]:
         """
         Returns ``kernel_size``, corresponding to number of ``data`` nodes.
         """
         return self._kernel_size
-    
+
     @property
     def stride(self) -> Tuple[int, int]:
         """
@@ -910,7 +910,7 @@ class ConvUTree(UTree):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._stride
-    
+
     @property
     def padding(self) -> Tuple[int, int]:
         """
@@ -918,7 +918,7 @@ class ConvUTree(UTree):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._padding
-    
+
     @property
     def dilation(self) -> Tuple[int, int]:
         """
@@ -926,7 +926,7 @@ class ConvUTree(UTree):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._dilation
-    
+
     def forward(self, image, *args, **kwargs):
         r"""
         Overrides ``torch.nn.Module``'s forward to compute a convolution on the
@@ -947,31 +947,31 @@ class ConvUTree(UTree):
             like ``inline``.
         """
         # Input image shape: batch_size x in_channels x height x width
-        
+
         patches = self.unfold(image).transpose(1, 2)
         # batch_size x nb_windows x (in_channels * nb_pixels)
-        
+
         patches = patches.view(*patches.shape[:-1], self.in_channels, -1)
         # batch_size x nb_windows x in_channels x nb_pixels
-        
+
         patches = patches.transpose(2, 3)
         # batch_size x nb_windows x nb_pixels x in_channels
-        
+
         result = super().forward(patches, *args, **kwargs)
         # batch_size x nb_windows x out_channels
-        
+
         result = result.transpose(1, 2)
         # batch_size x out_channels x nb_windows
-        
+
         h_in = image.shape[2]
         w_in = image.shape[3]
-        
-        h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] * \
-            (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
-        w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] * \
-                    (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
-        
+
+        h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] *
+                     (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
+        w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] *
+                     (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
+
         result = result.view(*result.shape[:-1], h_out, w_out)
         # batch_size x out_channels x height_out x width_out
-        
+
         return result

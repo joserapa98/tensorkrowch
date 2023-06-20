@@ -1,6 +1,5 @@
 from setuptools import setup
 from torch.utils.cpp_extension import CppExtension, BuildExtension
-from pathlib import Path
 
 LIB_NAME = 'tensorkrowch'
 
@@ -10,7 +9,6 @@ with open('tensorkrowch/_version.py') as f:
 
 # Pytorch Cpp Extension
 cpp_extension = CppExtension(LIB_NAME + '._C', sources=['tensorkrowch/csrc/operations.cpp'])
-
 
 setup(
     name=LIB_NAME,

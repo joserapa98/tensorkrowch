@@ -145,7 +145,7 @@ def _permute_first(node: AbstractNode, axes: Sequence[Ax]) -> Node:
     successor = Successor(kwargs={'node': node,
                                   'axes': axes},
                           child=new_node,
-                          hints=axes_nums)
+                          hints={'axes_nums': axes_nums})
 
     # Add successor to parent
     if 'permute' in node._successors:
@@ -166,7 +166,7 @@ def _permute_next(successor: Successor,
                   node: AbstractNode,
                   axes: Sequence[Ax]) -> Node:
     # All arguments are mandatory though some might not be used
-    new_tensor = node.tensor.permute(successor.hints)
+    new_tensor = node.tensor.permute(successor.hints['axes_nums'])
     child = successor.child
     child._direct_set_tensor(new_tensor)
 
@@ -3216,7 +3216,7 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
     # Create successor
     successor = Successor(kwargs={'node': node},
                           child=new_nodes,
-                          hints=batch_ids)
+                          hints={'batch_ids': batch_ids})
 
     # Add successor to parent
     if 'unbind' in node._successors:
@@ -3247,7 +3247,7 @@ def _unbind_next(successor: Successor, node: AbstractStackNode) -> List[Node]:
 
     else:  # index_mode
         children = successor.child
-        batch_ids = successor.hints
+        batch_ids = successor.hints['batch_ids']
         diff_batches = []
 
         for i, j in enumerate(batch_ids):

@@ -3132,7 +3132,7 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
         if isinstance(edge, StackEdge):
             edges_lists.append(edge._edges)
             node1_lists.append(edge._node1_list)
-            if edge.is_batch() and ('batch' in edge.axis1._name):
+            if edge.is_batch():
                 # Save position of batch edge, whose dimension might change
                 batch_ids.append(i)
         else:

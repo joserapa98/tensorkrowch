@@ -1,4 +1,7 @@
-![logo](https://github.com/joserapa98/tensorkrowch/blob/master/docs/figures/svg/tensorkrowch_logo_dark.svg)
+![logo](https://github.com/joserapa98/tensorkrowch/blob/master/docs/figures/svg/tensorkrowch_logo_dark.svg#gh-dark-mode-only)
+![logo](https://github.com/joserapa98/tensorkrowch/blob/master/docs/figures/svg/tensorkrowch_logo_light.svg#gh-light-mode-only)
+
+[![DOI](https://zenodo.org/badge/453954432.svg)](https://zenodo.org/badge/latestdoi/453954432)
 
 [![DOI](https://zenodo.org/badge/453954432.svg)](https://zenodo.org/badge/latestdoi/453954432)
 
@@ -167,4 +170,15 @@ TensorKrowch is licensed under the MIT License. Please see the [LICENSE](https:/
 
 ## Citing
 
+If you use TensorKrowch in your work, please cite [TensorKrowch's paper](https://www.arxiv.org/abs/2306.08595):
 
+- J. R. Pareja Monturiol, D. Pérez-García, and A. Pozas-Kerstjens, TensorKrowch: Smooth integration of tensor networks in machine learning, arXiv:2306.08595.
+
+```
+@misc{pareja2023tensorkrowch,
+  title={Tensor{K}rowch: {S}mooth integration of tensor networks in machine learning},
+  author={Pareja Monturiol, Jos{\'e} Ram{\'o}n and P{\'e}rez-Garc{\'i}a, David and Pozas-Kerstjens, Alejandro},
+  archivePrefix={arXiv},
+  eprint={2306.08595}
+}
+```

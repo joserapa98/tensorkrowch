@@ -4362,7 +4362,7 @@ class TensorNetwork(nn.Module):
                 num_batch_edges = m
                 
                 # Call parent method
-                super().set_data_nodes(input, edges, num_batch_edges)
+                super().set_data_nodes(input_edges, num_batch_edges)
                 
         ::
         
@@ -4667,8 +4667,7 @@ class TensorNetwork(nn.Module):
 
         * Create all the intermediate ``resultant`` nodes that result from
           :class:`Operations <Operation>` so that in the next contractions only
-          the :ref:`tensor-like-ops` have to be computed, thus saving a lot of
-          time.
+          the tensor operations have to be computed, thus saving a lot of time.
 
         * Keep track of the tensors that are used to compute operations, so that
           intermediate results that are not useful anymore can be deleted, thus

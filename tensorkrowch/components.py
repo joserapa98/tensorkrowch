@@ -4334,7 +4334,7 @@ class TensorNetwork(nn.Module):
         return net
 
     def set_data_nodes(self,
-                       input_edges: Union[List[int], List[Edge]],
+                       input_edges: List[Edge],
                        num_batch_edges: int) -> None:
         """
         Creates ``data`` nodes with as many batch edges as ``num_batch_edges``
@@ -4387,9 +4387,9 @@ class TensorNetwork(nn.Module):
 
         Parameters
         ----------
-        input_edges : list[int] or list[Edge]
-            List of edges (or indices of :meth:`edges` if given as ``int``) to
-            which the ``data`` nodes' feature edges will be connected.
+        input_edges : list[Edge]
+            List of edges to which the ``data`` nodes' feature edges will be
+            connected.
         num_batch_edges : int
             Number of batch edges in the ``data`` nodes.
             
@@ -4423,7 +4423,7 @@ class TensorNetwork(nn.Module):
                     [data_0[batch] <-> None
                      data_0[feature] <-> nodeA[input]])
         """
-        if input_edges == []:
+        if not input_edges:
             raise ValueError(
                 '`input_edges` is empty. '
                 'Cannot set data nodes if no edges are provided')

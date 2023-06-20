@@ -4763,7 +4763,14 @@ class TensorNetwork(nn.Module):
         """
         if data is not None:
             if not self._data_nodes:
-                self.set_data_nodes()
+                try:
+                    self.set_data_nodes()
+                except TypeError:
+                    raise TypeError(
+                        'set_data_nodes missing 2 required positional arguments:'
+                        ' `input_edges` and `num_batch_edges`. Override method'
+                        ' with no arguments in subclasses of TensorNetwork or '
+                        'call set_data_nodes explicitly before forward')
             self.add_data(data=data)
 
         if not self._resultant_nodes:

@@ -303,7 +303,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="Tree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.Tree">[docs]</a><span class="k">class</span> <span class="nc">Tree</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Tree States. These states form a tree structure where the ``data``</span>
 <span class="sd">    nodes are in the base. All nodes have a sequence of input edges and an</span>
 <span class="sd">    output edge. Thus the contraction of the Tree returns a `vector` node.</span>
@@ -403,13 +403,13 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">sites_per_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;Returns number of sites in each layer of the tree.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of sites in each layer of the tree.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sites_per_layer</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
                                 <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns bond dimensions of nodes in each layer. Each sequence</span>
 <span class="sd">        corresponds to the shape of the nodes in each layer (some input edges</span>
 <span class="sd">        and an output edge in the last position).</span>
@@ -424,11 +424,11 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Returns number of batch edges of the ``data`` nodes.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of batch edges of the ``data`` nodes.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Creates all the nodes of the Tree.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the Tree.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create Tree nodes if the Tree already has&#39;</span>
                              <span class="s1">&#39; nodes&#39;</span><span class="p">)</span>
@@ -453,20 +453,20 @@ title="Source repository"
                         <span class="k">if</span> <span class="n">idx_last_layer</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
                             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;There are more input edges in &#39;</span>
                                              <span class="sa">f</span><span class="s1">&#39;layer </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1"> than output edges in &#39;</span>
-                                             <span class="sa">f</span><span class="s1">&#39;layer </span><span class="si">{</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                                             <span class="sa">f</span><span class="s1">&#39;layer </span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 
                         <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">idx_last_layer</span><span class="p">][</span><span class="s1">&#39;output&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">edge</span>
                         <span class="n">idx_last_layer</span> <span class="o">+=</span> <span class="mi">1</span>
 
                 <span class="k">if</span> <span class="n">idx_last_layer</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;There are more output edges in &#39;</span>
-                                     <span class="sa">f</span><span class="s1">&#39;layer </span><span class="si">{</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="si">}</span><span class="s1"> than input edges in &#39;</span>
+                                     <span class="sa">f</span><span class="s1">&#39;layer </span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1"> than input edges in &#39;</span>
                                      <span class="sa">f</span><span class="s1">&#39;layer </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer_lst</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Tree.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.Tree.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">layer</span><span class="p">:</span>
                 <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
@@ -474,7 +474,7 @@ title="Source repository"
                 <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">tensor</span></div>
 
 <div class="viewcode-block" id="Tree.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.Tree.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates data nodes and connects each of them to the physical edge of</span>
 <span class="sd">        an input node.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -490,7 +490,7 @@ title="Source repository"
                            <span class="n">layer2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                            <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]],</span>
                                                   <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]]:</span>
-        <span class="sd">&quot;&quot;&quot;Contracts two consecutive layers of the tree.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts two consecutive layers of the tree.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">inline</span><span class="p">:</span>
             <span class="n">result_lst</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
@@ -524,7 +524,7 @@ title="Source repository"
             <span class="k">return</span> <span class="n">result_lst</span>
 
 <div class="viewcode-block" id="Tree.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.Tree.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the whole Tree Tensor Network.</span>
 
 <span class="sd">        Parameters</span>
@@ -556,7 +556,7 @@ title="Source repository"
                             <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                             <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">ParamNode</span><span class="p">],</span>
                                                                      <span class="n">List</span><span class="p">[</span><span class="n">ParamNode</span><span class="p">]]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Turns each layer into canonical form, moving singular values matrices</span>
 <span class="sd">        or non-isometries to the upper layer.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -594,7 +594,7 @@ title="Source repository"
                      <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Turns Tree into canonical form via local SVD/QR decompositions, moving</span>
 <span class="sd">        singular values matrices or non-isometries to the upper layers.</span>
 <span class="sd">        </span>
@@ -657,7 +657,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="UTree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UTree">[docs]</a><span class="k">class</span> <span class="nc">UTree</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Uniform Tree States where all nodes have the same shape. It is</span>
 <span class="sd">    the uniform version of :class:`Tree`, that is, all nodes share the same</span>
 <span class="sd">    tensor.</span>
@@ -747,12 +747,12 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">sites_per_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;Returns number of sites in each layer of the tree.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of sites in each layer of the tree.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sites_per_layer</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;Returns bond dimensions of nodes in each layer. Since all nodes have</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimensions of nodes in each layer. Since all nodes have</span>
 <span class="sd">        the same shape, it is a single sequence of dimensions (some input edges</span>
 <span class="sd">        and an output edge in the last position).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -760,11 +760,11 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Returns number of batch edges of the ``data`` nodes.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of batch edges of the ``data`` nodes.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Creates all the nodes of the Tree.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the Tree.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create Tree nodes if the Tree already has&#39;</span>
                              <span class="s1">&#39; nodes&#39;</span><span class="p">)</span>
@@ -788,14 +788,14 @@ title="Source repository"
                         <span class="k">if</span> <span class="n">idx_last_layer</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
                             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;There are more input edges in &#39;</span>
                                              <span class="sa">f</span><span class="s1">&#39;layer </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1"> than output edges in &#39;</span>
-                                             <span class="sa">f</span><span class="s1">&#39;layer </span><span class="si">{</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                                             <span class="sa">f</span><span class="s1">&#39;layer </span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 
                         <span class="n">edge</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">idx_last_layer</span><span class="p">][</span><span class="s1">&#39;output&#39;</span><span class="p">]</span>
                         <span class="n">idx_last_layer</span> <span class="o">+=</span> <span class="mi">1</span>
 
                 <span class="k">if</span> <span class="n">idx_last_layer</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;There are more output edges in &#39;</span>
-                                     <span class="sa">f</span><span class="s1">&#39;layer </span><span class="si">{</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="si">}</span><span class="s1"> than input edges in &#39;</span>
+                                     <span class="sa">f</span><span class="s1">&#39;layer </span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1"> than input edges in &#39;</span>
                                      <span class="sa">f</span><span class="s1">&#39;layer </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer_lst</span><span class="p">)</span>
@@ -811,7 +811,7 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">uniform_memory</span>
 
 <div class="viewcode-block" id="UTree.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UTree.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
         <span class="c1"># Virtual node</span>
         <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">_shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
         <span class="n">tensor</span><span class="p">[(</span><span class="mi">0</span><span class="p">,)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">)]</span> <span class="o">=</span> <span class="mf">1.</span>
@@ -822,7 +822,7 @@ title="Source repository"
                 <span class="n">node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="UTree.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UTree.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates data nodes and connects each of them to the physical edge of</span>
 <span class="sd">        an input node.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -837,7 +837,7 @@ title="Source repository"
                            <span class="n">layer1</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                            <span class="n">layer2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">ParamNode</span><span class="p">],</span>
                            <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;Contracts two consecutive layers of the tree.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts two consecutive layers of the tree.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">inline</span><span class="p">:</span>
             <span class="n">result_lst</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
@@ -871,7 +871,7 @@ title="Source repository"
             <span class="k">return</span> <span class="n">result_lst</span>
 
 <div class="viewcode-block" id="UTree.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UTree.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the whole Tree Tensor Network.</span>
 
 <span class="sd">        Parameters</span>
@@ -897,7 +897,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="ConvTree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvTree">[docs]</a><span class="k">class</span> <span class="nc">ConvTree</span><span class="p">(</span><span class="n">Tree</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Tree States where the input data is a batch of images. It is the</span>
 <span class="sd">    convolutional version of :class:`Tree`.</span>
 <span class="sd">    </span>
@@ -990,7 +990,7 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns ``in_channels``. Same as the first elements in ``bond_dim``</span>
 <span class="sd">        from :class:`Tree`, corresponding to dimensions of the input.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -998,14 +998,14 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">kernel_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns ``kernel_size``, corresponding to number of ``data`` nodes.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">stride</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns stride used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1013,7 +1013,7 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">padding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns padding used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1021,14 +1021,14 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dilation</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns dilation used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>
 
 <div class="viewcode-block" id="ConvTree.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvTree.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Overrides ``torch.nn.Module``&#39;s forward to compute a convolution on the</span>
 <span class="sd">        input image.</span>
 <span class="sd">        </span>
@@ -1078,7 +1078,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="ConvUTree"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvUTree">[docs]</a><span class="k">class</span> <span class="nc">ConvUTree</span><span class="p">(</span><span class="n">UTree</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Uniform Tree States where the input data is a batch of images. It</span>
 <span class="sd">    is the convolutional version of :class:`UTree`.</span>
 <span class="sd">    </span>
@@ -1175,7 +1175,7 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns ``in_channels``. Same as the first elements in ``bond_dim``</span>
 <span class="sd">        from :class:`UTree`, corresponding to dimensions of the input.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1183,14 +1183,14 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">kernel_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns ``kernel_size``, corresponding to number of ``data`` nodes.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">stride</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns stride used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1198,7 +1198,7 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">padding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns padding used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1206,14 +1206,14 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dilation</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns dilation used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>
 
 <div class="viewcode-block" id="ConvUTree.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvUTree.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Overrides ``torch.nn.Module``&#39;s forward to compute a convolution on the</span>
 <span class="sd">        input image.</span>
 <span class="sd">        </span>

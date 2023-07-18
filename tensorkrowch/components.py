@@ -2063,7 +2063,7 @@ class Node(AbstractNode):
         ``"_copy"``.
         
         To create a copy that has its own (non-inherited) edges, one can use
-        :meth:`reattach_edges` afterwards.
+        :meth:`~AbstractNode.reattach_edges` afterwards.
         
         Parameters
         ----------
@@ -2420,7 +2420,7 @@ class ParamNode(AbstractNode):
         extended with the suffix ``"_copy"``.
         
         To create a copy that has its own (non-inherited) edges, one can use
-        :meth:`reattach_edges` afterwards.
+        :meth:`~AbstractNode.reattach_edges` afterwards.
         
         Parameters
         ----------

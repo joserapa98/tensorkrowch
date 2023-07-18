@@ -303,7 +303,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="MPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS">[docs]</a><span class="k">class</span> <span class="nc">MPS</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Matrix Product States, where all nodes are input nodes, that is,</span>
 <span class="sd">    they are all connected to ``data`` nodes that will store the input data</span>
 <span class="sd">    tensor(s). When contracting the MPS with new input data, the result will</span>
@@ -439,31 +439,31 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_features</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Returns number of nodes.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of nodes.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">boundary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Returns boundary condition (&quot;obc&quot; or &quot;pbc&quot;).&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boundary condition (&quot;obc&quot; or &quot;pbc&quot;).&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;Returns physical dimension.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns physical dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;Returns bond dimension.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Returns number of batch edges of the ``data`` nodes.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of batch edges of the ``data`` nodes.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Creates all the nodes of the MPS.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the MPS.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">leaf_nodes</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create MPS nodes if the MPS already has &#39;</span>
                              <span class="s1">&#39;nodes&#39;</span><span class="p">)</span>
@@ -522,7 +522,7 @@ title="Source repository"
                     <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">periodic_edge</span>
 
 <div class="viewcode-block" id="MPS.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
         <span class="c1"># Left node</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
@@ -547,7 +547,7 @@ title="Source repository"
             <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">tensor</span></div>
 
 <div class="viewcode-block" id="MPS.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates ``data`` nodes and connects each of them to the physical edge of</span>
 <span class="sd">        each input node.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -569,7 +569,7 @@ title="Source repository"
                            <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
         <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]],</span>
         <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]]:</span>
-        <span class="sd">&quot;&quot;&quot;Contracts input data nodes with MPS nodes.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts input data nodes with MPS nodes.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">inline_input</span><span class="p">:</span>
             <span class="n">mats_result</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">:</span>
@@ -591,14 +591,14 @@ title="Source repository"
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">_inline_contraction</span><span class="p">(</span><span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Contracts sequence of MPS nodes (matrices) inline.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts sequence of MPS nodes (matrices) inline.&quot;&quot;&quot;</span>
         <span class="n">result_node</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
             <span class="n">result_node</span> <span class="o">@=</span> <span class="n">node</span>
         <span class="k">return</span> <span class="n">result_node</span>
 
     <span class="k">def</span> <span class="nf">_contract_envs_inline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Contracts the left and right environments inline.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts the left and right environments inline.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
             <span class="n">left_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">)</span>
             <span class="n">right_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">)</span>
@@ -612,7 +612,7 @@ title="Source repository"
 
     <span class="k">def</span> <span class="nf">_aux_pairwise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
     <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]:</span>
-        <span class="sd">&quot;&quot;&quot;Contracts a sequence of MPS nodes (matrices) pairwise.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts a sequence of MPS nodes (matrices) pairwise.&quot;&quot;&quot;</span>
         <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
         <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">nodes</span>
         <span class="k">if</span> <span class="n">length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
@@ -635,7 +635,7 @@ title="Source repository"
         <span class="k">return</span> <span class="n">nodes</span><span class="p">,</span> <span class="p">[]</span>
 
     <span class="k">def</span> <span class="nf">_pairwise_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mats_nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Contracts the left and right environments pairwise.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts the left and right environments pairwise.&quot;&quot;&quot;</span>
         <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mats_nodes</span><span class="p">)</span>
         <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">mats_nodes</span>
         <span class="k">if</span> <span class="n">length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
@@ -654,7 +654,7 @@ title="Source repository"
 <div class="viewcode-block" id="MPS.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the whole MPS.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
@@ -687,7 +687,7 @@ title="Source repository"
                      <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Turns MPS into canonical form via local SVD/QR decompositions.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
@@ -732,7 +732,7 @@ title="Source repository"
             <span class="n">oc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">-</span> <span class="mi">1</span>
         <span class="k">elif</span> <span class="n">oc</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Orthogonality center position `oc` should be &#39;</span>
-                             <span class="sa">f</span><span class="s1">&#39;between 0 and </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                             <span class="sa">f</span><span class="s1">&#39;between 0 and </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 
         <span class="n">nodes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
@@ -803,7 +803,7 @@ title="Source repository"
                              <span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
                              <span class="n">bond_dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                              <span class="n">side</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Projects all nodes into a space of dimension ``bond_dim``.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Projects all nodes into a space of dimension ``bond_dim``.&quot;&quot;&quot;</span>
         <span class="n">device</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">device</span>
 
         <span class="k">if</span> <span class="n">side</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
@@ -883,7 +883,7 @@ title="Source repository"
                                    <span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
                                    <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                                    <span class="n">left_nodeL</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Returns canonicalize version of the tensor at site ``idx``.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns canonicalize version of the tensor at site ``idx``.&quot;&quot;&quot;</span>
         <span class="n">L</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>  <span class="c1"># left x input x right</span>
         <span class="n">left_nodeC</span> <span class="o">=</span> <span class="kc">None</span>
 
@@ -932,7 +932,7 @@ title="Source repository"
         <span class="k">return</span> <span class="n">L</span><span class="p">,</span> <span class="n">left_nodeC</span>
 
 <div class="viewcode-block" id="MPS.canonicalize_univocal"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.canonicalize_univocal">[docs]</a>    <span class="k">def</span> <span class="nf">canonicalize_univocal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Turns MPS into the univocal canonical form defined `here</span>
 <span class="sd">        &lt;https://arxiv.org/abs/2202.12319&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -976,7 +976,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="UMPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UMPS">[docs]</a><span class="k">class</span> <span class="nc">UMPS</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Uniform (translationally invariant) Matrix Product States where</span>
 <span class="sd">    all nodes are input nodes. It is the uniform version of :class:`MPS`, that</span>
 <span class="sd">    is, all nodes share the same tensor. Thus this class cannot have different</span>
@@ -1052,26 +1052,26 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_features</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Returns number of nodes.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of nodes.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Returns input dimension.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns input dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Returns bond dimension.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Returns number of batch edges of the ``data`` nodes.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of batch edges of the ``data`` nodes.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span>
 
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Creates all the nodes of the MPS.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the MPS.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create MPS nodes if the MPS already has &#39;</span>
                              <span class="s1">&#39;nodes&#39;</span><span class="p">)</span>
@@ -1104,7 +1104,7 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">uniform_memory</span>
 
 <div class="viewcode-block" id="UMPS.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UMPS.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Initializes output and uniform nodes.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes output and uniform nodes.&quot;&quot;&quot;</span>
         <span class="c1"># Virtual node</span>
         <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
         <span class="n">random_eye</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="n">std</span>
@@ -1117,7 +1117,7 @@ title="Source repository"
             <span class="n">node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="UMPS.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UMPS.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates ``data`` nodes and connects each of them to the physical edge of</span>
 <span class="sd">        each input node.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1139,7 +1139,7 @@ title="Source repository"
                            <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
         <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]],</span>
         <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]]:</span>
-        <span class="sd">&quot;&quot;&quot;Contracts input data nodes with MPS nodes.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts input data nodes with MPS nodes.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">inline_input</span><span class="p">:</span>
             <span class="n">mats_result</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">:</span>
@@ -1161,14 +1161,14 @@ title="Source repository"
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">_inline_contraction</span><span class="p">(</span><span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Contracts sequence of MPS nodes (matrices) inline.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts sequence of MPS nodes (matrices) inline.&quot;&quot;&quot;</span>
         <span class="n">result_node</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
             <span class="n">result_node</span> <span class="o">@=</span> <span class="n">node</span>
         <span class="k">return</span> <span class="n">result_node</span>
 
     <span class="k">def</span> <span class="nf">_contract_envs_inline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Contracts the left and right environments inline.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts the left and right environments inline.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mats_env</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">contract_lst</span> <span class="o">=</span> <span class="n">mats_env</span>
         <span class="k">else</span><span class="p">:</span>
@@ -1178,7 +1178,7 @@ title="Source repository"
 
     <span class="k">def</span> <span class="nf">_aux_pairwise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
     <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]:</span>
-        <span class="sd">&quot;&quot;&quot;Contracts a sequence of MPS nodes (matrices) pairwise.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts a sequence of MPS nodes (matrices) pairwise.&quot;&quot;&quot;</span>
         <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
         <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">nodes</span>
         <span class="k">if</span> <span class="n">length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
@@ -1201,7 +1201,7 @@ title="Source repository"
         <span class="k">return</span> <span class="n">nodes</span><span class="p">,</span> <span class="p">[]</span>
 
     <span class="k">def</span> <span class="nf">_pairwise_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mats_nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Contracts the left and right environments pairwise.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts the left and right environments pairwise.&quot;&quot;&quot;</span>
         <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mats_nodes</span><span class="p">)</span>
         <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">mats_nodes</span>
         <span class="k">if</span> <span class="n">length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
@@ -1220,7 +1220,7 @@ title="Source repository"
 <div class="viewcode-block" id="UMPS.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UMPS.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the whole MPS.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
@@ -1249,7 +1249,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="ConvMPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvMPS">[docs]</a><span class="k">class</span> <span class="nc">ConvMPS</span><span class="p">(</span><span class="n">MPS</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Matrix Product States, where all nodes are input nodes, and where</span>
 <span class="sd">    the input data is a batch of images. It is the convolutional version of</span>
 <span class="sd">    :class:`MPS`.</span>
@@ -1348,12 +1348,12 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Returns ``in_channels``. Same as ``in_dim`` in :class:`MPS`.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``in_channels``. Same as ``in_dim`` in :class:`MPS`.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">kernel_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns ``kernel_size``. Number of nodes is given by</span>
 <span class="sd">        :math:`kernel\_size_0 \cdot kernel\_size_1`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1361,7 +1361,7 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">stride</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns stride used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1369,7 +1369,7 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">padding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns padding used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1377,14 +1377,14 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dilation</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns dilation used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>
 
 <div class="viewcode-block" id="ConvMPS.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvMPS.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;flat&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Overrides ``torch.nn.Module``&#39;s forward to compute a convolution on the</span>
 <span class="sd">        input image.</span>
 <span class="sd">        </span>
@@ -1454,7 +1454,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="ConvUMPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvUMPS">[docs]</a><span class="k">class</span> <span class="nc">ConvUMPS</span><span class="p">(</span><span class="n">UMPS</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for Uniform Matrix Product States, where all nodes are input nodes,</span>
 <span class="sd">    and where the input data is a batch of images. It is the convolutional</span>
 <span class="sd">    version of :class:`UMPS`. This class cannot have different bond dimensions</span>
@@ -1548,12 +1548,12 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Returns ``in_channels``. Same as ``in_dim`` in :class:`UMPS`.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``in_channels``. Same as ``in_dim`` in :class:`UMPS`.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">kernel_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns ``kernel_size``. Number of nodes is given by</span>
 <span class="sd">        :math:`kernel\_size_0 \cdot kernel\_size_1`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1561,7 +1561,7 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">stride</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns stride used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1569,7 +1569,7 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">padding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns padding used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1577,14 +1577,14 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dilation</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns dilation used in `torch.nn.Unfold</span>
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>
 
 <div class="viewcode-block" id="ConvUMPS.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvUMPS.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;flat&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Overrides ``torch.nn.Module``&#39;s forward to compute a convolution on the</span>
 <span class="sd">        input image.</span>
 <span class="sd">        </span>

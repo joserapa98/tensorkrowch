@@ -288,10 +288,8 @@ def permute_(node: AbstractNode, axes: Sequence[Ax]) -> Node:
                         override_node=True,
                         network=node._network,
                         override_edges=True,
-                        tensor=node.tensor.permute(
-                            axes_nums).detach(),
-                        edges=permute_list(
-                            node._edges, axes_nums),
+                        tensor=node.tensor.permute(axes_nums).detach(),
+                        edges=permute_list(node._edges, axes_nums),
                         node1_list=permute_list(node.is_node1(), axes_nums))
 
     return new_node

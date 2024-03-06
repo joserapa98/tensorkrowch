@@ -36,11 +36,6 @@ Before we begin, we need to install ``tensorkrowch`` if it isn't already availab
     $ pip install tensorkrowch
 
 
-Since ``TensorKrowch`` has a `PyTorch C++ Extension <https://pytorch.org/tutorials/advanced/cpp_extension.html>`_,
-it has to be built from source, so make sure you have installed on your system
-a C++ compiler compatible with C++14.
-
-
 Steps
 =====
 

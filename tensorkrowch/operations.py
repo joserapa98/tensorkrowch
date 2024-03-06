@@ -35,7 +35,6 @@ from typing import Callable
 
 import opt_einsum
 
-from tensorkrowch import _C
 from tensorkrowch.components import *
 from tensorkrowch.utils import (inverse_permutation, is_permutation,
                                 list2slice, permute_list)
@@ -2334,7 +2333,7 @@ Edge.rq_ = rq_edge_
 
 
 ################################   CONTRACT    ################################
-def _check_first_contract_edges(edges: List[Edge],
+def _check_first_contract_edges(edges: Optional[List[Edge]],
                                 node1: AbstractNode,
                                 node2: AbstractNode) -> Optional[Successor]:
     args = (None if edges is None else tuple(edges), node1, node2)
@@ -2342,6 +2341,43 @@ def _check_first_contract_edges(edges: List[Edge],
     if successors is None:
         return None
     return successors.get(args)
+
+
+def _permute_contract_reshape(tensor1, tensor2, permutation_dims, shape_limits):
+    batch = shape_limits[0]
+    non_contract_0 = shape_limits[1]
+    contract = shape_limits[2]
+    
+    # Permute if needed
+    permute1 = tensor1
+    if len(permutation_dims[0]) > 0:
+        permute1 = tensor1.permute(permutation_dims[0])
+        
+    permute2 = tensor2
+    if len(permutation_dims[1]) > 0:
+        permute2 = tensor2.permute(permutation_dims[1])
+        
+    # Compute sizes for reshapes
+    aux_shape1 = [permute1.shape[:batch].numel(),
+                  permute1.shape[batch:(batch + non_contract_0)].numel(),
+                  permute1.shape[(batch + non_contract_0):].numel()]
+    aux_shape2 = [permute2.shape[:batch].numel(),
+                  permute2.shape[batch:(batch + contract)].numel(),
+                  permute2.shape[(batch + contract):].numel(),]
+    new_shape = \
+        list(permute1.shape[:batch]) + \
+        list(permute1.shape[batch:(batch + non_contract_0)]) + \
+        list(permute2.shape[(batch + contract):])
+    
+    # Reshape
+    reshape1 = permute1.reshape(aux_shape1)
+    reshape2 = permute2.reshape(aux_shape2)
+    
+    # Contract and reshape
+    result = torch.bmm(reshape1, reshape2)
+    result = result.reshape(new_shape)
+    
+    return result
 
 
 def _contract_edges_first(edges: Optional[List[Edge]],
@@ -2463,10 +2499,10 @@ def _contract_edges_first(edges: Optional[List[Edge]],
         shape_limits = (len(batch_edges),
                         len(non_contract_edges[0]),
                         len(contract_edges))
-
-        result = _C.contract(tensors[0], tensors[1],
-                             permutation_dims,
-                             shape_limits)
+        
+        result = _permute_contract_reshape(tensors[0], tensors[1],
+                                           permutation_dims,
+                                           shape_limits)
 
         # Put batch dims at the beginning
         indices = [None, None]
@@ -2574,6 +2610,11 @@ def _contract_edges_next(successor: Successor,
                                             successor.index[0]),
                    node2._direct_get_tensor(successor.node_ref[1],
                                             successor.index[1])]
+        
+        result = _permute_contract_reshape(tensors[0], tensors[1],
+                                           hints['permutation_dims'],
+                                           hints['shape_limits'])
+
         # Record in inverse_memory while contracting, if network is traced
         # (to delete memory if possible)
         if node1._network._traced:

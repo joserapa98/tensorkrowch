@@ -78,18 +78,18 @@ class Operation:
         Operation names can be checked via ``net.operations``.
     check_first : callable
         Function that checks if the operation has been called at least one time.
-    func1 : callable
+    fn_first : callable
         Function that is called the first time the operation is performed.
-    func2 : callable
+    fn_next : callable
         Function that is called the next times the operation is performed.
     """
 
-    def __init__(self, name: Text, check_first, func1, func2):
+    def __init__(self, name: Text, check_first, fn_first, fn_next):
         assert isinstance(check_first, Callable)
-        assert isinstance(func1, Callable)
-        assert isinstance(func2, Callable)
-        self.func1 = func1
-        self.func2 = func2
+        assert isinstance(fn_first, Callable)
+        assert isinstance(fn_next, Callable)
+        self.fn_first = fn_first
+        self.fn_next = fn_next
         self.check_first = check_first
 
         # Operations could be overriden
@@ -99,10 +99,9 @@ class Operation:
         successor = self.check_first(*args, **kwargs)
 
         if successor is None:
-            return self.func1(*args, **kwargs)
+            return self.fn_first(*args, **kwargs)
         else:
-            args = [successor] + list(args)
-            return self.func2(*args, **kwargs)
+            return self.fn_next(successor, *args, **kwargs)
 
 
 ###############################################################################

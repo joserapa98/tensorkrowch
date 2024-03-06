@@ -218,6 +218,8 @@ def stack_unequal_tensors(lst_tensors: List[torch.Tensor]) -> torch.Tensor:
                         pad += [0, max_dim - dim]
                     pad.reverse()
                     lst_tensors[idx] = nn.functional.pad(tensor, pad)
+                    # NOTE: nn.functional.pad induces non-deterministic
+                    # behaviour in its backward pass on CUDA
         return torch.stack(lst_tensors)
 
 

@@ -1539,14 +1539,27 @@ class AbstractNode(ABC):
             if self._temp_tensor is not None:
                 self._unrestricted_set_tensor(self._temp_tensor)
                 self._temp_tensor = None
+    
+    def _check_inverse_memory(self, node_ref):
+        """
+        Checks how many times a node's tensor is accessed during contraction.
+        If that tensor can be erased when ``"re-accessed"`` reaches ``"accessed"``,
+        it is replaced by ``None``.
+        
+        This is used in subsequent calls to an operation, so it is assumed that
+        all addresses accessed are already in the ``inverse_memory``.
+        """
+        net = self._network
+        address = node_ref._tensor_info['address']
 
-    def _save_in_network(self,
-                         tensor: Optional[Union[Tensor, Parameter]]) -> None:
-        """Saves new node's tensor in the network's memory."""
-        self._network._memory_nodes[self._tensor_info['address']] = tensor
-        if isinstance(tensor, Parameter):
-            self._network.register_parameter(
-                'param_' + self._tensor_info['address'], tensor)
+        # When contracting network, if it is traced, we keep track of the number
+        # of accesses to "erasable" nodes
+        aux_dict = net._inverse_memory[address]
+        aux_dict['re-accessed'] += 1
+        if aux_dict['accessed'] == aux_dict['re-accessed']:
+            if aux_dict['erase']:
+                net._memory_nodes[address] = None
+            aux_dict['re-accessed'] = 0
 
     def _record_in_inverse_memory(self):
         """
@@ -1565,7 +1578,7 @@ class AbstractNode(ABC):
 
         When contracting the :class:`TensorNetwork`, if the node's tensor has been
         accessed the total amount of times it has to be accessed, and it can be
-        erased, then its tensor is indeed replaced by None.
+        erased, then its tensor is indeed replaced by ``None``.
         """
         net = self._network
         address = self._tensor_info['address']
@@ -1575,37 +1588,24 @@ class AbstractNode(ABC):
             check_nodes = [self, node_ref]
         else:
             check_nodes = [self]
-
+        
         # When tracing network, node is recorded in inverse memory
-        if net._tracing:
-            if address in net._inverse_memory:
+        if address in net._inverse_memory:
                 if net._inverse_memory[address]['erase']:
                     net._inverse_memory[address]['accessed'] += 1
-            else:
-                # Node can only be erased if both itself and the node from which
-                # it is taking the tensor information (node_ref) are resultant or
-                # data nodes (including virtual node that stores stack data tensor)
-                erase = True
-                for node in check_nodes:
-                    erase &= node.is_resultant() or node._data or \
-                             (node._virtual and node._name == 'stack_data_memory')
-
-                net._inverse_memory[address] = {
-                    'accessed': 1,
-                    're-accessed': 0,
-                    'erase': erase}
-
-        # When contracting network, we keep track of the number of accesses
-        # to "erasable" nodes
         else:
-            if address in net._inverse_memory:
-                net._inverse_memory[address]['re-accessed'] += 1
-                aux_dict = net._inverse_memory[address]
+            # Node can only be erased if both itself and the node from which
+            # it is taking the tensor information (node_ref) are resultant or
+            # data nodes (including virtual node that stores stack data tensor)
+            erase = True
+            for node in check_nodes:
+                erase &= node.is_resultant() or node._data or \
+                    (node._virtual and node._name == 'stack_data_memory')
 
-                if aux_dict['accessed'] == aux_dict['re-accessed']:
-                    if aux_dict['erase']:
-                        self._network._memory_nodes[address] = None
-                    net._inverse_memory[address]['re-accessed'] = 0
+            net._inverse_memory[address] = {
+                'accessed': 1,
+                're-accessed': 0,
+                'erase': erase}
 
     def move_to_network(self,
                         network: 'TensorNetwork',
@@ -3815,6 +3815,7 @@ class TensorNetwork(nn.Module):
         self._auto_stack = False   # train -> True / eval -> True
         self._auto_unbind = False  # train -> False / eval -> True
         self._tracing = False      # Tracing mode (True while calling .trace())
+        self._traced = False       # True if .trace() is called, False if reset()
 
         # Lis of operations used to contract the TN
         self._seq_ops = []
@@ -4634,6 +4635,7 @@ class TensorNetwork(nn.Module):
         
         For an example, check this :ref:`tutorial <tutorial_5>`.
         """
+        self._traced = False
         self._seq_ops = []
         self._inverse_memory = dict()
 
@@ -4730,6 +4732,7 @@ class TensorNetwork(nn.Module):
             self(example, *args, **kwargs)
             self._tracing = False
             self(example, *args, **kwargs)
+            self._traced = True
 
     def contract(self) -> Node:
         """

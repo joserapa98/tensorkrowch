@@ -153,7 +153,8 @@ def _permute_first(node: AbstractNode, axes: Sequence[Ax]) -> Node:
     net._seq_ops.append(('permute', args))
 
     # Record in inverse_memory while tracing
-    node._record_in_inverse_memory()
+    if net._tracing:
+        node._record_in_inverse_memory()
 
     return new_node
 
@@ -168,9 +169,10 @@ def _permute_next(successor: Successor,
     child = successor.child
     child._direct_set_tensor(new_tensor)
 
-    # Record in inverse_memory while contracting
+    # Record in inverse_memory while contracting, if network is traced
     # (to delete memory if possible)
-    node._record_in_inverse_memory()
+    if node._network._traced:
+        node._check_inverse_memory(successor.node_ref)
 
     return child
 
@@ -373,8 +375,9 @@ def _tprod_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     net._seq_ops.append(('tprod', args))
 
     # Record in inverse_memory while tracing
-    node1._record_in_inverse_memory()
-    node2._record_in_inverse_memory()
+    if net._tracing:
+        node1._record_in_inverse_memory()
+        node2._record_in_inverse_memory()
 
     return new_node
 
@@ -392,10 +395,11 @@ def _tprod_next(successor: Successor,
     child = successor.child
     child._direct_set_tensor(new_tensor)
 
-    # Record in inverse_memory while contracting
+    # Record in inverse_memory while contracting, if network is traced
     # (to delete memory if possible)
-    node1._record_in_inverse_memory()
-    node2._record_in_inverse_memory()
+    if node1._network._traced:
+        node1._check_inverse_memory(successor.node_ref)
+        node2._check_inverse_memory(successor.node_ref)
 
     return child
 
@@ -509,8 +513,9 @@ def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     net._seq_ops.append(('mul', args))
 
     # Record in inverse_memory while tracing
-    node1._record_in_inverse_memory()
-    node2._record_in_inverse_memory()
+    if net._tracing:
+        node1._record_in_inverse_memory()
+        node2._record_in_inverse_memory()
 
     return new_node
 
@@ -526,10 +531,11 @@ def _mul_next(successor: Successor,
     child = successor.child
     child._direct_set_tensor(new_tensor)
 
-    # Record in inverse_memory while contracting
+    # Record in inverse_memory while contracting, if network is traced
     # (to delete memory if possible)
-    node1._record_in_inverse_memory()
-    node2._record_in_inverse_memory()
+    if node1._network._traced:
+        node1._check_inverse_memory(successor.node_ref)
+        node2._check_inverse_memory(successor.node_ref)
 
     return child
 
@@ -640,8 +646,9 @@ def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     net._seq_ops.append(('add', args))
 
     # Record in inverse_memory while tracing
-    node1._record_in_inverse_memory()
-    node2._record_in_inverse_memory()
+    if net._tracing:
+        node1._record_in_inverse_memory()
+        node2._record_in_inverse_memory()
 
     return new_node
 
@@ -657,10 +664,11 @@ def _add_next(successor: Successor,
     child = successor.child
     child._direct_set_tensor(new_tensor)
 
-    # Record in inverse_memory while contracting
+    # Record in inverse_memory while contracting, if network is traced
     # (to delete memory if possible)
-    node1._record_in_inverse_memory()
-    node2._record_in_inverse_memory()
+    if node1._network._traced:
+        node1._check_inverse_memory(successor.node_ref)
+        node2._check_inverse_memory(successor.node_ref)
 
     return child
 
@@ -771,8 +779,9 @@ def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     net._seq_ops.append(('sub', args))
 
     # Record in inverse_memory while tracing
-    node1._record_in_inverse_memory()
-    node2._record_in_inverse_memory()
+    if net._tracing:
+        node1._record_in_inverse_memory()
+        node2._record_in_inverse_memory()
 
     return new_node
 
@@ -788,10 +797,11 @@ def _sub_next(successor: Successor,
     child = successor.child
     child._direct_set_tensor(new_tensor)
 
-    # Record in inverse_memory while contracting
+    # Record in inverse_memory while contracting, if network is traced
     # (to delete memory if possible)
-    node1._record_in_inverse_memory()
-    node2._record_in_inverse_memory()
+    if node1._network._traced:
+        node1._check_inverse_memory(successor.node_ref)
+        node2._check_inverse_memory(successor.node_ref)
 
     return child
 
@@ -1128,7 +1138,8 @@ def _split_first(node: AbstractNode,
     net._seq_ops.append(('split', args))
 
     # Record in inverse_memory while tracing
-    node._record_in_inverse_memory()
+    if net._tracing:
+        node._record_in_inverse_memory()
 
     return node1, node2
 
@@ -1154,13 +1165,13 @@ def _split_next(successor: Successor,
     node_tensor = node._direct_get_tensor(successor.node_ref,
                                           successor.index)
     if permutation_dims:
-        node_tensor = node.tensor \
+        node_tensor = node_tensor \
             .permute(*(batch_axes + node1_axes + node2_axes)) \
             .reshape(*(batch_shape +
                        [node1_shape.prod().item()] +
                        [node2_shape.prod().item()]))
     else:
-        node_tensor = node.tensor \
+        node_tensor = node_tensor \
             .reshape(*(batch_shape +
                        [node1_shape.prod().item()] +
                        [node2_shape.prod().item()]))
@@ -1254,9 +1265,10 @@ def _split_next(successor: Successor,
     children[0]._direct_set_tensor(node1_tensor)
     children[1]._direct_set_tensor(node2_tensor)
 
-    # Record in inverse_memory while contracting
+    # Record in inverse_memory while contracting, if network is traced
     # (to delete memory if possible)
-    node._record_in_inverse_memory()
+    if node._network._traced:
+        node._check_inverse_memory(successor.node_ref)
 
     return children[0], children[1]
 
@@ -2388,7 +2400,8 @@ def _contract_edges_first(edges: Optional[List[Edge]],
         hints = edges
 
         # Record in inverse_memory while tracing
-        node1._record_in_inverse_memory()
+        if node1._network._tracing:
+            node1._record_in_inverse_memory()
 
     else:
         nodes = [node1, node2]
@@ -2474,8 +2487,9 @@ def _contract_edges_first(edges: Optional[List[Edge]],
                  'permutation_dims': permutation_dims}
 
         # Record in inverse_memory while tracing
-        node1._record_in_inverse_memory()
-        node2._record_in_inverse_memory()
+        if node1._network._tracing:
+            node1._record_in_inverse_memory()
+            node2._record_in_inverse_memory()
 
     node1_is_stack = isinstance(node1, (StackNode, ParamStackNode))
     node2_is_stack = isinstance(node2, (StackNode, ParamStackNode))
@@ -2549,9 +2563,10 @@ def _contract_edges_next(successor: Successor,
                 elif num > max_axis:
                     axes_nums[num] -= 2
 
-        # Record in inverse_memory while contracting
+        # Record in inverse_memory while contracting, if network is traced
         # (to delete memory if possible)
-        node1._record_in_inverse_memory()
+        if node1._network._traced:
+            node1._check_inverse_memory(successor.node_ref[0])
 
     else:
         hints = successor.hints
@@ -2559,11 +2574,11 @@ def _contract_edges_next(successor: Successor,
                                             successor.index[0]),
                    node2._direct_get_tensor(successor.node_ref[1],
                                             successor.index[1])]
-
-        # Record in inverse_memory while contracting
+        # Record in inverse_memory while contracting, if network is traced
         # (to delete memory if possible)
-        node1._record_in_inverse_memory()
-        node2._record_in_inverse_memory()
+        if node1._network._traced:
+            node1._check_inverse_memory(successor.node_ref[0])
+            node2._check_inverse_memory(successor.node_ref[1])
 
     child = successor.child
     child._direct_set_tensor(result)
@@ -3033,8 +3048,9 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
                     delattr(net, 'param_' + node._name)
 
         # Record in inverse_memory while tracing
-        for node in nodes:
-            node._record_in_inverse_memory()
+        if net._tracing:
+            for node in nodes:
+                node._record_in_inverse_memory()
 
     # Create successor
     args = (tuple(nodes),)
@@ -3072,10 +3088,11 @@ def _stack_next(successor: Successor,
     stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])
     child._direct_set_tensor(stack_tensor)
 
-    # Record in inverse_memory while contracting
+    # Record in inverse_memory while contracting, if network is traced
     # (to delete memory if possible)
-    for node in nodes:
-        node._record_in_inverse_memory()
+    if nodes[0]._network._traced:
+        for node_ref, node in zip(successor.node_ref, nodes):
+            node._check_inverse_memory(node_ref)
 
     return child
 
@@ -3168,7 +3185,8 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
 
     if not net._auto_unbind:
         # Record in inverse_memory while tracing
-        node._record_in_inverse_memory()
+        if net._tracing:
+            node._record_in_inverse_memory()
 
     else:  # index_mode
         if node._tensor_info['address'] is None:
@@ -3260,9 +3278,10 @@ def _unbind_next(successor: Successor, node: AbstractStackNode) -> List[Node]:
         for tensor, child in zip(tensors, children):
             child._direct_set_tensor(tensor, True)
 
-        # Record in inverse_memory while contracting
+        # Record in inverse_memory while contracting, if network is traced
         # (to delete memory if possible)
-        node._record_in_inverse_memory()
+        if net._traced:
+            node._check_inverse_memory(successor.node_ref)
         return children[:]
 
     else:  # index_mode
@@ -3504,8 +3523,9 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
     net._seq_ops.append(('einsum', args))
 
     # Record in inverse_memory while tracing
-    for node in nodes:
-        node._record_in_inverse_memory()
+    if net._tracing:
+        for node in nodes:
+            node._record_in_inverse_memory()
 
     return new_node
 
@@ -3522,10 +3542,11 @@ def _einsum_next(successor: Successor,
     child = successor.child
     child._direct_set_tensor(new_tensor)
 
-    # Record in inverse_memory while contracting
+    # Record in inverse_memory while contracting, if network is traced
     # (to delete memory if possible)
-    for node in nodes:
-        node._record_in_inverse_memory()
+    if nodes[0]._network._traced:
+        for node_ref, node in zip(successor.node_ref, nodes):
+            node._check_inverse_memory(node_ref)
 
     return child
 

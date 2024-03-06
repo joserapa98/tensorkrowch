@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Operations &#8212; TensorKrowch 1.0.0 documentation</title>
+    <title>Operations &#8212; TensorKrowch 1.0.1 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -34,9 +34,7 @@
     <script src="_static/clipboard.min.js"></script>
     <script src="_static/copybutton.js"></script>
     <script src="_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
-    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="shortcut icon" href="_static/tensorkrowch_favicon_light.svg"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -721,12 +719,12 @@ of the resultant edge.</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.disconnect">
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">disconnect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edge</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#disconnect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.disconnect" title="Permalink to this definition">#</a></dt>
-<dd><p>Disconnects connected edge, that is, the connected edge is splitted into
+<dd><p>Disconnects connected edge, that is, the connected edge is split into
 two dangling edges, one for each node.</p>
 <p>This operation is the same as <a class="reference internal" href="components.html#tensorkrowch.Edge.disconnect" title="tensorkrowch.Edge.disconnect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Edge.disconnect()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge"><em>StackEdge</em></a>) – Edge that is going to be disconnected (splitted in two).</p>
+<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge"><em>StackEdge</em></a>) – Edge that is going to be disconnected (split in two).</p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>tuple[<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a>, <a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge">Edge</a>] or tuple[<a class="reference internal" href="components.html#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge">StackEdge</a>, <a class="reference internal" href="components.html#tensorkrowch.StackEdge" title="tensorkrowch.StackEdge">StackEdge</a>]</p>
@@ -750,7 +748,7 @@ nodes connected by <code class="docutils literal notranslate"><span class="pre">
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – Edge whose nodes are to be contracted and splitted.</p></li>
+<li><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – Edge whose nodes are to be contracted and split.</p></li>
 <li><p><strong>side</strong> (<em>str</em><em>, </em><em>optional</em>) – Indicates the side to which the diagonal matrix <span class="math notranslate nohighlight">\(S\)</span> should be
 contracted. If “left”, the first resultant node’s tensor will be
 <span class="math notranslate nohighlight">\(US\)</span>, and the other node’s tensor will be <span class="math notranslate nohighlight">\(V^{\dagger}\)</span>.
@@ -815,7 +813,7 @@ nodes connected by <code class="docutils literal notranslate"><span class="pre">
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – Edge whose nodes are to be contracted and splitted.</p></li>
+<li><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – Edge whose nodes are to be contracted and split.</p></li>
 <li><p><strong>side</strong> (<em>str</em><em>, </em><em>optional</em>) – Indicates the side to which the diagonal matrix <span class="math notranslate nohighlight">\(S\)</span> should be
 contracted. If “left”, the first resultant node’s tensor will be
 <span class="math notranslate nohighlight">\(US\)</span>, and the other node’s tensor will be <span class="math notranslate nohighlight">\(V^{\dagger}\)</span>.
@@ -879,7 +877,7 @@ underscore indicate <strong>in-place</strong> operations.</p>
 nodes connected by <code class="docutils literal notranslate"><span class="pre">edge</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – Edge whose nodes are to be contracted and splitted.</p>
+<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – Edge whose nodes are to be contracted and split.</p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>tuple[<a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
@@ -929,7 +927,7 @@ underscore indicate <strong>in-place</strong> operations.</p>
 nodes connected by <code class="docutils literal notranslate"><span class="pre">edge</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – Edge whose nodes are to be contracted and splitted.</p>
+<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="components.html#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – Edge whose nodes are to be contracted and split.</p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>tuple[<a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
@@ -1021,7 +1019,7 @@ performed when both nodes have batch edges with the same names.</p>
 <h2>Operation Class<a class="headerlink" href="#operation-class" title="Permalink to this headline">#</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.Operation">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Operation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_first</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#Operation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Operation" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Operation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_first</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn_first</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn_next</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#Operation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Operation" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for node operations.</p>
 <p>A node operation is made up of two functions, the one that is executed the
 first time the operation is called and the one that is executed in every
@@ -1037,8 +1035,8 @@ is always the same, though the tensors themselves are different).</p>
 <li><p><strong>name</strong> (<em>str</em>) – Name of the operation. It cannot coincide with another operation’s name.
 Operation names can be checked via <code class="docutils literal notranslate"><span class="pre">net.operations</span></code>.</p></li>
 <li><p><strong>check_first</strong> (<em>callable</em>) – Function that checks if the operation has been called at least one time.</p></li>
-<li><p><strong>func1</strong> (<em>callable</em>) – Function that is called the first time the operation is performed.</p></li>
-<li><p><strong>func2</strong> (<em>callable</em>) – Function that is called the next times the operation is performed.</p></li>
+<li><p><strong>fn_first</strong> (<em>callable</em>) – Function that is called the first time the operation is performed.</p></li>
+<li><p><strong>fn_next</strong> (<em>callable</em>) – Function that is called the next times the operation is performed.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1286,14 +1284,14 @@ and -1’s.</p>
 </ul>
 <p>If <code class="docutils literal notranslate"><span class="pre">mode</span></code> is “svd” or “svdr”, <code class="docutils literal notranslate"><span class="pre">side</span></code> must be provided. Besides, one
 (and only one) of <code class="docutils literal notranslate"><span class="pre">rank</span></code>, <code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code> and <code class="docutils literal notranslate"><span class="pre">cutoff</span></code> is required.</p>
-<p>Since the node is <cite>splitted</cite> in two, a new edge appears connecting both
-nodes. The axis that corresponds to this edge has the name <code class="docutils literal notranslate"><span class="pre">&quot;splitted&quot;</span></code>.</p>
+<p>Since the node is <cite>split</cite> in two, a new edge appears connecting both
+nodes. The axis that corresponds to this edge has the name <code class="docutils literal notranslate"><span class="pre">&quot;split&quot;</span></code>.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;split&quot;</span></code>. The node
 that keeps information about the <a class="reference internal" href="components.html#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">node</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>node</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a>) – Node that is to be splitted.</p></li>
+<li><p><strong>node</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a>) – Node that is to be split.</p></li>
 <li><p><strong>node1_axes</strong> (<em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="components.html#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em>) – First set of edges, will appear as the edges of the first (left)
 resultant node.</p></li>
 <li><p><strong>node2_axes</strong> (<em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="components.html#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em>) – Second set of edges, will appear as the edges of the second (right)
@@ -1333,8 +1331,8 @@ cum\_percentage\]</div>
 <span class="go">torch.Size([100, 5, 15])</span>
 </pre></div>
 </div>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">node_left</span><span class="p">[</span><span class="s1">&#39;splitted&#39;</span><span class="p">]</span>
-<span class="go">Edge( split_0[splitted] &lt;-&gt; split_1[splitted] )</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">node_left</span><span class="p">[</span><span class="s1">&#39;split&#39;</span><span class="p">]</span>
+<span class="go">Edge( split_0[split] &lt;-&gt; split_1[split] )</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -1348,13 +1346,13 @@ cum\_percentage\]</div>
 <dd><p>In-place version of <a class="reference internal" href="#tensorkrowch.split" title="tensorkrowch.split"><code class="xref py py-func docutils literal notranslate"><span class="pre">split()</span></code></a>.</p>
 <p>Following the <strong>PyTorch</strong> convention, names of functions ended with an
 underscore indicate <strong>in-place</strong> operations.</p>
-<p>Since the node is <cite>splitted</cite> in two, a new edge appears connecting both
-nodes. The axis that corresponds to this edge has the name <code class="docutils literal notranslate"><span class="pre">&quot;splitted&quot;</span></code>.</p>
+<p>Since the node is <cite>split</cite> in two, a new edge appears connecting both
+nodes. The axis that corresponds to this edge has the name <code class="docutils literal notranslate"><span class="pre">&quot;split&quot;</span></code>.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;split_ip&quot;</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>node</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a>) – Node that is to be splitted.</p></li>
+<li><p><strong>node</strong> (<a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a>) – Node that is to be split.</p></li>
 <li><p><strong>node1_axes</strong> (<em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="components.html#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em>) – First set of edges, will appear as the edges of the first (left)
 resultant node.</p></li>
 <li><p><strong>node2_axes</strong> (<em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="components.html#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em>) – Second set of edges, will appear as the edges of the second (right)
@@ -1394,8 +1392,8 @@ cum\_percentage\]</div>
 <span class="go">torch.Size([100, 5, 15])</span>
 </pre></div>
 </div>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">node_left</span><span class="p">[</span><span class="s1">&#39;splitted&#39;</span><span class="p">]</span>
-<span class="go">Edge( split_ip_0[splitted] &lt;-&gt; split_ip_1[splitted] )</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">node_left</span><span class="p">[</span><span class="s1">&#39;split&#39;</span><span class="p">]</span>
+<span class="go">Edge( split_ip_0[split] &lt;-&gt; split_ip_1[split] )</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">node</span></code> has been deleted (removed from the network), but it still exists
@@ -1563,7 +1561,7 @@ respectively. Restrictions that are applied to the nodes in order to be
 <cite>stackable</cite> are the same as in <a class="reference internal" href="components.html#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">StackNode</span></code></a>.</p>
 <p>The stack dimension will be the first one in the <code class="docutils literal notranslate"><span class="pre">resultant</span></code> node.</p>
 <p>See <a class="reference internal" href="components.html#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a> and <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> to learn how the
-<a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.auto_unbind" title="tensorkrowch.TensorNetwork.auto_unbind"><code class="xref py py-meth docutils literal notranslate"><span class="pre">auto_unbind()</span></code></a> mode affects the computation of
+<a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.auto_stack" title="tensorkrowch.TensorNetwork.auto_stack"><code class="xref py py-meth docutils literal notranslate"><span class="pre">auto_stack()</span></code></a> mode affects the computation of
 <a class="reference internal" href="#tensorkrowch.stack" title="tensorkrowch.stack"><code class="xref py py-func docutils literal notranslate"><span class="pre">stack()</span></code></a>.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;stack&quot;</span></code>. If this
 operation returns a <code class="docutils literal notranslate"><span class="pre">virtual</span></code> <a class="reference internal" href="components.html#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a>, it will be called
@@ -1572,7 +1570,7 @@ name</strong>.  The node that keeps information about the <a class="reference in
 <code class="docutils literal notranslate"><span class="pre">nodes[0]</span></code>, the first stacked node.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>nodes</strong> (<em>list</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>] or </em><em>tuple</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>]</em>) – Sequence of nodes that are to be stacked. They must be of the same type,
+<dd class="field-odd"><p><strong>nodes</strong> (<em>list</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>] or </em><em>tuple</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>]</em>) – Sequence of nodes that are to be stacked. They must be of the same type,
 have the same rank and axes names, be in the same tensor network, and
 have edges with the same types.</p>
 </dd>
@@ -1607,7 +1605,7 @@ the computation of <a class="reference internal" href="#tensorkrowch.unbind" tit
 that keeps information about the <a class="reference internal" href="components.html#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">node</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>node</strong> (<a class="reference internal" href="components.html#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><em>StackNode</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><em>ParamStackNode</em></a>) – Node that is to be unbinded.</p>
+<dd class="field-odd"><p><strong>node</strong> (<a class="reference internal" href="components.html#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><em>StackNode</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><em>ParamStackNode</em></a>) – Node that is to be unbound.</p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>list[<a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
@@ -1719,7 +1717,7 @@ of groups of nodes (all groups having the same amount of nodes, with the
 same properties, etc.). That is, it stacks these groups of nodes into a
 single collection of <code class="docutils literal notranslate"><span class="pre">StackNodes</span></code> that is then contracted via
 <a class="reference internal" href="#tensorkrowch.einsum" title="tensorkrowch.einsum"><code class="xref py py-func docutils literal notranslate"><span class="pre">einsum()</span></code></a> (using the stack dimensions as <strong>batch</strong>), and
-<a class="reference internal" href="#tensorkrowch.unbind" title="tensorkrowch.unbind"><code class="xref py py-func docutils literal notranslate"><span class="pre">unbinded</span></code></a> afterwards.</p>
+<a class="reference internal" href="#tensorkrowch.unbind" title="tensorkrowch.unbind"><code class="xref py py-func docutils literal notranslate"><span class="pre">unbound</span></code></a> afterwards.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -1733,8 +1731,8 @@ by an arrow. For instance, the contraction</p>
 </pre></div>
 </div>
 </p></li>
-<li><p><strong>nodes</strong> (<em>List</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>]</em><em>...</em>) – Nodes that are involved in the contraction. Should appear in the same
-order as it is specified in the <code class="docutils literal notranslate"><span class="pre">string</span></code>.</p></li>
+<li><p><strong>nodes_lists</strong> (<em>List</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>]</em><em>...</em>) – Lists of nodes that are involved in the contraction. Should appear in
+the same order as it is specified in the <code class="docutils literal notranslate"><span class="pre">string</span></code>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>

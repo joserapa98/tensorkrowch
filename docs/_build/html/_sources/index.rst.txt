@@ -138,12 +138,3 @@ If you use TensorKrowch in your work, please cite `TensorKrowch's paper
      archivePrefix={arXiv},
      eprint={2306.08595}
    }
-
-
-..
-   Indices and tables
-   ==================
-
-   * :ref:`genindex`
-   * :ref:`modindex`
-   * :ref:`search`

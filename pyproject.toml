@@ -1,4 +1,57 @@
 [build-system]
-requires = ["setuptools", "torch>=1.9"]
-requires-python = ">=3.8"
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "tensorkrowch"
+dynamic = ["version", "readme"]
+description = "Tensor Networks with PyTorch"
+authors = [
+    {name = "José Ramón Pareja Monturiol", email = "joserapa98@gmail.com"}
+]
+maintainers = [
+    {name = "José Ramón Pareja Monturiol", email = "joserapa98@gmail.com"}
+]
+license = {file = "LICENSE.txt"}
+keywords = [
+    "tensor",
+    "network",
+    "tensor network",
+    "tensor networks",
+    "mps",
+    "peps",
+    "quantum"
+]
+requires-python = ">=3.8"
+dependencies = [
+  "torch>=1.9",
+  "opt_einsum>=3.0",
+]
+
+
+[project.optional-dependencies]
+tests = ["pytest"]
+docs = [
+    "sphinx==4.5.0",
+    "sphinx-book-theme==0.3.3",
+    "sphinx-copybutton==0.5.2",
+    "sphinxcontrib-applehelp==1.0.4",
+    "sphinxcontrib-devhelp==1.0.2",
+    "sphinxcontrib-htmlhelp==2.0.1",
+    "sphinxcontrib-qthelp==1.0.3",
+    "sphinxcontrib-serializinghtml==1.1.5"
+]
+
+
+[tool.setuptools.dynamic]
+version = {attr = "tensorkrowch.__version__"}
+readme = {file = "README.md", content-type = "text/markdown"}
+
+
+[tool.setuptools]
+packages = ["tensorkrowch", "tensorkrowch.models"]
+
+
+[project.urls]
+GitHub = "https://github.com/joserapa98/tensorkrowch"
+Documentation = "https://joserapa98.github.io/tensorkrowch"

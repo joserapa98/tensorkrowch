@@ -21,14 +21,6 @@ or download the repository on your computer and run
 
 in the repository folder.
 
-
-.. warning::
-
-    Since **TensorKrowch** has a `PyTorch C++ Extension
-    <https://pytorch.org/tutorials/advanced/cpp_extension.html>`_, it has to be 
-    built from source, so make sure you have installed on your system a C++
-    compiler compatible with C++14.
-
 Tests are written outside the Python module, therefore they are not installed
 together with the package. To test the installation, clone the repository and
 run, in a Unix terminal

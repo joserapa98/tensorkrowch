@@ -3,6 +3,7 @@ Embedding methods
 """
 
 from math import pi, sqrt
+
 import torch
 
 from tensorkrowch.utils import binomial_coeffs
@@ -76,8 +77,8 @@ def unit(data: torch.Tensor, dim: int = 2) -> torch.Tensor:
     lst_tensors = []
     for i in range(1, dim + 1):
         aux = sqrt(binomial_coeffs(dim - 1, i - 1)) * \
-                (pi / 2 * data).cos().pow(dim - i) * \
-                (pi / 2 * data).sin().pow(i - 1)
+              (pi / 2 * data).cos().pow(dim - i) * \
+              (pi / 2 * data).sin().pow(i - 1)
         lst_tensors.append(aux)
     return torch.stack(lst_tensors, dim=-1)
 
@@ -118,7 +119,7 @@ def add_ones(data: torch.Tensor, axis: int = -1) -> torch.Tensor:
         components. The :math:`batch\_size` is optional.
     axis : int
         Axis where the ``data`` tensor is 'expanded' with the 1's. Should be
-        between 0 and the rank of ``data``. By default it is -1, which returns
+        between 0 and the rank of ``data``. By default, it is -1, which returns
         a tensor with shape  
         
         .. math::
@@ -149,6 +150,7 @@ def add_ones(data: torch.Tensor, axis: int = -1) -> torch.Tensor:
     torch.Size([100, 5, 2])
     """
     return torch.stack([torch.ones_like(data), data], dim=axis)
+
 
 def poly(data: torch.Tensor, degree: int = 2, axis: int = -1) -> torch.Tensor:
     r"""
@@ -191,7 +193,7 @@ def poly(data: torch.Tensor, degree: int = 2, axis: int = -1) -> torch.Tensor:
         Maximum degree of the monomials.
     axis : int
         Axis where the ``data`` tensor is 'expanded' with monomials. Should be
-        between 0 and the rank of ``data``. By default it is -1, which returns
+        between 0 and the rank of ``data``. By default, it is -1, which returns
         a tensor with shape 
         
         .. math::

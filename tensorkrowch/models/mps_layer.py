@@ -12,9 +12,9 @@ from typing import (List, Optional, Sequence,
 import torch
 import torch.nn as nn
 
+import tensorkrowch.operations as op
 from tensorkrowch.components import AbstractNode, Node, ParamNode
 from tensorkrowch.components import TensorNetwork
-import tensorkrowch.operations as op
 
 
 class MPSLayer(TensorNetwork):
@@ -114,12 +114,12 @@ class MPSLayer(TensorNetwork):
                  n_batches: int = 1) -> None:
 
         super().__init__(name='mps')
-        
+
         # boundary
         if boundary not in ['obc', 'pbc']:
             raise ValueError('`boundary` should be one of "obc" or "pbc"')
         self._boundary = boundary
-        
+
         # out_position
         if out_position is None:
             out_position = (n_features + 1) // 2
@@ -152,12 +152,12 @@ class MPSLayer(TensorNetwork):
         else:
             raise TypeError('`in_dim` should be int, tuple[int] or list[int] '
                             'type')
-        
+
         # out_dim
         if not isinstance(out_dim, int):
             raise TypeError('`out_dim` should be int type')
         self._out_dim = out_dim
-        
+
         # phys_dim
         if isinstance(in_dim, (list, tuple)):
             self._phys_dim = list(in_dim[:out_position]) + [out_dim] + \
@@ -184,7 +184,7 @@ class MPSLayer(TensorNetwork):
         else:
             raise TypeError('`bond_dim` should be int, tuple[int] or list[int]'
                             ' type')
-        
+
         # n_batches
         if not isinstance(n_batches, int):
             raise TypeError('`n_batches should be int type')
@@ -206,7 +206,7 @@ class MPSLayer(TensorNetwork):
     def in_dim(self) -> List[int]:
         """Returns input dimensions."""
         return self._in_dim
-    
+
     @property
     def out_dim(self) -> int:
         """
@@ -214,7 +214,7 @@ class MPSLayer(TensorNetwork):
         output node. Same as ``in_dim`` for input nodes.
         """
         return self._out_dim
-    
+
     @property
     def phys_dim(self) -> List[int]:
         """Returns ``in_dim`` list with ``out_dim`` in the ``out_position``."""
@@ -224,17 +224,17 @@ class MPSLayer(TensorNetwork):
     def bond_dim(self) -> List[int]:
         """Returns bond dimensions."""
         return self._bond_dim
-    
+
     @property
     def out_position(self) -> int:
         """Returns position of the output node (label)."""
         return self._out_position
-    
+
     @property
     def boundary(self) -> Text:
         """Returns boundary condition ("obc" or "pbc")."""
         return self._boundary
-    
+
     @property
     def n_batches(self) -> int:
         """Returns number of batch edges of the ``data`` nodes."""
@@ -245,12 +245,12 @@ class MPSLayer(TensorNetwork):
         if self.leaf_nodes:
             raise ValueError('Cannot create MPS nodes if the MPS already has '
                              'nodes')
-        
+
         self.left_node = None
         self.right_node = None
         self.left_env = []
         self.right_env = []
-                
+
         # Open Boundary Conditions
         if self.boundary == 'obc':
             # Left node
@@ -260,7 +260,7 @@ class MPSLayer(TensorNetwork):
                                            axes_names=('input', 'right'),
                                            name='left_node',
                                            network=self)
-                
+
             # Left environment
             if self.out_position > 1:
                 for i in range(1, self.out_position):
@@ -275,7 +275,7 @@ class MPSLayer(TensorNetwork):
                         self.left_node['right'] ^ self.left_env[-1]['left']
                     else:
                         self.left_env[-2]['right'] ^ self.left_env[-1]['left']
-                        
+
             # Output node
             if self.out_position == 0:
                 self.output_node = ParamNode(shape=(self.out_dim,
@@ -296,19 +296,19 @@ class MPSLayer(TensorNetwork):
                     self.left_env[-1]['right'] ^ self.output_node['left']
                 else:
                     self.left_node['right'] ^ self.output_node['left']
-                    
+
             if self.out_position == self.n_features:
                 self.output_node = ParamNode(shape=(self.bond_dim[-1],
                                                     self.out_dim),
-                                                    axes_names=('left',
-                                                                'output'),
-                                                    name='output_node',
-                                                    network=self)
+                                             axes_names=('left',
+                                                         'output'),
+                                             name='output_node',
+                                             network=self)
                 if self.left_env:
                     self.left_env[-1]['right'] ^ self.output_node['left']
                 elif self.left_node:
                     self.left_node['right'] ^ self.output_node['left']
-                    
+
             # Right environment
             if self.out_position < self.n_features - 1:
                 for i in range(self.out_position + 1, self.n_features):
@@ -335,7 +335,7 @@ class MPSLayer(TensorNetwork):
                     self.right_env[-1]['right'] ^ self.right_node['left']
                 else:
                     self.output_node['right'] ^ self.right_node['left']
-        
+
         # Periodic Boundary Conditions            
         else:
             # Left environment
@@ -352,22 +352,22 @@ class MPSLayer(TensorNetwork):
                         periodic_edge = self.left_env[-1]['left']
                     else:
                         self.left_env[-2]['right'] ^ self.left_env[-1]['left']
-                        
+
             # Output node
             self.output_node = ParamNode(
                 shape=(self.bond_dim[self.out_position - 1],
                        self.out_dim,
                        self.bond_dim[self.out_position]),
-                       axes_names=('left', 'output', 'right'),
-                       name='output_node',
-                       network=self)
+                axes_names=('left', 'output', 'right'),
+                name='output_node',
+                network=self)
             if self.left_env:
                 self.left_env[-1]['right'] ^ self.output_node['left']
             else:
                 periodic_edge = self.output_node['left']
             if self.out_position == self.n_features:
                 self.output_node['right'] ^ periodic_edge
-                    
+
             # Right environment
             if self.out_position < self.n_features:
                 for i in range(self.out_position + 1, self.n_features + 1):
@@ -386,8 +386,10 @@ class MPSLayer(TensorNetwork):
                         self.right_env[-1]['right'] ^ periodic_edge
 
     def initialize(self, std: float = 1e-9) -> None:
-        # TODO: explain initialization
-        """Initializes all the nodes."""
+        """
+        Initializes all the nodes as explained `here <https://arxiv.org/abs/1605.03795>`_.
+        It can be overriden for custom initializations.
+        """
         # Left node
         if self.left_node is not None:
             tensor = torch.randn(self.left_node.shape) * std
@@ -395,7 +397,7 @@ class MPSLayer(TensorNetwork):
             aux[0] = 1.
             tensor[0, :] = aux
             self.left_node.tensor = tensor
-        
+
         # Right node
         if self.right_node is not None:
             tensor = torch.randn(self.right_node.shape) * std
@@ -403,14 +405,14 @@ class MPSLayer(TensorNetwork):
             aux[0] = 1.
             tensor[:, 0] = aux
             self.right_node.tensor = tensor
-        
+
         # Left env + Right env
         for node in self.left_env + self.right_env:
             tensor = torch.randn(node.shape) * std
             aux = torch.eye(tensor.shape[0], tensor.shape[2])
             tensor[:, 0, :] = aux
             node.tensor = tensor
-            
+
         # Output node
         if (self.boundary == 'obc') and (self.out_position == 0):
             eye_tensor = torch.eye(self.output_node.shape[1])[0, :]
@@ -443,41 +445,40 @@ class MPSLayer(TensorNetwork):
                                 self.left_env + self.right_env))
         if self.right_node is not None:
             input_edges.append(self.right_node['input'])
-            
+
         super().set_data_nodes(input_edges=input_edges,
                                num_batch_edges=self.n_batches)
-        
+
         if self.left_env + self.right_env:
             self.lr_env_data = list(map(lambda node: node.neighbours('input'),
                                         self.left_env + self.right_env))
 
     def _input_contraction(self,
                            inline_input: bool = False) -> Tuple[
-                               Optional[List[Node]],
-                               Optional[List[Node]]]:
+                                                        Optional[List[Node]],
+                                                        Optional[List[Node]]]:
         """Contracts input data nodes with MPS nodes."""
         if inline_input:
-            left_result = []
-            for node in self.left_env:
-                left_result.append(node @ node.neighbours('input'))
-            right_result = []
-            for node in self.right_env:
-                right_result.append(node @ node.neighbours('input'))
+            left_result = list(map(lambda node: node @ node.neighbours('input'),
+                                   self.left_env))
+            right_result = list(map(lambda node: node @ node.neighbours('input'),
+                                   self.right_env))
+            
             return left_result, right_result
 
         else:
             if self.left_env + self.right_env:
                 stack = op.stack(self.left_env + self.right_env)
                 stack_data = op.stack(self.lr_env_data)
-                
+
                 stack['input'] ^ stack_data['feature']
-                
+
                 result = stack_data @ stack
                 result = op.unbind(result)
-                
+
                 left_result = result[:len(self.left_env)]
                 right_result = result[len(self.left_env):]
-                
+
                 return left_result, right_result
             else:
                 return [], []
@@ -495,7 +496,7 @@ class MPSLayer(TensorNetwork):
             for node in nodes[1:]:
                 result_node = node @ result_node
             return result_node
-        
+
     def _contract_envs_inline(self,
                               left_env: List[Node],
                               right_env: List[Node]) -> Tuple[List[Node],
@@ -515,7 +516,7 @@ class MPSLayer(TensorNetwork):
                 right_env = [self._inline_contraction(lst, False)]
             elif self.right_node is not None:
                 right_env = [self.right_node @ self.right_node.neighbours('input')]
-             
+
         # pbc   
         else:
             if left_env:
@@ -525,7 +526,7 @@ class MPSLayer(TensorNetwork):
                 lst = right_env[:]
                 lst.reverse()
                 right_env = [self._inline_contraction(lst, False)]
-            
+
         return left_env, right_env
 
     def _aux_pairwise(self, nodes: List[Node]) -> Tuple[List[Node],
@@ -536,16 +537,16 @@ class MPSLayer(TensorNetwork):
         if length > 1:
             half_length = length // 2
             nice_length = 2 * half_length
-            
+
             even_nodes = aux_nodes[0:nice_length:2]
             odd_nodes = aux_nodes[1:nice_length:2]
             leftover = aux_nodes[nice_length:]
-            
+
             stack1 = op.stack(even_nodes)
             stack2 = op.stack(odd_nodes)
-            
+
             stack1['right'] ^ stack2['left']
-            
+
             aux_nodes = stack1 @ stack2
             aux_nodes = op.unbind(aux_nodes)
 
@@ -603,14 +604,14 @@ class MPSLayer(TensorNetwork):
         Node
         """
         left_env, right_env = self._input_contraction(inline_input)
-        
+
         if inline_mats:
             left_env_contracted, right_env_contracted = \
                 self._contract_envs_inline(left_env, right_env)
         else:
             left_env_contracted, right_env_contracted = \
                 self._pairwise_contraction(left_env, right_env)
-        
+
         result = self.output_node
         if left_env_contracted and right_env_contracted:
             result = left_env_contracted[0] @ result @ right_env_contracted[0]
@@ -620,9 +621,9 @@ class MPSLayer(TensorNetwork):
             result = right_env_contracted[0] @ result
         else:
             result @= result
-            
+
         return result
-    
+
     def canonicalize(self,
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
@@ -663,16 +664,16 @@ class MPSLayer(TensorNetwork):
         [2, 3, 3, 2]
         """
         self.reset()
-        
+
         prev_auto_stack = self.auto_stack
         self.auto_stack = False
-        
+
         # Left
         left_nodes = []
         if self.left_node is not None:
             left_nodes.append(self.left_node)
         left_nodes += self.left_env
-        
+
         if left_nodes:
             new_left_nodes = []
             node = left_nodes[0]
@@ -693,13 +694,13 @@ class MPSLayer(TensorNetwork):
                     result1, result2 = node['right'].qr_()
                 else:
                     raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
-                
+
                 node = result2
                 result1 = result1.parameterize()
                 new_left_nodes.append(result1)
-                
+
             output_node = node
-                
+
             if self.boundary == 'obc':
                 if new_left_nodes:
                     self.left_node = new_left_nodes[0]
@@ -712,7 +713,7 @@ class MPSLayer(TensorNetwork):
         right_nodes.reverse()
         if self.right_node is not None:
             right_nodes = [self.right_node] + right_nodes
-        
+
         if right_nodes:
             new_right_nodes = []
             node = right_nodes[0]
@@ -733,53 +734,53 @@ class MPSLayer(TensorNetwork):
                     result1, result2 = node['left'].rq_()
                 else:
                     raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
-                
+
                 node = result1
                 result2 = result2.parameterize()
                 new_right_nodes = [result2] + new_right_nodes
-                
+
             output_node = node
-                
+
             if self.boundary == 'obc':
                 if new_right_nodes:
                     self.right_node = new_right_nodes[-1]
                 self.right_env = new_right_nodes[:-1]
             else:
                 self.right_env = new_right_nodes
-            
+
         self.output_node = output_node.parameterize()
-        
+
         all_nodes = []
         if left_nodes:
             all_nodes += new_left_nodes
         all_nodes += [self.output_node]
         if right_nodes:
             all_nodes += new_right_nodes
-            
+
         bond_dim = []
         for node in all_nodes:
             if 'right' in node.axes_names:
                 bond_dim.append(node['right'].size())
         self._bond_dim = bond_dim
-        
+
         self.auto_stack = prev_auto_stack
-    
+
     def _project_to_bond_dim(self,
                              nodes: List[AbstractNode],
                              bond_dim: int,
                              side: Text = 'right'):
         """Projects all nodes into a space of dimension ``bond_dim``."""
         device = nodes[0].tensor.device
-        
+
         if side == 'left':
             nodes.reverse()
         elif side != 'right':
             raise ValueError('`side` can only be "left" or "right"')
-        
+
         for node in nodes:
             if not node['input'].is_dangling():
                 self.delete_node(node.neighbours('input'))
-        
+
         line_mat_nodes = []
         in_dim_lst = []
         proj_mat_node = None
@@ -791,19 +792,19 @@ class MPSLayer(TensorNetwork):
                                                  'bond_dim'),
                                      name=f'proj_mat_node_{side}',
                                      network=self)
-                
+
                 proj_mat_node.tensor = torch.eye(
                     torch.tensor(in_dim_lst).prod().int().item(),
                     bond_dim).view(*in_dim_lst, -1).to(device)
                 for k in range(j + 1):
                     nodes[k]['input'] ^ proj_mat_node[k]
-                    
+
                 aux_result = proj_mat_node
                 for k in range(j + 1):
                     aux_result @= nodes[k]
                 line_mat_nodes.append(aux_result)  # bond_dim x left x right
                 break
-            
+
         if proj_mat_node is None:
             bond_dim = torch.tensor(in_dim_lst).prod().int().item()
             proj_mat_node = Node(shape=(*in_dim_lst, bond_dim),
@@ -811,18 +812,18 @@ class MPSLayer(TensorNetwork):
                                              'bond_dim'),
                                  name=f'proj_mat_node_{side}',
                                  network=self)
-            
+
             proj_mat_node.tensor = torch.eye(
                 torch.tensor(in_dim_lst).prod().int().item(),
                 bond_dim).view(*in_dim_lst, -1).to(device)
             for k in range(j + 1):
                 nodes[k]['input'] ^ proj_mat_node[k]
-                
+
             aux_result = proj_mat_node
             for k in range(j + 1):
                 aux_result @= nodes[k]
             line_mat_nodes.append(aux_result)
-            
+
         k = j + 1
         while k < len(nodes):
             in_dim = nodes[k]['input'].size()
@@ -830,20 +831,20 @@ class MPSLayer(TensorNetwork):
                                  axes_names=('input',),
                                  name=f'proj_vec_node_{side}_({k})',
                                  network=self)
-            
+
             proj_vec_node.tensor = torch.eye(in_dim, 1).squeeze().to(device)
             nodes[k]['input'] ^ proj_vec_node['input']
             line_mat_nodes.append(proj_vec_node @ nodes[k])
-            
+
             k += 1
-        
+
         line_mat_nodes.reverse()
         result = line_mat_nodes[0]
         for node in line_mat_nodes[1:]:
             result @= node
-            
+
         return result  # bond_dim x left/right
-    
+
     def _aux_canonicalize_univocal(self,
                                    nodes: List[AbstractNode],
                                    idx: int,
@@ -851,39 +852,39 @@ class MPSLayer(TensorNetwork):
         """Returns canonicalize version of the tensor at site ``idx``."""
         L = nodes[idx]  # left x input x right
         left_nodeC = None
-        
+
         if idx > 0:
             # bond_dim[-1] x input  x right  /  bond_dim[-1] x input
             L = left_nodeL @ L
-        
+
         L = L.tensor
-        
+
         if idx < self.n_features:
             bond_dim = self.bond_dim[idx]
-            
+
             prod_phys_dim_left = 1
             for i in range(idx + 1):
                 prod_phys_dim_left *= self.phys_dim[i]
             bond_dim = min(bond_dim, prod_phys_dim_left)
-            
+
             prod_phys_dim_right = 1
             for i in range(idx + 1, self._n_features):
                 prod_phys_dim_right *= self.phys_dim[i]
             bond_dim = min(bond_dim, prod_phys_dim_right)
-            
+
             if bond_dim < self._bond_dim[idx]:
                 self._bond_dim[idx] = bond_dim
-            
+
             left_nodeC = self._project_to_bond_dim(nodes=nodes[:idx + 1],
-                                                 bond_dim=bond_dim,
-                                                 side='left')  # bond_dim x right
+                                                   bond_dim=bond_dim,
+                                                   side='left')  # bond_dim x right
             right_node = self._project_to_bond_dim(nodes=nodes[idx + 1:],
-                                                 bond_dim=bond_dim,
-                                                 side='right')  # bond_dim x left
-            
+                                                   bond_dim=bond_dim,
+                                                   side='right')  # bond_dim x left
+
             C = left_nodeC @ right_node  # bond_dim x bond_dim
             C = torch.linalg.inv(C.tensor)
-            
+
             if idx == 0:
                 L @= right_node.tensor.t()  # input x bond_dim
                 L @= C
@@ -893,9 +894,9 @@ class MPSLayer(TensorNetwork):
                 L = (L.view(-1, L.shape[-1]) @ right_node.tensor.t())
                 L @= C
                 L = L.view(*shape_L[:-1], right_node.shape[0])
-            
+
         return L, left_nodeC
-        
+
     def canonicalize_univocal(self):
         """
         Turns MPS into the univocal canonical form defined `here
@@ -904,24 +905,24 @@ class MPSLayer(TensorNetwork):
         if self.boundary != 'obc':
             raise ValueError('`canonicalize_univocal` can only be used if '
                              'boundary is "obc"')
-            
+
         self.reset()
-        
+
         prev_auto_stack = self.auto_stack
         self.auto_stack = False
-        
+
         self.output_node.get_axis('output').name = 'input'
-        
+
         if self.boundary == 'obc':
             nodes = [self.left_node] + self.left_env + \
                     [self.output_node] + self.right_env + [self.right_node]
         else:
             nodes = self.left_env + [self.output_node] + self.right_env
-            
+
         for node in nodes:
             if not node['input'].is_dangling():
                 node['input'].disconnect()
-        
+
         new_tensors = []
         left_nodeC = None
         for i in range(self.n_features + 1):
@@ -930,19 +931,19 @@ class MPSLayer(TensorNetwork):
                 idx=i,
                 left_nodeL=left_nodeC)
             new_tensors.append(tensor)
-        
+
         for i, (node, tensor) in enumerate(zip(nodes, new_tensors)):
             if i < self.n_features:
                 if self.bond_dim[i] < node['right'].size():
                     node['right'].change_size(self.bond_dim[i])
             node.tensor = tensor
-            
+
             if not node['input'].is_dangling():
                 self.delete_node(node.neighbours('input'))
         self.reset()
-        
+
         self.output_node.get_axis('input').name = 'output'
-            
+
         l = self.out_position
         for node, data_node in zip(nodes[:l],
                                    list(self.data_nodes.values())[:l]):
@@ -950,7 +951,7 @@ class MPSLayer(TensorNetwork):
         for node, data_node in zip(nodes[l + 1:],
                                    list(self.data_nodes.values())[l:]):
             node['input'] ^ data_node['feature']
-            
+
         self.auto_stack = prev_auto_stack
 
 
@@ -1022,7 +1023,7 @@ class UMPSLayer(TensorNetwork):
         if n_features < 0:
             raise ValueError('`n_features` cannot be lower than 0')
         self._n_features = n_features
-        
+
         # out_position
         if out_position is None:
             out_position = n_features // 2
@@ -1033,7 +1034,7 @@ class UMPSLayer(TensorNetwork):
             self._in_dim = in_dim
         else:
             raise TypeError('`in_dim` should be int type')
-        
+
         # out_dim
         if isinstance(out_dim, int):
             self._out_dim = out_dim
@@ -1045,7 +1046,7 @@ class UMPSLayer(TensorNetwork):
             self._bond_dim = bond_dim
         else:
             raise TypeError('`bond_dim` should be int type')
-        
+
         # n_batches
         if not isinstance(n_batches, int):
             raise TypeError('`n_batches should be int type')
@@ -1064,10 +1065,10 @@ class UMPSLayer(TensorNetwork):
         return self._n_features
 
     @property
-    def in_dim(self) -> List[int]:
-        """Returns input dimension."""
+    def in_dim(self) -> int:
+        """Returns input/physical dimension."""
         return self._in_dim
-    
+
     @property
     def out_dim(self) -> int:
         """
@@ -1077,20 +1078,20 @@ class UMPSLayer(TensorNetwork):
         return self._out_dim
 
     @property
-    def bond_dim(self) -> List[int]:
+    def bond_dim(self) -> int:
         """Returns bond dimensions."""
         return self._bond_dim
-    
+
     @property
     def out_position(self) -> int:
         """Returns position of the output node (label)."""
         return self._out_position
-    
+
     @property
     def boundary(self) -> Text:
         """Returns boundary condition ("obc" or "pbc")."""
         return self._boundary
-    
+
     @property
     def n_batches(self) -> int:
         """Returns number of batch edges of the ``data`` nodes."""
@@ -1143,7 +1144,7 @@ class UMPSLayer(TensorNetwork):
                                              name='output_node',
                                              network=self)
             self.output_node['right'] ^ periodic_edge
-                    
+
             if self.left_env:
                 self.left_env[-1]['right'] ^ self.output_node['left']
 
@@ -1173,10 +1174,10 @@ class UMPSLayer(TensorNetwork):
                     self.output_node['right'] ^ self.right_env[-1]['left']
                 else:
                     self.right_env[-2]['right'] ^ self.right_env[-1]['left']
-                    
+
                 if i == self.n_features:
                     self.right_env[-1]['right'] ^ periodic_edge
-                    
+
         # Virtual node
         uniform_memory = ParamNode(shape=(self.bond_dim,
                                           self.in_dim,
@@ -1190,18 +1191,22 @@ class UMPSLayer(TensorNetwork):
         self.uniform_memory = uniform_memory
 
     def initialize(self, std: float = 1e-9) -> None:
-        """Initializes output and uniform nodes."""
+        """
+        Initializes output and uniform nodes as explained `here
+        <https://arxiv.org/abs/1605.03795>`_.
+        It can be overriden for custom initializations.
+        """
         # Virtual node
         tensor = torch.randn(self.uniform_memory.shape) * std
         random_eye = torch.randn(tensor.shape[0], tensor.shape[2]) * std
-        random_eye  = random_eye + torch.eye(tensor.shape[0], tensor.shape[2])
+        random_eye = random_eye + torch.eye(tensor.shape[0], tensor.shape[2])
         tensor[:, 0, :] = random_eye
-        
+
         self.uniform_memory.tensor = tensor
-    
+
         for node in self.left_env + self.right_env:
             node.set_tensor_from(self.uniform_memory)
-            
+
         # Output node
         eye_tensor = torch.eye(self.output_node.shape[0],
                                self.output_node.shape[2])
@@ -1220,18 +1225,18 @@ class UMPSLayer(TensorNetwork):
         """
         input_edges = list(map(lambda node: node['input'],
                                self.left_env + self.right_env))
-            
+
         super().set_data_nodes(input_edges=input_edges,
                                num_batch_edges=self._n_batches)
-        
+
         if self.left_env + self.right_env:
             self.lr_env_data = list(map(lambda node: node.neighbours('input'),
                                         self.left_env + self.right_env))
 
     def _input_contraction(self,
                            inline_input: bool = False) -> Tuple[
-                               Optional[List[Node]],
-                               Optional[List[Node]]]:
+                                                          Optional[List[Node]],
+                                                          Optional[List[Node]]]:
         """Contracts input data nodes with MPS nodes."""
         if inline_input:
             left_result = []
@@ -1246,12 +1251,12 @@ class UMPSLayer(TensorNetwork):
             if self.left_env + self.right_env:
                 stack = op.stack(self.left_env + self.right_env)
                 stack_data = op.stack(self.lr_env_data)
-                
+
                 stack['input'] ^ stack_data['feature']
-                
+
                 result = stack_data @ stack
                 result = op.unbind(result)
-                
+
                 left_result = result[:len(self.left_env)]
                 right_result = result[len(self.left_env):]
                 return left_result, right_result
@@ -1271,7 +1276,7 @@ class UMPSLayer(TensorNetwork):
             for node in nodes[1:]:
                 result_node = node @ result_node
             return result_node
-        
+
     def _contract_envs_inline(self,
                               left_env: List[Node],
                               right_env: List[Node]) -> Tuple[List[Node],
@@ -1282,7 +1287,7 @@ class UMPSLayer(TensorNetwork):
 
         if right_env:
             right_env = [self._inline_contraction(right_env, False)]
-            
+
         return left_env, right_env
 
     def _aux_pairwise(self, nodes: List[Node]) -> Tuple[List[Node],
@@ -1293,17 +1298,17 @@ class UMPSLayer(TensorNetwork):
         if length > 1:
             half_length = length // 2
             nice_length = 2 * half_length
-            
+
             even_nodes = aux_nodes[0:nice_length:2]
             odd_nodes = aux_nodes[1:nice_length:2]
             leftover = aux_nodes[nice_length:]
-            
+
             stack1 = op.stack(even_nodes)
             stack2 = op.stack(odd_nodes)
-            
+
             stack1['right'] ^ stack2['left']
             aux_nodes = stack1 @ stack2
-            
+
             aux_nodes = op.unbind(aux_nodes)
 
             return aux_nodes, leftover
@@ -1360,14 +1365,14 @@ class UMPSLayer(TensorNetwork):
         Node
         """
         left_env, right_env = self._input_contraction(inline_input)
-        
+
         if inline_mats:
             left_env_contracted, right_env_contracted = \
                 self._contract_envs_inline(left_env, right_env)
         else:
             left_env_contracted, right_env_contracted = \
                 self._pairwise_contraction(left_env, right_env)
-        
+
         result = self.output_node
         if left_env_contracted and right_env_contracted:
             result = left_env_contracted[0] @ result @ right_env_contracted[0]
@@ -1378,8 +1383,8 @@ class UMPSLayer(TensorNetwork):
         else:
             result @= result
         return result
-    
-    
+
+
 class ConvMPSLayer(MPSLayer):
     """
     Class for Matrix Product States with an extra node that is dedicated to the
@@ -1438,7 +1443,7 @@ class ConvMPSLayer(MPSLayer):
     >>> result.shape
     torch.Size([20, 10, 1, 1])
     """
-    
+
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -1449,33 +1454,33 @@ class ConvMPSLayer(MPSLayer):
                  dilation: int = 1,
                  out_position: Optional[int] = None,
                  boundary: Text = 'obc'):
-        
+
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
         elif not isinstance(kernel_size, Sequence):
             raise TypeError('`kernel_size` must be int or Sequence')
-        
+
         if isinstance(stride, int):
             stride = (stride, stride)
         elif not isinstance(stride, Sequence):
             raise TypeError('`stride` must be int or Sequence')
-        
+
         if isinstance(padding, int):
             padding = (padding, padding)
         elif not isinstance(padding, Sequence):
             raise TypeError('`padding` must be int or Sequence')
-        
+
         if isinstance(dilation, int):
             dilation = (dilation, dilation)
         elif not isinstance(dilation, Sequence):
             raise TypeError('`dilation` must be int or Sequence')
-        
+
         self._in_channels = in_channels
         self._kernel_size = kernel_size
         self._stride = stride
         self._padding = padding
         self._dilation = dilation
-        
+
         super().__init__(n_features=kernel_size[0] * kernel_size[1],
                          in_dim=in_channels,
                          out_dim=out_channels,
@@ -1483,17 +1488,17 @@ class ConvMPSLayer(MPSLayer):
                          out_position=out_position,
                          boundary=boundary,
                          n_batches=2)
-        
+
         self.unfold = nn.Unfold(kernel_size=kernel_size,
                                 stride=stride,
                                 padding=padding,
                                 dilation=dilation)
-        
+
     @property
     def in_channels(self) -> int:
         """Returns ``in_channels``. Same as ``in_dim`` in :class:`MPSLayer`."""
         return self._in_channels
-    
+
     @property
     def kernel_size(self) -> Tuple[int, int]:
         """
@@ -1501,7 +1506,7 @@ class ConvMPSLayer(MPSLayer):
         :math:`kernel\_size_0 \cdot kernel\_size_1 + 1`.
         """
         return self._kernel_size
-    
+
     @property
     def stride(self) -> Tuple[int, int]:
         """
@@ -1509,7 +1514,7 @@ class ConvMPSLayer(MPSLayer):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._stride
-    
+
     @property
     def padding(self) -> Tuple[int, int]:
         """
@@ -1517,7 +1522,7 @@ class ConvMPSLayer(MPSLayer):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._padding
-    
+
     @property
     def dilation(self) -> Tuple[int, int]:
         """
@@ -1525,7 +1530,7 @@ class ConvMPSLayer(MPSLayer):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._dilation
-    
+
     def forward(self, image, mode='flat', *args, **kwargs):
         r"""
         Overrides ``torch.nn.Module``'s forward to compute a convolution on the
@@ -1552,53 +1557,53 @@ class ConvMPSLayer(MPSLayer):
             like ``inline_input`` or ``inline_mats``.
         """
         # Input image shape: batch_size x in_channels x height x width
-        
+
         patches = self.unfold(image).transpose(1, 2)
         # batch_size x nb_windows x (in_channels * nb_pixels)
-        
+
         patches = patches.view(*patches.shape[:-1], self.in_channels, -1)
         # batch_size x nb_windows x in_channels x nb_pixels
-        
+
         patches = patches.transpose(2, 3)
         # batch_size x nb_windows x nb_pixels x in_channels
-        
+
         if mode == 'snake':
             new_patches = patches[..., :self._kernel_size[1], :]
             for i in range(1, self._kernel_size[0]):
                 if i % 2 == 0:
                     aux = patches[..., (i * self._kernel_size[1]):
-                        ((i + 1) * self._kernel_size[1]), :]
+                                       ((i + 1) * self._kernel_size[1]), :]
                 else:
                     aux = patches[...,
                         (i * self._kernel_size[1]):
                         ((i + 1) * self._kernel_size[1]), :].flip(dims=[0])
                 new_patches = torch.cat([new_patches, aux], dim=2)
-                
+
             patches = new_patches
-            
+
         elif mode != 'flat':
             raise ValueError('`mode` can only be "flat" or "snake"')
-        
+
         result = super().forward(patches, *args, **kwargs)
         # batch_size x nb_windows x out_channels
-        
+
         result = result.transpose(1, 2)
         # batch_size x out_channels x nb_windows
-        
+
         h_in = image.shape[2]
         w_in = image.shape[3]
-        
-        h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] * \
-            (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
-        w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] * \
-                    (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
-        
+
+        h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] *
+                     (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
+        w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] *
+                     (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
+
         result = result.view(*result.shape[:-1], h_out, w_out)
         # batch_size x out_channels x height_out x width_out
-        
+
         return result
-    
-    
+
+
 class ConvUMPSLayer(UMPSLayer):
     """
     Class for Uniform Matrix Product States with an extra node that is dedicated
@@ -1654,7 +1659,7 @@ class ConvUMPSLayer(UMPSLayer):
     >>> result.shape
     torch.Size([20, 10, 1, 1])
     """
-    
+
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -1664,50 +1669,50 @@ class ConvUMPSLayer(UMPSLayer):
                  padding: int = 0,
                  dilation: int = 1,
                  out_position: Optional[int] = None):
-        
+
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
         elif not isinstance(kernel_size, Sequence):
             raise TypeError('`kernel_size` must be int or Sequence')
-        
+
         if isinstance(stride, int):
             stride = (stride, stride)
         elif not isinstance(stride, Sequence):
             raise TypeError('`stride` must be int or Sequence')
-        
+
         if isinstance(padding, int):
             padding = (padding, padding)
         elif not isinstance(padding, Sequence):
             raise TypeError('`padding` must be int or Sequence')
-        
+
         if isinstance(dilation, int):
             dilation = (dilation, dilation)
         elif not isinstance(dilation, Sequence):
             raise TypeError('`dilation` must be int or Sequence')
-        
+
         self._in_channels = in_channels
         self._kernel_size = kernel_size
         self._stride = stride
         self._padding = padding
         self._dilation = dilation
-        
+
         super().__init__(n_features=kernel_size[0] * kernel_size[1],
                          in_dim=in_channels,
                          out_dim=out_channels,
                          bond_dim=bond_dim,
                          out_position=out_position,
                          n_batches=2)
-        
+
         self.unfold = nn.Unfold(kernel_size=kernel_size,
                                 stride=stride,
                                 padding=padding,
                                 dilation=dilation)
-        
+
     @property
     def in_channels(self) -> int:
         """Returns ``in_channels``. Same as ``in_dim`` in :class:`UMPSLayer`."""
         return self._in_channels
-    
+
     @property
     def kernel_size(self) -> Tuple[int, int]:
         """
@@ -1715,7 +1720,7 @@ class ConvUMPSLayer(UMPSLayer):
         :math:`kernel\_size_0 \cdot kernel\_size_1 + 1`.
         """
         return self._kernel_size
-    
+
     @property
     def stride(self) -> Tuple[int, int]:
         """
@@ -1723,7 +1728,7 @@ class ConvUMPSLayer(UMPSLayer):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._stride
-    
+
     @property
     def padding(self) -> Tuple[int, int]:
         """
@@ -1731,7 +1736,7 @@ class ConvUMPSLayer(UMPSLayer):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._padding
-    
+
     @property
     def dilation(self) -> Tuple[int, int]:
         """
@@ -1739,7 +1744,7 @@ class ConvUMPSLayer(UMPSLayer):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._dilation
-    
+
     def forward(self, image, mode='flat', *args, **kwargs):
         r"""
         Overrides ``torch.nn.Module``'s forward to compute a convolution on the
@@ -1766,48 +1771,48 @@ class ConvUMPSLayer(UMPSLayer):
             like ``inline_input`` or ``inline_mats``.
         """
         # Input image shape: batch_size x in_channels x height x width
-        
+
         patches = self.unfold(image).transpose(1, 2)
         # batch_size x nb_windows x (in_channels * nb_pixels)
-        
+
         patches = patches.view(*patches.shape[:-1], self.in_channels, -1)
         # batch_size x nb_windows x in_channels x nb_pixels
-        
+
         patches = patches.transpose(2, 3)
         # batch_size x nb_windows x nb_pixels x in_channels
-        
+
         if mode == 'snake':
             new_patches = patches[..., :self._kernel_size[1], :]
             for i in range(1, self._kernel_size[0]):
                 if i % 2 == 0:
                     aux = patches[..., (i * self._kernel_size[1]):
-                        ((i + 1) * self._kernel_size[1]), :]
+                                       ((i + 1) * self._kernel_size[1]), :]
                 else:
                     aux = patches[...,
                         (i * self._kernel_size[1]):
                         ((i + 1) * self._kernel_size[1]), :].flip(dims=[0])
                 new_patches = torch.cat([new_patches, aux], dim=2)
-                
+
             patches = new_patches
-            
+
         elif mode != 'flat':
             raise ValueError('`mode` can only be "flat" or "snake"')
-        
+
         result = super().forward(patches, *args, **kwargs)
         # batch_size x nb_windows x out_channels
-        
+
         result = result.transpose(1, 2)
         # batch_size x out_channels x nb_windows
-        
+
         h_in = image.shape[2]
         w_in = image.shape[3]
-        
-        h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] * \
-            (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
-        w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] * \
-                    (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
-        
+
+        h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] *
+                     (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
+        w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] *
+                     (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
+
         result = result.view(*result.shape[:-1], h_out, w_out)
         # batch_size x out_channels x height_out x width_out
-        
+
         return result

@@ -12,9 +12,9 @@ from typing import (List, Optional, Sequence,
 import torch
 import torch.nn as nn
 
+import tensorkrowch.operations as op
 from tensorkrowch.components import AbstractNode, Node, ParamNode
 from tensorkrowch.components import TensorNetwork
-import tensorkrowch.operations as op
 
 
 class MPS(TensorNetwork):
@@ -42,8 +42,8 @@ class MPS(TensorNetwork):
     n_features : int
         Number of input nodes.
     in_dim : int, list[int] or tuple[int]
-        Input dimension(s). If given as a sequence, its length should be
-        equal to ``n_features``.
+        Input dimension(s). Equivalent to the physical dimension. If given as a
+        sequence, its length should be equal to ``n_features``.
     bond_dim : int, list[int] or tuple[int]
         Bond dimension(s). If given as a sequence, its length should be equal
         to ``n_features`` (if ``boundary = "pbc"``) or ``n_features - 1`` (if
@@ -60,7 +60,7 @@ class MPS(TensorNetwork):
         
     Examples
     --------
-    ``MPS`` with same physical dimensions:
+    ``MPS`` with same input/physical dimensions:
     
     >>> mps = tk.models.MPS(n_features=5,
     ...                     in_dim=2,
@@ -70,7 +70,7 @@ class MPS(TensorNetwork):
     >>> result.shape
     torch.Size([20])
     
-    ``MPS`` with different physical dimensions:
+    ``MPS`` with different input/physical dimensions:
     
     >>> mps = tk.models.MPS(n_features=5,
     ...                     in_dim=list(range(2, 7)),
@@ -90,7 +90,7 @@ class MPS(TensorNetwork):
                  n_batches: int = 1) -> None:
 
         super().__init__(name='mps')
-        
+
         # boundary
         if boundary not in ['obc', 'pbc']:
             raise ValueError('`boundary` should be one of "obc" or "pbc"')
@@ -164,14 +164,14 @@ class MPS(TensorNetwork):
 
     @property
     def in_dim(self) -> List[int]:
-        """Returns physical dimension."""
+        """Returns input/physical dimension."""
         return self._in_dim
 
     @property
     def bond_dim(self) -> List[int]:
         """Returns bond dimension."""
         return self._bond_dim
-    
+
     @property
     def n_batches(self) -> int:
         """Returns number of batch edges of the ``data`` nodes."""
@@ -186,13 +186,13 @@ class MPS(TensorNetwork):
         self.left_node = None
         self.right_node = None
         self.mats_env = []
-        
+
         if self.boundary == 'obc':
             self.left_node = ParamNode(shape=(self.in_dim[0], self.bond_dim[0]),
                                        axes_names=('input', 'right'),
                                        name='left_node',
                                        network=self)
-            
+
             for i in range(self._n_features - 2):
                 node = ParamNode(shape=(self.bond_dim[i],
                                         self.in_dim[i + 1],
@@ -201,24 +201,23 @@ class MPS(TensorNetwork):
                                  name=f'mats_env_node_({i})',
                                  network=self)
                 self.mats_env.append(node)
-                
+
                 if i == 0:
                     self.left_node['right'] ^ self.mats_env[-1]['left']
                 else:
                     self.mats_env[-2]['right'] ^ self.mats_env[-1]['left']
-                    
-                
+
             self.right_node = ParamNode(shape=(self.bond_dim[-1],
                                                self.in_dim[-1]),
                                         axes_names=('left', 'input'),
                                         name='right_node',
                                         network=self)
-            
+
             if self._n_features > 2:
                 self.mats_env[-1]['right'] ^ self.right_node['left']
             else:
                 self.left_node['right'] ^ self.right_node['left']
-                
+
         else:
             for i in range(self._n_features):
                 node = ParamNode(shape=(self.bond_dim[i - 1],
@@ -228,17 +227,20 @@ class MPS(TensorNetwork):
                                  name=f'mats_env_node_({i})',
                                  network=self)
                 self.mats_env.append(node)
-                
+
                 if i == 0:
                     periodic_edge = self.mats_env[-1]['left']
                 else:
                     self.mats_env[-2]['right'] ^ self.mats_env[-1]['left']
-                
+
                 if i == self._n_features - 1:
                     self.mats_env[-1]['right'] ^ periodic_edge
 
     def initialize(self, std: float = 1e-9) -> None:
-        """Initializes all the nodes."""
+        """
+        Initializes all the nodes as explained `here <https://arxiv.org/abs/1605.03795>`_.
+        It can be overriden for custom initializations.
+        """
         # Left node
         if self.left_node is not None:
             tensor = torch.randn(self.left_node.shape) * std
@@ -246,7 +248,7 @@ class MPS(TensorNetwork):
             aux[0] = 1.
             tensor[0, :] = aux
             self.left_node.tensor = tensor
-        
+
         # Right node
         if self.right_node is not None:
             tensor = torch.randn(self.right_node.shape) * std
@@ -254,7 +256,7 @@ class MPS(TensorNetwork):
             aux[0] = 1.
             tensor[:, 0] = aux
             self.right_node.tensor = tensor
-        
+
         # Mats env
         for node in self.mats_env:
             tensor = torch.randn(node.shape) * std
@@ -264,8 +266,8 @@ class MPS(TensorNetwork):
 
     def set_data_nodes(self) -> None:
         """
-        Creates ``data`` nodes and connects each of them to the physical edge of
-        each input node.
+        Creates ``data`` nodes and connects each of them to the input/physical
+        edge of each input node.
         """
         input_edges = []
         if self.left_node is not None:
@@ -273,32 +275,32 @@ class MPS(TensorNetwork):
         input_edges += list(map(lambda node: node['input'], self.mats_env))
         if self.right_node is not None:
             input_edges.append(self.right_node['input'])
-            
+
         super().set_data_nodes(input_edges=input_edges,
                                num_batch_edges=self.n_batches)
-        
+
         if self.mats_env:
             self.mats_env_data = list(map(lambda node: node.neighbours('input'),
                                           self.mats_env))
 
     def _input_contraction(self,
                            inline_input: bool = False) -> Tuple[
-                               Optional[List[Node]],
-                               Optional[List[Node]]]:
+        Optional[List[Node]],
+        Optional[List[Node]]]:
         """Contracts input data nodes with MPS nodes."""
         if inline_input:
-            mats_result = []
-            for node in self.mats_env:
-                mats_result.append(node @ node.neighbours('input'))
+            mats_result = list(map(lambda node: node @ node.neighbours('input'),
+                                   self.mats_env))
+            
             return mats_result
 
         else:
             if self.mats_env:
                 stack = op.stack(self.mats_env)
                 stack_data = op.stack(self.mats_env_data)
-                
+
                 stack['input'] ^ stack_data['feature']
-                
+
                 result = stack_data @ stack
                 mats_result = op.unbind(result)
                 return mats_result
@@ -312,7 +314,7 @@ class MPS(TensorNetwork):
         for node in nodes[1:]:
             result_node @= node
         return result_node
-        
+
     def _contract_envs_inline(self, mats_env: List[Node]) -> Node:
         """Contracts the left and right environments inline."""
         if self.boundary == 'obc':
@@ -323,27 +325,27 @@ class MPS(TensorNetwork):
             contract_lst = mats_env
         else:
             return mats_env[0] @ mats_env[0]
-        
+
         return self._inline_contraction(contract_lst)
 
     def _aux_pairwise(self, nodes: List[Node]) -> Tuple[List[Node],
-                                                        List[Node]]:
+    List[Node]]:
         """Contracts a sequence of MPS nodes (matrices) pairwise."""
         length = len(nodes)
         aux_nodes = nodes
         if length > 1:
             half_length = length // 2
             nice_length = 2 * half_length
-            
+
             even_nodes = aux_nodes[0:nice_length:2]
             odd_nodes = aux_nodes[1:nice_length:2]
             leftover = aux_nodes[nice_length:]
-            
+
             stack1 = op.stack(even_nodes)
             stack2 = op.stack(odd_nodes)
-            
+
             stack1['right'] ^ stack2['left']
-            
+
             aux_nodes = stack1 @ stack2
             aux_nodes = op.unbind(aux_nodes)
 
@@ -389,14 +391,14 @@ class MPS(TensorNetwork):
         Node
         """
         mats_env = self._input_contraction(inline_input)
-        
+
         if inline_mats:
             result = self._contract_envs_inline(mats_env)
         else:
             result = self._pairwise_contraction(mats_env)
-        
+
         return result
-    
+
     def canonicalize(self,
                      oc: Optional[int] = None,
                      mode: Text = 'svd',
@@ -440,20 +442,20 @@ class MPS(TensorNetwork):
         [2, 3, 2]
         """
         self.reset()
-        
+
         prev_auto_stack = self._auto_stack
         self.auto_stack = False
-        
+
         if oc is None:
             oc = self._n_features - 1
         elif oc >= self._n_features:
             raise ValueError(f'Orthogonality center position `oc` should be '
                              f'between 0 and {self._n_features - 1}')
-        
+
         nodes = self.mats_env
         if self.boundary == 'obc':
             nodes = [self.left_node] + nodes + [self.right_node]
-        
+
         for i in range(oc):
             if mode == 'svd':
                 result1, result2 = nodes[i]['right'].svd_(
@@ -471,11 +473,11 @@ class MPS(TensorNetwork):
                 result1, result2 = nodes[i]['right'].qr_()
             else:
                 raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
-            
+
             result1 = result1.parameterize()
             nodes[i] = result1
             nodes[i + 1] = result2
-            
+
         for i in range(len(nodes) - 1, oc, -1):
             if mode == 'svd':
                 result1, result2 = nodes[i]['left'].svd_(
@@ -493,68 +495,68 @@ class MPS(TensorNetwork):
                 result1, result2 = nodes[i]['left'].rq_()
             else:
                 raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
-            
+
             result2 = result2.parameterize()
             nodes[i] = result2
             nodes[i - 1] = result1
-            
+
         nodes[oc] = nodes[oc].parameterize()
-        
+
         if self.boundary == 'obc':
             self.left_node = nodes[0]
             self.mats_env = nodes[1:-1]
             self.right_node = nodes[-1]
         else:
             self.mats_env = nodes
-        
+
         bond_dim = []
         for node in nodes:
             if 'right' in node.axes_names:
                 bond_dim.append(node['right'].size())
         self._bond_dim = bond_dim
-        
+
         self.auto_stack = prev_auto_stack
-        
+
     def _project_to_bond_dim(self,
-                           nodes: List[AbstractNode],
-                           bond_dim: int,
-                           side: Text = 'right'):
+                             nodes: List[AbstractNode],
+                             bond_dim: int,
+                             side: Text = 'right'):
         """Projects all nodes into a space of dimension ``bond_dim``."""
         device = nodes[0].tensor.device
-        
+
         if side == 'left':
             nodes.reverse()
         elif side != 'right':
             raise ValueError('`side` can only be \'left\' or \'right\'')
-        
+
         for node in nodes:
             if not node['input'].is_dangling():
                 self.delete_node(node.neighbours('input'))
-        
+
         line_mat_nodes = []
         in_dim_lst = []
         proj_mat_node = None
         for j in range(len(nodes)):
             in_dim_lst.append(nodes[j]['input'].size())
             if bond_dim <= torch.tensor(in_dim_lst).prod().item():
-                proj_mat_node = Node(shape=(*in_dim_lst,bond_dim),
+                proj_mat_node = Node(shape=(*in_dim_lst, bond_dim),
                                      axes_names=(*(['input'] * len(in_dim_lst)),
                                                  'bond_dim'),
                                      name=f'proj_mat_node_{side}',
                                      network=self)
-                
+
                 proj_mat_node.tensor = torch.eye(
                     torch.tensor(in_dim_lst).prod().int().item(),
                     bond_dim).view(*in_dim_lst, -1).to(device)
                 for k in range(j + 1):
                     nodes[k]['input'] ^ proj_mat_node[k]
-                    
+
                 aux_result = proj_mat_node
                 for k in range(j + 1):
                     aux_result @= nodes[k]
                 line_mat_nodes.append(aux_result)  # bond_dim x left x right
                 break
-            
+
         if proj_mat_node is None:
             bond_dim = torch.tensor(in_dim_lst).prod().int().item()
             proj_mat_node = Node(shape=(*in_dim_lst, bond_dim),
@@ -562,18 +564,18 @@ class MPS(TensorNetwork):
                                              'bond_dim'),
                                  name=f'proj_mat_node_{side}',
                                  network=self)
-            
+
             proj_mat_node.tensor = torch.eye(
                 torch.tensor(in_dim_lst).prod().int().item(),
                 bond_dim).view(*in_dim_lst, -1).to(device)
             for k in range(j + 1):
                 nodes[k]['input'] ^ proj_mat_node[k]
-                
+
             aux_result = proj_mat_node
             for k in range(j + 1):
                 aux_result @= nodes[k]
             line_mat_nodes.append(aux_result)
-            
+
         k = j + 1
         while k < len(nodes):
             in_dim = nodes[k]['input'].size()
@@ -581,20 +583,20 @@ class MPS(TensorNetwork):
                                  axes_names=('input',),
                                  name=f'proj_vec_node_{side}_({k})',
                                  network=self)
-            
+
             proj_vec_node.tensor = torch.eye(in_dim, 1).squeeze().to(device)
             nodes[k]['input'] ^ proj_vec_node['input']
             line_mat_nodes.append(proj_vec_node @ nodes[k])
-            
+
             k += 1
-        
+
         line_mat_nodes.reverse()
         result = line_mat_nodes[0]
         for node in line_mat_nodes[1:]:
             result @= node
-            
+
         return result  # bond_dim x left/right
-    
+
     def _aux_canonicalize_univocal(self,
                                    nodes: List[AbstractNode],
                                    idx: int,
@@ -602,39 +604,39 @@ class MPS(TensorNetwork):
         """Returns canonicalize version of the tensor at site ``idx``."""
         L = nodes[idx]  # left x input x right
         left_nodeC = None
-        
+
         if idx > 0:
             # bond_dim[-1] x input  x right  /  bond_dim[-1] x input
             L = left_nodeL @ L
-        
+
         L = L.tensor
-        
+
         if idx < self._n_features - 1:
             bond_dim = self._bond_dim[idx]
-            
+
             prod_phys_left = 1
             for i in range(idx + 1):
                 prod_phys_left *= self.in_dim[i]
             bond_dim = min(bond_dim, prod_phys_left)
-            
+
             prod_phys_right = 1
             for i in range(idx + 1, self._n_features):
                 prod_phys_right *= self.in_dim[i]
             bond_dim = min(bond_dim, prod_phys_right)
-            
+
             if bond_dim < self._bond_dim[idx]:
                 self._bond_dim[idx] = bond_dim
-            
+
             left_nodeC = self._project_to_bond_dim(nodes=nodes[:idx + 1],
-                                                 bond_dim=bond_dim,
-                                                 side='left')  # bond_dim x right
+                                                   bond_dim=bond_dim,
+                                                   side='left')  # bond_dim x right
             right_node = self._project_to_bond_dim(nodes=nodes[idx + 1:],
-                                                 bond_dim=bond_dim,
-                                                 side='right')  # bond_dim x left
-            
+                                                   bond_dim=bond_dim,
+                                                   side='right')  # bond_dim x left
+
             C = left_nodeC @ right_node  # bond_dim x bond_dim
             C = torch.linalg.inv(C.tensor)
-            
+
             if idx == 0:
                 L @= right_node.tensor.t()  # input x bond_dim
                 L @= C
@@ -644,9 +646,9 @@ class MPS(TensorNetwork):
                 L = (L.view(-1, L.shape[-1]) @ right_node.tensor.t())
                 L @= C
                 L = L.view(*shape_L[:-1], right_node.shape[0])
-            
+
         return L, left_nodeC
-        
+
     def canonicalize_univocal(self):
         """
         Turns MPS into the univocal canonical form defined `here
@@ -655,17 +657,17 @@ class MPS(TensorNetwork):
         if self._boundary != 'obc':
             raise ValueError('`canonicalize_univocal` can only be used if '
                              'boundary is `obc`')
-            
+
         self.reset()
-        
+
         prev_auto_stack = self._auto_stack
         self.auto_stack = False
-        
+
         nodes = [self.left_node] + self.mats_env + [self.right_node]
         for node in nodes:
             if not node['input'].is_dangling():
                 node['input'].disconnect()
-        
+
         new_tensors = []
         left_nodeC = None
         for i in range(self._n_features):
@@ -674,20 +676,20 @@ class MPS(TensorNetwork):
                 idx=i,
                 left_nodeL=left_nodeC)
             new_tensors.append(tensor)
-        
+
         for i, (node, tensor) in enumerate(zip(nodes, new_tensors)):
             if i < self._n_features - 1:
                 if self._bond_dim[i] < node['right'].size():
                     node['right'].change_size(self._bond_dim[i])
             node.tensor = tensor
-            
+
             if not node['input'].is_dangling():
                 self.delete_node(node.neighbours('input'))
         self.reset()
-            
+
         for node, data_node in zip(nodes, self._data_nodes.values()):
             node['input'] ^ data_node['feature']
-            
+
         self.auto_stack = prev_auto_stack
 
 
@@ -756,7 +758,7 @@ class UMPS(TensorNetwork):
             self._bond_dim = bond_dim
         else:
             raise TypeError('`bond_dim` should be int type')
-        
+
         # n_batches
         if not isinstance(n_batches, int):
             raise TypeError('`n_batches should be int type')
@@ -773,14 +775,14 @@ class UMPS(TensorNetwork):
 
     @property
     def in_dim(self) -> int:
-        """Returns input dimension."""
+        """Returns input/physical dimension."""
         return self._in_dim
 
     @property
     def bond_dim(self) -> int:
         """Returns bond dimension."""
         return self._bond_dim
-    
+
     @property
     def n_batches(self) -> int:
         """Returns number of batch edges of the ``data`` nodes."""
@@ -791,26 +793,26 @@ class UMPS(TensorNetwork):
         if self._leaf_nodes:
             raise ValueError('Cannot create MPS nodes if the MPS already has '
                              'nodes')
-        
+
         self.left_node = None
         self.right_node = None
         self.mats_env = []
-        
+
         for i in range(self._n_features):
             node = ParamNode(shape=(self.bond_dim, self.in_dim, self.bond_dim),
                              axes_names=('left', 'input', 'right'),
                              name=f'mats_env_node_({i})',
                              network=self)
             self.mats_env.append(node)
-            
+
             if i == 0:
                 periodic_edge = self.mats_env[-1]['left']
             else:
                 self.mats_env[-2]['right'] ^ self.mats_env[-1]['left']
-            
+
             if i == self._n_features - 1:
                 self.mats_env[-1]['right'] ^ periodic_edge
-                        
+
         # Virtual node
         uniform_memory = ParamNode(shape=(self.bond_dim, self.in_dim, self.bond_dim),
                                    axes_names=('left', 'input', 'right'),
@@ -820,22 +822,26 @@ class UMPS(TensorNetwork):
         self.uniform_memory = uniform_memory
 
     def initialize(self, std: float = 1e-9) -> None:
-        """Initializes output and uniform nodes."""
+        """
+        Initializes output and uniform nodes as explained `here
+        <https://arxiv.org/abs/1605.03795>`_.
+        It can be overriden for custom initializations.
+        """
         # Virtual node
         tensor = torch.randn(self.uniform_memory.shape) * std
         random_eye = torch.randn(tensor.shape[0], tensor.shape[2]) * std
-        random_eye  = random_eye + torch.eye(tensor.shape[0], tensor.shape[2])
+        random_eye = random_eye + torch.eye(tensor.shape[0], tensor.shape[2])
         tensor[:, 0, :] = random_eye
-        
+
         self.uniform_memory.tensor = tensor
-    
+
         for node in self.mats_env:
             node.set_tensor_from(self.uniform_memory)
 
     def set_data_nodes(self) -> None:
         """
-        Creates ``data`` nodes and connects each of them to the physical edge of
-        each input node.
+        Creates ``data`` nodes and connects each of them to the input/physical
+        edge of each input node.
         """
         input_edges = []
         if self.left_node is not None:
@@ -843,18 +849,18 @@ class UMPS(TensorNetwork):
         input_edges += list(map(lambda node: node['input'], self.mats_env))
         if self.right_node is not None:
             input_edges.append(self.right_node['input'])
-            
+
         super().set_data_nodes(input_edges=input_edges,
                                num_batch_edges=self._n_batches)
-        
+
         if self.mats_env:
             self.mats_env_data = list(map(lambda node: node.neighbours('input'),
                                           self.mats_env))
 
     def _input_contraction(self,
                            inline_input: bool = False) -> Tuple[
-                               Optional[List[Node]],
-                               Optional[List[Node]]]:
+        Optional[List[Node]],
+        Optional[List[Node]]]:
         """Contracts input data nodes with MPS nodes."""
         if inline_input:
             mats_result = []
@@ -866,9 +872,9 @@ class UMPS(TensorNetwork):
             if self.mats_env:
                 stack = op.stack(self.mats_env)
                 stack_data = op.stack(self.mats_env_data)
-                
+
                 stack['input'] ^ stack_data['feature']
-                
+
                 result = stack_data @ stack
                 mats_result = op.unbind(result)
                 return mats_result
@@ -882,18 +888,18 @@ class UMPS(TensorNetwork):
         for node in nodes[1:]:
             result_node @= node
         return result_node
-        
+
     def _contract_envs_inline(self, mats_env: List[Node]) -> Node:
         """Contracts the left and right environments inline."""
         if len(mats_env) > 1:
             contract_lst = mats_env
         else:
             return mats_env[0] @ mats_env[0]
-        
+
         return self._inline_contraction(contract_lst)
 
     def _aux_pairwise(self, nodes: List[Node]) -> Tuple[List[Node],
-                                                        List[Node]]:
+    List[Node]]:
         """Contracts a sequence of MPS nodes (matrices) pairwise."""
         length = len(nodes)
         aux_nodes = nodes
@@ -907,9 +913,9 @@ class UMPS(TensorNetwork):
 
             stack1 = op.stack(even_nodes)
             stack2 = op.stack(odd_nodes)
-            
+
             stack1['right'] ^ stack2['left']
-            
+
             aux_nodes = stack1 @ stack2
             aux_nodes = op.unbind(aux_nodes)
 
@@ -955,12 +961,12 @@ class UMPS(TensorNetwork):
         Node
         """
         mats_env = self._input_contraction(inline_input)
-        
+
         if inline_mats:
             result = self._contract_envs_inline(mats_env)
         else:
             result = self._pairwise_contraction(mats_env)
-        
+
         return result
 
 
@@ -1015,7 +1021,7 @@ class ConvMPS(MPS):
     >>> print(result.shape)
     torch.Size([20, 1, 1])
     """
-    
+
     def __init__(self,
                  in_channels: int,
                  bond_dim: Union[int, Sequence[int]],
@@ -1024,49 +1030,49 @@ class ConvMPS(MPS):
                  padding: int = 0,
                  dilation: int = 1,
                  boundary: Text = 'obc'):
-        
+
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
         elif not isinstance(kernel_size, Sequence):
             raise TypeError('`kernel_size` must be int or Sequence')
-        
+
         if isinstance(stride, int):
             stride = (stride, stride)
         elif not isinstance(stride, Sequence):
             raise TypeError('`stride` must be int or Sequence')
-        
+
         if isinstance(padding, int):
             padding = (padding, padding)
         elif not isinstance(padding, Sequence):
             raise TypeError('`padding` must be int or Sequence')
-        
+
         if isinstance(dilation, int):
             dilation = (dilation, dilation)
         elif not isinstance(dilation, Sequence):
             raise TypeError('`dilation` must be int or Sequence')
-        
+
         self._in_channels = in_channels
         self._kernel_size = kernel_size
         self._stride = stride
         self._padding = padding
         self._dilation = dilation
-        
+
         super().__init__(n_features=kernel_size[0] * kernel_size[1],
                          in_dim=in_channels,
                          bond_dim=bond_dim,
                          boundary=boundary,
                          n_batches=2)
-        
+
         self.unfold = nn.Unfold(kernel_size=kernel_size,
                                 stride=stride,
                                 padding=padding,
                                 dilation=dilation)
-        
+
     @property
     def in_channels(self) -> int:
         """Returns ``in_channels``. Same as ``in_dim`` in :class:`MPS`."""
         return self._in_channels
-    
+
     @property
     def kernel_size(self) -> Tuple[int, int]:
         """
@@ -1074,7 +1080,7 @@ class ConvMPS(MPS):
         :math:`kernel\_size_0 \cdot kernel\_size_1`.
         """
         return self._kernel_size
-    
+
     @property
     def stride(self) -> Tuple[int, int]:
         """
@@ -1082,7 +1088,7 @@ class ConvMPS(MPS):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._stride
-    
+
     @property
     def padding(self) -> Tuple[int, int]:
         """
@@ -1090,7 +1096,7 @@ class ConvMPS(MPS):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._padding
-    
+
     @property
     def dilation(self) -> Tuple[int, int]:
         """
@@ -1098,7 +1104,7 @@ class ConvMPS(MPS):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._dilation
-    
+
     def forward(self, image, mode='flat', *args, **kwargs):
         r"""
         Overrides ``torch.nn.Module``'s forward to compute a convolution on the
@@ -1125,50 +1131,50 @@ class ConvMPS(MPS):
             like ``inline_input`` or ``inline_mats``.
         """
         # Input image shape: batch_size x in_channels x height x width
-        
+
         patches = self.unfold(image).transpose(1, 2)
         # batch_size x nb_windows x (in_channels * nb_pixels)
-        
+
         patches = patches.view(*patches.shape[:-1], self.in_channels, -1)
         # batch_size x nb_windows x in_channels x nb_pixels
-        
+
         patches = patches.transpose(2, 3)
         # batch_size x nb_windows x nb_pixels x in_channels
-        
+
         if mode == 'snake':
             new_patches = patches[..., :self._kernel_size[1], :]
             for i in range(1, self._kernel_size[0]):
                 if i % 2 == 0:
                     aux = patches[..., (i * self._kernel_size[1]):
-                        ((i + 1) * self._kernel_size[1]), :]
+                                       ((i + 1) * self._kernel_size[1]), :]
                 else:
                     aux = patches[...,
                         (i * self._kernel_size[1]):
                         ((i + 1) * self._kernel_size[1]), :].flip(dims=[0])
                 new_patches = torch.cat([new_patches, aux], dim=2)
-                
+
             patches = new_patches
-            
+
         elif mode != 'flat':
             raise ValueError('`mode` can only be "flat" or "snake"')
-        
+
         result = super().forward(patches, *args, **kwargs)
         # batch_size x nb_windows
-        
+
         h_in = image.shape[2]
         w_in = image.shape[3]
-        
-        h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] * \
-            (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
-        w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] * \
-                    (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
-        
+
+        h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] *
+                     (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
+        w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] *
+                     (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
+
         result = result.view(*result.shape[:-1], h_out, w_out)
         # batch_size x height_out x width_out
-        
+
         return result
-    
-    
+
+
 class ConvUMPS(UMPS):
     """
     Class for Uniform Matrix Product States, where all nodes are input nodes,
@@ -1217,56 +1223,56 @@ class ConvUMPS(UMPS):
     >>> print(result.shape)
     torch.Size([20, 1, 1])
     """
-    
+
     def __init__(self,
-                    in_channels: int,
-                    bond_dim: int,
-                    kernel_size: Union[int, Sequence],
-                    stride: int = 1,
-                    padding: int = 0,
-                    dilation: int = 1):
-        
+                 in_channels: int,
+                 bond_dim: int,
+                 kernel_size: Union[int, Sequence],
+                 stride: int = 1,
+                 padding: int = 0,
+                 dilation: int = 1):
+
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
         elif not isinstance(kernel_size, Sequence):
             raise TypeError('`kernel_size` must be int or Sequence')
-        
+
         if isinstance(stride, int):
             stride = (stride, stride)
         elif not isinstance(stride, Sequence):
             raise TypeError('`stride` must be int or Sequence')
-        
+
         if isinstance(padding, int):
             padding = (padding, padding)
         elif not isinstance(padding, Sequence):
             raise TypeError('`padding` must be int or Sequence')
-        
+
         if isinstance(dilation, int):
             dilation = (dilation, dilation)
         elif not isinstance(dilation, Sequence):
             raise TypeError('`dilation` must be int or Sequence')
-        
+
         self._in_channels = in_channels
         self._kernel_size = kernel_size
         self._stride = stride
         self._padding = padding
         self._dilation = dilation
-        
+
         super().__init__(n_features=kernel_size[0] * kernel_size[1],
                          in_dim=in_channels,
                          bond_dim=bond_dim,
                          n_batches=2)
-        
+
         self.unfold = nn.Unfold(kernel_size=kernel_size,
                                 stride=stride,
                                 padding=padding,
                                 dilation=dilation)
-        
+
     @property
     def in_channels(self) -> int:
         """Returns ``in_channels``. Same as ``in_dim`` in :class:`UMPS`."""
         return self._in_channels
-    
+
     @property
     def kernel_size(self) -> Tuple[int, int]:
         """
@@ -1274,7 +1280,7 @@ class ConvUMPS(UMPS):
         :math:`kernel\_size_0 \cdot kernel\_size_1`.
         """
         return self._kernel_size
-    
+
     @property
     def stride(self) -> Tuple[int, int]:
         """
@@ -1282,7 +1288,7 @@ class ConvUMPS(UMPS):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._stride
-    
+
     @property
     def padding(self) -> Tuple[int, int]:
         """
@@ -1290,7 +1296,7 @@ class ConvUMPS(UMPS):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._padding
-    
+
     @property
     def dilation(self) -> Tuple[int, int]:
         """
@@ -1298,7 +1304,7 @@ class ConvUMPS(UMPS):
         <https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold>`_.
         """
         return self._dilation
-    
+
     def forward(self, image, mode='flat', *args, **kwargs):
         r"""
         Overrides ``torch.nn.Module``'s forward to compute a convolution on the
@@ -1325,45 +1331,45 @@ class ConvUMPS(UMPS):
             like ``inline_input`` or ``inline_mats``.
         """
         # Input image shape: batch_size x in_channels x height x width
-        
+
         patches = self.unfold(image).transpose(1, 2)
         # batch_size x nb_windows x (in_channels * nb_pixels)
-        
+
         patches = patches.view(*patches.shape[:-1], self.in_channels, -1)
         # batch_size x nb_windows x in_channels x nb_pixels
-        
+
         patches = patches.transpose(2, 3)
         # batch_size x nb_windows x nb_pixels x in_channels
-        
+
         if mode == 'snake':
             new_patches = patches[..., :self._kernel_size[1], :]
             for i in range(1, self._kernel_size[0]):
                 if i % 2 == 0:
                     aux = patches[..., (i * self._kernel_size[1]):
-                        ((i + 1) * self._kernel_size[1]), :]
+                                       ((i + 1) * self._kernel_size[1]), :]
                 else:
                     aux = patches[...,
                         (i * self._kernel_size[1]):
                         ((i + 1) * self._kernel_size[1]), :].flip(dims=[0])
                 new_patches = torch.cat([new_patches, aux], dim=2)
-                
+
             patches = new_patches
-            
+
         elif mode != 'flat':
             raise ValueError('`mode` can only be "flat" or "snake"')
-        
+
         result = super().forward(patches, *args, **kwargs)
         # batch_size x nb_windows
-        
+
         h_in = image.shape[2]
         w_in = image.shape[3]
-        
-        h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] * \
-            (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
-        w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] * \
-                    (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
-        
+
+        h_out = int((h_in + 2 * self.padding[0] - self.dilation[0] *
+                     (self.kernel_size[0] - 1) - 1) / self.stride[0] + 1)
+        w_out = int((w_in + 2 * self.padding[1] - self.dilation[1] *
+                     (self.kernel_size[1] - 1) - 1) / self.stride[1] + 1)
+
         result = result.view(*result.shape[:-1], h_out, w_out)
         # batch_size x height_out x width_out
-        
+
         return result

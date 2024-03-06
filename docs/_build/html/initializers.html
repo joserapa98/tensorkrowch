@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Initializers &#8212; TensorKrowch 1.0.0 documentation</title>
+    <title>Initializers &#8212; TensorKrowch 1.0.1 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -34,9 +34,7 @@
     <script src="_static/clipboard.min.js"></script>
     <script src="_static/copybutton.js"></script>
     <script src="_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
-    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="shortcut icon" href="_static/tensorkrowch_favicon_light.svg"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -431,9 +429,9 @@ title="Print to PDF"
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>]</em><em>, </em><em>torch.Size</em>) – Node’s shape, that is, the shape of its tensor.</p></li>
-<li><p><strong>axes_names</strong> (<em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – Sequence of names for each of the node’s axes. Names are used to access
-the edge that is attached to the node in a certain axis. Hence they
+<li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>] or </em><em>torch.Size</em>) – Node’s shape, that is, the shape of its tensor.</p></li>
+<li><p><strong>axes_names</strong> (<em>list</em><em>[</em><em>str</em><em>] or </em><em>tuple</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – Sequence of names for each of the node’s axes. Names are used to access
+the edge that is attached to the node in a certain axis. Hence, they
 should be all distinct.</p></li>
 <li><p><strong>name</strong> (<em>str</em><em>, </em><em>optional</em>) – Node’s name, used to access the node from de <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>
 where it belongs. It cannot contain blank spaces.</p></li>
@@ -460,9 +458,9 @@ network, will be created to contain the node.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>]</em><em>, </em><em>torch.Size</em>) – Node’s shape, that is, the shape of its tensor.</p></li>
-<li><p><strong>axes_names</strong> (<em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – Sequence of names for each of the node’s axes. Names are used to access
-the edge that is attached to the node in a certain axis. Hence they
+<li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>] or </em><em>torch.Size</em>) – Node’s shape, that is, the shape of its tensor.</p></li>
+<li><p><strong>axes_names</strong> (<em>list</em><em>[</em><em>str</em><em>] or </em><em>tuple</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – Sequence of names for each of the node’s axes. Names are used to access
+the edge that is attached to the node in a certain axis. Hence, they
 should be all distinct.</p></li>
 <li><p><strong>name</strong> (<em>str</em><em>, </em><em>optional</em>) – Node’s name, used to access the node from de <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>
 where it belongs. It cannot contain blank spaces.</p></li>
@@ -489,9 +487,9 @@ network, will be created to contain the node.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>]</em><em>, </em><em>torch.Size</em>) – Node’s shape, that is, the shape of its tensor.</p></li>
-<li><p><strong>axes_names</strong> (<em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – Sequence of names for each of the node’s axes. Names are used to access
-the edge that is attached to the node in a certain axis. Hence they
+<li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>] or </em><em>torch.Size</em>) – Node’s shape, that is, the shape of its tensor.</p></li>
+<li><p><strong>axes_names</strong> (<em>list</em><em>[</em><em>str</em><em>] or </em><em>tuple</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – Sequence of names for each of the node’s axes. Names are used to access
+the edge that is attached to the node in a certain axis. Hence, they
 should be all distinct.</p></li>
 <li><p><strong>name</strong> (<em>str</em><em>, </em><em>optional</em>) – Node’s name, used to access the node from de <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>
 where it belongs. It cannot contain blank spaces.</p></li>
@@ -521,9 +519,9 @@ filled with ones.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>]</em><em>, </em><em>torch.Size</em>) – Node’s shape, that is, the shape of its tensor.</p></li>
-<li><p><strong>axes_names</strong> (<em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – Sequence of names for each of the node’s axes. Names are used to access
-the edge that is attached to the node in a certain axis. Hence they
+<li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>] or </em><em>torch.Size</em>) – Node’s shape, that is, the shape of its tensor.</p></li>
+<li><p><strong>axes_names</strong> (<em>list</em><em>[</em><em>str</em><em>] or </em><em>tuple</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – Sequence of names for each of the node’s axes. Names are used to access
+the edge that is attached to the node in a certain axis. Hence, they
 should be all distinct.</p></li>
 <li><p><strong>name</strong> (<em>str</em><em>, </em><em>optional</em>) – Node’s name, used to access the node from de <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>
 where it belongs. It cannot contain blank spaces.</p></li>
@@ -551,9 +549,9 @@ a uniform distribution <span class="math notranslate nohighlight">\(U(low, high)
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>]</em><em>, </em><em>torch.Size</em>) – Node’s shape, that is, the shape of its tensor.</p></li>
-<li><p><strong>axes_names</strong> (<em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – Sequence of names for each of the node’s axes. Names are used to access
-the edge that is attached to the node in a certain axis. Hence they
+<li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>] or </em><em>torch.Size</em>) – Node’s shape, that is, the shape of its tensor.</p></li>
+<li><p><strong>axes_names</strong> (<em>list</em><em>[</em><em>str</em><em>] or </em><em>tuple</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – Sequence of names for each of the node’s axes. Names are used to access
+the edge that is attached to the node in a certain axis. Hence, they
 should be all distinct.</p></li>
 <li><p><strong>name</strong> (<em>str</em><em>, </em><em>optional</em>) – Node’s name, used to access the node from de <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>
 where it belongs. It cannot contain blank spaces.</p></li>
@@ -583,9 +581,9 @@ a normal distribution <span class="math notranslate nohighlight">\(N(mean, std)\
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>]</em><em>, </em><em>torch.Size</em>) – Node’s shape, that is, the shape of its tensor.</p></li>
-<li><p><strong>axes_names</strong> (<em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – Sequence of names for each of the node’s axes. Names are used to access
-the edge that is attached to the node in a certain axis. Hence they
+<li><p><strong>shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>] or </em><em>torch.Size</em>) – Node’s shape, that is, the shape of its tensor.</p></li>
+<li><p><strong>axes_names</strong> (<em>list</em><em>[</em><em>str</em><em>] or </em><em>tuple</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – Sequence of names for each of the node’s axes. Names are used to access
+the edge that is attached to the node in a certain axis. Hence, they
 should be all distinct.</p></li>
 <li><p><strong>name</strong> (<em>str</em><em>, </em><em>optional</em>) – Node’s name, used to access the node from de <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>
 where it belongs. It cannot contain blank spaces.</p></li>

@@ -22,9 +22,14 @@ copyright = '2023, José Ramón Pareja Monturiol'
 author = 'José Ramón Pareja Monturiol'
 
 # The full version, including alpha/beta/rc tags
-with open('../tensorkrowch/_version.py') as f:
-    exec(f.read())
-    release = __version__
+with open('../tensorkrowch/__init__.py') as f:
+    for line in f.read().splitlines():
+        if line.startswith('__version__'):
+            delim = '"' if '"' in line else "'"
+            __version__ = line.split(delim)[1]
+            break
+
+release = __version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -40,7 +45,6 @@ extensions = [
     'sphinx.ext.githubpages',
     'sphinx.ext.mathjax',
     'sphinx_copybutton',
-    'nbsphinx',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

@@ -566,7 +566,7 @@ class TestMPSLayer:
 
     def test_check_grad(self):
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        
+
         mps = tk.models.MPSLayer(n_features=1,
                                  in_dim=2,
                                  out_dim=2,

@@ -21,7 +21,7 @@ class TestTree:
         data = torch.randn(100, 12, 5)
 
         tree = tk.models.Tree(sites_per_layer=[6, 2, 1],
-                       bond_dim=[[5, 5, 4], [4, 4, 4, 3], [3, 3, 2]])
+                              bond_dim=[[5, 5, 4], [4, 4, 4, 3], [3, 3, 2]])
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -67,7 +67,7 @@ class TestTree:
         data = torch.randn(100, 1, 5)
 
         tree = tk.models.Tree(sites_per_layer=[1, 1, 1],
-                       bond_dim=[[5, 4], [4, 3], [3, 2]])
+                              bond_dim=[[5, 4], [4, 3], [3, 2]])
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -113,7 +113,7 @@ class TestTree:
         data = torch.randn(100, 3, 5)
 
         tree = tk.models.Tree(sites_per_layer=[1],
-                       bond_dim=[[5, 5, 5, 2]])
+                              bond_dim=[[5, 5, 5, 2]])
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -162,7 +162,7 @@ class TestUTree:
         data = torch.randn(100, 8, 4)
 
         tree = tk.models.UTree(sites_per_layer=[4, 2, 1],
-                        bond_dim=[4, 4, 4])
+                               bond_dim=[4, 4, 4])
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -185,7 +185,7 @@ class TestUTree:
         data = torch.randn(100, 1, 4)
 
         tree = tk.models.UTree(sites_per_layer=[1, 1, 1],
-                        bond_dim=[4, 4])
+                               bond_dim=[4, 4])
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -211,7 +211,7 @@ class TestUTree:
         # different from input edges' dimension, otherwise it's not
         # possible
         tree = tk.models.UTree(sites_per_layer=[1],
-                        bond_dim=[5, 5, 5, 2])
+                               bond_dim=[5, 5, 5, 2])
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -238,8 +238,8 @@ class TestConvTree:
         in_channels = 2
 
         tree = tk.models.ConvTree(sites_per_layer=[4, 2, 1],
-                           bond_dim=[[in_channels, 4], [4, 4, 3], [3, 3, 2]],
-                           kernel_size=2)
+                                  bond_dim=[[in_channels, 4], [4, 4, 3], [3, 3, 2]],
+                                  kernel_size=2)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -286,8 +286,8 @@ class TestConvTree:
         in_channels = 2
 
         tree = tk.models.ConvTree(sites_per_layer=[1, 1, 1],
-                           bond_dim=[[in_channels, 4], [4, 3], [3, 2]],
-                           kernel_size=1)
+                                  bond_dim=[[in_channels, 4], [4, 3], [3, 2]],
+                                  kernel_size=1)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -334,9 +334,9 @@ class TestConvTree:
         in_channels = 2
 
         tree = tk.models.ConvTree(sites_per_layer=[1],
-                           bond_dim=[[in_channels, in_channels,
-                                    in_channels, in_channels, 2]],
-                           kernel_size=2)
+                                  bond_dim=[[in_channels, in_channels,
+                                             in_channels, in_channels, 2]],
+                                  kernel_size=2)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -386,8 +386,8 @@ class TestConvUTree:
         in_channels = 2
 
         tree = tk.models.ConvUTree(sites_per_layer=[4, 2, 1],
-                            bond_dim=[in_channels, in_channels, in_channels],
-                            kernel_size=(2, 4))
+                                   bond_dim=[in_channels, in_channels, in_channels],
+                                   kernel_size=(2, 4))
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -411,8 +411,8 @@ class TestConvUTree:
         in_channels = 2
 
         tree = tk.models.ConvUTree(sites_per_layer=[1, 1, 1],
-                            bond_dim=[in_channels, in_channels],
-                            kernel_size=1)
+                                   bond_dim=[in_channels, in_channels],
+                                   kernel_size=1)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:
@@ -436,9 +436,9 @@ class TestConvUTree:
         in_channels = 2
 
         tree = tk.models.ConvUTree(sites_per_layer=[1],
-                            bond_dim=[in_channels, in_channels,
-                                    in_channels, in_channels, 2],
-                            kernel_size=2)
+                                   bond_dim=[in_channels, in_channels,
+                                             in_channels, in_channels, 2],
+                                   kernel_size=2)
 
         for auto_stack in [True, False]:
             for auto_unbind in [True, False]:

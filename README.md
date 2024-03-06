@@ -3,6 +3,8 @@
 
 [![DOI](https://zenodo.org/badge/453954432.svg)](https://zenodo.org/badge/latestdoi/453954432)
 
+[![DOI](https://zenodo.org/badge/453954432.svg)](https://zenodo.org/badge/latestdoi/453954432)
+
 # Tensor Networks with PyTorch
 
 **TensorKrowch** is a Python library built on top of **PyTorch** that simplifies
@@ -68,11 +70,6 @@ pip install .
 ```
 
 in the repository folder.
-
-> **_WARNING:_** Since **TensorKrowch** has a
-[PyTorch C++ Extension](https://pytorch.org/tutorials/advanced/cpp_extension.html),
-it has to be built from source, so make sure you have installed on your system
-a C++ compiler compatible with C++14.
 
 Tests are written outside the Python module, therefore they are not installed
 together with the package. To test the installation, clone the repository and

@@ -1,7 +1,7 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -29,6 +29,7 @@
     <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
     <script src="../../../_static/jquery.js"></script>
     <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../../_static/doctools.js"></script>
     <script src="../../../_static/clipboard.min.js"></script>
     <script src="../../../_static/copybutton.js"></script>
@@ -38,7 +39,7 @@
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="docsearch:language" content="None">
+    <meta name="docsearch:language" content="en">
     
 
     <!-- Google Analytics -->
@@ -297,9 +298,9 @@ title="Source repository"
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
 
+<span class="kn">import</span> <span class="nn">tensorkrowch.operations</span> <span class="k">as</span> <span class="nn">op</span>
 <span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">Node</span><span class="p">,</span> <span class="n">ParamNode</span>
 <span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">TensorNetwork</span>
-<span class="kn">import</span> <span class="nn">tensorkrowch.operations</span> <span class="k">as</span> <span class="nn">op</span>
 
 
 <div class="viewcode-block" id="PEPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.PEPS">[docs]</a><span class="k">class</span> <span class="nc">PEPS</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>
@@ -330,7 +331,7 @@ title="Source repository"
 <span class="sd">    n_cols : int</span>
 <span class="sd">        Number of columns of the 2D grid.</span>
 <span class="sd">    in_dim : int</span>
-<span class="sd">        Input dimension.</span>
+<span class="sd">        Input dimension. Equivalent to the physical dimension.</span>
 <span class="sd">    bond_dim : list[int] or tuple[int]</span>
 <span class="sd">        Bond dimensions for horizontal and vertical edges (in that order). Thus</span>
 <span class="sd">        it should contain 2 elements.</span>
@@ -371,7 +372,7 @@ title="Source repository"
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`boundary` should be a sequence of two elements&#39;</span><span class="p">)</span>
         <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">boundary</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`boundary` should be a sequence of two elements&#39;</span><span class="p">)</span>
-        
+
         <span class="k">if</span> <span class="n">boundary</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">n_rows</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;If `boundary` of rows is &quot;obc&quot;, at least &#39;</span>
@@ -383,7 +384,7 @@ title="Source repository"
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`boundary` elements should be one of &quot;obc&quot; or &#39;</span>
                              <span class="s1">&#39;&quot;pbc&quot;&#39;</span><span class="p">)</span>
-        
+
         <span class="k">if</span> <span class="n">boundary</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">n_cols</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;If `boundary` of columns is &quot;obc&quot;, at least &#39;</span>
@@ -395,7 +396,7 @@ title="Source repository"
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`boundary` elements should be one of &quot;obc&quot; or &#39;</span>
                              <span class="s1">&#39;&quot;pbc&quot;&#39;</span><span class="p">)</span>
-        
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_n_rows</span> <span class="o">=</span> <span class="n">n_rows</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_n_cols</span> <span class="o">=</span> <span class="n">n_cols</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">=</span> <span class="n">boundary</span>
@@ -404,7 +405,7 @@ title="Source repository"
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`in_dim` should be int type&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span> <span class="o">=</span> <span class="n">in_dim</span>
-            
+
         <span class="c1"># bond_dim</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
@@ -421,12 +422,12 @@ title="Source repository"
         <span class="c1"># Create Tensor Network</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
-        
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of rows of the 2D grid.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_rows</span>
-    
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_cols</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of columns of the 2D grid.&quot;&quot;&quot;</span>
@@ -442,19 +443,19 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns input dimension.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns input/physical dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimensions for horizontal and vertical edges.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span>
-    
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of batch edges of the ``data`` nodes.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span>
-            
+
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the PEPS.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">leaf_nodes</span><span class="p">:</span>
@@ -465,17 +466,17 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">left_down_corner</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">right_up_corner</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">right_down_corner</span> <span class="o">=</span> <span class="kc">None</span>
-        
+
         <span class="bp">self</span><span class="o">.</span><span class="n">left_border</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">right_border</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">up_border</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">down_border</span> <span class="o">=</span> <span class="p">[]</span>
-        
+
         <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span> <span class="o">=</span> <span class="p">[]</span>
-        
+
         <span class="n">in_dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span>
         <span class="n">bond_dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span>
-        
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span> <span class="o">==</span> <span class="p">[</span><span class="s1">&#39;obc&#39;</span><span class="p">,</span> <span class="s1">&#39;obc&#39;</span><span class="p">]:</span>
             <span class="c1"># Left up corner</span>
             <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
@@ -483,7 +484,7 @@ title="Source repository"
                              <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;left_up_corner_node&#39;</span><span class="p">,</span>
                              <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">left_up_corner</span> <span class="o">=</span> <span class="n">node</span>
-            
+
             <span class="c1"># Up border</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
                 <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
@@ -491,24 +492,24 @@ title="Source repository"
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;up_border_node_(</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">up_border</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-                
+
                 <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">left_up_corner</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">up_border</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-                    
+
             <span class="c1"># Right up corner</span>
             <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                              <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;down&#39;</span><span class="p">),</span>
                              <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;right_up_corner_node&#39;</span><span class="p">,</span>
                              <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">right_up_corner</span> <span class="o">=</span> <span class="n">node</span>
-            
+
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">up_border</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">left_up_corner</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-                
+
             <span class="c1"># Left border</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
                 <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
@@ -516,12 +517,12 @@ title="Source repository"
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;left_border_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">left_border</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-                
+
                 <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">left_up_corner</span><span class="p">[</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">left_border</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
-                    
+
             <span class="c1"># Right border</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
                 <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
@@ -529,24 +530,24 @@ title="Source repository"
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;right_border_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">right_border</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-                
+
                 <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">right_up_corner</span><span class="p">[</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">right_border</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
-                    
+
             <span class="c1"># Left down corner</span>
             <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                              <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;up&#39;</span><span class="p">),</span>
                              <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;left_down_corner_node&#39;</span><span class="p">,</span>
                              <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">left_down_corner</span> <span class="o">=</span> <span class="n">node</span>
-            
+
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">left_border</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">left_up_corner</span><span class="p">[</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
-                
+
             <span class="c1"># Down border</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
                 <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
@@ -554,29 +555,29 @@ title="Source repository"
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;down_border_node_(</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">down_border</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-                
+
                 <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">left_down_corner</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">down_border</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-                    
+
             <span class="c1"># Right down corner</span>
             <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
                              <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;up&#39;</span><span class="p">),</span>
                              <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;right_down_corner_node&#39;</span><span class="p">,</span>
                              <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">right_down_corner</span> <span class="o">=</span> <span class="n">node</span>
-            
+
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">right_border</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">right_up_corner</span><span class="p">[</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
-                
+
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">down_border</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">left_down_corner</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-            
+
             <span class="c1"># Grid env</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
@@ -588,21 +589,21 @@ title="Source repository"
                                      <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;grid_env_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">,</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                      <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-                    
+
                     <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">up_border</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
                     <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span> <span class="o">-</span> <span class="mi">3</span><span class="p">:</span>
                         <span class="n">node</span><span class="p">[</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">down_border</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
-                        
+
                     <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">left_border</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                     <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span> <span class="o">-</span> <span class="mi">3</span><span class="p">:</span>
                         <span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_border</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-                    
+
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span> <span class="o">==</span> <span class="p">[</span><span class="s1">&#39;obc&#39;</span><span class="p">,</span> <span class="s1">&#39;pbc&#39;</span><span class="p">]:</span>
             <span class="c1"># Up border</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span><span class="p">):</span>
@@ -611,12 +612,12 @@ title="Source repository"
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;up_border_node_(</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">up_border</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-                
+
                 <span class="k">if</span> <span class="n">j</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">up_border</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                 <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">up_border</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-                
+
             <span class="c1"># Down border</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span><span class="p">):</span>
                 <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
@@ -624,14 +625,14 @@ title="Source repository"
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;down_border_node_(</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">down_border</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-                
+
                 <span class="k">if</span> <span class="n">j</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">down_border</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                 <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">down_border</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">up_border</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
-            
+
             <span class="c1"># Grid env</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
@@ -643,19 +644,19 @@ title="Source repository"
                                      <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;grid_env_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">,</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                      <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-                    
+
                     <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">up_border</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
                     <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span> <span class="o">-</span> <span class="mi">3</span><span class="p">:</span>
                         <span class="n">node</span><span class="p">[</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">down_border</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
-                        
+
                     <span class="k">if</span> <span class="n">j</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                     <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                         <span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-                    
+
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span> <span class="o">==</span> <span class="p">[</span><span class="s1">&#39;pbc&#39;</span><span class="p">,</span> <span class="s1">&#39;obc&#39;</span><span class="p">]:</span>
             <span class="c1"># Left border</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span><span class="p">):</span>
@@ -664,12 +665,12 @@ title="Source repository"
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;left_border_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">left_border</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-                
+
                 <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">left_border</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
                 <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="n">node</span><span class="p">[</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_border</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
-                    
+
             <span class="c1"># Right border</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span><span class="p">):</span>
                 <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
@@ -677,14 +678,14 @@ title="Source repository"
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;right_border_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">right_border</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-                
+
                 <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">right_border</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
                 <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="n">node</span><span class="p">[</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_border</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">left_border</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-            
+
             <span class="c1"># Grid env</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
@@ -696,19 +697,19 @@ title="Source repository"
                                      <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;grid_env_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">,</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                      <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-                    
+
                     <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
                     <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                         <span class="n">node</span><span class="p">[</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
-                        
+
                     <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">left_border</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                     <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span> <span class="o">-</span> <span class="mi">3</span><span class="p">:</span>
                         <span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_border</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-                    
+
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Grid env</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span><span class="p">):</span>
@@ -721,29 +722,29 @@ title="Source repository"
                                      <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;grid_env_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">,</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                      <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-                    
+
                     <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
                     <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                         <span class="n">node</span><span class="p">[</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
-                        
+
                     <span class="k">if</span> <span class="n">j</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                     <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
-                        <span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span>  <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-                    
+                        <span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+
 <div class="viewcode-block" id="PEPS.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.PEPS.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">leaf_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
             <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span></div>
-    
+
 <div class="viewcode-block" id="PEPS.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.PEPS.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates data nodes and connects each of them to the physical edge of</span>
 <span class="sd">        an input node.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">input_edges</span> <span class="o">=</span> <span class="p">[]</span>
-        
+
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span><span class="p">):</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span><span class="p">):</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span> <span class="o">==</span> <span class="p">[</span><span class="s1">&#39;obc&#39;</span><span class="p">,</span> <span class="s1">&#39;obc&#39;</span><span class="p">]:</span>
@@ -784,12 +785,12 @@ title="Source repository"
                         <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_border</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
-                    
+
                 <span class="n">input_edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
-            
+
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">set_data_nodes</span><span class="p">(</span><span class="n">input_edges</span><span class="o">=</span><span class="n">input_edges</span><span class="p">,</span>
                                <span class="n">num_batch_edges</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_batches</span><span class="p">)</span></div>
-        
+
     <span class="k">def</span> <span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts input data nodes with PEPS nodes.&quot;&quot;&quot;</span>
         <span class="n">full_grid</span> <span class="o">=</span> <span class="p">[]</span>
@@ -797,7 +798,7 @@ title="Source repository"
             <span class="n">full_grid</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
             <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span><span class="p">):</span>
                 <span class="n">full_grid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
-        
+
         <span class="c1"># Contract with data</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span> <span class="o">==</span> <span class="p">[</span><span class="s1">&#39;obc&#39;</span><span class="p">,</span> <span class="s1">&#39;obc&#39;</span><span class="p">]:</span>
             <span class="c1"># Corners</span>
@@ -819,7 +820,7 @@ title="Source repository"
             <span class="n">stack_up_border_data</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack_up_border</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
             <span class="n">result_up_border</span> <span class="o">=</span> <span class="n">stack_up_border_data</span> <span class="o">@</span> <span class="n">stack_up_border</span>
             <span class="n">result_up_border</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result_up_border</span><span class="p">)</span>
-            
+
             <span class="c1"># Down border</span>
             <span class="n">stack_down_border</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">down_border</span><span class="p">)</span>
             <span class="n">stack_down_border_data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span>
@@ -828,14 +829,14 @@ title="Source repository"
             <span class="n">stack_down_border_data</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack_down_border</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
             <span class="n">result_down_border</span> <span class="o">=</span> <span class="n">stack_down_border_data</span> <span class="o">@</span> <span class="n">stack_down_border</span>
             <span class="n">result_down_border</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result_down_border</span><span class="p">)</span>
-            
+
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
                 <span class="n">full_grid</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_up_border</span>
                 <span class="n">full_grid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_down_border</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">full_grid</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_up_border</span>
                 <span class="n">full_grid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_down_border</span>
-            
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_border</span><span class="p">:</span>
             <span class="c1"># Left border</span>
             <span class="n">stack_left_border</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">left_border</span><span class="p">)</span>
@@ -845,7 +846,7 @@ title="Source repository"
             <span class="n">stack_left_border_data</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack_left_border</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
             <span class="n">result_left_border</span> <span class="o">=</span> <span class="n">stack_left_border_data</span> <span class="o">@</span> <span class="n">stack_left_border</span>
             <span class="n">result_left_border</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result_left_border</span><span class="p">)</span>
-            
+
             <span class="c1"># Right border</span>
             <span class="n">stack_right_border</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">right_border</span><span class="p">)</span>
             <span class="n">stack_right_border_data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span>
@@ -854,7 +855,7 @@ title="Source repository"
             <span class="n">stack_right_border_data</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack_right_border</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
             <span class="n">result_right_border</span> <span class="o">=</span> <span class="n">stack_right_border_data</span> <span class="o">@</span> <span class="n">stack_right_border</span>
             <span class="n">result_right_border</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result_right_border</span><span class="p">)</span>
-            
+
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
                     <span class="n">full_grid</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_left_border</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
@@ -863,12 +864,12 @@ title="Source repository"
                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span><span class="p">):</span>
                     <span class="n">full_grid</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_left_border</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
                     <span class="n">full_grid</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_right_border</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-            
+
         <span class="c1"># Grid env</span>
         <span class="n">list_grid_env</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">lst</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">:</span>
             <span class="n">list_grid_env</span> <span class="o">+=</span> <span class="n">lst</span>
-            
+
         <span class="k">if</span> <span class="n">list_grid_env</span><span class="p">:</span>
             <span class="n">stack_grid_env</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">list_grid_env</span><span class="p">)</span>
             <span class="n">stack_grid_env_data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span>
@@ -877,7 +878,7 @@ title="Source repository"
             <span class="n">stack_grid_env_data</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack_grid_env</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
             <span class="n">result_grid_env</span> <span class="o">=</span> <span class="n">stack_grid_env_data</span> <span class="o">@</span> <span class="n">stack_grid_env</span>
             <span class="n">result_grid_env</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result_grid_env</span><span class="p">)</span>
-            
+
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span> <span class="o">==</span> <span class="p">[</span><span class="s1">&#39;obc&#39;</span><span class="p">,</span> <span class="s1">&#39;obc&#39;</span><span class="p">]:</span>
                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
                     <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
@@ -898,9 +899,9 @@ title="Source repository"
                     <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span><span class="p">):</span>
                         <span class="n">full_grid</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_grid_env</span><span class="p">[</span>
                             <span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span> <span class="o">+</span> <span class="n">j</span><span class="p">]</span>
-                    
+
         <span class="k">return</span> <span class="n">full_grid</span>
-    
+
     <span class="k">def</span> <span class="nf">_contract_2_lines</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                           <span class="n">line1</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                           <span class="n">line2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
@@ -908,11 +909,11 @@ title="Source repository"
                           <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts two consecutive lines (rows or columns) of the PEPS.&quot;&quot;&quot;</span>
         <span class="n">result_list</span> <span class="o">=</span> <span class="p">[]</span>
-        
+
         <span class="k">if</span> <span class="n">inline</span><span class="p">:</span>
             <span class="k">for</span> <span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">line1</span><span class="p">,</span> <span class="n">line2</span><span class="p">):</span>
                 <span class="n">result_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node1</span> <span class="o">@</span> <span class="n">node2</span><span class="p">)</span>
-                
+
         <span class="k">else</span><span class="p">:</span>
             <span class="n">condition</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="k">if</span> <span class="n">from_side</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">,</span> <span class="s1">&#39;down&#39;</span><span class="p">]:</span>
@@ -921,14 +922,14 @@ title="Source repository"
             <span class="k">elif</span> <span class="n">from_side</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">]:</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
                     <span class="n">condition</span> <span class="o">=</span> <span class="kc">True</span>
-            
+
             <span class="k">if</span> <span class="n">condition</span><span class="p">:</span>
                 <span class="n">result_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">@</span> <span class="n">line2</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-                
+
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">line1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
                     <span class="n">stack1</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">line1</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
                     <span class="n">stack2</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">line2</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-                    
+
                     <span class="n">node1</span> <span class="o">=</span> <span class="n">line1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
                     <span class="n">node2</span> <span class="o">=</span> <span class="n">line2</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
                     <span class="n">axes1</span><span class="p">,</span> <span class="n">axes2</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
@@ -939,19 +940,19 @@ title="Source repository"
                                 <span class="n">axis2</span> <span class="o">=</span> <span class="n">edge1</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="n">node1</span><span class="o">.</span><span class="n">is_node1</span><span class="p">(</span><span class="n">i1</span><span class="p">)]</span>
                                 <span class="n">axes1</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">axis1</span><span class="p">)</span>
                                 <span class="n">axes2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">axis2</span><span class="p">)</span>
-                    
+
                     <span class="k">for</span> <span class="n">axis1</span><span class="p">,</span> <span class="n">axis2</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">axes1</span><span class="p">,</span> <span class="n">axes2</span><span class="p">):</span>
                         <span class="n">stack1</span><span class="p">[</span><span class="n">axis1</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack2</span><span class="p">[</span><span class="n">axis2</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
-                    
+
                     <span class="n">stack_result</span> <span class="o">=</span> <span class="n">stack1</span> <span class="o">@</span> <span class="n">stack2</span>
                     <span class="n">result_list</span> <span class="o">+=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">stack_result</span><span class="p">)</span>
-                
+
                 <span class="n">result_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line1</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">@</span> <span class="n">line2</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-            
+
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">stack1</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">line1</span><span class="p">)</span>
                 <span class="n">stack2</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">line2</span><span class="p">)</span>
-                
+
                 <span class="n">node1</span> <span class="o">=</span> <span class="n">line1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                 <span class="n">node2</span> <span class="o">=</span> <span class="n">line2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                 <span class="n">axes1</span><span class="p">,</span> <span class="n">axes2</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
@@ -962,15 +963,15 @@ title="Source repository"
                             <span class="n">axis2</span> <span class="o">=</span> <span class="n">edge1</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="n">node1</span><span class="o">.</span><span class="n">is_node1</span><span class="p">(</span><span class="n">i1</span><span class="p">)]</span>
                             <span class="n">axes1</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">axis1</span><span class="p">)</span>
                             <span class="n">axes2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">axis2</span><span class="p">)</span>
-                
+
                 <span class="k">for</span> <span class="n">axis1</span><span class="p">,</span> <span class="n">axis2</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">axes1</span><span class="p">,</span> <span class="n">axes2</span><span class="p">):</span>
                     <span class="n">stack1</span><span class="p">[</span><span class="n">axis1</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack2</span><span class="p">[</span><span class="n">axis2</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
-                
+
                 <span class="n">stack_result</span> <span class="o">=</span> <span class="n">stack1</span> <span class="o">@</span> <span class="n">stack2</span>
                 <span class="n">result_list</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">stack_result</span><span class="p">)</span>
-                
+
         <span class="k">return</span> <span class="n">result_list</span>
-    
+
     <span class="k">def</span> <span class="nf">_split_line</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                     <span class="n">line</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                     <span class="n">pbc</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -984,36 +985,36 @@ title="Source repository"
         <span class="n">nb</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_batches</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
             <span class="n">contracted</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">@</span> <span class="n">line</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
-            <span class="n">splitted1</span><span class="p">,</span> <span class="n">splitted2</span> <span class="o">=</span> <span class="n">contracted</span><span class="o">.</span><span class="n">split</span><span class="p">(</span>
+            <span class="n">split1</span><span class="p">,</span> <span class="n">split2</span> <span class="o">=</span> <span class="n">contracted</span><span class="o">.</span><span class="n">split</span><span class="p">(</span>
                 <span class="n">node1_axes</span><span class="o">=</span><span class="n">contracted</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="n">nb</span><span class="p">:(</span><span class="n">line</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">rank</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)],</span>
                 <span class="n">node2_axes</span><span class="o">=</span><span class="n">contracted</span><span class="o">.</span><span class="n">axes</span><span class="p">[(</span><span class="n">line</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">rank</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):],</span>
                 <span class="n">rank</span><span class="o">=</span><span class="n">max_bond</span><span class="p">)</span>
             <span class="k">if</span> <span class="p">(</span><span class="n">from_side</span> <span class="o">==</span> <span class="s1">&#39;up&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">from_side</span> <span class="o">==</span> <span class="s1">&#39;down&#39;</span><span class="p">):</span>
-                <span class="n">splitted1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;splitted&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span>
-                <span class="n">splitted2</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;splitted&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span>
+                <span class="n">split1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span>
+                <span class="n">split2</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">splitted1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;splitted&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;down&#39;</span>
-                <span class="n">splitted2</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;splitted&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span>
-            <span class="n">line</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">splitted1</span>
-            <span class="n">line</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">splitted2</span>
-            
+                <span class="n">split1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;down&#39;</span>
+                <span class="n">split2</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span>
+            <span class="n">line</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">split1</span>
+            <span class="n">line</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">split2</span>
+
         <span class="k">if</span> <span class="n">pbc</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">):</span>
             <span class="n">contracted</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">@</span> <span class="n">line</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">splitted1</span><span class="p">,</span> <span class="n">splitted2</span> <span class="o">=</span> <span class="n">contracted</span><span class="o">.</span><span class="n">split</span><span class="p">(</span>
+            <span class="n">split1</span><span class="p">,</span> <span class="n">split2</span> <span class="o">=</span> <span class="n">contracted</span><span class="o">.</span><span class="n">split</span><span class="p">(</span>
                 <span class="n">node1_axes</span><span class="o">=</span><span class="n">contracted</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="n">nb</span><span class="p">:(</span><span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rank</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)],</span>
                 <span class="n">node2_axes</span><span class="o">=</span><span class="n">contracted</span><span class="o">.</span><span class="n">axes</span><span class="p">[(</span><span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rank</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):],</span>
                 <span class="n">rank</span><span class="o">=</span><span class="n">max_bond</span><span class="p">)</span>
             <span class="k">if</span> <span class="p">(</span><span class="n">from_side</span> <span class="o">==</span> <span class="s1">&#39;up&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">from_side</span> <span class="o">==</span> <span class="s1">&#39;down&#39;</span><span class="p">):</span>
-                <span class="n">splitted1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;splitted&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span>
-                <span class="n">splitted2</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;splitted&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span>
+                <span class="n">split1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span>
+                <span class="n">split2</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">splitted1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;splitted&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;down&#39;</span>
-                <span class="n">splitted2</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;splitted&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span>
-            <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">splitted1</span>
-            <span class="n">line</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">splitted2</span>
-            
-        <span class="k">return</span> <span class="n">line</span>                      
-        
+                <span class="n">split1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;down&#39;</span>
+                <span class="n">split2</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span>
+            <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">split1</span>
+            <span class="n">line</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">split2</span>
+
+        <span class="k">return</span> <span class="n">line</span>
+
 <div class="viewcode-block" id="PEPS.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.PEPS.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">from_side</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span><span class="p">,</span>
                  <span class="n">max_bond</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
@@ -1040,18 +1041,18 @@ title="Source repository"
 <span class="sd">        Node</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">full_grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">()</span>
-        
+
         <span class="n">pbc</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">if</span> <span class="n">from_side</span> <span class="o">==</span> <span class="s1">&#39;up&#39;</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">:</span>
                 <span class="n">pbc</span> <span class="o">=</span> <span class="kc">True</span>
-                
+
         <span class="k">elif</span> <span class="n">from_side</span> <span class="o">==</span> <span class="s1">&#39;down&#39;</span><span class="p">:</span>
             <span class="n">full_grid</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
-            
+
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">:</span>
                 <span class="n">pbc</span> <span class="o">=</span> <span class="kc">True</span>
-                
+
         <span class="k">elif</span> <span class="n">from_side</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
             <span class="n">new_grid</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">full_grid</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
@@ -1060,10 +1061,10 @@ title="Source repository"
                     <span class="n">row</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">full_grid</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">])</span>
                 <span class="n">new_grid</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
             <span class="n">full_grid</span> <span class="o">=</span> <span class="n">new_grid</span>
-            
+
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">:</span>
                 <span class="n">pbc</span> <span class="o">=</span> <span class="kc">True</span>
-                
+
         <span class="k">elif</span> <span class="n">from_side</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span><span class="p">:</span>
             <span class="n">new_grid</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">full_grid</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
@@ -1073,32 +1074,32 @@ title="Source repository"
                 <span class="n">new_grid</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
             <span class="n">full_grid</span> <span class="o">=</span> <span class="n">new_grid</span>
             <span class="n">full_grid</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
-            
+
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">:</span>
                 <span class="n">pbc</span> <span class="o">=</span> <span class="kc">True</span>
-            
+
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">full_grid</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
             <span class="n">line1</span> <span class="o">=</span> <span class="n">full_grid</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
             <span class="n">line2</span> <span class="o">=</span> <span class="n">full_grid</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
             <span class="n">contracted_line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contract_2_lines</span><span class="p">(</span><span class="n">line1</span><span class="p">,</span> <span class="n">line2</span><span class="p">,</span>
                                                      <span class="n">from_side</span><span class="o">=</span><span class="n">from_side</span><span class="p">,</span>
                                                      <span class="n">inline</span><span class="o">=</span><span class="n">inline</span><span class="p">)</span>
-            <span class="n">splitted_line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_split_line</span><span class="p">(</span><span class="n">contracted_line</span><span class="p">,</span>
+            <span class="n">split_line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_split_line</span><span class="p">(</span><span class="n">contracted_line</span><span class="p">,</span>
                                              <span class="n">pbc</span><span class="o">=</span><span class="n">pbc</span><span class="p">,</span>
                                              <span class="n">from_side</span><span class="o">=</span><span class="n">from_side</span><span class="p">,</span>
                                              <span class="n">max_bond</span><span class="o">=</span><span class="n">max_bond</span><span class="p">)</span>
-            
-            <span class="n">full_grid</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">splitted_line</span>
-            
+
+            <span class="n">full_grid</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">split_line</span>
+
         <span class="n">result</span> <span class="o">=</span> <span class="n">full_grid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">full_grid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">:]:</span>
             <span class="n">result</span> <span class="o">@=</span> <span class="n">node</span>
-            
+
         <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">edges</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_batch</span><span class="p">():</span>
                 <span class="n">result</span> <span class="o">@=</span> <span class="n">result</span>
                 <span class="k">break</span>
-        
+
         <span class="k">return</span> <span class="n">result</span></div></div>
 
 
@@ -1121,7 +1122,7 @@ title="Source repository"
 <span class="sd">    n_cols : int</span>
 <span class="sd">        Number of columns of the 2D grid</span>
 <span class="sd">    in_dim : int</span>
-<span class="sd">        Input dimension.</span>
+<span class="sd">        Input dimension. Equivalent to the physical dimension.</span>
 <span class="sd">    bond_dim : list[int] or tuple[int]</span>
 <span class="sd">        Bond dimensions for horizontal and vertical edges (in that order). Thus</span>
 <span class="sd">        it should also contain 2 elements</span>
@@ -1160,7 +1161,7 @@ title="Source repository"
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;There has to be one row at least&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">n_cols</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;There has to be one column at least&#39;</span><span class="p">)</span>
-        
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_n_rows</span> <span class="o">=</span> <span class="n">n_rows</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_n_cols</span> <span class="o">=</span> <span class="n">n_cols</span>
 
@@ -1168,7 +1169,7 @@ title="Source repository"
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`in_dim` should be int type&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span> <span class="o">=</span> <span class="n">in_dim</span>
-            
+
         <span class="c1"># bond_dim</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
@@ -1185,12 +1186,12 @@ title="Source repository"
         <span class="c1"># Create Tensor Network</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
-        
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of rows of the 2D grid.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_rows</span>
-    
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_cols</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of columns of the 2D grid.&quot;&quot;&quot;</span>
@@ -1198,30 +1199,30 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns input dimension.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns input/physical dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimensions for horizontal and vertical edges.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span>
-    
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">n_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of batch edges of the ``data`` nodes.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span>
-            
+
     <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the PEPS.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create PEPS nodes if the PEPS already has&#39;</span>
                              <span class="s1">&#39; nodes&#39;</span><span class="p">)</span>
-        
+
         <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span> <span class="o">=</span> <span class="p">[]</span>
-        
+
         <span class="n">in_dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span>
         <span class="n">bond_dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bond_dim</span>
-        
+
         <span class="c1"># Grid env</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
@@ -1233,17 +1234,17 @@ title="Source repository"
                                  <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;grid_env_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">,</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
                                  <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-                
+
                 <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
                 <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="n">node</span><span class="p">[</span><span class="s1">&#39;down&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;up&#39;</span><span class="p">]</span>
-                    
+
                 <span class="k">if</span> <span class="n">j</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
                 <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
-                    <span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span>  <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-                    
+                    <span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+
         <span class="c1"># Virtual node</span>
         <span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                                                  <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">bond_dim</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
@@ -1253,31 +1254,31 @@ title="Source repository"
                                           <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
                                           <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">uniform_memory</span>
-                    
+
 <div class="viewcode-block" id="UPEPS.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UPEPS.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes all the nodes.&quot;&quot;&quot;</span>
         <span class="c1"># Virtual node</span>
         <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">tensor</span>
-        
+
         <span class="k">for</span> <span class="n">lst</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">lst</span><span class="p">:</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="p">)</span></div>
-    
+
 <div class="viewcode-block" id="UPEPS.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UPEPS.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates data nodes and connects each of them to the physical edge of</span>
 <span class="sd">        an input node.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">input_edges</span> <span class="o">=</span> <span class="p">[]</span>
-        
+
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span><span class="p">):</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span><span class="p">):</span>
                 <span class="n">input_edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
-            
+
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">set_data_nodes</span><span class="p">(</span><span class="n">input_edges</span><span class="o">=</span><span class="n">input_edges</span><span class="p">,</span>
                                <span class="n">num_batch_edges</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_batches</span><span class="p">)</span></div>
-        
+
     <span class="k">def</span> <span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts input data nodes with PEPS nodes.&quot;&quot;&quot;</span>
         <span class="n">full_grid</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1285,12 +1286,12 @@ title="Source repository"
             <span class="n">full_grid</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
             <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span><span class="p">):</span>
                 <span class="n">full_grid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
-        
+
         <span class="c1"># Grid env</span>
         <span class="n">list_grid_env</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">lst</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_env</span><span class="p">:</span>
             <span class="n">list_grid_env</span> <span class="o">+=</span> <span class="n">lst</span>
-            
+
         <span class="k">if</span> <span class="n">list_grid_env</span><span class="p">:</span>
             <span class="n">stack_grid_env</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">list_grid_env</span><span class="p">)</span>
             <span class="n">stack_grid_env_data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span>
@@ -1299,28 +1300,28 @@ title="Source repository"
             <span class="n">stack_grid_env_data</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack_grid_env</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
             <span class="n">result_grid_env</span> <span class="o">=</span> <span class="n">stack_grid_env_data</span> <span class="o">@</span> <span class="n">stack_grid_env</span>
             <span class="n">result_grid_env</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">result_grid_env</span><span class="p">)</span>
-            
+
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_rows</span><span class="p">):</span>
                 <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span><span class="p">):</span>
                     <span class="n">full_grid</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_grid_env</span><span class="p">[</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_cols</span> <span class="o">+</span> <span class="n">j</span><span class="p">]</span>
-                    
+
         <span class="k">return</span> <span class="n">full_grid</span>
-    
+
     <span class="k">def</span> <span class="nf">_contract_2_lines</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                           <span class="n">line1</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                           <span class="n">line2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                           <span class="n">inline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts two consecutive lines (rows or columns) of the PEPS.&quot;&quot;&quot;</span>
         <span class="n">result_list</span> <span class="o">=</span> <span class="p">[]</span>
-        
+
         <span class="k">if</span> <span class="n">inline</span><span class="p">:</span>
             <span class="k">for</span> <span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">line1</span><span class="p">,</span> <span class="n">line2</span><span class="p">):</span>
                 <span class="n">result_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node1</span> <span class="o">@</span> <span class="n">node2</span><span class="p">)</span>
-                
+
         <span class="k">else</span><span class="p">:</span>
             <span class="n">stack1</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">line1</span><span class="p">)</span>
             <span class="n">stack2</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">line2</span><span class="p">)</span>
-            
+
             <span class="n">node1</span> <span class="o">=</span> <span class="n">line1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="n">node2</span> <span class="o">=</span> <span class="n">line2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="n">axes1</span><span class="p">,</span> <span class="n">axes2</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
@@ -1331,15 +1332,15 @@ title="Source repository"
                         <span class="n">axis2</span> <span class="o">=</span> <span class="n">edge1</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="n">node1</span><span class="o">.</span><span class="n">is_node1</span><span class="p">(</span><span class="n">i1</span><span class="p">)]</span>
                         <span class="n">axes1</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">axis1</span><span class="p">)</span>
                         <span class="n">axes2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">axis2</span><span class="p">)</span>
-            
+
             <span class="k">for</span> <span class="n">axis1</span><span class="p">,</span> <span class="n">axis2</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">axes1</span><span class="p">,</span> <span class="n">axes2</span><span class="p">):</span>
                 <span class="n">stack1</span><span class="p">[</span><span class="n">axis1</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack2</span><span class="p">[</span><span class="n">axis2</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
-            
+
             <span class="n">stack_result</span> <span class="o">=</span> <span class="n">stack1</span> <span class="o">@</span> <span class="n">stack2</span>
             <span class="n">result_list</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">stack_result</span><span class="p">)</span>
-                
+
         <span class="k">return</span> <span class="n">result_list</span>
-    
+
     <span class="k">def</span> <span class="nf">_split_line</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                     <span class="n">line</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
                     <span class="n">from_side</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span><span class="p">,</span>
@@ -1352,36 +1353,36 @@ title="Source repository"
         <span class="n">nb</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_batches</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
             <span class="n">contracted</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">@</span> <span class="n">line</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
-            <span class="n">splitted1</span><span class="p">,</span> <span class="n">splitted2</span> <span class="o">=</span> <span class="n">contracted</span><span class="o">.</span><span class="n">split</span><span class="p">(</span>
+            <span class="n">split1</span><span class="p">,</span> <span class="n">split2</span> <span class="o">=</span> <span class="n">contracted</span><span class="o">.</span><span class="n">split</span><span class="p">(</span>
                 <span class="n">node1_axes</span><span class="o">=</span><span class="n">contracted</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="n">nb</span><span class="p">:(</span><span class="n">line</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">rank</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)],</span>
                 <span class="n">node2_axes</span><span class="o">=</span><span class="n">contracted</span><span class="o">.</span><span class="n">axes</span><span class="p">[(</span><span class="n">line</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">rank</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):],</span>
                 <span class="n">rank</span><span class="o">=</span><span class="n">max_bond</span><span class="p">)</span>
             <span class="k">if</span> <span class="p">(</span><span class="n">from_side</span> <span class="o">==</span> <span class="s1">&#39;up&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">from_side</span> <span class="o">==</span> <span class="s1">&#39;down&#39;</span><span class="p">):</span>
-                <span class="n">splitted1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;splitted&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span>
-                <span class="n">splitted2</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;splitted&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span>
+                <span class="n">split1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span>
+                <span class="n">split2</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">splitted1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;splitted&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;down&#39;</span>
-                <span class="n">splitted2</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;splitted&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span>
-            <span class="n">line</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">splitted1</span>
-            <span class="n">line</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">splitted2</span>
-            
+                <span class="n">split1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;down&#39;</span>
+                <span class="n">split2</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span>
+            <span class="n">line</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">split1</span>
+            <span class="n">line</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">split2</span>
+
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
             <span class="n">contracted</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">@</span> <span class="n">line</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">splitted1</span><span class="p">,</span> <span class="n">splitted2</span> <span class="o">=</span> <span class="n">contracted</span><span class="o">.</span><span class="n">split</span><span class="p">(</span>
+            <span class="n">split1</span><span class="p">,</span> <span class="n">split2</span> <span class="o">=</span> <span class="n">contracted</span><span class="o">.</span><span class="n">split</span><span class="p">(</span>
                 <span class="n">node1_axes</span><span class="o">=</span><span class="n">contracted</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="n">nb</span><span class="p">:(</span><span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rank</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)],</span>
                 <span class="n">node2_axes</span><span class="o">=</span><span class="n">contracted</span><span class="o">.</span><span class="n">axes</span><span class="p">[(</span><span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rank</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):],</span>
                 <span class="n">rank</span><span class="o">=</span><span class="n">max_bond</span><span class="p">)</span>
             <span class="k">if</span> <span class="p">(</span><span class="n">from_side</span> <span class="o">==</span> <span class="s1">&#39;up&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">from_side</span> <span class="o">==</span> <span class="s1">&#39;down&#39;</span><span class="p">):</span>
-                <span class="n">splitted1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;splitted&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span>
-                <span class="n">splitted2</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;splitted&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span>
+                <span class="n">split1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span>
+                <span class="n">split2</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">splitted1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;splitted&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;down&#39;</span>
-                <span class="n">splitted2</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;splitted&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span>
-            <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">splitted1</span>
-            <span class="n">line</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">splitted2</span>
-            
-        <span class="k">return</span> <span class="n">line</span>                      
-        
+                <span class="n">split1</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;down&#39;</span>
+                <span class="n">split2</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span>
+            <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">split1</span>
+            <span class="n">line</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">split2</span>
+
+        <span class="k">return</span> <span class="n">line</span>
+
 <div class="viewcode-block" id="UPEPS.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UPEPS.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">from_side</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;up&#39;</span><span class="p">,</span>
                  <span class="n">max_bond</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
@@ -1408,13 +1409,13 @@ title="Source repository"
 <span class="sd">        Node</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">full_grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">()</span>
-        
+
         <span class="k">if</span> <span class="n">from_side</span> <span class="o">==</span> <span class="s1">&#39;up&#39;</span><span class="p">:</span>
             <span class="k">pass</span>
-                
+
         <span class="k">elif</span> <span class="n">from_side</span> <span class="o">==</span> <span class="s1">&#39;down&#39;</span><span class="p">:</span>
             <span class="n">full_grid</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
-                
+
         <span class="k">elif</span> <span class="n">from_side</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
             <span class="n">new_grid</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">full_grid</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
@@ -1423,7 +1424,7 @@ title="Source repository"
                     <span class="n">row</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">full_grid</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">])</span>
                 <span class="n">new_grid</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
             <span class="n">full_grid</span> <span class="o">=</span> <span class="n">new_grid</span>
-                
+
         <span class="k">elif</span> <span class="n">from_side</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span><span class="p">:</span>
             <span class="n">new_grid</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">full_grid</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
@@ -1433,27 +1434,27 @@ title="Source repository"
                 <span class="n">new_grid</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
             <span class="n">full_grid</span> <span class="o">=</span> <span class="n">new_grid</span>
             <span class="n">full_grid</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
-            
+
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">full_grid</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
             <span class="n">line1</span> <span class="o">=</span> <span class="n">full_grid</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
             <span class="n">line2</span> <span class="o">=</span> <span class="n">full_grid</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
             <span class="n">contracted_line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contract_2_lines</span><span class="p">(</span><span class="n">line1</span><span class="p">,</span> <span class="n">line2</span><span class="p">,</span>
                                                      <span class="n">inline</span><span class="o">=</span><span class="n">inline</span><span class="p">)</span>
-            <span class="n">splitted_line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_split_line</span><span class="p">(</span><span class="n">contracted_line</span><span class="p">,</span>
+            <span class="n">split_line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_split_line</span><span class="p">(</span><span class="n">contracted_line</span><span class="p">,</span>
                                              <span class="n">from_side</span><span class="o">=</span><span class="n">from_side</span><span class="p">,</span>
                                              <span class="n">max_bond</span><span class="o">=</span><span class="n">max_bond</span><span class="p">)</span>
-            
-            <span class="n">full_grid</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">splitted_line</span>
-            
+
+            <span class="n">full_grid</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">split_line</span>
+
         <span class="n">result</span> <span class="o">=</span> <span class="n">full_grid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">full_grid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">:]:</span>
             <span class="n">result</span> <span class="o">@=</span> <span class="n">node</span>
-        
+
         <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">edges</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_batch</span><span class="p">():</span>
                 <span class="n">result</span> <span class="o">@=</span> <span class="n">result</span>
                 <span class="k">break</span>
-        
+
         <span class="k">return</span> <span class="n">result</span></div></div>
 
 
@@ -1506,7 +1507,7 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; result.shape</span>
 <span class="sd">    torch.Size([20, 1, 1])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    
+
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">in_channels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                  <span class="n">bond_dim</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
@@ -1515,50 +1516,50 @@ title="Source repository"
                  <span class="n">padding</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
                  <span class="n">dilation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                  <span class="n">boundary</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;obc&#39;</span><span class="p">,</span> <span class="s1">&#39;obc&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        
+
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">kernel_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">)</span>
         <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`kernel_size` must be int or Sequence&#39;</span><span class="p">)</span>
-        
+
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">stride</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">stride</span> <span class="o">=</span> <span class="p">(</span><span class="n">stride</span><span class="p">,</span> <span class="n">stride</span><span class="p">)</span>
         <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">stride</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`stride` must be int or Sequence&#39;</span><span class="p">)</span>
-        
+
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">padding</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">padding</span> <span class="o">=</span> <span class="p">(</span><span class="n">padding</span><span class="p">,</span> <span class="n">padding</span><span class="p">)</span>
         <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">padding</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`padding` must be int or Sequence&#39;</span><span class="p">)</span>
-        
+
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dilation</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">dilation</span> <span class="o">=</span> <span class="p">(</span><span class="n">dilation</span><span class="p">,</span> <span class="n">dilation</span><span class="p">)</span>
         <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dilation</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`dilation` must be int or Sequence&#39;</span><span class="p">)</span>
-        
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span> <span class="o">=</span> <span class="n">in_channels</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span> <span class="o">=</span> <span class="n">kernel_size</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_stride</span> <span class="o">=</span> <span class="n">stride</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_padding</span> <span class="o">=</span> <span class="n">padding</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span> <span class="o">=</span> <span class="n">dilation</span>
-        
+
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">n_rows</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                          <span class="n">n_cols</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
                          <span class="n">in_dim</span><span class="o">=</span><span class="n">in_channels</span><span class="p">,</span>
                          <span class="n">bond_dim</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">,</span>
                          <span class="n">boundary</span><span class="o">=</span><span class="n">boundary</span><span class="p">,</span>
                          <span class="n">n_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
-        
+
         <span class="bp">self</span><span class="o">.</span><span class="n">unfold</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Unfold</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span>
                                 <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span>
                                 <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span>
                                 <span class="n">dilation</span><span class="o">=</span><span class="n">dilation</span><span class="p">)</span>
-        
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``in_channels``. Same as ``in_dim`` in :class:`PEPS`.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span>
-    
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">kernel_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1566,7 +1567,7 @@ title="Source repository"
 <span class="sd">        given by :math:`kernel\_size_0` and :math:`kernel\_size_1`, respectively.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span>
-    
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">stride</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1574,7 +1575,7 @@ title="Source repository"
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stride</span>
-    
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">padding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1582,7 +1583,7 @@ title="Source repository"
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_padding</span>
-    
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dilation</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1590,7 +1591,7 @@ title="Source repository"
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>
-    
+
 <div class="viewcode-block" id="ConvPEPS.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvPEPS.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Overrides ``torch.nn.Module``&#39;s forward to compute a convolution on the input</span>
@@ -1611,30 +1612,30 @@ title="Source repository"
 <span class="sd">            like ``from_size``, ``max_bond`` or inline.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Input image shape: batch_size x in_channels x height x width</span>
-        
+
         <span class="n">patches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unfold</span><span class="p">(</span><span class="n">image</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
         <span class="c1"># batch_size x nb_windows x (in_channels * nb_pixels)</span>
-        
+
         <span class="n">patches</span> <span class="o">=</span> <span class="n">patches</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">patches</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_channels</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
         <span class="c1"># batch_size x nb_windows x in_channels x nb_pixels</span>
-        
+
         <span class="n">patches</span> <span class="o">=</span> <span class="n">patches</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
         <span class="c1"># batch_size x nb_windows x nb_pixels x in_channels</span>
-        
+
         <span class="n">result</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">patches</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="c1"># batch_size x nb_windows</span>
-        
+
         <span class="n">h_in</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
         <span class="n">w_in</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
-        
-        <span class="n">h_out</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">h_in</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">dilation</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> \
-            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">stride</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">w_out</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">w_in</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">dilation</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> \
-                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">stride</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-        
+
+        <span class="n">h_out</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">h_in</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">dilation</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span>
+                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">stride</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">w_out</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">w_in</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">dilation</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span>
+                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">stride</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
         <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">result</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">h_out</span><span class="p">,</span> <span class="n">w_out</span><span class="p">)</span>
         <span class="c1"># batch_size x height_out x width_out</span>
-        
+
         <span class="k">return</span> <span class="n">result</span></div></div>
 
 
@@ -1686,7 +1687,7 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; result.shape</span>
 <span class="sd">    torch.Size([20, 1, 1])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    
+
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">in_channels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                  <span class="n">bond_dim</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
@@ -1694,49 +1695,49 @@ title="Source repository"
                  <span class="n">stride</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
                  <span class="n">padding</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
                  <span class="n">dilation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        
+
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">kernel_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">)</span>
         <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`kernel_size` must be int or Sequence&#39;</span><span class="p">)</span>
-        
+
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">stride</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">stride</span> <span class="o">=</span> <span class="p">(</span><span class="n">stride</span><span class="p">,</span> <span class="n">stride</span><span class="p">)</span>
         <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">stride</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`stride` must be int or Sequence&#39;</span><span class="p">)</span>
-        
+
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">padding</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">padding</span> <span class="o">=</span> <span class="p">(</span><span class="n">padding</span><span class="p">,</span> <span class="n">padding</span><span class="p">)</span>
         <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">padding</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`padding` must be int or Sequence&#39;</span><span class="p">)</span>
-        
+
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dilation</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">dilation</span> <span class="o">=</span> <span class="p">(</span><span class="n">dilation</span><span class="p">,</span> <span class="n">dilation</span><span class="p">)</span>
         <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dilation</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`dilation` must be int or Sequence&#39;</span><span class="p">)</span>
-        
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span> <span class="o">=</span> <span class="n">in_channels</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span> <span class="o">=</span> <span class="n">kernel_size</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_stride</span> <span class="o">=</span> <span class="n">stride</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_padding</span> <span class="o">=</span> <span class="n">padding</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span> <span class="o">=</span> <span class="n">dilation</span>
-        
+
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">n_rows</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                          <span class="n">n_cols</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
                          <span class="n">in_dim</span><span class="o">=</span><span class="n">in_channels</span><span class="p">,</span>
                          <span class="n">bond_dim</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">,</span>
                          <span class="n">n_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
-        
+
         <span class="bp">self</span><span class="o">.</span><span class="n">unfold</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Unfold</span><span class="p">(</span><span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span>
                                 <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span>
                                 <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span>
                                 <span class="n">dilation</span><span class="o">=</span><span class="n">dilation</span><span class="p">)</span>
-        
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns ``in_channels``. Same as ``in_dim`` in :class:`UPEPS`.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_channels</span>
-    
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">kernel_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1744,7 +1745,7 @@ title="Source repository"
 <span class="sd">        given by :math:`kernel\_size_0` and :math:`kernel\_size_1`, respectively.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_size</span>
-    
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">stride</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1752,7 +1753,7 @@ title="Source repository"
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stride</span>
-    
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">padding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1760,7 +1761,7 @@ title="Source repository"
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_padding</span>
-    
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dilation</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1768,7 +1769,7 @@ title="Source repository"
 <span class="sd">        &lt;https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html#torch.nn.Unfold&gt;`_.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dilation</span>
-    
+
 <div class="viewcode-block" id="ConvUPEPS.forward"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvUPEPS.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Overrides ``torch.nn.Module``&#39;s forward to compute a convolution on the input</span>
@@ -1789,30 +1790,30 @@ title="Source repository"
 <span class="sd">            like ``from_size``, ``max_bond`` or inline.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Input image shape: batch_size x in_channels x height x width</span>
-        
+
         <span class="n">patches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unfold</span><span class="p">(</span><span class="n">image</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
         <span class="c1"># batch_size x nb_windows x (in_channels * nb_pixels)</span>
-        
+
         <span class="n">patches</span> <span class="o">=</span> <span class="n">patches</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">patches</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_channels</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
         <span class="c1"># batch_size x nb_windows x in_channels x nb_pixels</span>
-        
+
         <span class="n">patches</span> <span class="o">=</span> <span class="n">patches</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
         <span class="c1"># batch_size x nb_windows x nb_pixels x in_channels</span>
-        
+
         <span class="n">result</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">patches</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="c1"># batch_size x nb_windows</span>
-        
+
         <span class="n">h_in</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
         <span class="n">w_in</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
-        
-        <span class="n">h_out</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">h_in</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">dilation</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> \
-            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">stride</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">w_out</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">w_in</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">dilation</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> \
-                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">stride</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-        
+
+        <span class="n">h_out</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">h_in</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">dilation</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span>
+                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">stride</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">w_out</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">w_in</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">dilation</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span>
+                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">stride</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
         <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">result</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">h_out</span><span class="p">,</span> <span class="n">w_out</span><span class="p">)</span>
         <span class="c1"># batch_size x height_out x width_out</span>
-        
+
         <span class="k">return</span> <span class="n">result</span></div></div>
 </pre></div>
 

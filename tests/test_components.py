@@ -64,10 +64,10 @@ class TestAxis:
         assert stack.axes_names == ['stack', 'axis']
         assert stack['stack'].is_batch()
         assert not stack['axis'].is_batch()
-        
+
         with pytest.raises(ValueError):
             stack.get_axis('axis').name = 'other_stack'
-            
+
         # Name of axis "stack" cannot be changed
         with pytest.raises(ValueError):
             stack.get_axis('stack').name = 'axis'
@@ -122,7 +122,6 @@ class TestInitNode:
         assert node.tensor is None
         assert node._tensor_info == {'address': 'my_node',
                                      'node_ref': None,
-                                     'full': True,
                                      'index': None}
 
         net = node.network
@@ -155,7 +154,6 @@ class TestInitNode:
         assert node.tensor is None
         assert node._tensor_info == {'address': 'node',
                                      'node_ref': None,
-                                     'full': True,
                                      'index': None}
 
         net = node.network
@@ -188,7 +186,6 @@ class TestInitNode:
         assert node.tensor is None
         assert node._tensor_info == {'address': 'node',
                                      'node_ref': None,
-                                     'full': True,
                                      'index': None}
 
         net = node.network
@@ -219,7 +216,6 @@ class TestInitNode:
         assert torch.equal(node.tensor, tensor)
         assert node._tensor_info == {'address': 'node',
                                      'node_ref': None,
-                                     'full': True,
                                      'index': None}
 
         net = node.network
@@ -266,7 +262,6 @@ class TestInitParamNode:
         assert node.tensor is None
         assert node._tensor_info == {'address': 'my_node',
                                      'node_ref': None,
-                                     'full': True,
                                      'index': None}
 
         net = node.network
@@ -305,7 +300,6 @@ class TestInitParamNode:
         assert torch.equal(node.tensor, nn.Parameter(tensor))
         assert node._tensor_info == {'address': 'paramnode',
                                      'node_ref': None,
-                                     'full': True,
                                      'index': None}
 
         net = node.network
@@ -461,14 +455,14 @@ class TestSetTensorNode:
 
         assert node1.tensor is None
         assert node1.shape == (2, 5, 2)
-        
+
         assert node1.tensor_address() == 'node1'  # But empty
         assert node2.tensor_address() == 'node2'
 
         node1.tensor = tensor
         assert torch.equal(node1.tensor, node2.tensor)
         assert node1.shape == (2, 5, 2)
-        
+
         assert node1.tensor_address() == 'node1'
         assert node2.tensor_address() == 'node2'
 
@@ -588,104 +582,104 @@ class TestSetTensorNode:
         # Changing node1's tensor changes node2's tensor
         node1.tensor[0, 0, 0] = 1000
         assert node2.tensor[0, 0, 0] == 1000
-    
+
     def test_set_tensor_from(self, setup):
         node1, node2, tensor = setup
-        
+
         assert node1.tensor is None
         assert node1.shape == (2, 5, 2)
-        
+
         assert node1.tensor_address() == 'node1'  # But empty
         assert node2.tensor_address() == 'node2'
 
         node1.set_tensor_from(node2)
         assert torch.equal(node1.tensor, node2.tensor)
         assert node1.shape == (2, 5, 2)
-        
+
         assert node1.tensor_address() == 'node2'
         assert node2.tensor_address() == 'node2'
-        
+
         node2.tensor = torch.randn(node2.shape)
         assert torch.equal(node1.tensor, node2.tensor)
-    
+
     def test_set_tensor_from_empty(self, setup):
         node1, node2, tensor = setup
-        
+
         assert node1.tensor is None
         assert node1.shape == (2, 5, 2)
-        
+
         assert node1.tensor_address() == 'node1'  # But empty
         assert node2.tensor_address() == 'node2'
 
         node2.set_tensor_from(node1)
         assert node1.tensor is None
         assert node2.tensor is None
-        
+
         assert node1.tensor_address() == 'node1'  # But empty
         assert node2.tensor_address() == 'node1'  # But empty
-        
+
         node1.tensor = torch.randn(node1.shape)
         assert torch.equal(node1.tensor, node2.tensor)
-    
+
     def test_set_tensor_from_other_type(self, setup):
         node1, node2, tensor = setup
-        
+
         node1 = node1.parameterize()
         with pytest.raises(TypeError):
             # Node and ParamNode cannot share tensor
             node1.set_tensor_from(node2)
-            
+
     def test_set_tensor_from_other_network(self, setup):
         node1, node2, tensor = setup
-        
+
         node1.network = tk.TensorNetwork()
         with pytest.raises(ValueError):
             # Cannot share tensor if they are in different networks
             node1.set_tensor_from(node2)
-    
+
     def test_set_node_with_reference(self, setup):
         node1, node2, tensor = setup
-        
+
         assert node1.tensor is None
         assert node1.shape == (2, 5, 2)
-        
+
         assert node1.tensor_address() == 'node1'  # But empty
         assert node2.tensor_address() == 'node2'
 
         node1.set_tensor_from(node2)
         assert torch.equal(node1.tensor, node2.tensor)
         assert node1.shape == (2, 5, 2)
-        
+
         # Now node1 just has a reference to node2's tensor
         assert node1.tensor_address() == 'node2'
         assert node2.tensor_address() == 'node2'
-        
+
         with pytest.raises(ValueError):
             # Cannot set tensor in node1 if it has a reference to node2
             node1.tensor = torch.zeros(node1.shape)
-            
+
     def test_set_node_with_reference_reset(self, setup):
         node1, node2, tensor = setup
-        
+
         assert node1.tensor is None
         assert node1.shape == (2, 5, 2)
-        
+
         assert node1.tensor_address() == 'node1'  # But empty
         assert node2.tensor_address() == 'node2'
 
         node1.set_tensor_from(node2)
         assert torch.equal(node1.tensor, node2.tensor)
         assert node1.shape == (2, 5, 2)
-        
+
         # Now node1 just has a reference to node2's tensor
         assert node1.tensor_address() == 'node2'
         assert node2.tensor_address() == 'node2'
-        
+
         node1.reset_tensor_address()
         assert node1.tensor_address() == 'node1'
         assert node2.tensor_address() == 'node2'
         assert torch.equal(node1.tensor, node2.tensor)
-        
+
         node1.tensor = torch.zeros(node1.shape)
         assert not torch.equal(node1.tensor, node2.tensor)
 
@@ -713,14 +707,14 @@ class TestSetTensorParamNode:
 
         assert node1.tensor is None
         assert node1.shape == (2, 5, 2)
-        
+
         assert node1.tensor_address() == 'node1'  # But empty
         assert node2.tensor_address() == 'node2'
 
         node1.tensor = tensor
         assert torch.equal(node1.tensor, node2.tensor)
         assert node1.shape == (2, 5, 2)
-        
+
         assert node1.tensor_address() == 'node1'
         assert node2.tensor_address() == 'node2'
 
@@ -857,110 +851,110 @@ class TestSetTensorParamNode:
         node3.tensor = None
         assert node3.tensor is None
         assert node3.grad is None
-        
+
     def test_set_tensor_from(self, setup):
         node1, node2, tensor = setup
-        
+
         assert node1.tensor is None
         assert node1.shape == (2, 5, 2)
-        
+
         assert node1.tensor_address() == 'node1'  # But empty
         assert node2.tensor_address() == 'node2'
 
         node1.set_tensor_from(node2)
         assert torch.equal(node1.tensor, node2.tensor)
         assert node1.shape == (2, 5, 2)
-        
+
         assert node1.tensor_address() == 'node2'
         assert node2.tensor_address() == 'node2'
-        
+
         node2.tensor = torch.randn(node2.shape)
         assert torch.equal(node1.tensor, node2.tensor)
-    
+
     def test_set_tensor_from_empty(self, setup):
         node1, node2, tensor = setup
-        
+
         assert node1.tensor is None
         assert node1.shape == (2, 5, 2)
-        
+
         assert node1.tensor_address() == 'node1'  # But empty
         assert node2.tensor_address() == 'node2'
 
         node2.set_tensor_from(node1)
         assert node1.tensor is None
         assert node2.tensor is None
-        
+
         assert node1.tensor_address() == 'node1'  # But empty
         assert node2.tensor_address() == 'node1'  # But empty
-        
+
         node1.tensor = torch.randn(node1.shape)
-        assert torch.equal(node1.tensor, node2.tensor) 
-    
+        assert torch.equal(node1.tensor, node2.tensor)
+
     def test_set_tensor_from_other_type(self, setup):
         node1, node2, tensor = setup
-        
+
         node1 = node1.parameterize(False)
         with pytest.raises(TypeError):
             # Node and ParamNode cannot share tensor
             node1.set_tensor_from(node2)
-            
+
     def test_set_tensor_from_other_network(self, setup):
         node1, node2, tensor = setup
-        
+
         node1.network = tk.TensorNetwork()
         with pytest.raises(ValueError):
             # Cannot share tensor if they are in different networks
             node1.set_tensor_from(node2)
-    
+
     def test_set_node_with_reference(self, setup):
         node1, node2, tensor = setup
-        
+
         assert node1.tensor is None
         assert node1.shape == (2, 5, 2)
-        
+
         assert node1.tensor_address() == 'node1'  # But empty
         assert node2.tensor_address() == 'node2'
 
         node1.set_tensor_from(node2)
         assert torch.equal(node1.tensor, node2.tensor)
         assert node1.shape == (2, 5, 2)
-        
+
         # Now node1 just has a reference to node2's tensor
         assert node1.tensor_address() == 'node2'
         assert node2.tensor_address() == 'node2'
-        
+
         with pytest.raises(ValueError):
             # Cannot set tensor in node1 if it has a reference to node2
             node1.tensor = torch.zeros(node1.shape)
-            
+
     def test_set_node_with_reference_reset(self, setup):
         node1, node2, tensor = setup
-        
+
         assert node1.tensor is None
         assert node1.shape == (2, 5, 2)
-        
+
         assert node1.tensor_address() == 'node1'  # But empty
         assert node2.tensor_address() == 'node2'
 
         node1.set_tensor_from(node2)
         assert torch.equal(node1.tensor, node2.tensor)
         assert node1.shape == (2, 5, 2)
-        
+
         # Now node1 just has a reference to node2's tensor
         assert node1.tensor_address() == 'node2'
         assert node2.tensor_address() == 'node2'
-        
+
         node1.reset_tensor_address()
         assert node1.tensor_address() == 'node1'
         assert node2.tensor_address() == 'node2'
         assert torch.equal(node1.tensor, node2.tensor)
-        
+
         node1.tensor = torch.zeros(node1.shape)
         assert not torch.equal(node1.tensor, node2.tensor)
 
 
 class TestMoveToNetwork:
-    
+
     def test_change_network(self):
         node1 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node1',
@@ -1012,7 +1006,7 @@ class TestMoveToNetwork:
         assert len(net2.edges) == 4
         assert len(net1.nodes) == 0
         assert len(net1.edges) == 0
-    
+
     def test_move_all(self):
         net = tk.TensorNetwork()
         node1 = tk.Node(shape=(2, 3),
@@ -1024,16 +1018,16 @@ class TestMoveToNetwork:
                         name='node2',
                         network=net)
         node1['right'] ^ node2['left']
-        
+
         assert node1.network == net
         assert node2.network == net
-        
+
         other_net = tk.TensorNetwork()
         node1.network = other_net
-        
+
         assert node1.network == other_net
         assert node2.network == other_net
-        
+
     def test_move_some_leave_other(self):
         net = tk.TensorNetwork()
         node1 = tk.Node(shape=(2, 3),
@@ -1049,18 +1043,18 @@ class TestMoveToNetwork:
                         name='node3',
                         network=net)
         node1['right'] ^ node2['left']
-        
+
         assert node1.network == net
         assert node2.network == net
         assert node3.network == net
-        
+
         other_net = tk.TensorNetwork()
         node1.network = other_net
-        
+
         assert node1.network == other_net
         assert node2.network == other_net
         assert node3.network == net
-        
+
     def test_move_some_leave_other_share_tensor(self):
         net = tk.TensorNetwork()
         node1 = tk.empty(shape=(2, 3),
@@ -1072,68 +1066,68 @@ class TestMoveToNetwork:
                          name='node2',
                          network=net)
         node1.set_tensor_from(node2)
-        
+
         assert node1.network == net
         assert node2.network == net
-        
+
         other_net = tk.TensorNetwork()
         node1.network = other_net
-        
+
         assert node1.network == other_net
         assert node2.network == net
-        
+
         # When node is moved to another network, its _tensor_info is set
         # for the first time in that network. This automatically sets the
         # address as the name of the node, so the node recovers the ownership
         # of its tensor
         assert node1.tensor_address() == 'node1'
         assert node2.tensor_address() == 'node2'
-        assert torch.equal(node1.tensor, node2.tensor)      
+        assert torch.equal(node1.tensor, node2.tensor)
 
 
 class TestMeasures:
-    
+
     def test_sum(self):
         tensor = torch.randn(2, 3)
         node = tk.Node(axes_names=('left', 'right'),
                        tensor=tensor)
-        
+
         assert node.sum() == tensor.sum()
         assert torch.equal(node.sum(0), tensor.sum(0))
         assert torch.equal(node.sum(1), tensor.sum(1))
         assert torch.equal(node.sum('left'), tensor.sum(0))
         assert torch.equal(node.sum('right'), tensor.sum(1))
         assert torch.equal(node.sum(['left', 'right']), tensor.sum([0, 1]))
-        
+
     def test_mean(self):
         tensor = torch.randn(2, 3)
         node = tk.Node(axes_names=('left', 'right'),
                        tensor=tensor)
-        
+
         assert node.mean() == tensor.mean()
         assert torch.equal(node.mean(0), tensor.mean(0))
         assert torch.equal(node.mean(1), tensor.mean(1))
         assert torch.equal(node.mean('left'), tensor.mean(0))
         assert torch.equal(node.mean('right'), tensor.mean(1))
         assert torch.equal(node.mean(['left', 'right']), tensor.mean([0, 1]))
-        
+
     def test_std(self):
         tensor = torch.randn(2, 3)
         node = tk.Node(axes_names=('left', 'right'),
                        tensor=tensor)
-        
+
         assert node.std() == tensor.std()
         assert torch.equal(node.std(0), tensor.std(0))
         assert torch.equal(node.std(1), tensor.std(1))
         assert torch.equal(node.std('left'), tensor.std(0))
         assert torch.equal(node.std('right'), tensor.std(1))
         assert torch.equal(node.std(['left', 'right']), tensor.std([0, 1]))
-        
+
     def test_norm(self):
         tensor = torch.randn(2, 3)
         node = tk.Node(axes_names=('left', 'right'),
                        tensor=tensor)
-        
+
         assert node.norm() == tensor.norm()
         assert torch.equal(node.norm(2, 0), tensor.norm(2, 0))
         assert torch.equal(node.norm(2, 1), tensor.norm(2, 1))
@@ -1654,7 +1648,7 @@ class TestCopy:
             assert copy_edge._nodes[1 - copy.is_node1(i)] == copy
             assert edge._nodes[1 - copy.is_node1(i)] == node1
             assert copy_edge._nodes[copy.is_node1(i)] == \
-                edge._nodes[copy.is_node1(i)]
+                   edge._nodes[copy.is_node1(i)]
 
         assert node2['left'].node1 == node1
 
@@ -1682,7 +1676,7 @@ class TestCopy:
             assert copy_edge._nodes[1 - copy.is_node1(i)] == copy
             assert edge._nodes[1 - copy.is_node1(i)] == node1
             assert copy_edge._nodes[copy.is_node1(i)] == \
-                edge._nodes[copy.is_node1(i)]
+                   edge._nodes[copy.is_node1(i)]
 
         assert node2['left'].node1 == node1
 
@@ -1710,7 +1704,7 @@ class TestCopy:
             assert copy_edge._nodes[1 - copy.is_node1(i)] == copy
             assert edge._nodes[1 - copy.is_node1(i)] == node1
             assert copy_edge._nodes[copy.is_node1(i)] == \
-                edge._nodes[copy.is_node1(i)]
+                   edge._nodes[copy.is_node1(i)]
 
         assert node2['left'].node1 == node1
 
@@ -1738,10 +1732,10 @@ class TestCopy:
             assert copy_edge._nodes[1 - copy.is_node1(i)] == copy
             assert edge._nodes[1 - copy.is_node1(i)] == node1
             assert copy_edge._nodes[copy.is_node1(i)] == \
-                edge._nodes[copy.is_node1(i)]
+                   edge._nodes[copy.is_node1(i)]
 
         assert node2['left'].node1 == node1
-        
+
     def test_copy_node_preserve_name(self):
         node1 = tk.Node(axes_names=('left', 'input', 'right'),
                         name='node',
@@ -1750,7 +1744,7 @@ class TestCopy:
                         name='node',
                         tensor=torch.randn(2, 5, 2))
         node1['right'] ^ node2['left']
-        
+
         assert node1.name == 'node_0'
         assert node2.name == 'node_1'
 
@@ -1779,7 +1773,7 @@ class TestStack:
         assert isinstance(stack['stack'], tk.Edge)
         assert isinstance(stack['input'], tk.StackEdge)
         assert isinstance(stack['output'], tk.StackEdge)
-        
+
         for node in nodes:
             assert node.tensor_address() == node.name
 
@@ -1801,7 +1795,7 @@ class TestStack:
         assert isinstance(stack['stack'], tk.Edge)
         assert isinstance(stack['input'], tk.StackEdge)
         assert isinstance(stack['output'], tk.StackEdge)
-        
+
         for node in nodes:
             assert node.tensor_address() == node.name
 
@@ -1823,7 +1817,7 @@ class TestStack:
         assert isinstance(stack['stack'], tk.Edge)
         assert isinstance(stack['input'], tk.StackEdge)
         assert isinstance(stack['output'], tk.StackEdge)
-        
+
         for node in nodes:
             assert node.tensor_address() == node.name
 
@@ -1845,7 +1839,7 @@ class TestStack:
         assert isinstance(stack['stack'], tk.Edge)
         assert isinstance(stack['input'], tk.StackEdge)
         assert isinstance(stack['output'], tk.StackEdge)
-        
+
         # Nodes only modify their memory address if stacked
         # via operation `stack`
         for node in nodes:
@@ -1992,7 +1986,7 @@ class TestTensorNetwork:
 
         assert len(net.edges) == 15
         for i in range(4):
-            net[f'node_{i}']['right'] ^ net[f'node_{i+1}']['left']
+            net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
         assert len(net.edges) == 7
 
         net._remove_node(new_node)
@@ -2024,7 +2018,7 @@ class TestTensorNetwork:
 
         node1.name = 'my_node'
         assert list(net.nodes.keys()) == [f'node_{i}' for i in range(3)] \
-            + ['my_node']
+               + ['my_node']
         assert node1.name == 'my_node'
 
         node2.name = 'my_node'
@@ -2043,7 +2037,7 @@ class TestTensorNetwork:
                         init_method='randn')
 
         for i in range(3):
-            net[f'node_{i}']['right'] ^ net[f'node_{i+1}']['left']
+            net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
         assert len(net.edges) == 6
 
         node = net['node_0']
@@ -2247,7 +2241,7 @@ class TestTensorNetwork:
         assert torch.equal(net.data_nodes['data_1'].tensor, data[:, 1, :])
         assert torch.equal(net.nodes['stack_data_memory'].tensor,
                            data.movedim(-2, 0))
-        
+
         assert net.data_nodes['data_0'].shape == (10, 5)
         assert net.data_nodes['data_1'].shape == (10, 5)
         assert net.nodes['stack_data_memory'].shape == (2, 10, 5)
@@ -2256,7 +2250,7 @@ class TestTensorNetwork:
         # the shape of the stack_data_memory node. It gives a warning
         data = torch.randn(10, 3, 5)
         net.add_data(data)
-        
+
         assert net.data_nodes['data_0'].shape == (10, 5)
         assert net.data_nodes['data_1'].shape == (10, 5)
         assert net.nodes['stack_data_memory'].shape == (2, 10, 5)
@@ -2264,7 +2258,7 @@ class TestTensorNetwork:
         # This does not give warning, batch size can be changed as we wish
         data = torch.randn(100, 2, 5)
         net.add_data(data)
-        
+
         assert net.data_nodes['data_0'].shape == (100, 5)
         assert net.data_nodes['data_1'].shape == (100, 5)
         assert net.nodes['stack_data_memory'].shape == (2, 100, 5)
@@ -2380,7 +2374,7 @@ class TestTensorNetwork:
                         init_method='randn')
 
         for i in range(3):
-            net[f'node_{i}']['right'] ^ net[f'node_{i+1}']['left']
+            net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
         assert len(net.nodes) == 4
         assert len(net.edges) == 6
 
@@ -2401,7 +2395,7 @@ class TestTensorNetwork:
         assert len(net.leaf_nodes) == 3
         assert len(net.resultant_nodes) == 1
         assert len(net.edges) == 5
-        
+
     def test_inverse_memory(self):
         net = tk.TensorNetwork()
         nodes = []
@@ -2415,13 +2409,13 @@ class TestTensorNetwork:
 
         for i in range(3):
             nodes[i]['right'] ^ nodes[i + 1]['left']
-            
+
         input_edges = []
         for node in nodes:
             input_edges.append(node['input'])
-            
+
         net.set_data_nodes(input_edges, 1)
-        
+
         # Trace
         net._tracing = True
         net.add_data(torch.randn(100, 4, 5))
@@ -2429,33 +2423,34 @@ class TestTensorNetwork:
         result1 = aux_nodes[0] @ aux_nodes[1]
         result2 = aux_nodes[2] @ aux_nodes[3]
         result = result1 @ result2
-        
+
         # Repeat operations
         net._tracing = False
+        net._traced = True
         net.add_data(torch.randn(100, 4, 5))
         aux_nodes = [node @ node.neighbours('input') for node in nodes]
-        
+
         # Memory in nodes should be still there
         for node in nodes:
             assert node.tensor is not None
-        
+
         # Memory in data nodes should be consumed:
         for data_node in list(net.data_nodes.values()):
             assert data_node.tensor is None
             assert net['stack_data_memory'].tensor is None
-        
+
         result1 = aux_nodes[0] @ aux_nodes[1]
         assert aux_nodes[0].tensor is None
         assert aux_nodes[1].tensor is None
-        
+
         result2 = aux_nodes[2] @ aux_nodes[3]
         assert aux_nodes[2].tensor is None
         assert aux_nodes[3].tensor is None
-        
+
         result = result1 @ result2
         assert result1.tensor is None
         assert result2.tensor is None
-        
+
     def test_inverse_memory_contract_data_stack(self):
         net = tk.TensorNetwork()
         nodes = []
@@ -2469,56 +2464,57 @@ class TestTensorNetwork:
 
         for i in range(3):
             nodes[i]['right'] ^ nodes[i + 1]['left']
-            
+
         input_edges = []
         for node in nodes:
             input_edges.append(node['input'])
-            
+
         net.set_data_nodes(input_edges, 1)
-        
+
         # Trace
         net._tracing = True
         net.add_data(torch.randn(100, 4, 5))
-        
+
         stack_nodes = tk.stack(nodes)
         stack_data = tk.stack(list(net.data_nodes.values()))
         stack_nodes['input'] ^ stack_data['feature']
         aux_nodes = tk.unbind(stack_nodes @ stack_data)
-        
+
         result1 = aux_nodes[0] @ aux_nodes[1]
         result2 = aux_nodes[2] @ aux_nodes[3]
         result = result1 @ result2
-        
+
         # Repeat operations
         net._tracing = False
+        net._traced = True
         net.add_data(torch.randn(100, 4, 5))
-        
+
         stack_nodes = tk.stack(nodes)
         stack_data = tk.stack(list(net.data_nodes.values()))
         stack_nodes['input'] ^ stack_data['feature']
         aux_nodes = tk.unbind(stack_nodes @ stack_data)
-        
+
         # Memory in nodes should be still there
         for node in nodes:
             assert node.tensor is not None
-        
+
         # Memory in data nodes should be consumed:
         for data_node in list(net.data_nodes.values()):
             assert data_node.tensor is None
             assert net['stack_data_memory'].tensor is None
-        
+
         result1 = aux_nodes[0] @ aux_nodes[1]
         assert aux_nodes[0].tensor is None
         assert aux_nodes[1].tensor is None
-        
+
         result2 = aux_nodes[2] @ aux_nodes[3]
         assert aux_nodes[2].tensor is None
         assert aux_nodes[3].tensor is None
-        
+
         result = result1 @ result2
         assert result1.tensor is None
         assert result2.tensor is None
-        
+
     def test_inverse_memory_contract_data_stack_auto_stack(self):
         net = tk.TensorNetwork()
         nodes = []
@@ -2532,57 +2528,57 @@ class TestTensorNetwork:
 
         for i in range(3):
             nodes[i]['right'] ^ nodes[i + 1]['left']
-            
+
         input_edges = []
         for node in nodes:
             input_edges.append(node['input'])
-            
+
         net.set_data_nodes(input_edges, 1)
         net.auto_stack = True
-        
+
         # Trace
         net._tracing = True
         net.add_data(torch.randn(100, 4, 5))
-        
+
         stack_nodes = tk.stack(nodes)
         stack_data = tk.stack(list(net.data_nodes.values()))
         stack_nodes['input'] ^ stack_data['feature']
         aux_nodes = tk.unbind(stack_nodes @ stack_data)
-        
+
         result1 = aux_nodes[0] @ aux_nodes[1]
         result2 = aux_nodes[2] @ aux_nodes[3]
         result = result1 @ result2
-        
+
         # Repeat operations
         net._tracing = False
+        net._traced = True
         net.add_data(torch.randn(100, 4, 5))
-        
+
         stack_nodes = tk.stack(nodes)
         stack_data = tk.stack(list(net.data_nodes.values()))
         stack_nodes['input'] ^ stack_data['feature']
         aux_nodes = tk.unbind(stack_nodes @ stack_data)
-        
+
         # Memory in nodes should be still there
         for node in nodes:
             assert node.tensor is not None
-        
+
         # Memory in data nodes should be consumed:
         for data_node in list(net.data_nodes.values()):
             assert data_node.tensor is None
             assert net['stack_data_memory'].tensor is None
-        
+
         result1 = aux_nodes[0] @ aux_nodes[1]
         assert aux_nodes[0].tensor is None
         assert aux_nodes[1].tensor is None
-        
+
         result2 = aux_nodes[2] @ aux_nodes[3]
         assert aux_nodes[2].tensor is None
         assert aux_nodes[3].tensor is None
-        
+
         result = result1 @ result2
         assert result1.tensor is None
         assert result2.tensor is None
-        
 
     def test_reset(self):
         net = tk.TensorNetwork(name='net')
@@ -2594,7 +2590,7 @@ class TestTensorNetwork:
                         init_method='randn')
 
         for i in range(3):
-            net[f'node_{i}']['right'] ^ net[f'node_{i+1}']['left']
+            net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
         assert len(net.nodes) == 4
         assert len(net.edges) == 6
 
@@ -2617,7 +2613,7 @@ class TestTensorNetwork:
         assert len(net.leaf_nodes) == 4
         assert len(net.resultant_nodes) == 0
         assert len(net.edges) == 6
-        
+
     def test_trace(self):
         pass
 
@@ -2631,7 +2627,7 @@ class TestTensorNetwork:
                         init_method='randn')
 
         for i in range(3):
-            net[f'node_{i}']['right'] ^ net[f'node_{i+1}']['left']
+            net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
         assert len(net.nodes) == 4
         assert len(net.edges) == 6
         for node in net.nodes.values():
@@ -2668,7 +2664,7 @@ class TestTensorNetwork:
                         init_method='randn')
 
         for i in range(3):
-            net[f'node_{i}']['right'] ^ net[f'node_{i+1}']['left']
+            net[f'node_{i}']['right'] ^ net[f'node_{i + 1}']['left']
         assert len(net.nodes) == 4
         assert len(net.edges) == 6
         for node in net.nodes.values():
@@ -2680,18 +2676,18 @@ class TestTensorNetwork:
         net.auto_unbind = True
         assert net.auto_stack == False
         assert net.auto_unbind == True
-        
+
         stack1 = tk.stack(list(net.nodes.values()))
-        unbinded = tk.unbind(stack1)
-        stack2 = tk.stack(unbinded)
+        unbound = tk.unbind(stack1)
+        stack2 = tk.stack(unbound)
         # Now leaf nodes have their emory stored in the stack
         for node in net.leaf_nodes.values():
             assert node._tensor_info['address'] is not None
             assert node._tensor_info['node_ref'] is None
 
-        # Unbinded nodes and `stack2` share memory with `stack1`
+        # unbound nodes and `stack2` share memory with `stack1`
         assert stack1._tensor_info['address'] is not None
-        for node in unbinded:
+        for node in unbound:
             assert node._tensor_info['address'] is None
         assert stack2._tensor_info['address'] is None
 
@@ -2700,8 +2696,8 @@ class TestTensorNetwork:
         assert net.auto_unbind == False
 
         stack1 = tk.stack(list(net.nodes.values()))
-        unbinded = tk.unbind(stack1)
-        stack2 = tk.stack(unbinded)
+        unbound = tk.unbind(stack1)
+        stack2 = tk.stack(unbound)
         # All nodes still have their own memory
         for node in net.leaf_nodes.values():
             assert node._tensor_info['address'] is not None

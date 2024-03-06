@@ -3045,7 +3045,7 @@ class Edge:
 
     def is_batch(self) -> bool:
         """Returns boolean indicating whether the edge is a batch edge."""
-        return self.axis1.is_batch()
+        return self._axes[0]._batch
 
     def is_attached_to(self, node: AbstractNode) -> bool:
         """Returns boolean indicating whether the edge is attached to ``node``."""

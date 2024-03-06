@@ -1695,7 +1695,7 @@ def svd_(edge: Edge,
 
     batch_axes = []
     for axis in node1._axes:
-        if axis.is_batch() and (axis._name in node2.axes_names):
+        if axis._batch and (axis._name in node2.axes_names):
             batch_axes.append(axis)
 
     n_batches = len(batch_axes)
@@ -1889,7 +1889,7 @@ def svdr_(edge: Edge,
 
     batch_axes = []
     for axis in node1._axes:
-        if axis.is_batch() and (axis._name in node2.axes_names):
+        if axis._batch and (axis._name in node2.axes_names):
             batch_axes.append(axis)
 
     n_batches = len(batch_axes)
@@ -2061,7 +2061,7 @@ def qr_(edge) -> Tuple[Node, Node]:
 
     batch_axes = []
     for axis in node1._axes:
-        if axis.is_batch() and (axis._name in node2.axes_names):
+        if axis._batch and (axis._name in node2.axes_names):
             batch_axes.append(axis)
 
     n_batches = len(batch_axes)
@@ -2208,7 +2208,7 @@ def rq_(edge) -> Tuple[Node, Node]:
 
     batch_axes = []
     for axis in node1._axes:
-        if axis.is_batch() and (axis._name in node2.axes_names):
+        if axis._batch and (axis._name in node2.axes_names):
             batch_axes.append(axis)
 
     n_batches = len(batch_axes)
@@ -2389,11 +2389,11 @@ def _contract_edges_first(edges: Optional[List[Edge]],
                     else:
                         contract_edges[edge].append(j)
 
-                elif axis.is_batch():
+                elif axis._batch:
                     if i == 0:
                         batch_in_node2 = False
                         for aux_axis in nodes[1]._axes:
-                            if aux_axis.is_batch() and \
+                            if aux_axis._batch and \
                                     (axis._name == aux_axis._name):
                                 batch_edges[axis._name] = [j]
                                 batch_in_node2 = True
@@ -2988,7 +2988,7 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
         if stack_node_ref.shape[1:] != stack_node.shape[1:]:
             for i, (max_dim, dim) in enumerate(zip(stack_node_ref._shape[1:],
                                                    stack_node._shape[1:])):
-                if stack_node._axes[i + 1].is_batch():
+                if stack_node._axes[i + 1]._batch:
                     # Admit any size in batch edges
                     index.append(slice(0, None))
                 else:
@@ -3008,7 +3008,7 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
                 index = [i]
                 for j, (max_dim, dim) in enumerate(zip(stack_node._shape[1:],
                                                        node._shape)):
-                    if node._axes[j].is_batch():
+                    if node._axes[j]._batch:
                         # Admit any size in batch edges
                         index.append(slice(0, None))
                     else:
@@ -3170,7 +3170,7 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
                 index = [i]
                 for j, (max_dim, dim) in enumerate(zip(node._shape[1:],
                                                        new_node._shape)):
-                    if new_node._axes[j].is_batch():
+                    if new_node._axes[j]._batch:
                         # Admit any size in batch edges
                         index.append(slice(0, None))
                     else:
@@ -3191,7 +3191,7 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
                     # If node is indexing from the original stack
                     for j, (aux_slice, dim) in enumerate(zip(node_index[1:],
                                                              new_node._shape)):
-                        if new_node._axes[j].is_batch():
+                        if new_node._axes[j]._batch:
                             # Admit any size in batch edges
                             index.append(slice(0, None))
                         else:
@@ -3202,7 +3202,7 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
                     # If node has the same shape as the original stack
                     for j, (max_dim, dim) in enumerate(zip(node.shape[1:],
                                                            new_node._shape)):
-                        if new_node._axes[j].is_batch():
+                        if new_node._axes[j]._batch:
                             # Admit any size in batch edges
                             index.append(slice(0, None))
                         else:

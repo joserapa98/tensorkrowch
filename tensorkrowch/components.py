@@ -918,7 +918,8 @@ class AbstractNode(ABC):
                 aux_shape = list(self._shape)
                 aux_shape[axis_num] = size
                 self._shape = Size(aux_shape)
-                self._direct_set_tensor(tensor[index])
+                correct_format_tensor = self._set_tensor_format(tensor[index])
+                self._direct_set_tensor(correct_format_tensor)
 
             elif size > self._shape[axis_num]:
                 # If new size is greater than current, tensor is expanded with
@@ -933,7 +934,9 @@ class AbstractNode(ABC):
                 aux_shape = list(self._shape)
                 aux_shape[axis_num] = size
                 self._shape = Size(aux_shape)
-                self._direct_set_tensor(nn.functional.pad(tensor, pad))
+                correct_format_tensor = self._set_tensor_format(
+                    nn.functional.pad(tensor, pad))
+                self._direct_set_tensor(correct_format_tensor)
 
     def get_axis(self, axis: Ax) -> Axis:
         """Returns :class:`Axis` given its ``name`` or ``num``."""
@@ -1263,11 +1266,9 @@ class AbstractNode(ABC):
         Sets a new node's tensor without checking extra conditions. It just
         can crop the tensor in case it is specified with ``check_shape``.
         """
-        if check_shape and not self._compatible_shape(tensor):
-            tensor = self._crop_tensor(tensor)
-        correct_format_tensor = self._set_tensor_format(tensor)
-
-        self._save_in_network(correct_format_tensor)
+    def _direct_set_tensor(self, tensor: Optional[Tensor]) -> None:
+        """Sets a new node's tensor without checking extra conditions."""
+        self._save_in_network(tensor)
         self._shape = tensor.shape
 
     def _unrestricted_set_tensor(self,

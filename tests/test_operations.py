@@ -3309,6 +3309,57 @@ class TestContractBetween:
         net.zero_grad(set_to_none=False)
         assert torch.equal(node1.grad, torch.zeros(node1.shape))
         assert torch.equal(node2.grad, torch.zeros(node2.shape))
+    
+    def test_contract_node_paramnode(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node2 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'input', 'right'),
+                             name='node1',
+                             init_method='randn',
+                             network=net)
+        node1['left'] ^ node2['left']
+        node1['right'] ^ node2['right']
+
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 0
+
+        assert node1.successors == dict()
+        assert node2.successors == dict()
+
+        # Contract nodes
+        node3 = node1 @ node2
+        assert node3.shape == (5, 5)
+        assert node3.axes_names == ['input_0', 'input_1']
+        assert node3.edges == [node1['input'], node2['input']]
+        assert node3.network == net
+
+        assert len(net.nodes) == 3
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 1
+
+        assert node1.successors != dict()
+        assert node1.successors['contract_edges'][(None, node1, node2)].child == node3
+        assert node2.successors == dict()
+
+        result_tensor = node3.tensor
+
+        # Repeat contraction
+        node4 = node1 @ node2
+        assert node3 == node4
+        assert torch.equal(result_tensor, node4.tensor)
+
+        # Compute gradient
+        node3.sum().backward()
+        assert not torch.equal(node2.grad, torch.zeros(node2.shape))
+
+        net.zero_grad(set_to_none=False)
+        assert torch.equal(node2.grad, torch.zeros(node2.shape))
 
     def test_trace_node(self):
         node1 = tk.Node(shape=(2, 5, 5, 2),

@@ -33,6 +33,7 @@ This script contains:
 import types
 from typing import Callable
 
+from itertools import starmap
 import opt_einsum
 
 from tensorkrowch.components import *
@@ -3641,8 +3642,11 @@ def _einsum_next(successor: Successor,
                  string: Text,
                  *nodes: AbstractNode) -> Node:
     hints = successor.hints
-
-    tensors = [node.tensor for node in nodes]
+    
+    tensors = list(
+        starmap(lambda nr, idx, node: node._direct_get_tensor(nr, idx),
+                zip(successor.node_ref, successor.index, nodes))
+    )
     new_tensor = opt_einsum.contract(hints['einsum_string'], *tensors,
                                      optimize=hints['path'])
 
@@ -3664,7 +3668,7 @@ einsum_op = Operation('einsum',
                       _einsum_next)
 
 
-def einsum(string: Text, *nodes: AbstractNode) -> Node:
+def einsum(string: Text, *nodes: Sequence[AbstractNode]) -> Node:
     """
     Performs einsum contraction based on `opt_einsum
     <https://optimized-einsum.readthedocs.io/en/stable/autosummary/opt_einsum.contract.html>`_.

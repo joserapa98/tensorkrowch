@@ -162,7 +162,9 @@ def _permute_next(successor: Successor,
                   node: AbstractNode,
                   axes: Sequence[Ax]) -> Node:
     # All arguments are mandatory though some might not be used
-    new_tensor = node.tensor.permute(successor.hints['axes_nums'])
+    new_tensor = node._direct_get_tensor(successor.node_ref,
+                                         successor.index)
+    new_tensor = new_tensor.permute(successor.hints)
     child = successor.child
     child._direct_set_tensor(new_tensor)
 
@@ -380,9 +382,13 @@ def _tprod_first(node1: AbstractNode, node2: AbstractNode) -> Node:
 def _tprod_next(successor: Successor,
                 node1: AbstractNode,
                 node2: AbstractNode) -> Node:
-    new_tensor = torch.outer(node1.tensor.flatten(),
-                             node2.tensor.flatten()).view(*(list(node1._shape) +
-                                                            list(node2._shape)))
+    tensor1 = node1._direct_get_tensor(successor.node_ref[0],
+                                       successor.index[0])
+    tensor2 = node1._direct_get_tensor(successor.node_ref[1],
+                                       successor.index[1])
+    new_tensor = torch.outer(tensor1.flatten(),
+                             tensor2.flatten()).view(*(list(node1._shape) + 
+                                                       list(node2._shape)))
     child = successor.child
     child._direct_set_tensor(new_tensor)
 
@@ -512,7 +518,11 @@ def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
 def _mul_next(successor: Successor,
               node1: AbstractNode,
               node2: AbstractNode) -> Node:
-    new_tensor = node1.tensor * node2.tensor
+    tensor1 = node1._direct_get_tensor(successor.node_ref[0],
+                                       successor.index[0])
+    tensor2 = node1._direct_get_tensor(successor.node_ref[1],
+                                       successor.index[1])
+    new_tensor = tensor1 * tensor2
     child = successor.child
     child._direct_set_tensor(new_tensor)
 
@@ -639,7 +649,11 @@ def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
 def _add_next(successor: Successor,
               node1: AbstractNode,
               node2: AbstractNode) -> Node:
-    new_tensor = node1.tensor + node2.tensor
+    tensor1 = node1._direct_get_tensor(successor.node_ref[0],
+                                       successor.index[0])
+    tensor2 = node1._direct_get_tensor(successor.node_ref[1],
+                                       successor.index[1])
+    new_tensor = tensor1 + tensor2
     child = successor.child
     child._direct_set_tensor(new_tensor)
 
@@ -766,7 +780,11 @@ def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
 def _sub_next(successor: Successor,
               node1: AbstractNode,
               node2: AbstractNode) -> Node:
-    new_tensor = node1.tensor - node2.tensor
+    tensor1 = node1._direct_get_tensor(successor.node_ref[0],
+                                       successor.index[0])
+    tensor2 = node1._direct_get_tensor(successor.node_ref[1],
+                                       successor.index[1])
+    new_tensor = tensor1 - tensor2
     child = successor.child
     child._direct_set_tensor(new_tensor)
 
@@ -1129,10 +1147,12 @@ def _split_next(successor: Successor,
     node2_axes = successor.hints['node2_axes']
     permutation_dims = successor.hints['permutation_dims']
 
-    batch_shape = torch.tensor(node.shape)[batch_axes].tolist()
-    node1_shape = torch.tensor(node.shape)[node1_axes]
-    node2_shape = torch.tensor(node.shape)[node2_axes]
-
+    batch_shape = torch.tensor(node._shape)[batch_axes].tolist()
+    node1_shape = torch.tensor(node._shape)[node1_axes]
+    node2_shape = torch.tensor(node._shape)[node2_axes]
+    
+    node_tensor = node._direct_get_tensor(successor.node_ref,
+                                          successor.index)
     if permutation_dims:
         node_tensor = node.tensor \
             .permute(*(batch_axes + node1_axes + node2_axes)) \
@@ -2502,11 +2522,10 @@ def _contract_edges_next(successor: Successor,
                          edges: Optional[List[Edge]],
                          node1: AbstractNode,
                          node2: AbstractNode) -> Node:
-    hints = successor.hints
-    edges = hints['edges']
-
     if node1 == node2:
         edges = successor.hints
+        result = node1._direct_get_tensor(successor.node_ref[0],
+                                          successor.index[0])
         axes_nums = dict(zip(range(node1.rank), range(node1.rank)))
 
         for edge in edges:
@@ -2536,6 +2555,10 @@ def _contract_edges_next(successor: Successor,
 
     else:
         hints = successor.hints
+        tensors = [node1._direct_get_tensor(successor.node_ref[0],
+                                            successor.index[0]),
+                   node2._direct_get_tensor(successor.node_ref[1],
+                                            successor.index[1])]
 
         # Record in inverse_memory while contracting
         # (to delete memory if possible)
@@ -3230,7 +3253,9 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
 def _unbind_next(successor: Successor, node: AbstractStackNode) -> List[Node]:
     net = node._network
     if not net._auto_unbind:
-        tensors = torch.unbind(node.tensor)
+        node_tensor = node._direct_get_tensor(successor.node_ref,
+                                              successor.index)
+        tensors = torch.unbind(node_tensor)
         children = successor.child
         for tensor, child in zip(tensors, children):
             child._direct_set_tensor(tensor, True)

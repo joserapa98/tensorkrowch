@@ -1259,13 +1259,16 @@ class AbstractNode(ABC):
             raise ValueError('`tensor` should have the same number of'
                              ' dimensions as node\'s tensor (same rank)')
 
-    def _direct_set_tensor(self,
-                           tensor: Optional[Tensor],
-                           check_shape: bool = False) -> None:
+    def _direct_get_tensor(self, node_ref, index) -> Optional[Union[Tensor, Parameter]]:
         """
-        Sets a new node's tensor without checking extra conditions. It just
-        can crop the tensor in case it is specified with ``check_shape``.
+        Return node's tensor without checking extra conditions. This direct
+        access to the tensor is used from ``Operations``, so ``self`` should
+        (and will) be a non-empty node.
         """
+        if index is None:
+            return self._network._memory_nodes[node_ref._tensor_info['address']]
+        return self._network._memory_nodes[node_ref._tensor_info['address']][index]
+
     def _direct_set_tensor(self, tensor: Optional[Tensor]) -> None:
         """Sets a new node's tensor without checking extra conditions."""
         self._save_in_network(tensor)

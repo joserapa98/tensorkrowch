@@ -40,8 +40,6 @@ from tensorkrowch.components import *
 from tensorkrowch.utils import (inverse_permutation, is_permutation,
                                 list2slice, permute_list)
 
-Ax = Union[int, Text, Axis]
-
 
 def copy_func(f):
     """Returns a function with the same code, defaults, closure and name."""

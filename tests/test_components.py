@@ -122,7 +122,6 @@ class TestInitNode:
         assert node.tensor is None
         assert node._tensor_info == {'address': 'my_node',
                                      'node_ref': None,
-                                     'full': True,
                                      'index': None}
 
         net = node.network
@@ -155,7 +154,6 @@ class TestInitNode:
         assert node.tensor is None
         assert node._tensor_info == {'address': 'node',
                                      'node_ref': None,
-                                     'full': True,
                                      'index': None}
 
         net = node.network
@@ -188,7 +186,6 @@ class TestInitNode:
         assert node.tensor is None
         assert node._tensor_info == {'address': 'node',
                                      'node_ref': None,
-                                     'full': True,
                                      'index': None}
 
         net = node.network
@@ -219,7 +216,6 @@ class TestInitNode:
         assert torch.equal(node.tensor, tensor)
         assert node._tensor_info == {'address': 'node',
                                      'node_ref': None,
-                                     'full': True,
                                      'index': None}
 
         net = node.network
@@ -266,7 +262,6 @@ class TestInitParamNode:
         assert node.tensor is None
         assert node._tensor_info == {'address': 'my_node',
                                      'node_ref': None,
-                                     'full': True,
                                      'index': None}
 
         net = node.network
@@ -305,7 +300,6 @@ class TestInitParamNode:
         assert torch.equal(node.tensor, nn.Parameter(tensor))
         assert node._tensor_info == {'address': 'paramnode',
                                      'node_ref': None,
-                                     'full': True,
                                      'index': None}
 
         net = node.network
@@ -2432,6 +2426,7 @@ class TestTensorNetwork:
 
         # Repeat operations
         net._tracing = False
+        net._traced = True
         net.add_data(torch.randn(100, 4, 5))
         aux_nodes = [node @ node.neighbours('input') for node in nodes]
 
@@ -2491,6 +2486,7 @@ class TestTensorNetwork:
 
         # Repeat operations
         net._tracing = False
+        net._traced = True
         net.add_data(torch.randn(100, 4, 5))
 
         stack_nodes = tk.stack(nodes)
@@ -2555,6 +2551,7 @@ class TestTensorNetwork:
 
         # Repeat operations
         net._tracing = False
+        net._traced = True
         net.add_data(torch.randn(100, 4, 5))
 
         stack_nodes = tk.stack(nodes)

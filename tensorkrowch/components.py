@@ -588,17 +588,13 @@ class AbstractNode(ABC):
         if (self._temp_tensor is not None) or (self._tensor_info is None):
             result = self._temp_tensor
             return result
-
-        address = self._tensor_info['address']
-        node_ref = self._tensor_info['node_ref']
-        full = self._tensor_info['full']
+        
+        address = self.tensor_address()
         index = self._tensor_info['index']
-
-        if address is None:
-            address = node_ref._tensor_info['address']
+        
         result = self._network._memory_nodes[address]
 
-        return_result = full or (result is None)
+        return_result = (index is None) or (result is None)
         if not self._network._auto_unbind:
             return_result = return_result or self._name.startswith('unbind')
 
@@ -1470,7 +1466,6 @@ class AbstractNode(ABC):
         if other._tensor_info['address'] is not None:
             self._tensor_info['address'] = None
             self._tensor_info['node_ref'] = other
-            self._tensor_info['full'] = True
             self._tensor_info['index'] = None
         else:
             self._tensor_info = other._tensor_info
@@ -1514,7 +1509,6 @@ class AbstractNode(ABC):
             self._temp_tensor = self.tensor
             self._tensor_info['address'] = self._name
             self._tensor_info['node_ref'] = None
-            self._tensor_info['full'] = True
             self._tensor_info['index'] = None
 
             if isinstance(self._temp_tensor, Parameter):
@@ -2331,7 +2325,7 @@ class ParamNode(AbstractNode):
         if aux_grad is None:
             return aux_grad
         else:
-            if self._tensor_info['full']:
+            if self._tensor_info['index'] is None:
                 return aux_grad
             return aux_grad[self._tensor_info['index']]
 
@@ -4202,7 +4196,6 @@ class TensorNetwork(nn.Module):
             self._memory_nodes[new_name] = node._temp_tensor
             node._tensor_info = {'address': new_name,
                                  'node_ref': None,
-                                 'full': True,
                                  'index': None}
             node._temp_tensor = None
             node._network = self
@@ -4488,7 +4481,6 @@ class TensorNetwork(nn.Module):
                 del self._memory_nodes[node._tensor_info['address']]
                 node._tensor_info['address'] = None
                 node._tensor_info['node_ref'] = stack_node
-                node._tensor_info['full'] = False
                 node._tensor_info['index'] = i
 
     def unset_data_nodes(self) -> None:
@@ -4633,7 +4625,6 @@ class TensorNetwork(nn.Module):
                 node._temp_tensor = node.tensor
                 node._tensor_info['address'] = node._name
                 node._tensor_info['node_ref'] = None
-                node._tensor_info['full'] = True
                 node._tensor_info['index'] = None
 
                 if isinstance(node._temp_tensor, Parameter):

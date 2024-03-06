@@ -2983,7 +2983,6 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
         del net._memory_nodes[stack_node._tensor_info['address']]
         stack_node._tensor_info['address'] = None
         stack_node._tensor_info['node_ref'] = stack_node_ref
-        stack_node._tensor_info['full'] = False
 
         index = [stack_indices]
         if stack_node_ref.shape[1:] != stack_node.shape[1:]:
@@ -3006,7 +3005,6 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
                     del net._memory_nodes[node._tensor_info['address']]
                 node._tensor_info['address'] = None
                 node._tensor_info['node_ref'] = stack_node
-                node._tensor_info['full'] = False
                 index = [i]
                 for j, (max_dim, dim) in enumerate(zip(stack_node._shape[1:],
                                                        node._shape)):
@@ -3167,7 +3165,6 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
                     new_node._tensor_info['address']]
             new_node._tensor_info['address'] = None
             new_node._tensor_info['node_ref'] = node_ref
-            new_node._tensor_info['full'] = False
 
             if node_ref == node:
                 index = [i]

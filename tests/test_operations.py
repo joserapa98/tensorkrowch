@@ -162,7 +162,7 @@ class TestBasicOps:
         assert node3.shape == (2, 3, 4, 5)
         assert node3.edges == node1.edges + node2.edges
         assert node1.successors != dict()
-        assert node1.successors['tprod'][0].child == node3
+        assert node1.successors['tprod'][(node1, node2)].child == node3
         assert node2.successors == dict()
 
         result_tensor = node3.tensor
@@ -208,7 +208,7 @@ class TestBasicOps:
         assert node3.shape == (2, 2)
         assert node3.edges == node1.edges
         assert node1.successors != dict()
-        assert node1.successors['mul'][0].child == node3
+        assert node1.successors['mul'][(node1, node2)].child == node3
         assert node2.successors == dict()
 
         result_tensor = node3.tensor
@@ -253,7 +253,7 @@ class TestBasicOps:
         assert node3.shape == (2, 2)
         assert node3.edges == node1.edges
         assert node1.successors != dict()
-        assert node1.successors['add'][0].child == node3
+        assert node1.successors['add'][(node1, node2)].child == node3
         assert node2.successors == dict()
 
         result_tensor = node3.tensor
@@ -298,7 +298,7 @@ class TestBasicOps:
         assert node3.shape == (2, 2)
         assert node3.edges == node1.edges
         assert node1.successors != dict()
-        assert node1.successors['sub'][0].child == node3
+        assert node1.successors['sub'][(node1, node2)].child == node3
         assert node2.successors == dict()
 
         result_tensor = node3.tensor
@@ -351,7 +351,7 @@ class TestBasicOps:
         assert node3.shape == (2, 3, 4, 5)
         assert node3.edges == node1.edges + node2.edges
         assert node1.successors != dict()
-        assert node1.successors['tprod'][0].child == node3
+        assert node1.successors['tprod'][(node1, node2)].child == node3
         assert node2.successors == dict()
 
         result_tensor = node3.tensor
@@ -405,7 +405,7 @@ class TestBasicOps:
         assert node3.shape == (2, 2)
         assert node3.edges == node1.edges
         assert node1.successors != dict()
-        assert node1.successors['mul'][0].child == node3
+        assert node1.successors['mul'][(node1, node2)].child == node3
         assert node2.successors == dict()
 
         result_tensor = node3.tensor
@@ -458,7 +458,7 @@ class TestBasicOps:
         assert node3.shape == (2, 2)
         assert node3.edges == node1.edges
         assert node1.successors != dict()
-        assert node1.successors['add'][0].child == node3
+        assert node1.successors['add'][(node1, node2)].child == node3
         assert node2.successors == dict()
 
         result_tensor = node3.tensor
@@ -511,7 +511,7 @@ class TestBasicOps:
         assert node3.shape == (2, 2)
         assert node3.edges == node1.edges
         assert node1.successors != dict()
-        assert node1.successors['sub'][0].child == node3
+        assert node1.successors['sub'][(node1, node2)].child == node3
         assert node2.successors == dict()
 
         result_tensor = node3.tensor
@@ -563,7 +563,7 @@ class TestSplitSVD:
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 1
-        assert node1.successors['contract_edges'][0].child == result
+        assert node1.successors['contract_edges'][(None, node1, node2)].child == result
 
         # Split result
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
@@ -584,7 +584,14 @@ class TestSplitSVD:
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 3
-        assert result.successors['split'][0].child == [new_node1, new_node2]
+        assert result.successors['split'][(result,
+                                           tuple(['left', 'input_0']),
+                                           tuple(['input_1', 'right']),
+                                           'svd',
+                                           'left',
+                                           None,
+                                           None,
+                                           None)].child == [new_node1, new_node2]
 
         assert net.edges == [node1['left'], node1['input'],
                              node2['input'], node2['right']]
@@ -995,7 +1002,7 @@ class TestSplitSVDR:
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 1
-        assert node1.successors['contract_edges'][0].child == result
+        assert node1.successors['contract_edges'][(None, node1, node2)].child == result
 
         # Split result
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
@@ -1017,7 +1024,14 @@ class TestSplitSVDR:
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 3
-        assert result.successors['split'][0].child == [new_node1, new_node2]
+        assert result.successors['split'][(result,
+                                           tuple(['left', 'input_0']),
+                                           tuple(['input_1', 'right']),
+                                           'svdr',
+                                           'left',
+                                           None,
+                                           None,
+                                           None)].child == [new_node1, new_node2]
 
         assert net.edges == [node1['left'], node1['input'],
                              node2['input'], node2['right']]
@@ -1443,7 +1457,7 @@ class TestSplitQR:
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 1
-        assert node1.successors['contract_edges'][0].child == result
+        assert node1.successors['contract_edges'][(None, node1, node2)].child == result
 
         # Split result
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
@@ -1465,7 +1479,14 @@ class TestSplitQR:
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 3
-        assert result.successors['split'][0].child == [new_node1, new_node2]
+        assert result.successors['split'][(result,
+                                           tuple(['left', 'input_0']),
+                                           tuple(['input_1', 'right']),
+                                           'qr',
+                                           'left',
+                                           None,
+                                           None,
+                                           None)].child == [new_node1, new_node2]
 
         assert net.edges == [node1['left'], node1['input'],
                              node2['input'], node2['right']]
@@ -1741,7 +1762,7 @@ class TestSplitRQ:
         assert len(net.nodes) == 3
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 1
-        assert node1.successors['contract_edges'][0].child == result
+        assert node1.successors['contract_edges'][(None, node1, node2)].child == result
 
         # Split result
         new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
@@ -1763,7 +1784,14 @@ class TestSplitRQ:
         assert len(net.nodes) == 5
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 3
-        assert result.successors['split'][0].child == [new_node1, new_node2]
+        assert result.successors['split'][(result,
+                                           tuple(['left', 'input_0']),
+                                           tuple(['input_1', 'right']),
+                                           'rq',
+                                           'left',
+                                           None,
+                                           None,
+                                           None)].child == [new_node1, new_node2]
 
         assert net.edges == [node1['left'], node1['input'],
                              node2['input'], node2['right']]
@@ -3071,7 +3099,7 @@ class TestContractEdge:
         assert len(net.resultant_nodes) == 1
 
         assert node1.successors != dict()
-        assert node1.successors['contract_edges'][0].child == node3
+        assert node1.successors['contract_edges'][((node1['right'],), node1, node2)].child == node3
         assert node2.successors == dict()
 
         # Cannot contract edges that are not shared (connected) between two nodes
@@ -3101,7 +3129,7 @@ class TestContractEdge:
         assert len(node1.network.resultant_nodes) == 1
 
         assert node1.successors != dict()
-        assert node1.successors['contract_edges'][0].child == node2
+        assert node1.successors['contract_edges'][((node1[2],), node1, node1)].child == node2
 
     def test_contract_edge_in_place(self):
         net = tk.TensorNetwork()
@@ -3175,7 +3203,7 @@ class TestContractBetween:
         assert len(net.resultant_nodes) == 1
 
         assert node1.successors != dict()
-        assert node1.successors['contract_edges'][0].child == node3
+        assert node1.successors['contract_edges'][(None, node1, node2)].child == node3
         assert node2.successors == dict()
 
         result_tensor = node3.tensor
@@ -3219,7 +3247,7 @@ class TestContractBetween:
         assert len(net.resultant_nodes) == 1
 
         assert node1.successors != dict()
-        assert node1.successors['contract_edges'][0].child == node3
+        assert node1.successors['contract_edges'][(None, node1, node2)].child == node3
         assert node2.successors == dict()
 
         result_tensor = node3.tensor
@@ -3263,7 +3291,7 @@ class TestContractBetween:
         assert len(net.resultant_nodes) == 1
 
         assert node1.successors != dict()
-        assert node1.successors['contract_edges'][0].child == node3
+        assert node1.successors['contract_edges'][(None, node1, node2)].child == node3
         assert node2.successors == dict()
 
         result_tensor = node3.tensor
@@ -3306,7 +3334,7 @@ class TestContractBetween:
         assert len(node1.network.resultant_nodes) == 1
 
         assert node1.successors != dict()
-        assert node1.successors['contract_edges'][0].child == node2
+        assert node1.successors['contract_edges'][(None, node1, node1)].child == node2
 
         result_tensor = node2.tensor
 
@@ -3339,7 +3367,7 @@ class TestContractBetween:
         assert len(node1.network.resultant_nodes) == 1
 
         assert node1.successors != dict()
-        assert node1.successors['contract_edges'][0].child == node2
+        assert node1.successors['contract_edges'][(None, node1, node1)].child == node2
 
         result_tensor = node2.tensor
 
@@ -3378,7 +3406,7 @@ class TestContractBetween:
         assert len(node1.network.resultant_nodes) == 1
 
         assert node1.successors != dict()
-        assert node1.successors['contract_edges'][0].child == node2
+        assert node1.successors['contract_edges'][(None, node1, node1)].child == node2
 
         result_tensor = node2.tensor
 
@@ -3428,7 +3456,7 @@ class TestContractBetween:
         assert len(net.resultant_nodes) == 1
 
         assert node1.successors != dict()
-        assert node1.successors['contract_edges'][0].child == node3
+        assert node1.successors['contract_edges'][(None, node1, node2)].child == node3
         assert node2.successors == dict()
 
         result_tensor = node3.tensor
@@ -3437,6 +3465,14 @@ class TestContractBetween:
         node4 = node1 @ node2
         assert node3 == node4
         assert torch.equal(result_tensor, node4.tensor)
+        
+        # Repeat contraction changing batch size
+        node1.tensor = torch.randn(2, 10, 2)
+        node2.tensor = torch.randn(2, 10, 2)
+        node5 = node1 @ node2
+        assert node3 == node5
+        assert not torch.equal(result_tensor, node5.tensor)
+        assert node5.shape == (10,)
 
     def test_contract_with_diff_batch(self):
         net = tk.TensorNetwork()
@@ -3472,7 +3508,7 @@ class TestContractBetween:
         assert len(net.resultant_nodes) == 1
 
         assert node1.successors != dict()
-        assert node1.successors['contract_edges'][0].child == node3
+        assert node1.successors['contract_edges'][(None, node1, node2)].child == node3
         assert node2.successors == dict()
 
         result_tensor = node3.tensor
@@ -3489,6 +3525,7 @@ class TestContractBetween:
         node5 = node1 @ node2
         assert node3 == node5
         assert not torch.equal(result_tensor, node5.tensor)
+        assert node3.shape == (7, 11)
 
     def test_contract_several_batches(self):
         net = tk.TensorNetwork()
@@ -3527,7 +3564,7 @@ class TestContractBetween:
         assert len(net.resultant_nodes) == 1
 
         assert node1.successors != dict()
-        assert node1.successors['contract_edges'][0].child == node3
+        assert node1.successors['contract_edges'][(None, node1, node2)].child == node3
         assert node2.successors == dict()
 
         result_tensor = node3.tensor

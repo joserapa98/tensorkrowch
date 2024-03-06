@@ -45,7 +45,7 @@ class PEPS(TensorNetwork):
     n_cols : int
         Number of columns of the 2D grid.
     in_dim : int
-        Input dimension.
+        Input dimension. Equivalent to the physical dimension.
     bond_dim : list[int] or tuple[int]
         Bond dimensions for horizontal and vertical edges (in that order). Thus
         it should contain 2 elements.
@@ -157,7 +157,7 @@ class PEPS(TensorNetwork):
 
     @property
     def in_dim(self) -> int:
-        """Returns input dimension."""
+        """Returns input/physical dimension."""
         return self._in_dim
 
     @property
@@ -836,7 +836,7 @@ class UPEPS(TensorNetwork):
     n_cols : int
         Number of columns of the 2D grid
     in_dim : int
-        Input dimension.
+        Input dimension. Equivalent to the physical dimension.
     bond_dim : list[int] or tuple[int]
         Bond dimensions for horizontal and vertical edges (in that order). Thus
         it should also contain 2 elements
@@ -913,7 +913,7 @@ class UPEPS(TensorNetwork):
 
     @property
     def in_dim(self) -> int:
-        """Returns input dimension."""
+        """Returns input/physical dimension."""
         return self._in_dim
 
     @property

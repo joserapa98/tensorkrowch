@@ -42,8 +42,8 @@ class MPS(TensorNetwork):
     n_features : int
         Number of input nodes.
     in_dim : int, list[int] or tuple[int]
-        Input dimension(s). If given as a sequence, its length should be
-        equal to ``n_features``.
+        Input dimension(s). Equivalent to the physical dimension. If given as a
+        sequence, its length should be equal to ``n_features``.
     bond_dim : int, list[int] or tuple[int]
         Bond dimension(s). If given as a sequence, its length should be equal
         to ``n_features`` (if ``boundary = "pbc"``) or ``n_features - 1`` (if
@@ -60,7 +60,7 @@ class MPS(TensorNetwork):
         
     Examples
     --------
-    ``MPS`` with same physical dimensions:
+    ``MPS`` with same input/physical dimensions:
     
     >>> mps = tk.models.MPS(n_features=5,
     ...                     in_dim=2,
@@ -70,7 +70,7 @@ class MPS(TensorNetwork):
     >>> result.shape
     torch.Size([20])
     
-    ``MPS`` with different physical dimensions:
+    ``MPS`` with different input/physical dimensions:
     
     >>> mps = tk.models.MPS(n_features=5,
     ...                     in_dim=list(range(2, 7)),
@@ -164,7 +164,7 @@ class MPS(TensorNetwork):
 
     @property
     def in_dim(self) -> List[int]:
-        """Returns physical dimension."""
+        """Returns input/physical dimension."""
         return self._in_dim
 
     @property
@@ -237,7 +237,10 @@ class MPS(TensorNetwork):
                     self.mats_env[-1]['right'] ^ periodic_edge
 
     def initialize(self, std: float = 1e-9) -> None:
-        """Initializes all the nodes."""
+        """
+        Initializes all the nodes as explained `here <https://arxiv.org/abs/1605.03795>`_.
+        It can be overriden for custom initializations.
+        """
         # Left node
         if self.left_node is not None:
             tensor = torch.randn(self.left_node.shape) * std
@@ -263,8 +266,8 @@ class MPS(TensorNetwork):
 
     def set_data_nodes(self) -> None:
         """
-        Creates ``data`` nodes and connects each of them to the physical edge of
-        each input node.
+        Creates ``data`` nodes and connects each of them to the input/physical
+        edge of each input node.
         """
         input_edges = []
         if self.left_node is not None:
@@ -286,9 +289,9 @@ class MPS(TensorNetwork):
         Optional[List[Node]]]:
         """Contracts input data nodes with MPS nodes."""
         if inline_input:
-            mats_result = []
-            for node in self.mats_env:
-                mats_result.append(node @ node.neighbours('input'))
+            mats_result = list(map(lambda node: node @ node.neighbours('input'),
+                                   self.mats_env))
+            
             return mats_result
 
         else:
@@ -772,7 +775,7 @@ class UMPS(TensorNetwork):
 
     @property
     def in_dim(self) -> int:
-        """Returns input dimension."""
+        """Returns input/physical dimension."""
         return self._in_dim
 
     @property
@@ -819,7 +822,11 @@ class UMPS(TensorNetwork):
         self.uniform_memory = uniform_memory
 
     def initialize(self, std: float = 1e-9) -> None:
-        """Initializes output and uniform nodes."""
+        """
+        Initializes output and uniform nodes as explained `here
+        <https://arxiv.org/abs/1605.03795>`_.
+        It can be overriden for custom initializations.
+        """
         # Virtual node
         tensor = torch.randn(self.uniform_memory.shape) * std
         random_eye = torch.randn(tensor.shape[0], tensor.shape[2]) * std
@@ -833,8 +840,8 @@ class UMPS(TensorNetwork):
 
     def set_data_nodes(self) -> None:
         """
-        Creates ``data`` nodes and connects each of them to the physical edge of
-        each input node.
+        Creates ``data`` nodes and connects each of them to the input/physical
+        edge of each input node.
         """
         input_edges = []
         if self.left_node is not None:

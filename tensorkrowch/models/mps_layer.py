@@ -386,8 +386,10 @@ class MPSLayer(TensorNetwork):
                         self.right_env[-1]['right'] ^ periodic_edge
 
     def initialize(self, std: float = 1e-9) -> None:
-        # TODO: explain initialization
-        """Initializes all the nodes."""
+        """
+        Initializes all the nodes as explained `here <https://arxiv.org/abs/1605.03795>`_.
+        It can be overriden for custom initializations.
+        """
         # Left node
         if self.left_node is not None:
             tensor = torch.randn(self.left_node.shape) * std
@@ -457,12 +459,11 @@ class MPSLayer(TensorNetwork):
                                                         Optional[List[Node]]]:
         """Contracts input data nodes with MPS nodes."""
         if inline_input:
-            left_result = []
-            for node in self.left_env:
-                left_result.append(node @ node.neighbours('input'))
-            right_result = []
-            for node in self.right_env:
-                right_result.append(node @ node.neighbours('input'))
+            left_result = list(map(lambda node: node @ node.neighbours('input'),
+                                   self.left_env))
+            right_result = list(map(lambda node: node @ node.neighbours('input'),
+                                   self.right_env))
+            
             return left_result, right_result
 
         else:
@@ -1065,7 +1066,7 @@ class UMPSLayer(TensorNetwork):
 
     @property
     def in_dim(self) -> int:
-        """Returns input dimension."""
+        """Returns input/physical dimension."""
         return self._in_dim
 
     @property
@@ -1190,7 +1191,11 @@ class UMPSLayer(TensorNetwork):
         self.uniform_memory = uniform_memory
 
     def initialize(self, std: float = 1e-9) -> None:
-        """Initializes output and uniform nodes."""
+        """
+        Initializes output and uniform nodes as explained `here
+        <https://arxiv.org/abs/1605.03795>`_.
+        It can be overriden for custom initializations.
+        """
         # Virtual node
         tensor = torch.randn(self.uniform_memory.shape) * std
         random_eye = torch.randn(tensor.shape[0], tensor.shape[2]) * std

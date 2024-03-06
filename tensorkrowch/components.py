@@ -4806,11 +4806,11 @@ class TensorNetwork(nn.Module):
             return output.tensor
 
         else:
-            for op in self._seq_ops:
-                output = self.operations[op[0]](**op[1])
+            output = list(map(lambda op: self.operations[op[0]](*op[1]),
+                              self._seq_ops))[-1]
 
             if not isinstance(output, Node):
-                if (op[0] == 'unbind') and (len(output) == 1):
+                if (self._seq_ops[-1][0] == 'unbind') and (len(output) == 1):
                     output = output[0]
                 else:
                     raise ValueError('The last operation should be the one '

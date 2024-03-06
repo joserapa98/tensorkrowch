@@ -2996,12 +2996,12 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
     all_leaf = True           # Check if all the nodes are leaf
     all_non_param = True      # Check if all the nodes are non-parametric
     all_param = True          # Check if all the nodes are parametric
-    all_same_ref = True       # Check if all the nodes' memories are stored in the
-    # same reference node's memory
+    all_same_ref = True       # Check if all the nodes' memories are stored in
+                              # the same reference node's memory
     node_ref_is_stack = True  # Check if the shared reference node is a stack
     stack_node_ref = None     # In the case above, the reference node
     stack_indices = []        # In the case above, stack indices of each node in
-    # the reference node's memory
+                              # the reference node's memory
 
     if not (isinstance(nodes, (list, tuple)) and isinstance(nodes[0], AbstractNode)):
         raise TypeError('`nodes` should be a list or tuple of AbstractNodes')
@@ -3044,6 +3044,33 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
     else:
         stack_node = StackNode._create_resultant(nodes=nodes,
                                                  name='stack')
+        
+    # Stack nodes' tensors
+    nodes_tensors = [node.tensor for node in nodes]
+    
+    # Check if all dims are the same
+    same_dims = True
+    max_shape = list(nodes_tensors[0].shape)
+    for tensor in nodes_tensors[1:]:
+        for idx, dim in enumerate(tensor.shape):
+            if same_dims and (dim != max_shape[idx]):
+                same_dims = False
+            if dim > max_shape[idx]:
+                max_shape[idx] = dim
+    
+    # If not, pad all tensors with zeros to the maximum dims and stack
+    lst_pads = []
+    if not same_dims:
+        for idx, tensor in enumerate(nodes_tensors):
+            pad = []
+            if tensor.shape != max_shape:
+                for max_dim, dim in zip(max_shape, tensor.shape):
+                    pad += [0, max_dim - dim]
+                pad.reverse()
+                lst_pads.append(pad)
+                nodes_tensors[idx] = nn.functional.pad(tensor, pad)
+                # NOTE: nn.functional.pad induces non-deterministic
+                # behaviour in its backward pass on CUDA
 
     # Both conditions can only be satisfied in index_mode
     if all_same_ref:
@@ -3122,11 +3149,25 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
 def _stack_next(successor: Successor,
                 nodes: Sequence[AbstractNode]) -> StackNode:
     child = successor.child
-    if successor.hints['all_same_ref'] or \
-            (successor.hints['all_leaf'] and successor.hints['auto_stack']):
+    hints = successor.hints
+    if hints['all_same_ref'] or (hints['all_leaf'] and hints['auto_stack']):
         return child
+    
+    if hints['same_dims']:
+        nodes_tensors = list(
+            starmap(lambda nr, idx, node:
+                node._direct_get_tensor(nr, idx),
+                zip(successor.node_ref, successor.index, nodes))
+            )
+    else:
+        nodes_tensors = list(
+            starmap(lambda nr, idx, node, pad:
+                nn.functional.pad(node._direct_get_tensor(nr, idx), pad),
+                zip(successor.node_ref, successor.index, nodes, hints['lst_pads']))
+            )
+    stack_tensor = torch.stack(nodes_tensors)
 
-    stack_tensor = stack_unequal_tensors([node.tensor for node in nodes])
+    # stack_tensor = stack_unequal_tensors([node._direct_tensor for node in nodes])
     child._direct_set_tensor(stack_tensor)
 
     # Record in inverse_memory while contracting, if network is traced
@@ -3151,7 +3192,7 @@ def stack(nodes: Sequence[AbstractNode]):
     The stack dimension will be the first one in the ``resultant`` node.
     
     See :class:`ParamStackNode` and :class:`TensorNetwork` to learn how the
-    :meth:`~TensorNetwork.auto_unbind` mode affects the computation of
+    :meth:`~TensorNetwork.auto_stack` mode affects the computation of
     :func:`stack`.
     
     Nodes ``resultant`` from this operation are called ``"stack"``. If this

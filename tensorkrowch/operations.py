@@ -112,13 +112,11 @@ class Operation:
 #################################   PERMUTE    ################################
 def _check_first_permute(node: AbstractNode,
                          axes: Sequence[Ax]) -> Optional[Successor]:
-    kwargs = {'node': node,
-              'axes': axes}
-    if 'permute' in node._successors:
-        for succ in node._successors['permute']:
-            if succ.kwargs == kwargs:
-                return succ
-    return None
+    args = (node, axes)
+    successors = node._successors.get('permute')
+    if not successors:
+        return None
+    return successors.get(args)
 
 
 def _permute_first(node: AbstractNode, axes: Sequence[Ax]) -> Node:
@@ -134,27 +132,26 @@ def _permute_first(node: AbstractNode, axes: Sequence[Ax]) -> Node:
             axes_names=permute_list(node.axes_names, axes_nums),
             name='permute',
             network=node._network,
-            tensor=node.tensor.permute(
-                axes_nums),
-            edges=permute_list(
-                node._edges, axes_nums),
+            tensor=node.tensor.permute(axes_nums),
+            edges=permute_list(node._edges, axes_nums),
             node1_list=permute_list(node.is_node1(), axes_nums))
 
     # Create successor
     net = node._network
-    successor = Successor(kwargs={'node': node,
-                                  'axes': axes},
+    args = (node, axes)
+    successor = Successor(node_ref=node.node_ref(),
+                          index=node._tensor_info['index'],
                           child=new_node,
-                          hints={'axes_nums': axes_nums})
+                          hints=axes_nums)
 
     # Add successor to parent
     if 'permute' in node._successors:
-        node._successors['permute'].append(successor)
+        node._successors['permute'].update({args: successor})
     else:
-        node._successors['permute'] = [successor]
+        node._successors['permute'] = {args: successor}
 
     # Add operation to list of performed operations of TN
-    net._seq_ops.append(('permute', successor.kwargs))
+    net._seq_ops.append(('permute', args))
 
     # Record in inverse_memory while tracing
     node._record_in_inverse_memory()
@@ -331,13 +328,11 @@ AbstractNode.permute_ = permute_node_
 ##################################   TPROD    #################################
 def _check_first_tprod(node1: AbstractNode,
                        node2: AbstractNode) -> Optional[Successor]:
-    kwargs = {'node1': node1,
-              'node2': node2}
-    if 'tprod' in node1._successors:
-        for succ in node1._successors['tprod']:
-            if succ.kwargs == kwargs:
-                return succ
-    return None
+    args = (node1, node2)
+    successors = node1._successors.get('tprod')
+    if not successors:
+        return None
+    return successors.get(args)
 
 
 def _tprod_first(node1: AbstractNode, node2: AbstractNode) -> Node:
@@ -360,18 +355,21 @@ def _tprod_first(node1: AbstractNode, node2: AbstractNode) -> Node:
 
     # Create successor
     net = node1._network
-    successor = Successor(kwargs={'node1': node1,
-                                  'node2': node2},
+    args = (node1, node2)
+    successor = Successor(node_ref=(node1.node_ref(),
+                                    node2.node_ref()),
+                          index=(node1._tensor_info['index'],
+                                 node2._tensor_info['index']),
                           child=new_node)
 
     # Add successor to parent
     if 'tprod' in node1._successors:
-        node1._successors['tprod'].append(successor)
+        node1._successors['tprod'].update({args: successor})
     else:
-        node1._successors['tprod'] = [successor]
+        node1._successors['tprod'] = {args: successor}
 
     # Add operation to list of performed operations of TN
-    net._seq_ops.append(('tprod', successor.kwargs))
+    net._seq_ops.append(('tprod', args))
 
     # Record in inverse_memory while tracing
     node1._record_in_inverse_memory()
@@ -468,13 +466,11 @@ AbstractNode.__mod__ = tprod_node
 ###################################   MUL    ##################################
 def _check_first_mul(node1: AbstractNode,
                      node2: AbstractNode) -> Optional[Successor]:
-    kwargs = {'node1': node1,
-              'node2': node2}
-    if 'mul' in node1._successors:
-        for succ in node1._successors['mul']:
-            if succ.kwargs == kwargs:
-                return succ
-    return None
+    args = (node1, node2)
+    successors = node1._successors.get('mul')
+    if not successors:
+        return None
+    return successors.get(args)
 
 
 def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
@@ -491,18 +487,21 @@ def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
 
     # Create successor
     net = node1._network
-    successor = Successor(kwargs={'node1': node1,
-                                  'node2': node2},
+    args = (node1, node2)
+    successor = Successor(node_ref=(node1.node_ref(),
+                                    node2.node_ref()),
+                          index=(node1._tensor_info['index'],
+                                 node2._tensor_info['index']),
                           child=new_node)
 
     # Add successor to parent
     if 'mul' in node1._successors:
-        node1._successors['mul'].append(successor)
+        node1._successors['mul'].update({args: successor})
     else:
-        node1._successors['mul'] = [successor]
+        node1._successors['mul'] = {args: successor}
 
     # Add operation to list of performed operations of TN
-    net._seq_ops.append(('mul', successor.kwargs))
+    net._seq_ops.append(('mul', args))
 
     # Record in inverse_memory while tracing
     node1._record_in_inverse_memory()
@@ -594,13 +593,11 @@ AbstractNode.__mul__ = mul_node
 ###################################   ADD    ##################################
 def _check_first_add(node1: AbstractNode,
                      node2: AbstractNode) -> Optional[Successor]:
-    kwargs = {'node1': node1,
-              'node2': node2}
-    if 'add' in node1._successors:
-        for succ in node1._successors['add']:
-            if succ.kwargs == kwargs:
-                return succ
-    return None
+    args = (node1, node2)
+    successors = node1._successors.get('add')
+    if not successors:
+        return None
+    return successors.get(args)
 
 
 def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
@@ -617,18 +614,21 @@ def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
 
     # Create successor
     net = node1._network
-    successor = Successor(kwargs={'node1': node1,
-                                  'node2': node2},
+    args = (node1, node2)
+    successor = Successor(node_ref=(node1.node_ref(),
+                                    node2.node_ref()),
+                          index=(node1._tensor_info['index'],
+                                 node2._tensor_info['index']),
                           child=new_node)
 
     # Add successor to parent
     if 'add' in node1._successors:
-        node1._successors['add'].append(successor)
+        node1._successors['add'].update({args: successor})
     else:
-        node1._successors['add'] = [successor]
+        node1._successors['add'] = {args: successor}
 
     # Add operation to list of performed operations of TN
-    net._seq_ops.append(('add', successor.kwargs))
+    net._seq_ops.append(('add', args))
 
     # Record in inverse_memory while tracing
     node1._record_in_inverse_memory()
@@ -720,13 +720,11 @@ AbstractNode.__add__ = add_node
 ###################################   SUB    ##################################
 def _check_first_sub(node1: AbstractNode,
                      node2: AbstractNode) -> Optional[Successor]:
-    kwargs = {'node1': node1,
-              'node2': node2}
-    if 'sub' in node1._successors:
-        for succ in node1._successors['sub']:
-            if succ.kwargs == kwargs:
-                return succ
-    return None
+    args = (node1, node2)
+    successors = node1._successors.get('sub')
+    if not successors:
+        return None
+    return successors.get(args)
 
 
 def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
@@ -743,18 +741,21 @@ def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
 
     # Create successor
     net = node1._network
-    successor = Successor(kwargs={'node1': node1,
-                                  'node2': node2},
+    args = (node1, node2)
+    successor = Successor(node_ref=(node1.node_ref(),
+                                    node2.node_ref()),
+                          index=(node1._tensor_info['index'],
+                                 node2._tensor_info['index']),
                           child=new_node)
 
     # Add successor to parent
     if 'sub' in node1._successors:
-        node1._successors['sub'].append(successor)
+        node1._successors['sub'].update({args: successor})
     else:
-        node1._successors['sub'] = [successor]
+        node1._successors['sub'] = {args: successor}
 
     # Add operation to list of performed operations of TN
-    net._seq_ops.append(('sub', successor.kwargs))
+    net._seq_ops.append(('sub', args))
 
     # Record in inverse_memory while tracing
     node1._record_in_inverse_memory()
@@ -856,19 +857,18 @@ def _check_first_split(node: AbstractNode,
                        rank: Optional[int] = None,
                        cum_percentage: Optional[float] = None,
                        cutoff: Optional[float] = None) -> Optional[Successor]:
-    kwargs = {'node': node,
-              'node1_axes': node1_axes,
-              'node2_axes': node2_axes,
-              'mode': mode,
-              'side': side,
-              'rank': rank,
-              'cum_percentage': cum_percentage,
-              'cutoff': cutoff}
-    if 'split' in node._successors:
-        for succ in node._successors['split']:
-            if succ.kwargs == kwargs:
-                return succ
-    return None
+    args = (node,
+            tuple(node1_axes),
+            tuple(node2_axes),
+            mode,
+            side,
+            rank,
+            cum_percentage,
+            cutoff)
+    successors = node._successors.get('split')
+    if not successors:
+        return None
+    return successors.get(args)
 
 
 def _split_first(node: AbstractNode,
@@ -883,15 +883,15 @@ def _split_first(node: AbstractNode,
         raise TypeError('`node1_edges` should be list or tuple type')
     if not isinstance(node2_axes, (list, tuple)):
         raise TypeError('`node2_edges` should be list or tuple type')
-
-    kwargs = {'node': node,
-              'node1_axes': node1_axes,
-              'node2_axes': node2_axes,
-              'mode': mode,
-              'side': side,
-              'rank': rank,
-              'cum_percentage': cum_percentage,
-              'cutoff': cutoff}
+    
+    args = (node,
+            tuple(node1_axes),
+            tuple(node2_axes),
+            mode,
+            side,
+            rank,
+            cum_percentage,
+            cutoff)
 
     node1_axes = [node.get_axis_num(axis) for axis in node1_axes]
     node2_axes = [node.get_axis_num(axis) for axis in node2_axes]
@@ -1093,7 +1093,8 @@ def _split_first(node: AbstractNode,
     net._remove_edge(split_edge)
 
     # Create successor
-    successor = Successor(kwargs=kwargs,
+    successor = Successor(node_ref=node.node_ref(),
+                          index=node._tensor_info['index'],
                           child=[node1, node2],
                           hints={'batch_axes': batch_axes,
                                  'node1_axes': node1_axes,
@@ -1102,12 +1103,12 @@ def _split_first(node: AbstractNode,
 
     # Add successor to parent
     if 'split' in node._successors:
-        node._successors['split'].append(successor)
+        node._successors['split'].update({args: successor})
     else:
-        node._successors['split'] = [successor]
+        node._successors['split'] = {args: successor}
 
     # Add operation to list of performed operations of TN
-    net._seq_ops.append(('split', successor.kwargs))
+    net._seq_ops.append(('split', args))
 
     # Record in inverse_memory while tracing
     node._record_in_inverse_memory()
@@ -2305,14 +2306,11 @@ Edge.rq_ = rq_edge_
 def _check_first_contract_edges(edges: List[Edge],
                                 node1: AbstractNode,
                                 node2: AbstractNode) -> Optional[Successor]:
-    kwargs = {'edges': edges,
-              'node1': node1,
-              'node2': node2}
-    if 'contract_edges' in node1._successors:
-        for succ in node1._successors['contract_edges']:
-            if succ.kwargs == kwargs:
-                return succ
-    return None
+    args = (None if edges is None else tuple(edges), node1, node2)
+    successors = node1._successors.get('contract_edges')
+    if successors is None:
+        return None
+    return successors.get(args)
 
 
 def _contract_edges_first(edges: Optional[List[Edge]],
@@ -2322,11 +2320,11 @@ def _contract_edges_first(edges: Optional[List[Edge]],
     if not shared_edges:
         raise ValueError(f'No batch edges or shared edges between nodes '
                          f'{node1!s} and {node2!s} found')
+        
+    args = (None if edges is None else tuple(edges), node1, node2)
 
-    edges_none = False
     if edges is None:
         edges = shared_edges
-        edges_none = True
     else:
         for edge in edges:
             if edge not in shared_edges:
@@ -2368,7 +2366,7 @@ def _contract_edges_first(edges: Optional[List[Edge]],
                 new_edges.append(node1._edges[num])
                 new_node1_list.append(node1.is_node1(num))
 
-        hints = {'edges': edges}
+        hints = edges
 
         # Record in inverse_memory while tracing
         node1._record_in_inverse_memory()
@@ -2453,9 +2451,8 @@ def _contract_edges_first(edges: Optional[List[Edge]],
                 new_edges.append(nodes[i][idx])
                 new_node1_list.append(nodes[i].axes[idx].is_node1())
 
-        hints = {'permutation_dims': permutation_dims,
-                 'shape_limits': shape_limits,
-                 'edges': edges}
+        hints = {'shape_limits': shape_limits,
+                 'permutation_dims': permutation_dims}
 
         # Record in inverse_memory while tracing
         node1._record_in_inverse_memory()
@@ -2483,20 +2480,21 @@ def _contract_edges_first(edges: Optional[List[Edge]],
 
     # Create successor
     net = node1._network
-    successor = Successor(kwargs={'edges': edges if not edges_none else None,
-                                  'node1': node1,
-                                  'node2': node2},
+    successor = Successor(node_ref=(node1.node_ref(),
+                                    node2.node_ref()),
+                          index=(node1._tensor_info['index'],
+                                 node2._tensor_info['index']),
                           child=new_node,
                           hints=hints)
 
     # Add successor to parent
     if 'contract_edges' in node1._successors:
-        node1._successors['contract_edges'].append(successor)
+        node1._successors['contract_edges'].update({args: successor})
     else:
-        node1._successors['contract_edges'] = [successor]
+        node1._successors['contract_edges'] = {args: successor}
 
     # Add operation to list of performed operations of TN
-    net._seq_ops.append(('contract_edges', successor.kwargs))
+    net._seq_ops.append(('contract_edges', args))
 
     return new_node
 
@@ -2509,7 +2507,7 @@ def _contract_edges_next(successor: Successor,
     edges = hints['edges']
 
     if node1 == node2:
-        result = node1.tensor
+        edges = successor.hints
         axes_nums = dict(zip(range(node1.rank), range(node1.rank)))
 
         for edge in edges:
@@ -2538,11 +2536,7 @@ def _contract_edges_next(successor: Successor,
         node1._record_in_inverse_memory()
 
     else:
-        tensors = [node1.tensor, node2.tensor]
-
-        result = _C.contract(tensors[0], tensors[1],
-                             hints['permutation_dims'],
-                             hints['shape_limits'])
+        hints = successor.hints
 
         # Record in inverse_memory while contracting
         # (to delete memory if possible)
@@ -2910,16 +2904,14 @@ AbstractNode.contract_between_ = contract_between_node_
 
 #####################################   STACK   ###############################
 def _check_first_stack(nodes: Sequence[AbstractNode]) -> Optional[Successor]:
-    kwargs = {'nodes': nodes}
-
     if not nodes:
         raise ValueError('`nodes` should be a non-empty sequence of nodes')
-
-    if 'stack' in nodes[0]._successors:
-        for succ in nodes[0]._successors['stack']:
-            if succ.kwargs == kwargs:
-                return succ
-    return None
+    
+    args = (tuple(nodes),)
+    successors = nodes[0]._successors.get('stack')
+    if not successors:
+        return None
+    return successors.get(args)
 
 
 def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
@@ -3023,23 +3015,27 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
             node._record_in_inverse_memory()
 
     # Create successor
-    successor = Successor(kwargs={'nodes': nodes},
+    args = (tuple(nodes),)
+    successor = Successor(node_ref=tuple([node.node_ref() for node in nodes]),
+                          index=tuple([node._tensor_info['index'] for node in nodes]),
                           child=stack_node,
                           hints={'all_same_ref': all_same_ref,
                                  'all_leaf':
                                      all_leaf and
                                      (all_param or all_non_param) and
                                      node_ref_is_stack,
+                                 'same_dims': same_dims,
+                                 'lst_pads': lst_pads,
                                  'auto_stack': net._auto_stack})
 
     # Add successor to parent
     if 'stack' in nodes[0]._successors:
-        nodes[0]._successors['stack'].append(successor)
+        nodes[0]._successors['stack'].update({args: successor})
     else:
-        nodes[0]._successors['stack'] = [successor]
+        nodes[0]._successors['stack'] = {args: successor}
 
     # Add operation to list of performed operations of TN
-    net._seq_ops.append(('stack', successor.kwargs))
+    net._seq_ops.append(('stack', args))
 
     return stack_node
 
@@ -3107,12 +3103,11 @@ def stack(nodes: Sequence[AbstractNode]):
 
 ##################################   UNBIND   #################################
 def _check_first_unbind(node: AbstractStackNode) -> Optional[Successor]:
-    kwargs = {'node': node}
-    if 'unbind' in node._successors:
-        for succ in node._successors['unbind']:
-            if succ.kwargs == kwargs:
-                return succ
-    return None
+    args = (node,)
+    successors = node._successors.get('unbind')
+    if not successors:
+        return None
+    return successors.get(args)
 
 
 def _unbind_first(node: AbstractStackNode) -> List[Node]:
@@ -3211,18 +3206,22 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
                 new_node._tensor_info['index'] = index
 
     # Create successor
-    successor = Successor(kwargs={'node': node},
+    args = (node,)
+    successor = Successor(node_ref=node.node_ref(),
+                          index=node._tensor_info['index'],
                           child=new_nodes,
-                          hints={'batch_ids': batch_ids})
+                          hints={'batch_ids': batch_ids,
+                                 'same_dims': same_dims,
+                                 'lst_crops': lst_crops})
 
     # Add successor to parent
     if 'unbind' in node._successors:
-        node._successors['unbind'].append(successor)
+        node._successors['unbind'].update({args: successor})
     else:
-        node._successors['unbind'] = [successor]
+        node._successors['unbind'] = {args: successor}
 
     # Add operation to list of performed operations of TN
-    net._seq_ops.append(('unbind', successor.kwargs))
+    net._seq_ops.append(('unbind', args))
 
     # Returns copy in order not to modify the successor
     # if the returned list gets modified by any means
@@ -3327,17 +3326,14 @@ def unbind(node: AbstractStackNode) -> List[Node]:
 ##################################   EINSUM   #################################
 def _check_first_einsum(string: Text,
                         *nodes: AbstractNode) -> Optional[Successor]:
-    kwargs = {'string': string,
-              'nodes': nodes}
-
     if not nodes:
         raise ValueError('No nodes were provided')
-
-    if 'einsum' in nodes[0]._successors:
-        for succ in nodes[0]._successors['einsum']:
-            if succ.kwargs == kwargs:
-                return succ
-    return None
+    
+    args = (string, *nodes)
+    successors = nodes[0]._successors.get('einsum')
+    if not successors:
+        return None
+    return successors.get(args)
 
 
 def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
@@ -3466,21 +3462,22 @@ def _einsum_first(string: Text, *nodes: AbstractNode) -> Node:
                                           node1_list=list(node1_list.values()))
 
     # Create successor
-    successor = Successor(kwargs={'string': string,
-                                  'nodes': nodes},
+    args = (string, *nodes)
+    successor = Successor(node_ref=tuple([node.node_ref() for node in nodes]),
+                          index=tuple([node._tensor_info['index'] for node in nodes]),
                           child=new_node,
                           hints={'einsum_string': einsum_string,
                                  'path': path})
 
     # Add successor to parent
     if 'einsum' in nodes[0]._successors:
-        nodes[0]._successors['einsum'].append(successor)
+        nodes[0]._successors['einsum'].update({args: successor})
     else:
-        nodes[0]._successors['einsum'] = [successor]
+        nodes[0]._successors['einsum'] = {args: successor}
 
     # Add operation to list of performed operations of TN
     net = nodes[0]._network
-    net._seq_ops.append(('einsum', successor.kwargs))
+    net._seq_ops.append(('einsum', args))
 
     # Record in inverse_memory while tracing
     for node in nodes:

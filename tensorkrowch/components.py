@@ -666,8 +666,10 @@ class AbstractNode(ABC):
     @property
     def successors(self) -> Dict[Text, 'Successor']:
         """
-        Dictionary with :class:`Operations <Operation>`' names as keys, and the
-        list of :class:`Successors <Successor>` of the node as values.
+        Dictionary with :class:`Operations <Operation>`' names as keys, and
+        dictionaries of :class:`Successors <Successor>` of the node as values.
+        The inner dictionaries use as keys the arguments used when the
+        operation was called.
         """
         return self._successors
 
@@ -3544,15 +3546,15 @@ class Successor:
     node every time. Instead, it is more efficient to keep track of which node
     arose as the result of an operation, and simply change its tensor.
 
-    Hence, a ``Successor`` is instantiated providing the arguments of the operation
-    that gave rise to a resultant node, a reference to the resultant node itself,
-    and some hints that might help accelerating the computations the next time
-    the operation is performed.
+    Hence, a ``Successor`` is instantiated providing details to get the operand
+    nodes' tensors, as well as a reference to the resultant node, and some hints
+    that might help accelerating the computations the next time the operation
+    is performed.
     
     |
 
-    These three properties can be accessed via ``successor.kwargs``,
-    ``successor.child`` and ``successor.hints``.
+    These properties can be accessed via ``successor.node_ref``,
+    ``successor.index``, ``successor.child`` and ``successor.hints``.
     
     |
     
@@ -3561,11 +3563,15 @@ class Successor:
 
     Parameters
     ----------
-    kwargs : dict[str, any]
-        Dictionary with keyword arguments used to call an operation.
+    node_ref : Node, ParamNode, or list[Node, ParamNode]
+        For the nodes that are involved in an operation, this are the
+        corresponding nodes that store their tensors.
+    index : list[int, slice] or list[list[int, slice]], optional
+        For the nodes that are involved in an operation, this are the
+        corresponding indices used to access their tensors.
     child : Node or list[Node]
         The node or list of nodes that result from an operation.
-    hints : dict[str, any], optional
+    hints : any, optional
         A dictionary of hints created the first time an operation is computed in
         order to save some computation in the next calls of the operation.
 
@@ -3583,7 +3589,9 @@ class Successor:
     >>> print(result.name)
     contract_edges
     
-    >>> nodeA.successors['contract_edges'][0].child == result
+    >>> # To get a successor, the name of the operation and the arguments have
+    >>> # to be provided as keys of the successors dictionary
+    >>> nodeA.successors['contract_edges'][(None, nodeA, nodeB)].child == result
     True
     
     
@@ -3591,10 +3599,13 @@ class Successor:
     """
 
     def __init__(self,
-                 kwargs: Dict[Text, Any],
+                 node_ref: Union[AbstractNode, List[AbstractNode]],
+                 index: Union[Optional[List[Union[int, slice]]],
+                              List[Optional[List[Union[int, slice]]]]],
                  child: Union[Node, List[Node]],
-                 hints: Optional[Dict[Text, Any]] = None) -> None:
-        self.kwargs = kwargs
+                 hints: Optional[Any] = None) -> None:
+        self.node_ref = node_ref
+        self.index = index
         self.child = child
         self.hints = hints
 
@@ -4584,8 +4595,8 @@ class TensorNetwork(nn.Module):
         * ``resultant``: These nodes are :meth:`deleted <delete_node>` from the
           network.
         
-        Also, the lists of :class:`Successors <Successor>` of all ``leaf`` and
-        ``data`` nodes are emptied.
+        Also, the dictionaries of :class:`Successors <Successor>` of all ``leaf``
+        and ``data`` nodes are emptied.
         
         The :class:`TensorNetwork` is automatically ``reset`` when
         :meth:`parameterizing <parameterize>` it, changing :meth:`auto_stack`

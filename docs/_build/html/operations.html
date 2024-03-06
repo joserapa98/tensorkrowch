@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Operations &#8212; TensorKrowch 1.0.0 documentation</title>
+    <title>Operations &#8212; TensorKrowch 1.0.1 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -34,9 +34,7 @@
     <script src="_static/clipboard.min.js"></script>
     <script src="_static/copybutton.js"></script>
     <script src="_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
-    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="shortcut icon" href="_static/tensorkrowch_favicon_light.svg"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -1021,7 +1019,7 @@ performed when both nodes have batch edges with the same names.</p>
 <h2>Operation Class<a class="headerlink" href="#operation-class" title="Permalink to this headline">#</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.Operation">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Operation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_first</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#Operation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Operation" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Operation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_first</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn_first</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn_next</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#Operation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Operation" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for node operations.</p>
 <p>A node operation is made up of two functions, the one that is executed the
 first time the operation is called and the one that is executed in every
@@ -1037,8 +1035,8 @@ is always the same, though the tensors themselves are different).</p>
 <li><p><strong>name</strong> (<em>str</em>) – Name of the operation. It cannot coincide with another operation’s name.
 Operation names can be checked via <code class="docutils literal notranslate"><span class="pre">net.operations</span></code>.</p></li>
 <li><p><strong>check_first</strong> (<em>callable</em>) – Function that checks if the operation has been called at least one time.</p></li>
-<li><p><strong>func1</strong> (<em>callable</em>) – Function that is called the first time the operation is performed.</p></li>
-<li><p><strong>func2</strong> (<em>callable</em>) – Function that is called the next times the operation is performed.</p></li>
+<li><p><strong>fn_first</strong> (<em>callable</em>) – Function that is called the first time the operation is performed.</p></li>
+<li><p><strong>fn_next</strong> (<em>callable</em>) – Function that is called the next times the operation is performed.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1563,7 +1561,7 @@ respectively. Restrictions that are applied to the nodes in order to be
 <cite>stackable</cite> are the same as in <a class="reference internal" href="components.html#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">StackNode</span></code></a>.</p>
 <p>The stack dimension will be the first one in the <code class="docutils literal notranslate"><span class="pre">resultant</span></code> node.</p>
 <p>See <a class="reference internal" href="components.html#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a> and <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> to learn how the
-<a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.auto_unbind" title="tensorkrowch.TensorNetwork.auto_unbind"><code class="xref py py-meth docutils literal notranslate"><span class="pre">auto_unbind()</span></code></a> mode affects the computation of
+<a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.auto_stack" title="tensorkrowch.TensorNetwork.auto_stack"><code class="xref py py-meth docutils literal notranslate"><span class="pre">auto_stack()</span></code></a> mode affects the computation of
 <a class="reference internal" href="#tensorkrowch.stack" title="tensorkrowch.stack"><code class="xref py py-func docutils literal notranslate"><span class="pre">stack()</span></code></a>.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;stack&quot;</span></code>. If this
 operation returns a <code class="docutils literal notranslate"><span class="pre">virtual</span></code> <a class="reference internal" href="components.html#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a>, it will be called
@@ -1572,7 +1570,7 @@ name</strong>.  The node that keeps information about the <a class="reference in
 <code class="docutils literal notranslate"><span class="pre">nodes[0]</span></code>, the first stacked node.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>nodes</strong> (<em>list</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>] or </em><em>tuple</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>]</em>) – Sequence of nodes that are to be stacked. They must be of the same type,
+<dd class="field-odd"><p><strong>nodes</strong> (<em>list</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>] or </em><em>tuple</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>]</em>) – Sequence of nodes that are to be stacked. They must be of the same type,
 have the same rank and axes names, be in the same tensor network, and
 have edges with the same types.</p>
 </dd>

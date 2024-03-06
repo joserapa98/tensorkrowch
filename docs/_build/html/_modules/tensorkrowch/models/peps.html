@@ -1,7 +1,7 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -29,6 +29,7 @@
     <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
     <script src="../../../_static/jquery.js"></script>
     <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../../_static/doctools.js"></script>
     <script src="../../../_static/clipboard.min.js"></script>
     <script src="../../../_static/copybutton.js"></script>
@@ -38,7 +39,7 @@
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="docsearch:language" content="None">
+    <meta name="docsearch:language" content="en">
     
 
     <!-- Google Analytics -->
@@ -330,7 +331,7 @@ title="Source repository"
 <span class="sd">    n_cols : int</span>
 <span class="sd">        Number of columns of the 2D grid.</span>
 <span class="sd">    in_dim : int</span>
-<span class="sd">        Input dimension.</span>
+<span class="sd">        Input dimension. Equivalent to the physical dimension.</span>
 <span class="sd">    bond_dim : list[int] or tuple[int]</span>
 <span class="sd">        Bond dimensions for horizontal and vertical edges (in that order). Thus</span>
 <span class="sd">        it should contain 2 elements.</span>
@@ -442,7 +443,7 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns input dimension.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns input/physical dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span>
 
     <span class="nd">@property</span>
@@ -1121,7 +1122,7 @@ title="Source repository"
 <span class="sd">    n_cols : int</span>
 <span class="sd">        Number of columns of the 2D grid</span>
 <span class="sd">    in_dim : int</span>
-<span class="sd">        Input dimension.</span>
+<span class="sd">        Input dimension. Equivalent to the physical dimension.</span>
 <span class="sd">    bond_dim : list[int] or tuple[int]</span>
 <span class="sd">        Bond dimensions for horizontal and vertical edges (in that order). Thus</span>
 <span class="sd">        it should also contain 2 elements</span>
@@ -1198,7 +1199,7 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">in_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns input dimension.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns input/physical dimension.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span>
 
     <span class="nd">@property</span>

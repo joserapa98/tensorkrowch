@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Models &#8212; TensorKrowch 1.0.0 documentation</title>
+    <title>Models &#8212; TensorKrowch 1.0.1 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -34,9 +34,7 @@
     <script src="_static/clipboard.min.js"></script>
     <script src="_static/copybutton.js"></script>
     <script src="_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
-    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="shortcut icon" href="_static/tensorkrowch_favicon_light.svg"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -364,7 +362,7 @@ title="Print to PDF"
   </a>
   <ul class="nav section-nav flex-column">
    <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#id16">
+    <a class="reference internal nav-link" href="#id18">
      MPS
     </a>
    </li>
@@ -391,7 +389,7 @@ title="Print to PDF"
   </a>
   <ul class="nav section-nav flex-column">
    <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#id34">
+    <a class="reference internal nav-link" href="#id38">
      Tree
     </a>
    </li>
@@ -418,7 +416,7 @@ title="Print to PDF"
   </a>
   <ul class="nav section-nav flex-column">
    <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#id51">
+    <a class="reference internal nav-link" href="#id55">
      PEPS
     </a>
    </li>
@@ -491,7 +489,7 @@ title="Print to PDF"
   </a>
   <ul class="nav section-nav flex-column">
    <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#id16">
+    <a class="reference internal nav-link" href="#id18">
      MPS
     </a>
    </li>
@@ -518,7 +516,7 @@ title="Print to PDF"
   </a>
   <ul class="nav section-nav flex-column">
    <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#id34">
+    <a class="reference internal nav-link" href="#id38">
      Tree
     </a>
    </li>
@@ -545,7 +543,7 @@ title="Print to PDF"
   </a>
   <ul class="nav section-nav flex-column">
    <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#id51">
+    <a class="reference internal nav-link" href="#id55">
      PEPS
     </a>
    </li>
@@ -712,7 +710,8 @@ output node. Same as <code class="docutils literal notranslate"><span class="pre
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.models.MPSLayer.initialize">
 <span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">std</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-09</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps_layer.html#MPSLayer.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPSLayer.initialize" title="Permalink to this definition">#</a></dt>
-<dd><p>Initializes all the nodes.</p>
+<dd><p>Initializes all the nodes as explained <a class="reference external" href="https://arxiv.org/abs/1605.03795">here</a>.
+It can be overriden for custom initializations.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -848,7 +847,7 @@ output node) will be <code class="docutils literal notranslate"><span class="pre
 <dl class="py property">
 <dt class="sig sig-object py" id="tensorkrowch.models.UMPSLayer.in_dim">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">in_dim</span></span><a class="headerlink" href="#tensorkrowch.models.UMPSLayer.in_dim" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns input dimension.</p>
+<dd><p>Returns input/physical dimension.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -885,7 +884,8 @@ output node. Same as <code class="docutils literal notranslate"><span class="pre
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.models.UMPSLayer.initialize">
 <span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">std</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-09</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps_layer.html#UMPSLayer.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.UMPSLayer.initialize" title="Permalink to this definition">#</a></dt>
-<dd><p>Initializes output and uniform nodes.</p>
+<dd><p>Initializes output and uniform nodes as explained <a class="reference external" href="https://arxiv.org/abs/1605.03795">here</a>.
+It can be overriden for custom initializations.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1141,8 +1141,8 @@ like <code class="docutils literal notranslate"><span class="pre">inline_input</
 </section>
 <section id="mps">
 <h2>MPS<a class="headerlink" href="#mps" title="Permalink to this headline">#</a></h2>
-<section id="id16">
-<h3>MPS<a class="headerlink" href="#id16" title="Permalink to this headline">#</a></h3>
+<section id="id18">
+<h3>MPS<a class="headerlink" href="#id18" title="Permalink to this headline">#</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.models.MPS">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.models.</span></span><span class="sig-name descname"><span class="pre">MPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_features</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">in_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bond_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'obc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS" title="Permalink to this definition">#</a></dt>
@@ -1165,8 +1165,8 @@ extremes of the <code class="docutils literal notranslate"><span class="pre">MPS
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n_features</strong> (<em>int</em>) – Number of input nodes.</p></li>
-<li><p><strong>in_dim</strong> (<em>int</em><em>, </em><em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em>) – Input dimension(s). If given as a sequence, its length should be
-equal to <code class="docutils literal notranslate"><span class="pre">n_features</span></code>.</p></li>
+<li><p><strong>in_dim</strong> (<em>int</em><em>, </em><em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em>) – Input dimension(s). Equivalent to the physical dimension. If given as a
+sequence, its length should be equal to <code class="docutils literal notranslate"><span class="pre">n_features</span></code>.</p></li>
 <li><p><strong>bond_dim</strong> (<em>int</em><em>, </em><em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em>) – Bond dimension(s). If given as a sequence, its length should be equal
 to <code class="docutils literal notranslate"><span class="pre">n_features</span></code> (if <code class="docutils literal notranslate"><span class="pre">boundary</span> <span class="pre">=</span> <span class="pre">&quot;pbc&quot;</span></code>) or <code class="docutils literal notranslate"><span class="pre">n_features</span> <span class="pre">-</span> <span class="pre">1</span></code> (if
 <code class="docutils literal notranslate"><span class="pre">boundary</span> <span class="pre">=</span> <span class="pre">&quot;obc&quot;</span></code>). The i-th bond dimension is always the dimension
@@ -1181,7 +1181,7 @@ patches in convolutional layers).</p></li>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<p><code class="docutils literal notranslate"><span class="pre">MPS</span></code> with same physical dimensions:</p>
+<p><code class="docutils literal notranslate"><span class="pre">MPS</span></code> with same input/physical dimensions:</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">mps</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MPS</span><span class="p">(</span><span class="n">n_features</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
 <span class="gp">... </span>                    <span class="n">in_dim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
 <span class="gp">... </span>                    <span class="n">bond_dim</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
@@ -1191,7 +1191,7 @@ patches in convolutional layers).</p></li>
 <span class="go">torch.Size([20])</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">MPS</span></code> with different physical dimensions:</p>
+<p><code class="docutils literal notranslate"><span class="pre">MPS</span></code> with different input/physical dimensions:</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">mps</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MPS</span><span class="p">(</span><span class="n">n_features</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
 <span class="gp">... </span>                    <span class="n">in_dim</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">7</span><span class="p">)),</span>
 <span class="gp">... </span>                    <span class="n">bond_dim</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
@@ -1217,7 +1217,7 @@ patches in convolutional layers).</p></li>
 <dl class="py property">
 <dt class="sig sig-object py" id="tensorkrowch.models.MPS.in_dim">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">in_dim</span></span><a class="headerlink" href="#tensorkrowch.models.MPS.in_dim" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns physical dimension.</p>
+<dd><p>Returns input/physical dimension.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -1235,14 +1235,15 @@ patches in convolutional layers).</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.models.MPS.initialize">
 <span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">std</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-09</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.initialize" title="Permalink to this definition">#</a></dt>
-<dd><p>Initializes all the nodes.</p>
+<dd><p>Initializes all the nodes as explained <a class="reference external" href="https://arxiv.org/abs/1605.03795">here</a>.
+It can be overriden for custom initializations.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.models.MPS.set_data_nodes">
 <span class="sig-name descname"><span class="pre">set_data_nodes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.set_data_nodes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.set_data_nodes" title="Permalink to this definition">#</a></dt>
-<dd><p>Creates <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes and connects each of them to the physical edge of
-each input node.</p>
+<dd><p>Creates <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes and connects each of them to the input/physical
+edge of each input node.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1361,7 +1362,7 @@ patches in convolutional layers).</p></li>
 <dl class="py property">
 <dt class="sig sig-object py" id="tensorkrowch.models.UMPS.in_dim">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">in_dim</span></span><a class="headerlink" href="#tensorkrowch.models.UMPS.in_dim" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns input dimension.</p>
+<dd><p>Returns input/physical dimension.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -1379,14 +1380,15 @@ patches in convolutional layers).</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.models.UMPS.initialize">
 <span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">std</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-09</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#UMPS.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.UMPS.initialize" title="Permalink to this definition">#</a></dt>
-<dd><p>Initializes output and uniform nodes.</p>
+<dd><p>Initializes output and uniform nodes as explained <a class="reference external" href="https://arxiv.org/abs/1605.03795">here</a>.
+It can be overriden for custom initializations.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.models.UMPS.set_data_nodes">
 <span class="sig-name descname"><span class="pre">set_data_nodes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#UMPS.set_data_nodes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.UMPS.set_data_nodes" title="Permalink to this definition">#</a></dt>
-<dd><p>Creates <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes and connects each of them to the physical edge of
-each input node.</p>
+<dd><p>Creates <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes and connects each of them to the input/physical
+edge of each input node.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1626,8 +1628,8 @@ like <code class="docutils literal notranslate"><span class="pre">inline_input</
 </section>
 <section id="tree">
 <h2>Tree<a class="headerlink" href="#tree" title="Permalink to this headline">#</a></h2>
-<section id="id34">
-<h3>Tree<a class="headerlink" href="#id34" title="Permalink to this headline">#</a></h3>
+<section id="id38">
+<h3>Tree<a class="headerlink" href="#id38" title="Permalink to this headline">#</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.models.Tree">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.models.</span></span><span class="sig-name descname"><span class="pre">Tree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sites_per_layer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bond_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/tree.html#Tree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.Tree" title="Permalink to this definition">#</a></dt>
@@ -2051,8 +2053,8 @@ like <code class="docutils literal notranslate"><span class="pre">inline</span><
 </section>
 <section id="peps">
 <h2>PEPS<a class="headerlink" href="#peps" title="Permalink to this headline">#</a></h2>
-<section id="id51">
-<h3>PEPS<a class="headerlink" href="#id51" title="Permalink to this headline">#</a></h3>
+<section id="id55">
+<h3>PEPS<a class="headerlink" href="#id55" title="Permalink to this headline">#</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.models.PEPS">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.models.</span></span><span class="sig-name descname"><span class="pre">PEPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_rows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">in_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bond_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['obc',</span> <span class="pre">'obc']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/peps.html#PEPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.PEPS" title="Permalink to this definition">#</a></dt>
@@ -2077,7 +2079,7 @@ grid.</p></li>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n_rows</strong> (<em>int</em>) – Number of rows of the 2D grid.</p></li>
 <li><p><strong>n_cols</strong> (<em>int</em>) – Number of columns of the 2D grid.</p></li>
-<li><p><strong>in_dim</strong> (<em>int</em>) – Input dimension.</p></li>
+<li><p><strong>in_dim</strong> (<em>int</em>) – Input dimension. Equivalent to the physical dimension.</p></li>
 <li><p><strong>bond_dim</strong> (<em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em>) – Bond dimensions for horizontal and vertical edges (in that order). Thus
 it should contain 2 elements.</p></li>
 <li><p><strong>boundary</strong> (<em>list</em><em>[</em><em>{&quot;obc&quot;</em><em>, </em><em>&quot;pbc&quot;}</em><em>]</em>) – List of strings indicating whether periodic or open boundary conditions
@@ -2123,7 +2125,7 @@ vertical (left and right) boundaries.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="tensorkrowch.models.PEPS.in_dim">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">in_dim</span></span><a class="headerlink" href="#tensorkrowch.models.PEPS.in_dim" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns input dimension.</p>
+<dd><p>Returns input/physical dimension.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -2196,7 +2198,7 @@ conditions are always periodic.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n_rows</strong> (<em>int</em>) – Number of rows of the 2D grid.</p></li>
 <li><p><strong>n_cols</strong> (<em>int</em>) – Number of columns of the 2D grid</p></li>
-<li><p><strong>in_dim</strong> (<em>int</em>) – Input dimension.</p></li>
+<li><p><strong>in_dim</strong> (<em>int</em>) – Input dimension. Equivalent to the physical dimension.</p></li>
 <li><p><strong>bond_dim</strong> (<em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em>) – Bond dimensions for horizontal and vertical edges (in that order). Thus
 it should also contain 2 elements</p></li>
 <li><p><strong>n_batches</strong> (<em>int</em>) – Number of batch edges of input <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes. Usually <code class="docutils literal notranslate"><span class="pre">n_batches</span> <span class="pre">=</span> <span class="pre">1</span></code>
@@ -2235,7 +2237,7 @@ patches in convolutional layers).</p></li>
 <dl class="py property">
 <dt class="sig sig-object py" id="tensorkrowch.models.UPEPS.in_dim">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">in_dim</span></span><a class="headerlink" href="#tensorkrowch.models.UPEPS.in_dim" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns input dimension.</p>
+<dd><p>Returns input/physical dimension.</p>
 </dd></dl>
 
 <dl class="py property">

@@ -1,7 +1,7 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -29,6 +29,7 @@
     <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
     <script src="../../_static/jquery.js"></script>
     <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/clipboard.min.js"></script>
     <script src="../../_static/copybutton.js"></script>
@@ -38,7 +39,7 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="docsearch:language" content="None">
+    <meta name="docsearch:language" content="en">
     
 
     <!-- Google Analytics -->
@@ -873,17 +874,13 @@ title="Source repository"
         <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_temp_tensor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
             <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temp_tensor</span>
             <span class="k">return</span> <span class="n">result</span>
-
-        <span class="n">address</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span>
-        <span class="n">node_ref</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span>
-        <span class="n">full</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;full&#39;</span><span class="p">]</span>
+        
+        <span class="n">address</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor_address</span><span class="p">()</span>
         <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="n">address</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">address</span> <span class="o">=</span> <span class="n">node_ref</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span>
+        
         <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">address</span><span class="p">]</span>
 
-        <span class="n">return_result</span> <span class="o">=</span> <span class="n">full</span> <span class="ow">or</span> <span class="p">(</span><span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">return_result</span> <span class="o">=</span> <span class="p">(</span><span class="n">index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_auto_unbind</span><span class="p">:</span>
             <span class="n">return_result</span> <span class="o">=</span> <span class="n">return_result</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;unbind&#39;</span><span class="p">)</span>
 
@@ -955,8 +952,10 @@ title="Source repository"
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">successors</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Text</span><span class="p">,</span> <span class="s1">&#39;Successor&#39;</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Dictionary with :class:`Operations &lt;Operation&gt;`&#39; names as keys, and the</span>
-<span class="sd">        list of :class:`Successors &lt;Successor&gt;` of the node as values.</span>
+<span class="sd">        Dictionary with :class:`Operations &lt;Operation&gt;`&#39; names as keys, and</span>
+<span class="sd">        dictionaries of :class:`Successors &lt;Successor&gt;` of the node as values.</span>
+<span class="sd">        The inner dictionaries use as keys the arguments used when the</span>
+<span class="sd">        operation was called.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_successors</span>
 
@@ -986,6 +985,11 @@ title="Source repository"
     <span class="nd">@staticmethod</span>
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">_set_tensor_format</span><span class="p">(</span><span class="n">tensor</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">]:</span>
+        <span class="k">pass</span>
+    
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_save_in_network</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                         <span class="n">tensor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">pass</span>
 
     <span class="nd">@abstractmethod</span>
@@ -1200,7 +1204,8 @@ title="Source repository"
                 <span class="n">aux_shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_shape</span><span class="p">)</span>
                 <span class="n">aux_shape</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]</span> <span class="o">=</span> <span class="n">size</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_shape</span> <span class="o">=</span> <span class="n">Size</span><span class="p">(</span><span class="n">aux_shape</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_direct_set_tensor</span><span class="p">(</span><span class="n">tensor</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
+                <span class="n">correct_format_tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_tensor_format</span><span class="p">(</span><span class="n">tensor</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_direct_set_tensor</span><span class="p">(</span><span class="n">correct_format_tensor</span><span class="p">)</span>
 
             <span class="k">elif</span> <span class="n">size</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shape</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]:</span>
                 <span class="c1"># If new size is greater than current, tensor is expanded with</span>
@@ -1215,7 +1220,9 @@ title="Source repository"
                 <span class="n">aux_shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_shape</span><span class="p">)</span>
                 <span class="n">aux_shape</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]</span> <span class="o">=</span> <span class="n">size</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_shape</span> <span class="o">=</span> <span class="n">Size</span><span class="p">(</span><span class="n">aux_shape</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_direct_set_tensor</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">pad</span><span class="p">))</span>
+                <span class="n">correct_format_tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_tensor_format</span><span class="p">(</span>
+                    <span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">pad</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_direct_set_tensor</span><span class="p">(</span><span class="n">correct_format_tensor</span><span class="p">)</span>
 
 <div class="viewcode-block" id="AbstractNode.get_axis"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.get_axis">[docs]</a>    <span class="k">def</span> <span class="nf">get_axis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Ax</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Axis</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns :class:`Axis` given its ``name`` or ``num``.&quot;&quot;&quot;</span>
@@ -1538,18 +1545,19 @@ title="Source repository"
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`tensor` should have the same number of&#39;</span>
                              <span class="s1">&#39; dimensions as node</span><span class="se">\&#39;</span><span class="s1">s tensor (same rank)&#39;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_direct_set_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                           <span class="n">tensor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
-                           <span class="n">check_shape</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">_direct_get_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_ref</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Sets a new node&#39;s tensor without checking extra conditions. It just</span>
-<span class="sd">        can crop the tensor in case it is specified with ``check_shape``.</span>
+<span class="sd">        Return node&#39;s tensor without checking extra conditions. This direct</span>
+<span class="sd">        access to the tensor is used from ``Operations``, so ``self`` should</span>
+<span class="sd">        (and will) be a non-empty node.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">check_shape</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compatible_shape</span><span class="p">(</span><span class="n">tensor</span><span class="p">):</span>
-            <span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crop_tensor</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
-        <span class="n">correct_format_tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_tensor_format</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">node_ref</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">node_ref</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]][</span><span class="n">index</span><span class="p">]</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_save_in_network</span><span class="p">(</span><span class="n">correct_format_tensor</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_direct_set_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tensor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sets a new node&#39;s tensor without checking extra conditions.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_in_network</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_shape</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span>
 
     <span class="k">def</span> <span class="nf">_unrestricted_set_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -1755,7 +1763,6 @@ title="Source repository"
         <span class="k">if</span> <span class="n">other</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">other</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;full&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">_tensor_info</span></div>
@@ -1767,6 +1774,12 @@ title="Source repository"
             <span class="n">node_ref</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span>
             <span class="n">address</span> <span class="o">=</span> <span class="n">node_ref</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">address</span></div>
+    
+<div class="viewcode-block" id="AbstractNode.node_ref"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.node_ref">[docs]</a>    <span class="k">def</span> <span class="nf">node_ref</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;AbstractNode&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the node that stores current node&#39;s tensor.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
 
 <div class="viewcode-block" id="AbstractNode.reset_tensor_address"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.reset_tensor_address">[docs]</a>    <span class="k">def</span> <span class="nf">reset_tensor_address</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1799,7 +1812,6 @@ title="Source repository"
             <span class="bp">self</span><span class="o">.</span><span class="n">_temp_tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;full&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_temp_tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
@@ -1813,14 +1825,27 @@ title="Source repository"
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temp_tensor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_unrestricted_set_tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_temp_tensor</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_temp_tensor</span> <span class="o">=</span> <span class="kc">None</span></div>
+    
+    <span class="k">def</span> <span class="nf">_check_inverse_memory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_ref</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks how many times a node&#39;s tensor is accessed during contraction.</span>
+<span class="sd">        If that tensor can be erased when ``&quot;re-accessed&quot;`` reaches ``&quot;accessed&quot;``,</span>
+<span class="sd">        it is replaced by ``None``.</span>
+<span class="sd">        </span>
+<span class="sd">        This is used in subsequent calls to an operation, so it is assumed that</span>
+<span class="sd">        all addresses accessed are already in the ``inverse_memory``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span>
+        <span class="n">address</span> <span class="o">=</span> <span class="n">node_ref</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span>
 
-    <span class="k">def</span> <span class="nf">_save_in_network</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                         <span class="n">tensor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Saves new node&#39;s tensor in the network&#39;s memory.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">tensor</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">register_parameter</span><span class="p">(</span>
-                <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">],</span> <span class="n">tensor</span><span class="p">)</span>
+        <span class="c1"># When contracting network, if it is traced, we keep track of the number</span>
+        <span class="c1"># of accesses to &quot;erasable&quot; nodes</span>
+        <span class="n">aux_dict</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_inverse_memory</span><span class="p">[</span><span class="n">address</span><span class="p">]</span>
+        <span class="n">aux_dict</span><span class="p">[</span><span class="s1">&#39;re-accessed&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">aux_dict</span><span class="p">[</span><span class="s1">&#39;accessed&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">aux_dict</span><span class="p">[</span><span class="s1">&#39;re-accessed&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">aux_dict</span><span class="p">[</span><span class="s1">&#39;erase&#39;</span><span class="p">]:</span>
+                <span class="n">net</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">address</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">aux_dict</span><span class="p">[</span><span class="s1">&#39;re-accessed&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
 
     <span class="k">def</span> <span class="nf">_record_in_inverse_memory</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1839,7 +1864,7 @@ title="Source repository"
 
 <span class="sd">        When contracting the :class:`TensorNetwork`, if the node&#39;s tensor has been</span>
 <span class="sd">        accessed the total amount of times it has to be accessed, and it can be</span>
-<span class="sd">        erased, then its tensor is indeed replaced by None.</span>
+<span class="sd">        erased, then its tensor is indeed replaced by ``None``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">net</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span>
         <span class="n">address</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span>
@@ -1849,37 +1874,24 @@ title="Source repository"
             <span class="n">check_nodes</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_ref</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">check_nodes</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="p">]</span>
-
+        
         <span class="c1"># When tracing network, node is recorded in inverse memory</span>
-        <span class="k">if</span> <span class="n">net</span><span class="o">.</span><span class="n">_tracing</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">address</span> <span class="ow">in</span> <span class="n">net</span><span class="o">.</span><span class="n">_inverse_memory</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">address</span> <span class="ow">in</span> <span class="n">net</span><span class="o">.</span><span class="n">_inverse_memory</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">net</span><span class="o">.</span><span class="n">_inverse_memory</span><span class="p">[</span><span class="n">address</span><span class="p">][</span><span class="s1">&#39;erase&#39;</span><span class="p">]:</span>
                     <span class="n">net</span><span class="o">.</span><span class="n">_inverse_memory</span><span class="p">[</span><span class="n">address</span><span class="p">][</span><span class="s1">&#39;accessed&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="c1"># Node can only be erased if both itself and the node from which</span>
-                <span class="c1"># it is taking the tensor information (node_ref) are resultant or</span>
-                <span class="c1"># data nodes (including virtual node that stores stack data tensor)</span>
-                <span class="n">erase</span> <span class="o">=</span> <span class="kc">True</span>
-                <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">check_nodes</span><span class="p">:</span>
-                    <span class="n">erase</span> <span class="o">&amp;=</span> <span class="n">node</span><span class="o">.</span><span class="n">is_resultant</span><span class="p">()</span> <span class="ow">or</span> <span class="n">node</span><span class="o">.</span><span class="n">_data</span> <span class="ow">or</span> \
-                             <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">_virtual</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span> <span class="o">==</span> <span class="s1">&#39;stack_data_memory&#39;</span><span class="p">)</span>
-
-                <span class="n">net</span><span class="o">.</span><span class="n">_inverse_memory</span><span class="p">[</span><span class="n">address</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-                    <span class="s1">&#39;accessed&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-                    <span class="s1">&#39;re-accessed&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-                    <span class="s1">&#39;erase&#39;</span><span class="p">:</span> <span class="n">erase</span><span class="p">}</span>
-
-        <span class="c1"># When contracting network, we keep track of the number of accesses</span>
-        <span class="c1"># to &quot;erasable&quot; nodes</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">address</span> <span class="ow">in</span> <span class="n">net</span><span class="o">.</span><span class="n">_inverse_memory</span><span class="p">:</span>
-                <span class="n">net</span><span class="o">.</span><span class="n">_inverse_memory</span><span class="p">[</span><span class="n">address</span><span class="p">][</span><span class="s1">&#39;re-accessed&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="n">aux_dict</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_inverse_memory</span><span class="p">[</span><span class="n">address</span><span class="p">]</span>
+            <span class="c1"># Node can only be erased if both itself and the node from which</span>
+            <span class="c1"># it is taking the tensor information (node_ref) are resultant or</span>
+            <span class="c1"># data nodes (including virtual node that stores stack data tensor)</span>
+            <span class="n">erase</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">check_nodes</span><span class="p">:</span>
+                <span class="n">erase</span> <span class="o">&amp;=</span> <span class="n">node</span><span class="o">.</span><span class="n">is_resultant</span><span class="p">()</span> <span class="ow">or</span> <span class="n">node</span><span class="o">.</span><span class="n">_data</span> <span class="ow">or</span> \
+                    <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">_virtual</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span> <span class="o">==</span> <span class="s1">&#39;stack_data_memory&#39;</span><span class="p">)</span>
 
-                <span class="k">if</span> <span class="n">aux_dict</span><span class="p">[</span><span class="s1">&#39;accessed&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">aux_dict</span><span class="p">[</span><span class="s1">&#39;re-accessed&#39;</span><span class="p">]:</span>
-                    <span class="k">if</span> <span class="n">aux_dict</span><span class="p">[</span><span class="s1">&#39;erase&#39;</span><span class="p">]:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">address</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-                    <span class="n">net</span><span class="o">.</span><span class="n">_inverse_memory</span><span class="p">[</span><span class="n">address</span><span class="p">][</span><span class="s1">&#39;re-accessed&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">net</span><span class="o">.</span><span class="n">_inverse_memory</span><span class="p">[</span><span class="n">address</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;accessed&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="s1">&#39;re-accessed&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="s1">&#39;erase&#39;</span><span class="p">:</span> <span class="n">erase</span><span class="p">}</span>
 
 <div class="viewcode-block" id="AbstractNode.move_to_network"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.move_to_network">[docs]</a>    <span class="k">def</span> <span class="nf">move_to_network</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                         <span class="n">network</span><span class="p">:</span> <span class="s1">&#39;TensorNetwork&#39;</span><span class="p">,</span>
@@ -2284,6 +2296,11 @@ title="Source repository"
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">tensor</span>
+    
+    <span class="k">def</span> <span class="nf">_save_in_network</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                         <span class="n">tensor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Saves new node&#39;s tensor in the network&#39;s memory.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">tensor</span>
 
 <div class="viewcode-block" id="Node.parameterize"><a class="viewcode-back" href="../../components.html#tensorkrowch.Node.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Node&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamNode&#39;</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -2616,7 +2633,7 @@ title="Source repository"
         <span class="k">if</span> <span class="n">aux_grad</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">aux_grad</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;full&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="c1">#self._tensor_info[&#39;full&#39;]:</span>
                 <span class="k">return</span> <span class="n">aux_grad</span>
             <span class="k">return</span> <span class="n">aux_grad</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]]</span>
 
@@ -2641,6 +2658,13 @@ title="Source repository"
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">tensor</span>
         <span class="k">return</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">_save_in_network</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                         <span class="n">tensor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Saves new node&#39;s tensor in the network&#39;s memory, and registers parameter.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">tensor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">register_parameter</span><span class="p">(</span>
+            <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">],</span> <span class="n">tensor</span><span class="p">)</span>
 
 <div class="viewcode-block" id="ParamNode.parameterize"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamNode.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;Node&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamNode&#39;</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -3336,7 +3360,7 @@ title="Source repository"
 
 <div class="viewcode-block" id="Edge.is_batch"><a class="viewcode-back" href="../../components.html#tensorkrowch.Edge.is_batch">[docs]</a>    <span class="k">def</span> <span class="nf">is_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boolean indicating whether the edge is a batch edge.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="o">.</span><span class="n">is_batch</span><span class="p">()</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="o">.</span><span class="n">_batch</span></div>
 
 <div class="viewcode-block" id="Edge.is_attached_to"><a class="viewcode-back" href="../../components.html#tensorkrowch.Edge.is_attached_to">[docs]</a>    <span class="k">def</span> <span class="nf">is_attached_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boolean indicating whether the edge is attached to ``node``.&quot;&quot;&quot;</span>
@@ -3835,15 +3859,15 @@ title="Source repository"
 <span class="sd">    node every time. Instead, it is more efficient to keep track of which node</span>
 <span class="sd">    arose as the result of an operation, and simply change its tensor.</span>
 
-<span class="sd">    Hence, a ``Successor`` is instantiated providing the arguments of the operation</span>
-<span class="sd">    that gave rise to a resultant node, a reference to the resultant node itself,</span>
-<span class="sd">    and some hints that might help accelerating the computations the next time</span>
-<span class="sd">    the operation is performed.</span>
+<span class="sd">    Hence, a ``Successor`` is instantiated providing details to get the operand</span>
+<span class="sd">    nodes&#39; tensors, as well as a reference to the resultant node, and some hints</span>
+<span class="sd">    that might help accelerating the computations the next time the operation</span>
+<span class="sd">    is performed.</span>
 <span class="sd">    </span>
 <span class="sd">    |</span>
 
-<span class="sd">    These three properties can be accessed via ``successor.kwargs``,</span>
-<span class="sd">    ``successor.child`` and ``successor.hints``.</span>
+<span class="sd">    These properties can be accessed via ``successor.node_ref``,</span>
+<span class="sd">    ``successor.index``, ``successor.child`` and ``successor.hints``.</span>
 <span class="sd">    </span>
 <span class="sd">    |</span>
 <span class="sd">    </span>
@@ -3852,11 +3876,15 @@ title="Source repository"
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    kwargs : dict[str, any]</span>
-<span class="sd">        Dictionary with keyword arguments used to call an operation.</span>
+<span class="sd">    node_ref : Node, ParamNode, or list[Node, ParamNode]</span>
+<span class="sd">        For the nodes that are involved in an operation, this are the</span>
+<span class="sd">        corresponding nodes that store their tensors.</span>
+<span class="sd">    index : list[int, slice] or list[list[int, slice]], optional</span>
+<span class="sd">        For the nodes that are involved in an operation, this are the</span>
+<span class="sd">        corresponding indices used to access their tensors.</span>
 <span class="sd">    child : Node or list[Node]</span>
 <span class="sd">        The node or list of nodes that result from an operation.</span>
-<span class="sd">    hints : dict[str, any], optional</span>
+<span class="sd">    hints : any, optional</span>
 <span class="sd">        A dictionary of hints created the first time an operation is computed in</span>
 <span class="sd">        order to save some computation in the next calls of the operation.</span>
 
@@ -3874,7 +3902,9 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; print(result.name)</span>
 <span class="sd">    contract_edges</span>
 <span class="sd">    </span>
-<span class="sd">    &gt;&gt;&gt; nodeA.successors[&#39;contract_edges&#39;][0].child == result</span>
+<span class="sd">    &gt;&gt;&gt; # To get a successor, the name of the operation and the arguments have</span>
+<span class="sd">    &gt;&gt;&gt; # to be provided as keys of the successors dictionary</span>
+<span class="sd">    &gt;&gt;&gt; nodeA.successors[&#39;contract_edges&#39;][(None, nodeA, nodeB)].child == result</span>
 <span class="sd">    True</span>
 <span class="sd">    </span>
 <span class="sd">    </span>
@@ -3882,10 +3912,13 @@ title="Source repository"
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                 <span class="n">kwargs</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Text</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+                 <span class="n">node_ref</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">]],</span>
+                 <span class="n">index</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">slice</span><span class="p">]]],</span>
+                              <span class="n">List</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">slice</span><span class="p">]]]]],</span>
                  <span class="n">child</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]],</span>
-                 <span class="n">hints</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="n">Text</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span> <span class="o">=</span> <span class="n">kwargs</span>
+                 <span class="n">hints</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node_ref</span> <span class="o">=</span> <span class="n">node_ref</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">index</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">child</span> <span class="o">=</span> <span class="n">child</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">hints</span> <span class="o">=</span> <span class="n">hints</span></div>
 
@@ -4068,6 +4101,7 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span> <span class="o">=</span> <span class="kc">False</span>   <span class="c1"># train -&gt; True / eval -&gt; True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_auto_unbind</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># train -&gt; False / eval -&gt; True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_tracing</span> <span class="o">=</span> <span class="kc">False</span>      <span class="c1"># Tracing mode (True while calling .trace())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_traced</span> <span class="o">=</span> <span class="kc">False</span>       <span class="c1"># True if .trace() is called, False if reset()</span>
 
         <span class="c1"># Lis of operations used to contract the TN</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_seq_ops</span> <span class="o">=</span> <span class="p">[]</span>
@@ -4487,7 +4521,6 @@ title="Source repository"
             <span class="bp">self</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">new_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_temp_tensor</span>
             <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;address&#39;</span><span class="p">:</span> <span class="n">new_name</span><span class="p">,</span>
                                  <span class="s1">&#39;node_ref&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-                                 <span class="s1">&#39;full&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
                                  <span class="s1">&#39;index&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
             <span class="n">node</span><span class="o">.</span><span class="n">_temp_tensor</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="n">node</span><span class="o">.</span><span class="n">_network</span> <span class="o">=</span> <span class="bp">self</span>
@@ -4773,7 +4806,6 @@ title="Source repository"
                 <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]]</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">stack_node</span>
-                <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;full&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span></div>
 
 <div class="viewcode-block" id="TensorNetwork.unset_data_nodes"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork.unset_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">unset_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -4877,8 +4909,8 @@ title="Source repository"
 <span class="sd">        * ``resultant``: These nodes are :meth:`deleted &lt;delete_node&gt;` from the</span>
 <span class="sd">          network.</span>
 <span class="sd">        </span>
-<span class="sd">        Also, the lists of :class:`Successors &lt;Successor&gt;` of all ``leaf`` and</span>
-<span class="sd">        ``data`` nodes are emptied.</span>
+<span class="sd">        Also, the dictionaries of :class:`Successors &lt;Successor&gt;` of all ``leaf``</span>
+<span class="sd">        and ``data`` nodes are emptied.</span>
 <span class="sd">        </span>
 <span class="sd">        The :class:`TensorNetwork` is automatically ``reset`` when</span>
 <span class="sd">        :meth:`parameterizing &lt;parameterize&gt;` it, changing :meth:`auto_stack`</span>
@@ -4889,6 +4921,7 @@ title="Source repository"
 <span class="sd">        </span>
 <span class="sd">        For an example, check this :ref:`tutorial &lt;tutorial_5&gt;`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_traced</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_seq_ops</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_inverse_memory</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 
@@ -4918,7 +4951,6 @@ title="Source repository"
                 <span class="n">node</span><span class="o">.</span><span class="n">_temp_tensor</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-                <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;full&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 
                 <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">_temp_tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
@@ -4985,7 +5017,8 @@ title="Source repository"
             <span class="bp">self</span><span class="o">.</span><span class="n">_tracing</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="bp">self</span><span class="p">(</span><span class="n">example</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_tracing</span> <span class="o">=</span> <span class="kc">False</span>
-            <span class="bp">self</span><span class="p">(</span><span class="n">example</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="p">(</span><span class="n">example</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_traced</span> <span class="o">=</span> <span class="kc">True</span></div>
 
 <div class="viewcode-block" id="TensorNetwork.contract"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -5062,11 +5095,11 @@ title="Source repository"
             <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">tensor</span>
 
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_seq_ops</span><span class="p">:</span>
-                <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">operations</span><span class="p">[</span><span class="n">op</span><span class="p">[</span><span class="mi">0</span><span class="p">]](</span><span class="o">**</span><span class="n">op</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">op</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">operations</span><span class="p">[</span><span class="n">op</span><span class="p">[</span><span class="mi">0</span><span class="p">]](</span><span class="o">*</span><span class="n">op</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                              <span class="bp">self</span><span class="o">.</span><span class="n">_seq_ops</span><span class="p">))[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">Node</span><span class="p">):</span>
-                <span class="k">if</span> <span class="p">(</span><span class="n">op</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;unbind&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_seq_ops</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;unbind&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">):</span>
                     <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The last operation should be the one &#39;</span>

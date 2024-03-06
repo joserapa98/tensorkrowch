@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Components &#8212; TensorKrowch 1.0.0 documentation</title>
+    <title>Components &#8212; TensorKrowch 1.0.1 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -34,9 +34,7 @@
     <script src="_static/clipboard.min.js"></script>
     <script src="_static/copybutton.js"></script>
     <script src="_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
-    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="shortcut icon" href="_static/tensorkrowch_favicon_light.svg"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -848,8 +846,10 @@ graph where the node is will be moved.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.successors">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">successors</span></span><a class="headerlink" href="#tensorkrowch.AbstractNode.successors" title="Permalink to this definition">#</a></dt>
-<dd><p>Dictionary with <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operations</span></code></a>’ names as keys, and the
-list of <a class="reference internal" href="#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successors</span></code></a> of the node as values.</p>
+<dd><p>Dictionary with <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operations</span></code></a>’ names as keys, and
+dictionaries of <a class="reference internal" href="#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successors</span></code></a> of the node as values.
+The inner dictionaries use as keys the arguments used when the
+operation was called.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -1226,6 +1226,12 @@ changed, <code class="docutils literal notranslate"><span class="pre">nodeB</spa
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.tensor_address">
 <span class="sig-name descname"><span class="pre">tensor_address</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.tensor_address"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.tensor_address" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns address of the node’s tensor in the network’s memory.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.AbstractNode.node_ref">
+<span class="sig-name descname"><span class="pre">node_ref</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.node_ref"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.node_ref" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns the node that stores current node’s tensor.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -3024,7 +3030,7 @@ used.</p>
 <h2>Successor<a class="headerlink" href="#successor" title="Permalink to this headline">#</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.Successor">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Successor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kwargs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">child</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hints</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#Successor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Successor" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">Successor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node_ref</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">child</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hints</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#Successor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Successor" title="Permalink to this definition">#</a></dt>
 <dd><p>Class for successors. This is a sort of cache memory for <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operations</span></code></a> that have been already computed.</p>
 <p>For instance, when contracting two nodes, the result gives a new node that
 stores the tensor resultant from contracting both nodes’ tensors. However,
@@ -3032,15 +3038,15 @@ when training a <a class="reference internal" href="#tensorkrowch.TensorNetwork"
 change every epoch, but there is actually no need to create a new resultant
 node every time. Instead, it is more efficient to keep track of which node
 arose as the result of an operation, and simply change its tensor.</p>
-<p>Hence, a <code class="docutils literal notranslate"><span class="pre">Successor</span></code> is instantiated providing the arguments of the operation
-that gave rise to a resultant node, a reference to the resultant node itself,
-and some hints that might help accelerating the computations the next time
-the operation is performed.</p>
+<p>Hence, a <code class="docutils literal notranslate"><span class="pre">Successor</span></code> is instantiated providing details to get the operand
+nodes’ tensors, as well as a reference to the resultant node, and some hints
+that might help accelerating the computations the next time the operation
+is performed.</p>
 <div class="line-block">
 <div class="line"><br /></div>
 </div>
-<p>These three properties can be accessed via <code class="docutils literal notranslate"><span class="pre">successor.kwargs</span></code>,
-<code class="docutils literal notranslate"><span class="pre">successor.child</span></code> and <code class="docutils literal notranslate"><span class="pre">successor.hints</span></code>.</p>
+<p>These properties can be accessed via <code class="docutils literal notranslate"><span class="pre">successor.node_ref</span></code>,
+<code class="docutils literal notranslate"><span class="pre">successor.index</span></code>, <code class="docutils literal notranslate"><span class="pre">successor.child</span></code> and <code class="docutils literal notranslate"><span class="pre">successor.hints</span></code>.</p>
 <div class="line-block">
 <div class="line"><br /></div>
 </div>
@@ -3049,9 +3055,12 @@ node keeps the <code class="docutils literal notranslate"><span class="pre">Succ
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>kwargs</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>any</em><em>]</em>) – Dictionary with keyword arguments used to call an operation.</p></li>
+<li><p><strong>node_ref</strong> (<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em>, </em><a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>, or </em><em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em>, </em><a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>]</em>) – For the nodes that are involved in an operation, this are the
+corresponding nodes that store their tensors.</p></li>
+<li><p><strong>index</strong> (<em>list</em><em>[</em><em>int</em><em>, </em><em>slice</em><em>] or </em><em>list</em><em>[</em><em>list</em><em>[</em><em>int</em><em>, </em><em>slice</em><em>]</em><em>]</em><em>, </em><em>optional</em>) – For the nodes that are involved in an operation, this are the
+corresponding indices used to access their tensors.</p></li>
 <li><p><strong>child</strong> (<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><em>list</em><em>[</em><a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em>]</em>) – The node or list of nodes that result from an operation.</p></li>
-<li><p><strong>hints</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>any</em><em>]</em><em>, </em><em>optional</em>) – A dictionary of hints created the first time an operation is computed in
+<li><p><strong>hints</strong> (<em>any</em><em>, </em><em>optional</em>) – A dictionary of hints created the first time an operation is computed in
 order to save some computation in the next calls of the operation.</p></li>
 </ul>
 </dd>
@@ -3069,7 +3078,9 @@ of successors of the first node (left operand).</p>
 <span class="go">contract_edges</span>
 </pre></div>
 </div>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span><span class="o">.</span><span class="n">successors</span><span class="p">[</span><span class="s1">&#39;contract_edges&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">child</span> <span class="o">==</span> <span class="n">result</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># To get a successor, the name of the operation and the arguments have</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># to be provided as keys of the successors dictionary</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span><span class="o">.</span><span class="n">successors</span><span class="p">[</span><span class="s1">&#39;contract_edges&#39;</span><span class="p">][(</span><span class="kc">None</span><span class="p">,</span> <span class="n">nodeA</span><span class="p">,</span> <span class="n">nodeB</span><span class="p">)]</span><span class="o">.</span><span class="n">child</span> <span class="o">==</span> <span class="n">result</span>
 <span class="go">True</span>
 </pre></div>
 </div>
@@ -3545,8 +3556,8 @@ nodes using the reserved name <code class="docutils literal notranslate"><span c
 <li><p><code class="docutils literal notranslate"><span class="pre">resultant</span></code>: These nodes are <a class="reference internal" href="#tensorkrowch.TensorNetwork.delete_node" title="tensorkrowch.TensorNetwork.delete_node"><code class="xref py py-meth docutils literal notranslate"><span class="pre">deleted</span></code></a> from the
 network.</p></li>
 </ul>
-<p>Also, the lists of <a class="reference internal" href="#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successors</span></code></a> of all <code class="docutils literal notranslate"><span class="pre">leaf</span></code> and
-<code class="docutils literal notranslate"><span class="pre">data</span></code> nodes are emptied.</p>
+<p>Also, the dictionaries of <a class="reference internal" href="#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successors</span></code></a> of all <code class="docutils literal notranslate"><span class="pre">leaf</span></code>
+and <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes are emptied.</p>
 <p>The <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> is automatically <code class="docutils literal notranslate"><span class="pre">reset</span></code> when
 <a class="reference internal" href="#tensorkrowch.TensorNetwork.parameterize" title="tensorkrowch.TensorNetwork.parameterize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">parameterizing</span></code></a> it, changing <a class="reference internal" href="#tensorkrowch.TensorNetwork.auto_stack" title="tensorkrowch.TensorNetwork.auto_stack"><code class="xref py py-meth docutils literal notranslate"><span class="pre">auto_stack()</span></code></a>
 or <a class="reference internal" href="#tensorkrowch.TensorNetwork.auto_unbind" title="tensorkrowch.TensorNetwork.auto_unbind"><code class="xref py py-meth docutils literal notranslate"><span class="pre">auto_unbind()</span></code></a> modes, or <a class="reference internal" href="#tensorkrowch.TensorNetwork.trace" title="tensorkrowch.TensorNetwork.trace"><code class="xref py py-meth docutils literal notranslate"><span class="pre">tracing</span></code></a>.</p>

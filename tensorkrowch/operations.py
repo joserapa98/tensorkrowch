@@ -3252,8 +3252,7 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
         else:
             edges_lists.append([edge] * len(tensors))
             node1_lists.append([True] * len(tensors))
-    lst = list(zip(tensors, list(zip(*edges_lists)),
-                   list(zip(*node1_lists))))
+    lst = list(zip(tensors, list(zip(*edges_lists)), list(zip(*node1_lists))))
 
     net = node._network
     for i, (tensor, edges, node1_list) in enumerate(lst):
@@ -3264,6 +3263,26 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
                                           edges=list(edges),
                                           node1_list=list(node1_list))
         new_nodes.append(new_node)
+        
+    # Check if all nodes have the same shape or have to be cropped
+    same_dims = True
+    for i in range(len(new_nodes[:-1])):
+        if new_nodes[i].shape != new_nodes[i + 1].shape:
+            same_dims = False
+            break
+    
+    lst_crops = []
+    if not same_dims:
+        for i, new_node in enumerate(new_nodes):
+            index = []
+            for j, dim in enumerate(tensors[i].shape):
+                edge = new_node.get_edge(j)
+
+                if edge.is_batch():
+                    index.append(slice(0, None))
+                else:  #dim >= edge.size():
+                    index.append(slice(dim - edge.size(), dim))
+            lst_crops.append(index)
 
     if not net._auto_unbind:
         # Record in inverse_memory while tracing
@@ -3357,8 +3376,14 @@ def _unbind_next(successor: Successor, node: AbstractStackNode) -> List[Node]:
                                               successor.index)
         tensors = torch.unbind(node_tensor)
         children = successor.child
-        for tensor, child in zip(tensors, children):
-            child._direct_set_tensor(tensor, True)
+        hints = successor.hints
+        
+        if hints['same_dims']:
+            for tensor, child in zip(tensors, children):
+                child._direct_set_tensor(tensor)
+        else:
+            for tensor, child, crop in zip(tensors, children, hints['lst_crops']):
+                child._direct_set_tensor(tensor[crop])
 
         # Record in inverse_memory while contracting, if network is traced
         # (to delete memory if possible)

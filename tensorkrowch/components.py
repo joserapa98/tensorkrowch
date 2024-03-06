@@ -700,6 +700,11 @@ class AbstractNode(ABC):
     @abstractmethod
     def _set_tensor_format(tensor: Tensor) -> Union[Tensor, Parameter]:
         pass
+    
+    @abstractmethod
+    def _save_in_network(self,
+                         tensor: Optional[Union[Tensor, Parameter]]) -> None:
+        pass
 
     @abstractmethod
     def parameterize(self, set_param: bool) -> 'AbstractNode':
@@ -1995,6 +2000,11 @@ class Node(AbstractNode):
         if isinstance(tensor, Parameter):
             return tensor.detach()
         return tensor
+    
+    def _save_in_network(self,
+                         tensor: Optional[Union[Tensor, Parameter]]) -> None:
+        """Saves new node's tensor in the network's memory."""
+        self._network._memory_nodes[self._tensor_info['address']] = tensor
 
     def parameterize(self, set_param: bool = True) -> Union['Node', 'ParamNode']:
         """
@@ -2352,6 +2362,13 @@ class ParamNode(AbstractNode):
         if isinstance(tensor, Parameter):
             return tensor
         return Parameter(tensor)
+    
+    def _save_in_network(self,
+                         tensor: Optional[Union[Tensor, Parameter]]) -> None:
+        """Saves new node's tensor in the network's memory, and registers parameter."""
+        self._network._memory_nodes[self._tensor_info['address']] = tensor
+        self._network.register_parameter(
+            'param_' + self._tensor_info['address'], tensor)
 
     def parameterize(self, set_param: bool = True) -> Union['Node', 'ParamNode']:
         """

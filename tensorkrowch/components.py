@@ -1488,6 +1488,12 @@ class AbstractNode(ABC):
             node_ref = self._tensor_info['node_ref']
             address = node_ref._tensor_info['address']
         return address
+    
+    def node_ref(self) -> 'AbstractNode':
+        """Returns the node that stores current node's tensor."""
+        if self._tensor_info['address'] is None:
+            return self._tensor_info['node_ref']
+        return self
 
     def reset_tensor_address(self):
         """

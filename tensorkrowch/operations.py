@@ -82,7 +82,11 @@ class Operation:
         Function that is called the next times the operation is performed.
     """
 
-    def __init__(self, name: Text, check_first, fn_first, fn_next):
+    def __init__(self,
+                 name: Text,
+                 check_first: Callable,
+                 fn_first: Callable,
+                 fn_next: Callable) -> None:
         assert isinstance(check_first, Callable)
         assert isinstance(fn_first, Callable)
         assert isinstance(fn_next, Callable)

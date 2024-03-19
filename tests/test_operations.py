@@ -784,6 +784,113 @@ class TestSplitSVD:
         assert new_node1.shape == (10, 2, 5, 1)
         assert new_node2.shape == (10, 1, 5, 3)
 
+    def test_split_contracted_node_cutoff(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(10, 2, 5, 4),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node2 = tk.Node(shape=(10, 4, 5, 3),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node2',
+                        init_method='randn',
+                        network=net)
+        edge = node1[3] ^ node2[1]
+        result = node1 @ node2
+
+        high_rank_tensor = torch.zeros(10, 15)
+        high_rank_tensor[:10, :10] = torch.diag(torch.arange(1, 0, -0.1))
+        high_rank_tensor = high_rank_tensor.expand(
+            10, 10, 15).reshape(10, 2, 5, 5, 3)
+        result._unrestricted_set_tensor(high_rank_tensor)
+
+        # Split result
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            cutoff=0.5)
+
+        assert new_node1.shape == (10, 2, 5, 6)
+        assert new_node1['batch'].size() == 10
+        assert new_node1['left'].size() == 2
+        assert new_node1['input'].size() == 5
+        assert new_node1['split'].size() == 6
+
+        assert new_node2.shape == (10, 6, 5, 3)
+        assert new_node2['batch'].size() == 10
+        assert new_node2['split'].size() == 6
+        assert new_node2['input'].size() == 5
+        assert new_node2['right'].size() == 3
+
+        # Repeat operation with low rank tensor
+        low_rank_tensor = torch.zeros(10, 15)
+        low_rank_tensor[:5, :5] = torch.diag(torch.arange(1, 0, -0.2))
+        low_rank_tensor = low_rank_tensor.expand(
+            10, 10, 15).reshape(10, 2, 5, 5, 3)
+        result._unrestricted_set_tensor(low_rank_tensor)
+
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            cutoff=0.5)
+
+        # When using cum_percentage, if the tensor rank changes,
+        # the dimension of the split edge changes with it
+        assert new_node1.shape == (10, 2, 5, 3)
+        assert new_node2.shape == (10, 3, 5, 3)
+        
+    def test_split_contracted_node_rank_cum_percentage_cutoff(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(10, 2, 5, 4),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node2 = tk.Node(shape=(10, 4, 5, 3),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node2',
+                        init_method='randn',
+                        network=net)
+        edge = node1[3] ^ node2[1]
+        result = node1 @ node2
+
+        tensor = torch.zeros(10, 15)
+        tensor[:10, :10] = torch.diag(torch.arange(1, 0, -0.1))
+        tensor = tensor.expand(
+            10, 10, 15).reshape(10, 2, 5, 5, 3)
+        result._unrestricted_set_tensor(tensor)
+
+        # Split result
+        # If several options are specified, the rank will be the one that
+        # fulfills all of them, that is, the minimum rank
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            rank=5, # rank = 5
+                                            cum_percentage=0.9, # rank = 8
+                                            cutoff=0.5) # rank = 6
+
+        assert new_node1.shape == (10, 2, 5, 5)
+        assert new_node2.shape == (10, 5, 5, 3)
+
+        # Repeat operation changing restrictions
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            rank=10, # rank = 10
+                                            cum_percentage=0.9, # rank = 8
+                                            cutoff=0.5) # rank = 6
+        
+        assert new_node1.shape == (10, 2, 5, 6)
+        assert new_node2.shape == (10, 6, 5, 3)
+        
+        # Repeat operation changing restrictions
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            rank=10, # rank = 10
+                                            cum_percentage=0.9, # rank = 8
+                                            cutoff=0.1) # rank = 10
+        
+        assert new_node1.shape == (10, 2, 5, 8)
+        assert new_node2.shape == (10, 8, 5, 3)
+
     def test_split_in_place(self):
         net = tk.TensorNetwork()
         node1 = tk.Node(shape=(10, 2, 5, 4),
@@ -1231,6 +1338,118 @@ class TestSplitSVDR:
         # the dimension of the split edge changes with it
         assert new_node1.shape == (10, 2, 5, 1)
         assert new_node2.shape == (10, 1, 5, 3)
+        
+    def test_split_contracted_node_cutoff(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(10, 2, 5, 4),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node2 = tk.Node(shape=(10, 4, 5, 3),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node2',
+                        init_method='randn',
+                        network=net)
+        edge = node1[3] ^ node2[1]
+        result = node1 @ node2
+
+        high_rank_tensor = torch.zeros(10, 15)
+        high_rank_tensor[:10, :10] = torch.diag(torch.arange(1, 0, -0.1))
+        high_rank_tensor = high_rank_tensor.expand(
+            10, 10, 15).reshape(10, 2, 5, 5, 3)
+        result._unrestricted_set_tensor(high_rank_tensor)
+
+        # Split result
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            mode='svdr',
+                                            cutoff=0.5)
+
+        assert new_node1.shape == (10, 2, 5, 6)
+        assert new_node1['batch'].size() == 10
+        assert new_node1['left'].size() == 2
+        assert new_node1['input'].size() == 5
+        assert new_node1['split'].size() == 6
+
+        assert new_node2.shape == (10, 6, 5, 3)
+        assert new_node2['batch'].size() == 10
+        assert new_node2['split'].size() == 6
+        assert new_node2['input'].size() == 5
+        assert new_node2['right'].size() == 3
+
+        # Repeat operation with low rank tensor
+        low_rank_tensor = torch.zeros(10, 15)
+        low_rank_tensor[:5, :5] = torch.diag(torch.arange(1, 0, -0.2))
+        low_rank_tensor = low_rank_tensor.expand(
+            10, 10, 15).reshape(10, 2, 5, 5, 3)
+        result._unrestricted_set_tensor(low_rank_tensor)
+
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            mode='svdr',
+                                            cutoff=0.5)
+
+        # When using cum_percentage, if the tensor rank changes,
+        # the dimension of the split edge changes with it
+        assert new_node1.shape == (10, 2, 5, 3)
+        assert new_node2.shape == (10, 3, 5, 3)
+        
+    def test_split_contracted_node_rank_cum_percentage_cutoff(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(10, 2, 5, 4),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node2 = tk.Node(shape=(10, 4, 5, 3),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node2',
+                        init_method='randn',
+                        network=net)
+        edge = node1[3] ^ node2[1]
+        result = node1 @ node2
+
+        tensor = torch.zeros(10, 15)
+        tensor[:10, :10] = torch.diag(torch.arange(1, 0, -0.1))
+        tensor = tensor.expand(
+            10, 10, 15).reshape(10, 2, 5, 5, 3)
+        result._unrestricted_set_tensor(tensor)
+
+        # Split result
+        # If several options are specified, the rank will be the one that
+        # fulfills all of them, that is, the minimum rank
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            mode='svdr',
+                                            rank=5, # rank = 5
+                                            cum_percentage=0.9, # rank = 8
+                                            cutoff=0.5) # rank = 6
+
+        assert new_node1.shape == (10, 2, 5, 5)
+        assert new_node2.shape == (10, 5, 5, 3)
+
+        # Repeat operation changing restrictions
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            mode='svdr',
+                                            rank=10, # rank = 10
+                                            cum_percentage=0.9, # rank = 8
+                                            cutoff=0.5) # rank = 6
+        
+        assert new_node1.shape == (10, 2, 5, 6)
+        assert new_node2.shape == (10, 6, 5, 3)
+        
+        # Repeat operation changing restrictions
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            mode='svdr',
+                                            rank=10, # rank = 10
+                                            cum_percentage=0.9, # rank = 8
+                                            cutoff=0.1) # rank = 10
+        
+        assert new_node1.shape == (10, 2, 5, 8)
+        assert new_node2.shape == (10, 8, 5, 3)
 
     def test_split_in_place(self):
         net = tk.TensorNetwork()

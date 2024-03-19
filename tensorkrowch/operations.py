@@ -970,48 +970,39 @@ def _split_first(node: AbstractNode,
 
     if (mode == 'svd') or (mode == 'svdr'):
         u, s, vh = torch.linalg.svd(node_tensor, full_matrices=False)
-
-        if cum_percentage is not None:
-            if (rank is not None) or (cutoff is not None):
-                raise ValueError('Only one of `rank`, `cum_percentage` and '
-                                 '`cutoff` should be provided')
-
-            percentages = s.cumsum(-1) / s.sum(-1) \
-                .view(*s.shape[:-1], 1).expand(s.shape)
-            cum_percentage_tensor = torch.tensor(cum_percentage) \
-                .repeat(percentages.shape[:-1])
-            rank = 0
-            for i in range(percentages.shape[-1]):
-                p = percentages[..., i]
-                rank += 1
-                # Cut when ``cum_percentage`` is exceeded in all batches
-                if torch.ge(p, cum_percentage_tensor).all():
-                    break
-
-        elif cutoff is not None:
-            if rank is not None:
-                raise ValueError('Only one of `rank`, `cum_percentage` and '
-                                 '`cutoff` should be provided')
-
-            cutoff_tensor = torch.tensor(cutoff).repeat(s.shape[:-1])
-            rank = 0
-            for i in range(s.shape[-1]):
-                # Cut when ``cutoff`` is exceeded in all batches
-                if torch.le(s[..., i], cutoff_tensor).all():
-                    break
-                rank += 1
-            if rank == 0:
-                rank = 1
-
+        
+        lst_ranks = []
+        
         if rank is None:
             rank = s.shape[-1]
+            lst_ranks.append(rank)
         else:
-            if rank < s.shape[-1]:
-                u = u[..., :rank]
-                s = s[..., :rank]
-                vh = vh[..., :rank, :]
-            else:
-                rank = s.shape[-1]
+            lst_ranks.append(min(max(1, int(rank)), s.shape[-1]))
+            
+        if cum_percentage is not None:
+            s_percentages = s.cumsum(-1) / \
+                (s.sum(-1, keepdim=True).expand(s.shape) + 1e-10) # To avoid having all 0's
+            cum_percentage_tensor = cum_percentage * torch.ones_like(s)
+            cp_rank = torch.lt(
+                s_percentages,
+                cum_percentage_tensor
+                ).view(-1, s.shape[-1]).all(dim=0).sum()
+            lst_ranks.append(max(1, cp_rank.item() + 1))
+            
+        if cutoff is not None:
+            cutoff_tensor = cutoff * torch.ones_like(s)
+            co_rank = torch.ge(
+                s,
+                cutoff_tensor
+                ).view(-1, s.shape[-1]).all(dim=0).sum()
+            lst_ranks.append(max(1, co_rank.item()))
+        
+        # Select rank from specified restrictions
+        rank = min(lst_ranks)
+        
+        u = u[..., :rank]
+        s = s[..., :rank]
+        vh = vh[..., :rank, :]
 
         if mode == 'svdr':
             phase = torch.sign(torch.randn(s.shape))
@@ -1178,48 +1169,39 @@ def _split_next(successor: Successor,
 
     if (mode == 'svd') or (mode == 'svdr'):
         u, s, vh = torch.linalg.svd(node_tensor, full_matrices=False)
-
-        if cum_percentage is not None:
-            if (rank is not None) or (cutoff is not None):
-                raise ValueError('Only one of `rank`, `cum_percentage` and '
-                                 '`cutoff` should be provided')
-
-            percentages = s.cumsum(-1) / s.sum(-1) \
-                .view(*s.shape[:-1], 1).expand(s.shape)
-            cum_percentage_tensor = torch.tensor(
-                cum_percentage).repeat(percentages.shape[:-1])
-            rank = 0
-            for i in range(percentages.shape[-1]):
-                p = percentages[..., i]
-                rank += 1
-                # Cut when ``cum_percentage`` is exceeded in all batches
-                if torch.ge(p, cum_percentage_tensor).all():
-                    break
-
-        elif cutoff is not None:
-            if rank is not None:
-                raise ValueError('Only one of `rank`, `cum_percentage` and '
-                                 '`cutoff` should be provided')
-
-            cutoff_tensor = torch.tensor(cutoff).repeat(s.shape[:-1])
-            rank = 0
-            for i in range(s.shape[-1]):
-                # Cut when ``cutoff`` is exceeded in all batches
-                if torch.le(s[..., i], cutoff_tensor).all():
-                    break
-                rank += 1
-            if rank == 0:
-                rank = 1
-
+        
+        lst_ranks = []
+        
         if rank is None:
             rank = s.shape[-1]
+            lst_ranks.append(rank)
         else:
-            if rank < s.shape[-1]:
-                u = u[..., :rank]
-                s = s[..., :rank]
-                vh = vh[..., :rank, :]
-            else:
-                rank = s.shape[-1]
+            lst_ranks.append(min(max(1, rank), s.shape[-1]))
+            
+        if cum_percentage is not None:
+            s_percentages = s.cumsum(-1) / \
+                (s.sum(-1, keepdim=True).expand(s.shape) + 1e-10) # To avoid having all 0's
+            cum_percentage_tensor = cum_percentage * torch.ones_like(s)
+            cp_rank = torch.lt(
+                s_percentages,
+                cum_percentage_tensor
+                ).view(-1, s.shape[-1]).all(dim=0).sum()
+            lst_ranks.append(max(1, cp_rank.item() + 1))
+            
+        if cutoff is not None:
+            cutoff_tensor = cutoff * torch.ones_like(s)
+            co_rank = torch.ge(
+                s,
+                cutoff_tensor
+                ).view(-1, s.shape[-1]).all(dim=0).sum()
+            lst_ranks.append(max(1, co_rank.item()))
+        
+        # Select rank from specified restrictions
+        rank = min(lst_ranks)
+        
+        u = u[..., :rank]
+        s = s[..., :rank]
+        vh = vh[..., :rank, :]
 
         if mode == 'svdr':
             phase = torch.sign(torch.randn(s.shape))
@@ -1333,8 +1315,10 @@ def split(node: AbstractNode,
 
       where R is a lower triangular matrix and Q is unitary.
 
-    If ``mode`` is "svd" or "svdr", ``side`` must be provided. Besides, one
-    (and only one) of ``rank``, ``cum_percentage`` and ``cutoff`` is required.
+    If ``mode`` is "svd" or "svdr", ``side`` must be provided. Besides, at least
+    one of ``rank``, ``cum_percentage`` and ``cutoff`` is required. If more than
+    one is specified, the resulting rank will be the one that satisfies all
+    conditions.
     
     Since the node is `split` in two, a new edge appears connecting both
     nodes. The axis that corresponds to this edge has the name ``"split"``.

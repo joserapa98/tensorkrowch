@@ -1309,8 +1309,6 @@ class AbstractNode(ABC):
                               ' device')
 
             if not self._compatible_shape(tensor):
-                warnings.warn(f'`tensor` is being cropped to fit the shape of '
-                              f'node {self!s} at non-batch edges')
                 tensor = self._crop_tensor(tensor)
             correct_format_tensor = self._set_tensor_format(tensor)
 
@@ -1399,6 +1397,9 @@ class AbstractNode(ABC):
         """
         # If node stores its own tensor
         if not self.is_resultant() and (self._tensor_info['address'] is not None):
+            if (tensor is not None) and not self._compatible_shape(tensor):
+                warnings.warn(f'`tensor` is being cropped to fit the shape of '
+                              f'node {self!s} at non-batch edges')
             self._unrestricted_set_tensor(tensor=tensor,
                                           init_method=init_method,
                                           device=device,

@@ -73,7 +73,8 @@ First of all, we need to import the necessary libraries::
 
     # Model parameters
     image_size = (28, 28)
-    in_channels = 3
+    in_dim = 3
+    out_dim = 10
     bond_dim = 10
 
 
@@ -138,7 +139,7 @@ possible classes.
     # Instantiate model
     mps = tk.models.MPSLayer(n_features=image_size[0] * image_size[1],
                              in_dim=in_dim,
-                             out_dim=10,
+                             out_dim=out_dim,
                              bond_dim=bond_dim)
 
     # Send model to GPU

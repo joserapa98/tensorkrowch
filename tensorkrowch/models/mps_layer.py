@@ -9,6 +9,8 @@ This script contains:
 from typing import (List, Optional, Sequence,
                     Text, Tuple, Union)
 
+from math import sqrt
+
 import torch
 import torch.nn as nn
 
@@ -628,7 +630,8 @@ class MPSLayer(TensorNetwork):
                      mode: Text = 'svd',
                      rank: Optional[int] = None,
                      cum_percentage: Optional[float] = None,
-                     cutoff: Optional[float] = None) -> None:
+                     cutoff: Optional[float] = None,
+                     renormalize: bool = False) -> None:
         r"""
         Turns MPS into canonical form via local SVD/QR decompositions.
         
@@ -652,6 +655,14 @@ class MPSLayer(TensorNetwork):
                 cum\_percentage
         cutoff : float, optional
             Quantity that lower bounds singular values in order to be kept.
+        renormalize : bool
+            Indicates whether nodes should be renormalized after SVD/QR
+            decompositions. If not, it may happen that the norm explodes as it
+            is being accumulated from all nodes. Renormalization aims to avoid
+            this undesired behavior by extracting the norm of each node on a
+            logarithmic scale after SVD/QR decompositions are computed. Finally,
+            the normalization factor is evenly distributed among all nodes of
+            the MPS.
         
         Examples
         --------
@@ -667,6 +678,8 @@ class MPSLayer(TensorNetwork):
 
         prev_auto_stack = self.auto_stack
         self.auto_stack = False
+        
+        log_norm = 0
 
         # Left
         left_nodes = []
@@ -694,6 +707,12 @@ class MPSLayer(TensorNetwork):
                     result1, result2 = node['right'].qr_()
                 else:
                     raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
+                
+                if renormalize:
+                    aux_norm = result2.norm() / sqrt(result2.shape[0])
+                    if not aux_norm.isinf() and (aux_norm > 0):
+                        result2.tensor = result2.tensor / aux_norm
+                        log_norm += aux_norm.log()
 
                 node = result2
                 result1 = result1.parameterize()
@@ -734,6 +753,12 @@ class MPSLayer(TensorNetwork):
                     result1, result2 = node['left'].rq_()
                 else:
                     raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
+                
+                if renormalize:
+                    aux_norm = result1.norm() / sqrt(result1.shape[0])
+                    if not aux_norm.isinf() and (aux_norm > 0):
+                        result1.tensor = result1.tensor / aux_norm
+                        log_norm += aux_norm.log()
 
                 node = result1
                 result2 = result2.parameterize()
@@ -756,11 +781,16 @@ class MPSLayer(TensorNetwork):
         all_nodes += [self.output_node]
         if right_nodes:
             all_nodes += new_right_nodes
-
+        
+        if log_norm != 0:
+            rescale = (log_norm / len(all_nodes)).exp()
+            
         bond_dim = []
         for node in all_nodes:
             if 'right' in node.axes_names:
                 bond_dim.append(node['right'].size())
+            if renormalize and (log_norm != 0):
+                node.tensor = node.tensor * rescale
         self._bond_dim = bond_dim
 
         self.auto_stack = prev_auto_stack

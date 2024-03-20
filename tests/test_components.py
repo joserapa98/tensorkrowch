@@ -1135,6 +1135,13 @@ class TestMeasures:
         assert torch.equal(node.norm(2, 'right'), tensor.norm(2, 1))
         assert torch.equal(node.norm(2, ['left', 'right']), tensor.norm(2, [0, 1]))
 
+    def test_numel(self):
+        tensor = torch.randn(2, 3)
+        node = tk.Node(axes_names=('left', 'right'),
+                       tensor=tensor)
+
+        assert node.numel() == tensor.numel()
+
 
 class TestConnect:
 

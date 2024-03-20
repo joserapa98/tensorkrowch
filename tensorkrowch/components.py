@@ -1852,6 +1852,24 @@ class AbstractNode(ABC):
                 axis_num.append(self.get_axis_num(axis))
         return self.tensor.norm(p=p, dim=axis_num)
 
+    def numel(self) -> Tensor:
+        """
+        Returns the total number of elements in the node's tensor.
+
+        See also `torch.numel() <https://pytorch.org/docs/stable/generated/torch.numel.html>`_.
+
+        Returns
+        -------
+        int
+        
+        Examples
+        --------
+        >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
+        >>> node.numel()
+        6
+        """
+        return self.tensor.numel()
+
     def __str__(self) -> Text:
         return self._name
 

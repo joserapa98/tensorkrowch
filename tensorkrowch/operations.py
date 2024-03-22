@@ -2670,10 +2670,78 @@ def contract_edges(edges: Optional[List[Edge]],
     return contract_edges_op(edges, node1, node2)
 
 
+def contract(edge: Edge) -> Node:
+    """
+    Contracts the nodes that are connected through the edge.
+    
+    Nodes ``resultant`` from this operation are called ``"contract_edges"``.
+    The node that keeps information about the :class:`Successor` is
+    ``edge.node1``.
+
+    Parameters
+    ----------
+    edge : Edge
+        Edge that is to be contracted. Batch contraction is automatically
+        performed when both nodes have batch edges with the same names.
+
+    Returns
+    -------
+    Node
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(10, 15, 20),
+    ...                  axes_names=('one', 'two', 'three'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(10, 15, 20),
+    ...                  axes_names=('one', 'two', 'three'),
+    ...                  name='nodeB')
+    ...
+    >>> _ = nodeA['one'] ^ nodeB['one']
+    >>> _ = nodeA['two'] ^ nodeB['two']
+    >>> _ = nodeA['three'] ^ nodeB['three']
+    >>> result = tk.contract(nodeA['one'])
+    >>> result.shape
+    torch.Size([15, 20, 15, 20])
+    """
+    return contract_edges_op([edge], edge.node1, edge.node2)
+
+contract_edge = copy_func(contract)
+contract_edge.__doc__ = \
+    """
+    Contracts the nodes that are connected through the edge.
+    
+    Nodes ``resultant`` from this operation are called ``"contract_edges"``.
+    The node that keeps information about the :class:`Successor` is
+    ``self.node1``.
+
+    Returns
+    -------
+    Node
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn(shape=(10, 15, 20),
+    ...                  axes_names=('one', 'two', 'three'),
+    ...                  name='nodeA')
+    >>> nodeB = tk.randn(shape=(10, 15, 20),
+    ...                  axes_names=('one', 'two', 'three'),
+    ...                  name='nodeB')
+    ...
+    >>> _ = nodeA['one'] ^ nodeB['one']
+    >>> _ = nodeA['two'] ^ nodeB['two']
+    >>> _ = nodeA['three'] ^ nodeB['three']
+    >>> result = nodeA['one'].contract()
+    >>> result.shape
+    torch.Size([15, 20, 15, 20])
+    """
+
+Edge.contract = contract_edge
+
+
 def contract_(edge: Edge) -> Node:
     """
-    Contracts in-place the nodes that are connected through the edge. See
-    :func:`contract` for a more complete explanation.
+    In-place version of :func:`contract`.
 
     Following the **PyTorch** convention, names of functions ended with an
     underscore indicate **in-place** operations.
@@ -2717,7 +2785,7 @@ def contract_(edge: Edge) -> Node:
     >>> del nodeA
     >>> del nodeB
     """
-    result = contract_edges([edge], edge.node1, edge.node2)
+    result = contract_edges_op([edge], edge.node1, edge.node2)
     result.reattach_edges(True)
     result._unrestricted_set_tensor(result.tensor.detach())
 
@@ -2798,7 +2866,7 @@ def contract_between(node1: AbstractNode,
     >>> result.shape
     torch.Size([100, 10, 7])
     """
-    return contract_edges(None, node1, node2)
+    return contract_edges_op(None, node1, node2)
 
 
 contract_between_node = copy_func(contract_between)

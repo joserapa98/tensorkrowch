@@ -519,7 +519,8 @@ also serve to test your installation of <code class="docutils literal notranslat
 
 <span class="c1"># Model parameters</span>
 <span class="n">image_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">)</span>
-<span class="n">in_channels</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">in_dim</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">out_dim</span> <span class="o">=</span> <span class="mi">10</span>
 <span class="n">bond_dim</span> <span class="o">=</span> <span class="mi">10</span>
 </pre></div>
 </div>
@@ -580,7 +581,7 @@ possible classes.</p>
 <span class="c1"># Instantiate model</span>
 <span class="n">mps</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MPSLayer</span><span class="p">(</span><span class="n">n_features</span><span class="o">=</span><span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
                          <span class="n">in_dim</span><span class="o">=</span><span class="n">in_dim</span><span class="p">,</span>
-                         <span class="n">out_dim</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                         <span class="n">out_dim</span><span class="o">=</span><span class="n">out_dim</span><span class="p">,</span>
                          <span class="n">bond_dim</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">)</span>
 
 <span class="c1"># Send model to GPU</span>

@@ -1,11 +1,11 @@
 
 <!DOCTYPE html>
 
-<html lang="en">
+<html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.operations &#8212; TensorKrowch 1.0.0 documentation</title>
+    <title>tensorkrowch.operations &#8212; TensorKrowch 1.0.1 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -29,17 +29,15 @@
     <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
     <script src="../../_static/jquery.js"></script>
     <script src="../../_static/underscore.js"></script>
-    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/clipboard.min.js"></script>
     <script src="../../_static/copybutton.js"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
-    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <link rel="shortcut icon" href="../../_static/tensorkrowch_favicon_light.svg"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="docsearch:language" content="en">
+    <meta name="docsearch:language" content="None">
     
 
     <!-- Google Analytics -->
@@ -326,8 +324,6 @@ title="Source repository"
 <span class="kn">from</span> <span class="nn">tensorkrowch.utils</span> <span class="kn">import</span> <span class="p">(</span><span class="n">inverse_permutation</span><span class="p">,</span> <span class="n">is_permutation</span><span class="p">,</span>
                                 <span class="n">list2slice</span><span class="p">,</span> <span class="n">permute_list</span><span class="p">)</span>
 
-<span class="n">Ax</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Text</span><span class="p">,</span> <span class="n">Axis</span><span class="p">]</span>
-
 
 <span class="k">def</span> <span class="nf">copy_func</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns a function with the same code, defaults, closure and name.&quot;&quot;&quot;</span>
@@ -370,7 +366,11 @@ title="Source repository"
 <span class="sd">        Function that is called the next times the operation is performed.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="n">Text</span><span class="p">,</span> <span class="n">check_first</span><span class="p">,</span> <span class="n">fn_first</span><span class="p">,</span> <span class="n">fn_next</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">name</span><span class="p">:</span> <span class="n">Text</span><span class="p">,</span>
+                 <span class="n">check_first</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+                 <span class="n">fn_first</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+                 <span class="n">fn_next</span><span class="p">:</span> <span class="n">Callable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">check_first</span><span class="p">,</span> <span class="n">Callable</span><span class="p">)</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fn_first</span><span class="p">,</span> <span class="n">Callable</span><span class="p">)</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fn_next</span><span class="p">,</span> <span class="n">Callable</span><span class="p">)</span>
@@ -1254,48 +1254,39 @@ title="Source repository"
 
     <span class="k">if</span> <span class="p">(</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svd&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svdr&#39;</span><span class="p">):</span>
         <span class="n">u</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">vh</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">node_tensor</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">cum_percentage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="p">(</span><span class="n">rank</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">cutoff</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only one of `rank`, `cum_percentage` and &#39;</span>
-                                 <span class="s1">&#39;`cutoff` should be provided&#39;</span><span class="p">)</span>
-
-            <span class="n">percentages</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">s</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> \
-                <span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
-            <span class="n">cum_percentage_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">cum_percentage</span><span class="p">)</span> \
-                <span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">percentages</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-            <span class="n">rank</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">percentages</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
-                <span class="n">p</span> <span class="o">=</span> <span class="n">percentages</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span>
-                <span class="n">rank</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="c1"># Cut when ``cum_percentage`` is exceeded in all batches</span>
-                <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">ge</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">cum_percentage_tensor</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
-                    <span class="k">break</span>
-
-        <span class="k">elif</span> <span class="n">cutoff</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only one of `rank`, `cum_percentage` and &#39;</span>
-                                 <span class="s1">&#39;`cutoff` should be provided&#39;</span><span class="p">)</span>
-
-            <span class="n">cutoff_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">cutoff</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-            <span class="n">rank</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
-                <span class="c1"># Cut when ``cutoff`` is exceeded in all batches</span>
-                <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">le</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">i</span><span class="p">],</span> <span class="n">cutoff_tensor</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
-                    <span class="k">break</span>
-                <span class="n">rank</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">rank</span> <span class="o">=</span> <span class="mi">1</span>
-
+        
+        <span class="n">lst_ranks</span> <span class="o">=</span> <span class="p">[]</span>
+        
         <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">rank</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rank</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">rank</span> <span class="o">&lt;</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
-                <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">]</span>
-                <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">]</span>
-                <span class="n">vh</span> <span class="o">=</span> <span class="n">vh</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">,</span> <span class="p">:]</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">rank</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">rank</span><span class="p">)),</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+            
+        <span class="k">if</span> <span class="n">cum_percentage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">s_percentages</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> \
+                <span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-10</span><span class="p">)</span> <span class="c1"># To avoid having all 0&#39;s</span>
+            <span class="n">cum_percentage_tensor</span> <span class="o">=</span> <span class="n">cum_percentage</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="n">cp_rank</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">lt</span><span class="p">(</span>
+                <span class="n">s_percentages</span><span class="p">,</span>
+                <span class="n">cum_percentage_tensor</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">cp_rank</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+            
+        <span class="k">if</span> <span class="n">cutoff</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">cutoff_tensor</span> <span class="o">=</span> <span class="n">cutoff</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="n">co_rank</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ge</span><span class="p">(</span>
+                <span class="n">s</span><span class="p">,</span>
+                <span class="n">cutoff_tensor</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">co_rank</span><span class="o">.</span><span class="n">item</span><span class="p">()))</span>
+        
+        <span class="c1"># Select rank from specified restrictions</span>
+        <span class="n">rank</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">lst_ranks</span><span class="p">)</span>
+        
+        <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">]</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">]</span>
+        <span class="n">vh</span> <span class="o">=</span> <span class="n">vh</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">,</span> <span class="p">:]</span>
 
         <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svdr&#39;</span><span class="p">:</span>
             <span class="n">phase</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
@@ -1462,48 +1453,39 @@ title="Source repository"
 
     <span class="k">if</span> <span class="p">(</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svd&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svdr&#39;</span><span class="p">):</span>
         <span class="n">u</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">vh</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">node_tensor</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">cum_percentage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="p">(</span><span class="n">rank</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">cutoff</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only one of `rank`, `cum_percentage` and &#39;</span>
-                                 <span class="s1">&#39;`cutoff` should be provided&#39;</span><span class="p">)</span>
-
-            <span class="n">percentages</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">s</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> \
-                <span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
-            <span class="n">cum_percentage_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
-                <span class="n">cum_percentage</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">percentages</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-            <span class="n">rank</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">percentages</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
-                <span class="n">p</span> <span class="o">=</span> <span class="n">percentages</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span>
-                <span class="n">rank</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="c1"># Cut when ``cum_percentage`` is exceeded in all batches</span>
-                <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">ge</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">cum_percentage_tensor</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
-                    <span class="k">break</span>
-
-        <span class="k">elif</span> <span class="n">cutoff</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only one of `rank`, `cum_percentage` and &#39;</span>
-                                 <span class="s1">&#39;`cutoff` should be provided&#39;</span><span class="p">)</span>
-
-            <span class="n">cutoff_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">cutoff</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-            <span class="n">rank</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
-                <span class="c1"># Cut when ``cutoff`` is exceeded in all batches</span>
-                <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">le</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">i</span><span class="p">],</span> <span class="n">cutoff_tensor</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
-                    <span class="k">break</span>
-                <span class="n">rank</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">rank</span> <span class="o">=</span> <span class="mi">1</span>
-
+        
+        <span class="n">lst_ranks</span> <span class="o">=</span> <span class="p">[]</span>
+        
         <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">rank</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rank</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">rank</span> <span class="o">&lt;</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
-                <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">]</span>
-                <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">]</span>
-                <span class="n">vh</span> <span class="o">=</span> <span class="n">vh</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">,</span> <span class="p">:]</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">rank</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">rank</span><span class="p">),</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+            
+        <span class="k">if</span> <span class="n">cum_percentage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">s_percentages</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> \
+                <span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-10</span><span class="p">)</span> <span class="c1"># To avoid having all 0&#39;s</span>
+            <span class="n">cum_percentage_tensor</span> <span class="o">=</span> <span class="n">cum_percentage</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="n">cp_rank</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">lt</span><span class="p">(</span>
+                <span class="n">s_percentages</span><span class="p">,</span>
+                <span class="n">cum_percentage_tensor</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">cp_rank</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+            
+        <span class="k">if</span> <span class="n">cutoff</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">cutoff_tensor</span> <span class="o">=</span> <span class="n">cutoff</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="n">co_rank</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ge</span><span class="p">(</span>
+                <span class="n">s</span><span class="p">,</span>
+                <span class="n">cutoff_tensor</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">co_rank</span><span class="o">.</span><span class="n">item</span><span class="p">()))</span>
+        
+        <span class="c1"># Select rank from specified restrictions</span>
+        <span class="n">rank</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">lst_ranks</span><span class="p">)</span>
+        
+        <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">]</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">]</span>
+        <span class="n">vh</span> <span class="o">=</span> <span class="n">vh</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">,</span> <span class="p">:]</span>
 
         <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svdr&#39;</span><span class="p">:</span>
             <span class="n">phase</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
@@ -1617,8 +1599,10 @@ title="Source repository"
 
 <span class="sd">      where R is a lower triangular matrix and Q is unitary.</span>
 
-<span class="sd">    If ``mode`` is &quot;svd&quot; or &quot;svdr&quot;, ``side`` must be provided. Besides, one</span>
-<span class="sd">    (and only one) of ``rank``, ``cum_percentage`` and ``cutoff`` is required.</span>
+<span class="sd">    If ``mode`` is &quot;svd&quot; or &quot;svdr&quot;, ``side`` must be provided. Besides, at least</span>
+<span class="sd">    one of ``rank``, ``cum_percentage`` and ``cutoff`` is required. If more than</span>
+<span class="sd">    one is specified, the resulting rank will be the one that satisfies all</span>
+<span class="sd">    conditions.</span>
 <span class="sd">    </span>
 <span class="sd">    Since the node is `split` in two, a new edge appears connecting both</span>
 <span class="sd">    nodes. The axis that corresponds to this edge has the name ``&quot;split&quot;``.</span>
@@ -2377,7 +2361,7 @@ title="Source repository"
 
     <span class="n">batch_axes</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">axis</span> <span class="ow">in</span> <span class="n">node1</span><span class="o">.</span><span class="n">_axes</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">axis</span><span class="o">.</span><span class="n">is_batch</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span> <span class="ow">in</span> <span class="n">node2</span><span class="o">.</span><span class="n">axes_names</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">axis</span><span class="o">.</span><span class="n">_batch</span> <span class="ow">and</span> <span class="p">(</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span> <span class="ow">in</span> <span class="n">node2</span><span class="o">.</span><span class="n">axes_names</span><span class="p">):</span>
             <span class="n">batch_axes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
 
     <span class="n">n_batches</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch_axes</span><span class="p">)</span>
@@ -2524,7 +2508,7 @@ title="Source repository"
 
     <span class="n">batch_axes</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">axis</span> <span class="ow">in</span> <span class="n">node1</span><span class="o">.</span><span class="n">_axes</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">axis</span><span class="o">.</span><span class="n">is_batch</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span> <span class="ow">in</span> <span class="n">node2</span><span class="o">.</span><span class="n">axes_names</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">axis</span><span class="o">.</span><span class="n">_batch</span> <span class="ow">and</span> <span class="p">(</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span> <span class="ow">in</span> <span class="n">node2</span><span class="o">.</span><span class="n">axes_names</span><span class="p">):</span>
             <span class="n">batch_axes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
 
     <span class="n">n_batches</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch_axes</span><span class="p">)</span>
@@ -2970,10 +2954,78 @@ title="Source repository"
     <span class="k">return</span> <span class="n">contract_edges_op</span><span class="p">(</span><span class="n">edges</span><span class="p">,</span> <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span></div>
 
 
+<span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="n">edge</span><span class="p">:</span> <span class="n">Edge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Contracts the nodes that are connected through the edge.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;contract_edges&quot;``.</span>
+<span class="sd">    The node that keeps information about the :class:`Successor` is</span>
+<span class="sd">    ``edge.node1``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    edge : Edge</span>
+<span class="sd">        Edge that is to be contracted. Batch contraction is automatically</span>
+<span class="sd">        performed when both nodes have batch edges with the same names.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(10, 15, 20),</span>
+<span class="sd">    ...                  axes_names=(&#39;one&#39;, &#39;two&#39;, &#39;three&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeA&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(10, 15, 20),</span>
+<span class="sd">    ...                  axes_names=(&#39;one&#39;, &#39;two&#39;, &#39;three&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeB&#39;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;one&#39;] ^ nodeB[&#39;one&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;two&#39;] ^ nodeB[&#39;two&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;three&#39;] ^ nodeB[&#39;three&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; result = tk.contract(nodeA[&#39;one&#39;])</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([15, 20, 15, 20])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">contract_edges_op</span><span class="p">([</span><span class="n">edge</span><span class="p">],</span> <span class="n">edge</span><span class="o">.</span><span class="n">node1</span><span class="p">,</span> <span class="n">edge</span><span class="o">.</span><span class="n">node2</span><span class="p">)</span>
+
+<span class="n">contract_edge</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">contract</span><span class="p">)</span>
+<span class="n">contract_edge</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Contracts the nodes that are connected through the edge.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;contract_edges&quot;``.</span>
+<span class="sd">    The node that keeps information about the :class:`Successor` is</span>
+<span class="sd">    ``self.node1``.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn(shape=(10, 15, 20),</span>
+<span class="sd">    ...                  axes_names=(&#39;one&#39;, &#39;two&#39;, &#39;three&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeA&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn(shape=(10, 15, 20),</span>
+<span class="sd">    ...                  axes_names=(&#39;one&#39;, &#39;two&#39;, &#39;three&#39;),</span>
+<span class="sd">    ...                  name=&#39;nodeB&#39;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;one&#39;] ^ nodeB[&#39;one&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;two&#39;] ^ nodeB[&#39;two&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; _ = nodeA[&#39;three&#39;] ^ nodeB[&#39;three&#39;]</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA[&#39;one&#39;].contract()</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([15, 20, 15, 20])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<span class="n">Edge</span><span class="o">.</span><span class="n">contract</span> <span class="o">=</span> <span class="n">contract_edge</span>
+
+
 <div class="viewcode-block" id="contract_"><a class="viewcode-back" href="../../operations.html#tensorkrowch.contract_">[docs]</a><span class="k">def</span> <span class="nf">contract_</span><span class="p">(</span><span class="n">edge</span><span class="p">:</span> <span class="n">Edge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Contracts in-place the nodes that are connected through the edge. See</span>
-<span class="sd">    :func:`contract` for a more complete explanation.</span>
+<span class="sd">    In-place version of :func:`contract`.</span>
 
 <span class="sd">    Following the **PyTorch** convention, names of functions ended with an</span>
 <span class="sd">    underscore indicate **in-place** operations.</span>
@@ -3017,7 +3069,7 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; del nodeA</span>
 <span class="sd">    &gt;&gt;&gt; del nodeB</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="n">contract_edges</span><span class="p">([</span><span class="n">edge</span><span class="p">],</span> <span class="n">edge</span><span class="o">.</span><span class="n">node1</span><span class="p">,</span> <span class="n">edge</span><span class="o">.</span><span class="n">node2</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">contract_edges_op</span><span class="p">([</span><span class="n">edge</span><span class="p">],</span> <span class="n">edge</span><span class="o">.</span><span class="n">node1</span><span class="p">,</span> <span class="n">edge</span><span class="o">.</span><span class="n">node2</span><span class="p">)</span>
     <span class="n">result</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">result</span><span class="o">.</span><span class="n">_unrestricted_set_tensor</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span>
 
@@ -3098,7 +3150,7 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; result.shape</span>
 <span class="sd">    torch.Size([100, 10, 7])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">contract_edges</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">contract_edges_op</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span></div>
 
 
 <span class="n">contract_between_node</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">contract_between</span><span class="p">)</span>
@@ -3365,7 +3417,6 @@ title="Source repository"
         <span class="k">del</span> <span class="n">net</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">stack_node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]]</span>
         <span class="n">stack_node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="n">stack_node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">stack_node_ref</span>
-        <span class="c1"># stack_node._tensor_info[&#39;full&#39;] = False</span>
 
         <span class="n">index</span> <span class="o">=</span> <span class="p">[</span><span class="n">stack_indices</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">stack_node_ref</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">!=</span> <span class="n">stack_node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
@@ -3388,7 +3439,6 @@ title="Source repository"
                     <span class="k">del</span> <span class="n">net</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]]</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">stack_node</span>
-                <span class="c1"># node._tensor_info[&#39;full&#39;] = False</span>
                 <span class="n">index</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="p">]</span>
                 <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="p">(</span><span class="n">max_dim</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">stack_node</span><span class="o">.</span><span class="n">_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span>
                                                        <span class="n">node</span><span class="o">.</span><span class="n">_shape</span><span class="p">)):</span>
@@ -3490,7 +3540,7 @@ title="Source repository"
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    nodes : list[Node or ParamNode] or tuple[Node or ParamNode]</span>
+<span class="sd">    nodes : list[AbstractNode] or tuple[AbstractNode]</span>
 <span class="sd">        Sequence of nodes that are to be stacked. They must be of the same type,</span>
 <span class="sd">        have the same rank and axes names, be in the same tensor network, and</span>
 <span class="sd">        have edges with the same types.</span>
@@ -3588,13 +3638,12 @@ title="Source repository"
                     <span class="n">new_node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]]</span>
             <span class="n">new_node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="n">new_node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;node_ref&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">node_ref</span>
-            <span class="c1"># new_node._tensor_info[&#39;full&#39;] = False</span>
 
             <span class="k">if</span> <span class="n">node_ref</span> <span class="o">==</span> <span class="n">node</span><span class="p">:</span>
                 <span class="n">index</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="p">]</span>
                 <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="p">(</span><span class="n">max_dim</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span>
                                                        <span class="n">new_node</span><span class="o">.</span><span class="n">_shape</span><span class="p">)):</span>
-                    <span class="k">if</span> <span class="n">new_node</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">is_batch</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">new_node</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">_batch</span><span class="p">:</span>
                         <span class="c1"># Admit any size in batch edges</span>
                         <span class="n">index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
                     <span class="k">else</span><span class="p">:</span>
@@ -3615,7 +3664,7 @@ title="Source repository"
                     <span class="c1"># If node is indexing from the original stack</span>
                     <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="p">(</span><span class="n">aux_slice</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">node_index</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span>
                                                              <span class="n">new_node</span><span class="o">.</span><span class="n">_shape</span><span class="p">)):</span>
-                        <span class="k">if</span> <span class="n">new_node</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">is_batch</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="n">new_node</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">_batch</span><span class="p">:</span>
                             <span class="c1"># Admit any size in batch edges</span>
                             <span class="n">index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
                         <span class="k">else</span><span class="p">:</span>
@@ -3626,7 +3675,7 @@ title="Source repository"
                     <span class="c1"># If node has the same shape as the original stack</span>
                     <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="p">(</span><span class="n">max_dim</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span>
                                                            <span class="n">new_node</span><span class="o">.</span><span class="n">_shape</span><span class="p">)):</span>
-                        <span class="k">if</span> <span class="n">new_node</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">is_batch</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="n">new_node</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">_batch</span><span class="p">:</span>
                             <span class="c1"># Admit any size in batch edges</span>
                             <span class="n">index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
                         <span class="k">else</span><span class="p">:</span>

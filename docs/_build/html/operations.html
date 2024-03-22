@@ -968,8 +968,7 @@ nodes connected by <code class="docutils literal notranslate"><span class="pre">
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.contract_">
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">contract_</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edge</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#contract_"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.contract_" title="Permalink to this definition">#</a></dt>
-<dd><p>Contracts in-place the nodes that are connected through the edge. See
-<code class="xref py py-func docutils literal notranslate"><span class="pre">contract()</span></code> for a more complete explanation.</p>
+<dd><p>In-place version of <code class="xref py py-func docutils literal notranslate"><span class="pre">contract()</span></code>.</p>
 <p>Following the <strong>PyTorch</strong> convention, names of functions ended with an
 underscore indicate <strong>in-place</strong> operations.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;contract_edges_ip&quot;</span></code>.</p>
@@ -1282,8 +1281,10 @@ and -1’s.</p>
 <p>where R is a lower triangular matrix and Q is unitary.</p>
 </li>
 </ul>
-<p>If <code class="docutils literal notranslate"><span class="pre">mode</span></code> is “svd” or “svdr”, <code class="docutils literal notranslate"><span class="pre">side</span></code> must be provided. Besides, one
-(and only one) of <code class="docutils literal notranslate"><span class="pre">rank</span></code>, <code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code> and <code class="docutils literal notranslate"><span class="pre">cutoff</span></code> is required.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">mode</span></code> is “svd” or “svdr”, <code class="docutils literal notranslate"><span class="pre">side</span></code> must be provided. Besides, at least
+one of <code class="docutils literal notranslate"><span class="pre">rank</span></code>, <code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code> and <code class="docutils literal notranslate"><span class="pre">cutoff</span></code> is required. If more than
+one is specified, the resulting rank will be the one that satisfies all
+conditions.</p>
 <p>Since the node is <cite>split</cite> in two, a new edge appears connecting both
 nodes. The axis that corresponds to this edge has the name <code class="docutils literal notranslate"><span class="pre">&quot;split&quot;</span></code>.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;split&quot;</span></code>. The node
@@ -1570,7 +1571,7 @@ name</strong>.  The node that keeps information about the <a class="reference in
 <code class="docutils literal notranslate"><span class="pre">nodes[0]</span></code>, the first stacked node.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>nodes</strong> (<em>list</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>] or </em><em>tuple</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>]</em>) – Sequence of nodes that are to be stacked. They must be of the same type,
+<dd class="field-odd"><p><strong>nodes</strong> (<em>list</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>] or </em><em>tuple</em><em>[</em><a class="reference internal" href="components.html#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><em>AbstractNode</em></a><em>]</em>) – Sequence of nodes that are to be stacked. They must be of the same type,
 have the same rank and axes names, be in the same tensor network, and
 have edges with the same types.</p>
 </dd>

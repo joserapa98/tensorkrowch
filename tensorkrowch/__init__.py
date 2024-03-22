@@ -24,14 +24,14 @@ import tensorkrowch.embeddings as embeddings
 # Edge operations
 from tensorkrowch.components import connect, connect_stack, disconnect
 from tensorkrowch.operations import svd_, svdr_, qr_, rq_
-from tensorkrowch.operations import contract_
+from tensorkrowch.operations import contract, contract_
 
 # Node operations
 from tensorkrowch.operations import Operation
 from tensorkrowch.operations import get_shared_edges  # Not in docs
 
 from tensorkrowch.operations import permute, permute_, tprod, mul, add, sub
-from tensorkrowch.operations import (split, split_, contract_edges, contract_,
+from tensorkrowch.operations import (split, split_, contract_edges,
                                      contract_between, contract_between_,
                                      stack, unbind, einsum, stacked_einsum)
 

@@ -2748,6 +2748,19 @@ class StackNode(Node):
             return StackEdge(edges=self._edges_dict[axis._name],
                              node1_list=self._node1_lists_dict[axis._name],
                              node1=self, axis1=axis)
+    
+    def reconnect(self, other: Union['StackNode', 'ParamStackNode']) -> None:
+        """
+        Re-connects the ``StackNode`` to another ``(Param)StackNode``, in the
+        axes where the original stacked nodes were already connected.
+        """
+        for axis1 in self._edges_dict:
+            for axis2 in other._edges_dict:
+                if self._edges_dict[axis1][0] == other._edges_dict[axis2][0]:
+                    connect_stack(self.get_edge(axis1), other.get_edge(axis2))
+    
+    def __xor__(self, other: Union['StackNode', 'ParamStackNode']) -> None:
+        self.reconnect(other)
 
 
 class ParamStackNode(ParamNode):
@@ -2927,6 +2940,19 @@ class ParamStackNode(ParamNode):
             return StackEdge(edges=self._edges_dict[axis._name],
                              node1_list=self._node1_lists_dict[axis._name],
                              node1=self, axis1=axis)
+    
+    def reconnect(self, other: Union['StackNode', 'ParamStackNode']) -> None:
+        """
+        Re-connects the ``StackNode`` to another ``(Param)StackNode``, in the
+        axes where the original stacked nodes were already connected.
+        """
+        for axis1 in self._edges_dict:
+            for axis2 in other._edges_dict:
+                if self._edges_dict[axis1][0] == other._edges_dict[axis2][0]:
+                    connect_stack(self.get_edge(axis1), other.get_edge(axis2))
+    
+    def __xor__(self, other: Union['StackNode', 'ParamStackNode']) -> None:
+        self.reconnect(other)
 
 
 ###############################################################################

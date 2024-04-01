@@ -1851,6 +1851,64 @@ class TestStack:
         # via operation `stack`
         for node in nodes:
             assert node.tensor_address() == node.name
+            
+    def test_reconnect_stacknodes(self):
+        net = tk.TensorNetwork()
+        nodes1 = []
+        nodes2 = []
+        for _ in range(5):
+            node1 = tk.Node(shape=(3, 2),
+                            axes_names=('input', 'output'),
+                            name='node1',
+                            network=net,
+                            init_method='randn')
+            nodes1.append(node1)
+            
+            node2 = tk.Node(shape=(2, 3),
+                            axes_names=('input', 'output'),
+                            name='node2',
+                            network=net,
+                            init_method='randn')
+            nodes2.append(node2)
+            
+            node1['output'] ^ node2['input']
+            node1['input'] ^ node2['output']
+
+        stack1 = tk.StackNode(nodes1)
+        stack2 = tk.StackNode(nodes2)
+        
+        stack1 ^ stack2
+        assert stack1.neighbours('output') == stack2
+        assert stack1.neighbours('input') == stack2
+    
+    def test_reconnect_paramstacknodes(self):
+        net = tk.TensorNetwork()
+        nodes1 = []
+        nodes2 = []
+        for _ in range(5):
+            node1 = tk.ParamNode(shape=(3, 2),
+                                 axes_names=('input', 'output'),
+                                 name='node1',
+                                 network=net,
+                                 init_method='randn')
+            nodes1.append(node1)
+            
+            node2 = tk.ParamNode(shape=(2, 3),
+                                 axes_names=('input', 'output'),
+                                 name='node2',
+                                 network=net,
+                                 init_method='randn')
+            nodes2.append(node2)
+            
+            node1['output'] ^ node2['input']
+            node1['input'] ^ node2['output']
+
+        stack1 = tk.StackNode(nodes1)
+        stack2 = tk.StackNode(nodes2)
+        
+        stack1 ^ stack2
+        assert stack1.neighbours('output') == stack2
+        assert stack1.neighbours('input') == stack2
 
     def test_error_stack_node(self):
         node = tk.Node(shape=(3, 2),

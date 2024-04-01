@@ -951,17 +951,17 @@ class AbstractNode(ABC):
             for ax in self._axes:
                 if axis == ax._num:
                     return ax._num
-            raise IndexError(f'Node {self!s} has no axis with index {axis}')
+            raise IndexError(f'Node "{self!s}" has no axis with index {axis}')
         elif isinstance(axis, str):
             for ax in self._axes:
                 if axis == ax._name:
                     return ax._num
-            raise IndexError(f'Node {self!s} has no axis with name {axis}')
+            raise IndexError(f'Node "{self!s}" has no axis with name "{axis}"')
         elif isinstance(axis, Axis):
             for ax in self._axes:
                 if axis == ax:
                     return ax._num
-            raise IndexError(f'Node {self!s} has no axis {axis!r}')
+            raise IndexError(f'Node "{self!s}" has no axis "{axis!r}"')
         else:
             raise TypeError('`axis` should be int, str or Axis type')
 
@@ -1399,7 +1399,7 @@ class AbstractNode(ABC):
         if not self.is_resultant() and (self._tensor_info['address'] is not None):
             if (tensor is not None) and not self._compatible_shape(tensor):
                 warnings.warn(f'`tensor` is being cropped to fit the shape of '
-                              f'node {self!s} at non-batch edges')
+                              f'node "{self!s}" at non-batch edges')
             self._unrestricted_set_tensor(tensor=tensor,
                                           init_method=init_method,
                                           device=device,
@@ -3442,17 +3442,17 @@ def connect(edge1: Edge, edge2: Edge) -> Edge:
 
     for edge in [edge1, edge2]:
         if not edge.is_dangling():
-            raise ValueError(f'Edge {edge!s} is not a dangling edge. '
-                             f'This edge points to nodes: {edge.node1!s} and '
-                             f'{edge.node2!s}')
+            raise ValueError(f'Edge "{edge!s}" is not a dangling edge. '
+                             f'This edge points to nodes: "{edge.node1!s}" and '
+                             f'"{edge.node2!s}"')
         if edge.is_batch():
-            raise ValueError(f'Edge {edge!s} is a batch edge. Batch edges '
+            raise ValueError(f'Edge "{edge!s}" is a batch edge. Batch edges '
                              'cannot be connected')
 
     if edge1.size() != edge2.size():
         raise ValueError(f'Cannot connect edges of unequal size. '
-                         f'Size of edge {edge1!s}: {edge1.size()}. '
-                         f'Size of edge {edge2!s}: {edge2.size()}')
+                         f'Size of edge "{edge1!s}": {edge1.size()}. '
+                         f'Size of edge "{edge2!s}": {edge2.size()}')
 
     node1, axis1 = edge1.node1, edge1.axis1
     node2, axis2 = edge2.node1, edge2.axis1
@@ -3505,9 +3505,9 @@ def connect_stack(edge1: StackEdge, edge2: StackEdge) -> StackEdge:
 
     for edge in [edge1, edge2]:
         if not edge.is_dangling():
-            raise ValueError(f'Edge {edge!s} is not a dangling edge. '
-                             f'This edge points to nodes: {edge.node1!s} and '
-                             f'{edge.node2!s}')
+            raise ValueError(f'Edge "{edge!s}" is not a dangling edge. '
+                             f'This edge points to nodes: "{edge.node1!s}" and '
+                             f'"{edge.node2!s}"')
 
     node1, axis1 = edge1.node1, edge1.axis1
     node2, axis2 = edge2.node1, edge2.axis1
@@ -4521,7 +4521,7 @@ class TensorNetwork(nn.Module):
             elif isinstance(edge, Edge):
                 if edge not in self._edges:
                     raise ValueError(
-                        f'Edge {edge!r} should be a dangling edge of the '
+                        f'Edge "{edge!r}" should be a dangling edge of the '
                         'Tensor Network')
             else:
                 raise TypeError(
@@ -4850,7 +4850,7 @@ class TensorNetwork(nn.Module):
                 return self.nodes[key]
             except Exception:
                 raise KeyError(
-                    f'Tensor network {self!s} does not have any node with '
+                    f'Tensor network "{self!s}" does not have any node with '
                     f'name {key}')
         else:
             raise TypeError('`key` should be int or str type')

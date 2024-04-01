@@ -5863,7 +5863,7 @@ class TestTNModels:
                 stack_input = tk.stack(self.input_nodes)
                 stack_data = tk.stack(list(self.data_nodes.values()))
 
-                stack_input['input'] ^ stack_data['feature']
+                stack_input ^ stack_data
                 stack_result = stack_input @ stack_data
 
                 stack_result = tk.unbind(stack_result)

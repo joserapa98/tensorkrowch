@@ -5469,6 +5469,7 @@ class TestStackUnbind:
 
     def test_batches_auto_unbind(self):
         net = tk.TensorNetwork()
+        net.auto_stack = False
         net.auto_unbind = False
 
         node1 = tk.Node(shape=(20, 30, 2),
@@ -5499,6 +5500,7 @@ class TestStackUnbind:
 
     def test_batches_index_mode(self):
         net = tk.TensorNetwork()
+        net.auto_stack = False
         net.auto_unbind = True
 
         node1 = tk.Node(shape=(20, 30, 2),

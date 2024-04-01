@@ -3859,7 +3859,7 @@ class TensorNetwork(nn.Module):
 
         # TN modes
         # Auto-management of memory mode
-        self._auto_stack = False   # train -> True / eval -> True
+        self._auto_stack = True   # train -> True / eval -> True
         self._auto_unbind = False  # train -> False / eval -> True
         self._tracing = False      # Tracing mode (True while calling .trace())
         self._traced = False       # True if .trace() is called, False if reset()
@@ -3928,7 +3928,7 @@ class TensorNetwork(nn.Module):
     def auto_stack(self) -> bool:
         """
         Returns boolean indicating whether ``auto_stack`` mode is active. By
-        default, it is ``False``.
+        default, it is ``True``.
         
         This mode indicates whether the operation :func:`stack` can take control
         of the memory management of the network to skip some steps in future

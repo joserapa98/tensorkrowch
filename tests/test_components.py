@@ -2684,6 +2684,8 @@ class TestTensorNetwork:
 
     def test_auto_stack(self):
         net = tk.TensorNetwork(name='net')
+        net.auto_stack = False
+        net.auto_unbind = False
         for i in range(4):
             _ = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
@@ -2721,6 +2723,8 @@ class TestTensorNetwork:
 
     def test_auto_unbind(self):
         net = tk.TensorNetwork(name='net')
+        net.auto_stack = False
+        net.auto_unbind = False
         for i in range(4):
             _ = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),

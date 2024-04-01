@@ -252,3 +252,55 @@ def list2slice(lst: List) -> Union[List, slice]:
         aux_slice[1] += 1
         return slice(*aux_slice)
     return lst
+
+def split_sequence_into_regions(lst: Sequence[int]) -> List[List[int]]:
+    """
+    Splits a sequence of integers into regions where each region contains
+    consecutive integers.
+
+    Parameters
+    ----------
+    lst : list[int] or tuple[int]
+        List of integers in ascending order.
+
+    Returns
+    -------
+    list[list[int]]
+
+    Raises
+    ------
+    TypeError
+        If the input is not a sequence of integers.
+    ValueError
+        If the input sequence is not ordered.
+
+    Example
+    -------
+    >>> sequence = [1, 2, 3, 5, 6, 7, 10, 11, 13]
+    >>> split_sequence_into_regions(sequence)
+    [[1, 2, 3], [5, 6, 7], [10, 11], [13]]
+    """
+    if not isinstance(lst, Sequence) or not all(isinstance(x, int) for x in lst):   #TODO: use this in my code
+        raise TypeError('Input must be a sequence of integers')
+    
+    if len(lst) != len(set(lst)):
+        raise ValueError('Input sequence cannot contain repeated elements')
+
+    if any(lst[i + 1] < lst[i] for i in range(len(lst) - 1)):
+        raise ValueError('Input sequence must be in ascending order')
+
+    if not lst:
+        return []
+
+    regions = []
+    current_region = [lst[0]]
+
+    for i in range(1, len(lst)):
+        if lst[i] == lst[i - 1] + 1:
+            current_region.append(lst[i])
+        else:
+            regions.append(current_region)
+            current_region = [lst[i]]
+
+    regions.append(current_region)
+    return regions

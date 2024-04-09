@@ -978,6 +978,38 @@ class TestSetTensorParamNode:
         node1.tensor = torch.zeros(node1.shape)
         assert not torch.equal(node1.tensor, node2.tensor)
 
+    def test_set_tensor_from_paramnode_same_name(self):
+        net = tk.TensorNetwork()
+        
+        # First ParamNode with its own tensor
+        node1 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'batch', 'right'),
+                             name='node1',
+                             network=net,
+                             init_method='zeros')
+        
+        # Second ParamNode uses tensor from node1
+        node2 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'batch', 'right'),
+                             name='node2',
+                             network=net)
+        node2.set_tensor_from(node1)
+        
+        # Third ParamNode has the same name as node2
+        node3 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'batch', 'right'),
+                             name='node2',
+                             network=net,
+                             init_method='ones')
+        
+        # node1 is a parameter of the network
+        assert torch.equal(net.param_node1, torch.zeros(node1.shape))
+        
+        # node2 is not a parameter because it doesn't hold its own tensor
+        assert not hasattr(net, 'param_node2_0')
+        
+        # node3 is also a parameter of the network
+        assert torch.equal(net.param_node2_1, torch.ones(node2.shape))
 
 class TestMoveToNetwork:
 

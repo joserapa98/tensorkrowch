@@ -4301,7 +4301,8 @@ class TensorNetwork(nn.Module):
         """Updates a single node's name, without taking care of the other names."""
         # Node is ParamNode and tensor is not None
         if isinstance(node.tensor, Parameter):
-            delattr(self, '_'.join(['param', node._name]))
+            if hasattr(self, 'param_' + node._name):
+                delattr(self, 'param_' + node._name)
         for edge in node._edges:
             if edge.is_attached_to(node):
                 self._remove_edge(edge)
@@ -4310,15 +4311,16 @@ class TensorNetwork(nn.Module):
         node._name = new_name
 
         if isinstance(node.tensor, Parameter):
-            if not hasattr(self, '_'.join(['param', node._name])):
-                self.register_parameter(
-                    '_'.join(['param', node._name]),
-                    self._memory_nodes[node._name])
-            else:
-                # Nodes names are never repeated, so it is likely that
-                # this case will never occur
-                raise ValueError(
-                    f'Network already has attribute named {node._name}')
+            if node._tensor_info['address'] is not None:
+                if not hasattr(self, 'param_' + node._name):
+                    self.register_parameter(
+                        'param_' + node._name,
+                        self._memory_nodes[node._name])
+                else:
+                    # Nodes names are never repeated, so it is likely that
+                    # this case will never occur
+                    raise ValueError(
+                        f'Network already has attribute named {node._name}')
 
         for edge in node._edges:
             self._add_edge(edge)
@@ -4455,7 +4457,8 @@ class TensorNetwork(nn.Module):
         """
         # Node is ParamNode and tensor is not None
         if isinstance(node.tensor, Parameter):
-            delattr(self, '_'.join(['param', node._name]))
+            if hasattr(self, 'param_' + node._name):
+                delattr(self, 'param_' + node._name)
         for edge in node._edges:
             if edge.is_attached_to(node):
                 self._remove_edge(edge)

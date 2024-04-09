@@ -113,7 +113,7 @@ class Operation:
 #################################   PERMUTE    ################################
 def _check_first_permute(node: AbstractNode,
                          axes: Sequence[Ax]) -> Optional[Successor]:
-    args = (node, axes)
+    args = (node, tuple(axes))
     successors = node._successors.get('permute')
     if not successors:
         return None
@@ -139,7 +139,7 @@ def _permute_first(node: AbstractNode, axes: Sequence[Ax]) -> Node:
 
     # Create successor
     net = node._network
-    args = (node, axes)
+    args = (node, tuple(axes))
     successor = Successor(node_ref=node.node_ref(),
                           index=node._tensor_info['index'],
                           child=new_node,

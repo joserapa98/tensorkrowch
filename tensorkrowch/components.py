@@ -4260,7 +4260,11 @@ class TensorNetwork(nn.Module):
         """
         node.disconnect()
         self._remove_node(node, move_names)
-        del node
+        node._temp_tensor = None
+    
+    def delete(self) -> None:
+        for node in self.nodes.values():
+            self.delete_node(node)
 
     def _update_node_info(self, node: AbstractNode, new_name: Text) -> None:
         """

@@ -2651,6 +2651,100 @@ class TestTensorNetwork:
         assert len(net.resultant_nodes) == 1
         assert len(net.edges) == 5
 
+    def test_delete_network(self):
+        net = tk.TensorNetwork(name='net')
+        nodes = []
+        for i in range(4):
+            node = tk.Node(shape=(2, 5, 2),
+                           axes_names=('left', 'input', 'right'),
+                           name='node',
+                           network=net,
+                           init_method='randn')
+            nodes.append(node)
+
+        for i in range(3):
+            nodes[i]['right'] ^ nodes[i + 1]['left']
+        
+        net.set_data_nodes([nodes[i]['input'] for i in range(4)],
+                           num_batch_edges=1)
+        net.add_data(torch.randn(10, 4, 5))
+        
+        # Contract network
+        stack = tk.stack(nodes)
+        stack_data = tk.stack([nodes[i].neighbours('input') for i in range(4)])
+        stack ^ stack_data
+        
+        result = stack_data @ stack
+        result = tk.unbind(result)
+        
+        assert len(net.leaf_nodes) == 4
+        assert len(net.data_nodes) == 4
+        assert len(net.virtual_nodes) == 1
+        assert len(net.resultant_nodes) == 7
+        
+        # Delete network
+        net.delete()
+        del net  # We still have to delete reference to network
+        
+        # If we still hold references to the nodes of the network, they will
+        # still be accessible until we call del on each reference
+        assert node._network is None
+        assert node.neighbours() == []
+        assert node.tensor is None
+
+    def test_delete_network_with_virtual(self):
+        net = tk.TensorNetwork(name='net')
+        nodes = []
+        for i in range(4):
+            node = tk.Node(shape=(2, 5, 2),
+                           axes_names=('left', 'input', 'right'),
+                           name='node',
+                           network=net)
+            nodes.append(node)
+        
+        v_node = tk.Node(shape=(2, 5, 2),
+                         axes_names=('left', 'input', 'right'),
+                         name='uniform_memory',
+                         network=net,
+                         init_method='randn',
+                         virtual=True)
+        for node in nodes:
+            node.set_tensor_from(v_node)
+
+        for i in range(3):
+            nodes[i]['right'] ^ nodes[i + 1]['left']
+        
+        net.set_data_nodes([nodes[i]['input'] for i in range(4)],
+                           num_batch_edges=1)
+        net.add_data(torch.randn(10, 4, 5))
+        
+        # Contract network
+        stack = tk.stack(nodes)
+        stack_data = tk.stack([nodes[i].neighbours('input') for i in range(4)])
+        stack ^ stack_data
+        
+        result = stack_data @ stack
+        result = tk.unbind(result)
+        
+        assert len(net.leaf_nodes) == 4
+        assert len(net.data_nodes) == 4
+        assert len(net.virtual_nodes) == 2
+        assert len(net.resultant_nodes) == 7
+        
+        # Delete network
+        net.delete()
+        del net  # We still have to delete reference to network
+        
+        # If we still hold references to the nodes of the network, they will
+        # still be accessible until we call del on each reference
+        assert node._network is None
+        assert node.neighbours() == []
+        assert node.tensor is None
+        
+        assert v_node._network is None
+        assert v_node.neighbours() == []
+        assert v_node.tensor is None
+
     def test_inverse_memory(self):
         net = tk.TensorNetwork()
         nodes = []

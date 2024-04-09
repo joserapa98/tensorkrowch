@@ -4869,6 +4869,7 @@ class TensorNetwork(nn.Module):
                     continue
                 self.delete_node(node, False)
 
+    @torch.no_grad()
     def trace(self, example: Optional[Tensor] = None, *args, **kwargs) -> None:
         """
         Traces the tensor network contraction algorithm with two purposes:
@@ -4903,13 +4904,12 @@ class TensorNetwork(nn.Module):
             Keyword arguments that might be used in :meth:`contract`.
         """
         self.reset()
-
-        with torch.no_grad():
-            self._tracing = True
-            self(example, *args, **kwargs)
-            self._tracing = False
-            self(example, *args, **kwargs)
-            self._traced = True
+        
+        self._tracing = True
+        self(example, *args, **kwargs)
+        self._tracing = False
+        self(example, *args, **kwargs)
+        self._traced = True
 
     def contract(self) -> Node:
         """

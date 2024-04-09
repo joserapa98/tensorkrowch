@@ -3250,7 +3250,7 @@ def stack(nodes: Sequence[AbstractNode]):
     
     Nodes ``resultant`` from this operation are called ``"stack"``. If this
     operation returns a ``virtual`` :class:`ParamStackNode`, it will be called
-    ``"virtual_stack"``. See :class:AbstractNode` to learn about this **reserved
+    ``"virtual_result"``. See :class:AbstractNode` to learn about this **reserved
     name**.  The node that keeps information about the :class:`Successor` is
     ``nodes[0]``, the first stacked node.
 

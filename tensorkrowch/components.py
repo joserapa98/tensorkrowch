@@ -384,10 +384,10 @@ class AbstractNode(ABC):
       To learn more about this, see :meth:`~TensorNetwork.set_data_nodes` and
       :meth:`~TensorNetwork.add_data`.
     
-    * **"virtual_stack"**: Name of the ``virtual`` :class:`ParamStackNode` that
+    * **"virtual_result"**: Name of the ``virtual`` :class:`ParamStackNode` that
       results from stacking :class:`ParamNodes <ParamNode>` as the first
       operation in the network contraction, if ``auto_stack`` mode is set to
-      ``True``. There might be as much ``"virtual_stack"`` nodes as stacks are
+      ``True``. There might be as much ``"virtual_result"`` nodes as stacks are
       created from ``ParamNodes``. To learn more about this, see
       :class:`ParamStackNode`.
     
@@ -2897,7 +2897,7 @@ class ParamStackNode(ParamNode):
     first :func:`stack` is never actually computed.
     
     The ``ParamStackNode`` that results from this process uses the reserved name
-    ``"virtual_stack"``, as explained :class:`here <AbstractNode>`. This node
+    ``"virtual_result"``, as explained :class:`here <AbstractNode>`. This node
     stores the tensor from which all the stacked :class:`ParamNodes <ParamNode>`
     just take one `slice`.
     
@@ -4795,7 +4795,7 @@ class TensorNetwork(nn.Module):
           
         * ``virtual``: Only virtual nodes created in :class:`operations
           <Operation>` are :meth:`deleted <delete_node>`. This only includes
-          nodes using the reserved name ``"virtual_stack"``.
+          nodes using the reserved name ``"virtual_result"``.
           
         * ``resultant``: These nodes are :meth:`deleted <delete_node>` from the
           network.
@@ -4822,8 +4822,8 @@ class TensorNetwork(nn.Module):
             aux_dict.update(self._resultant_nodes)
             aux_dict.update(self._virtual_nodes)
             for node in aux_dict.values():
-                if node._virtual and ('virtual_stack' not in node._name):
-                    # Virtual nodes named "virtual_stack" are ParamStackNodes
+                if node._virtual and ('virtual_result' not in node._name):
+                    # Virtual nodes named "virtual_result" are ParamStackNodes
                     # that result from stacking a collection of ParamNodes
                     # This condition is satisfied by the rest of virtual nodes
                     continue
@@ -4863,7 +4863,7 @@ class TensorNetwork(nn.Module):
             aux_dict.update(self._resultant_nodes)
             aux_dict.update(self._virtual_nodes)
             for node in list(aux_dict.values()):
-                if node._virtual and ('virtual_stack' not in node._name):
+                if node._virtual and ('virtual_result' not in node._name):
                     # This condition is satisfied by the rest of virtual nodes
                     # (e.g. "virtual_feature", "virtual_n_features")
                     continue

@@ -3092,7 +3092,7 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
 
     if all_param and node_ref_is_stack and net._auto_stack:
         stack_node = ParamStackNode(nodes=nodes,
-                                    name='virtual_stack',
+                                    name='virtual_result',
                                     virtual=True)
     else:
         stack_node = StackNode._create_resultant(nodes=nodes,

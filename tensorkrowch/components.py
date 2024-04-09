@@ -713,6 +713,13 @@ class AbstractNode(ABC):
     @abstractmethod
     def copy(self, share_tensor: bool = False) -> 'AbstractNode':
         pass
+    
+    @abstractmethod
+    def change_type(self,
+                    leaf: bool = False,
+                    data: bool = False,
+                    virtual: bool = False,) -> None:
+        pass
 
     # -------
     # Methods
@@ -2149,6 +2156,54 @@ class Node(AbstractNode):
                             edges=self._edges,
                             node1_list=self.is_node1())
         return new_node
+    
+    def change_type(self,
+                    leaf: bool = False,
+                    data: bool = False,
+                    virtual: bool = False,) -> None:
+        """
+        Changes node type, only if node is not a resultant node.
+        
+        Parameters
+        ----------
+        leaf : bool
+            Boolean indicating if the new node type is ``leaf``.
+        data : bool
+            Boolean indicating if the new node type is ``data``.
+        virtual : bool
+            Boolean indicating if the new node type is ``virtual``.
+        """
+        if self.is_resultant():
+            raise ValueError('Only non-resultant nodes\' types can be changed')
+        
+        if (leaf + data + virtual) != 1:
+            raise ValueError('One, and only one, of `leaf`, `data` and `virtual`'
+                             ' can be set to True')
+        
+        # Unset current type
+        if self._leaf and not leaf:
+            node_dict = self._network._leaf_nodes
+            self._leaf = False
+            del node_dict[self._name]
+        elif self._data and not data:
+            node_dict = self._network._data_nodes
+            self._data = False
+            del node_dict[self._name]
+        elif self._virtual and not virtual:
+            node_dict = self._network._virtual_nodes
+            self._virtual = False
+            del node_dict[self._name]
+        
+        # Set new type
+        if leaf:
+            self._leaf = True
+            self._network._leaf_nodes[self._name] = self
+        elif data:
+            self._data = True
+            self._network._data_nodes[self._name] = self
+        elif virtual:
+            self._virtual = True
+            self._network._virtual_nodes[self._name] = self
 
 
 class ParamNode(AbstractNode):
@@ -2513,6 +2568,41 @@ class ParamNode(AbstractNode):
                                  edges=self._edges,
                                  node1_list=self.is_node1())
         return new_node
+    
+    def change_type(self,
+                    leaf: bool = False,
+                    virtual: bool = False,) -> None:
+        """
+        Changes node type, only if node is not a resultant node.
+        
+        Parameters
+        ----------
+        leaf : bool
+            Boolean indicating if the new node type is ``leaf``.
+        virtual : bool
+            Boolean indicating if the new node type is ``virtual``.
+        """
+        if (leaf + virtual) != 1:
+            raise ValueError('One, and only one, of `leaf`, and `virtual`'
+                             ' can be set to True')
+        
+        # Unset current type
+        if self._leaf and not leaf:
+            node_dict = self._network._leaf_nodes
+            self._leaf = False
+            del node_dict[self._name]
+        elif self._virtual and not virtual:
+            node_dict = self._network._virtual_nodes
+            self._virtual = False
+            del node_dict[self._name]
+        
+        # Set new type
+        if leaf:
+            self._leaf = True
+            self._network._leaf_nodes[self._name] = self
+        elif virtual:
+            self._virtual = True
+            self._network._virtual_nodes[self._name] = self
 
 
 ###############################################################################

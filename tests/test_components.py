@@ -1085,6 +1085,108 @@ class TestMoveToNetwork:
         assert torch.equal(node1.tensor, node2.tensor)
 
 
+class TestChangeType:
+    
+    def test_change_type_node(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 3),
+                        axes_names=('left', 'right'),
+                        name='node1',
+                        data=True,
+                        network=net,
+                        init_method='randn')
+        node2 = tk.Node(shape=(3, 4),
+                        axes_names=('left', 'right'),
+                        name='node2',
+                        network=net,
+                        init_method='randn')
+        
+        node1['right'] ^ node2['left']
+        node3 = node1 @ node2
+        
+        assert node1.is_data()
+        assert node1.name in net.data_nodes
+        assert node2.is_leaf()
+        assert node2.name in net.leaf_nodes
+        assert node3.is_resultant()
+        
+        # Change types
+        node1.change_type(virtual=True)
+        node2.change_type(data=True)
+        
+        assert node1.is_virtual()
+        assert node1.name in net.virtual_nodes
+        assert node1.name not in net.data_nodes
+        assert node2.is_data()
+        assert node2.name in net.data_nodes
+        assert node2.name not in net.leaf_nodes
+        assert node3.is_resultant()
+    
+    def test_change_type_paramnode(self):
+        net = tk.TensorNetwork()
+        node1 = tk.ParamNode(shape=(2, 3),
+                             axes_names=('left', 'right'),
+                             name='node1',
+                             virtual=True,
+                             network=net,
+                             init_method='randn')
+        node2 = tk.ParamNode(shape=(3, 4),
+                             axes_names=('left', 'right'),
+                             name='node2',
+                             network=net,
+                             init_method='randn')
+        
+        node1['right'] ^ node2['left']
+        node3 = node1 @ node2
+        
+        assert node1.is_virtual()
+        assert node1.name in net.virtual_nodes
+        assert node2.is_leaf()
+        assert node2.name in net.leaf_nodes
+        assert node3.is_resultant()
+        
+        # Change types
+        node1.change_type(leaf=True)
+        node2.change_type(virtual=True)
+        
+        assert node1.is_leaf()
+        assert node1.name in net.leaf_nodes
+        assert node1.name not in net.virtual_nodes
+        assert node2.is_virtual()
+        assert node2.name in net.virtual_nodes
+        assert node2.name not in net.leaf_nodes
+        assert node3.is_resultant()
+    
+    def test_change_type_errors(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 3),
+                        axes_names=('left', 'right'),
+                        name='node1',
+                        data=True,
+                        network=net,
+                        init_method='randn')
+        node2 = tk.ParamNode(shape=(3, 4),
+                             axes_names=('left', 'right'),
+                             name='node2',
+                             network=net,
+                             init_method='randn')
+        
+        node1['right'] ^ node2['left']
+        node3 = node1 @ node2
+        
+        # ParamNodes cannot be changed to data type
+        with pytest.raises(TypeError):
+            node2.change_type(data=True)
+        
+        # Non-resultant nodes cannot be set as resultant
+        with pytest.raises(ValueError):
+            node1.change_type(leaf=False, virtual=False, data=False)
+        
+        # Resultant nodes cannot be set as non-resultant
+        with pytest.raises(ValueError):
+            node3.change_type(leaf=True)
+
+
 class TestMeasures:
 
     def test_sum(self):

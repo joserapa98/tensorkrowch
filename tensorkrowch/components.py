@@ -42,7 +42,7 @@ from tensorkrowch.utils import (check_name_style, enum_repeated_names, erase_enu
 ###############################################################################
 #                                     AXIS                                    #
 ###############################################################################
-class Axis:
+class Axis:  # MARK: Axis
     """
     Axes are the objects that stick edges to nodes. Each instance of the
     :class:`AbstractNode` class has a list of :math:`N` axes, each corresponding
@@ -286,7 +286,7 @@ Ax = Union[int, Text, Axis]
 Shape = Union[Sequence[int], Size]
 
 
-class AbstractNode(ABC):
+class AbstractNode(ABC):  # MARK: AbstractNode
     """
     Abstract class for all types of nodes. Defines what a node is and most of its
     properties and methods. Since it is an abstract class, cannot be instantiated.
@@ -1918,7 +1918,7 @@ class AbstractNode(ABC):
                f'\tedges:\n{tab_string(print_list(self._edges), 2)})'
 
 
-class Node(AbstractNode):
+class Node(AbstractNode):  # MARK: Node
     """
     Base class for non-trainable nodes. Should be subclassed by any class of nodes
     that are not intended to be trained (e.g. :class:`StackNode`).
@@ -2236,7 +2236,7 @@ class Node(AbstractNode):
             self._network._virtual_nodes[self._name] = self
 
 
-class ParamNode(AbstractNode):
+class ParamNode(AbstractNode):  # MARK: ParamNode
     """
     Class for trainable nodes. Should be subclassed by any class of nodes that
     are intended to be trained (e.g. :class:`ParamStackNode`).
@@ -2638,7 +2638,7 @@ class ParamNode(AbstractNode):
 ###############################################################################
 #                                 STACK NODES                                 #
 ###############################################################################
-class StackNode(Node):
+class StackNode(Node):  # MARK: StackNode
     """
     Class for stacked nodes. ``StackNodes`` are nodes that store the information
     of a list of nodes that are stacked via :func:`stack`, although they can also
@@ -2883,7 +2883,7 @@ class StackNode(Node):
         self.reconnect(other)
 
 
-class ParamStackNode(ParamNode):
+class ParamStackNode(ParamNode):  # MARK: ParamStackNode
     """
     Class for parametric stacked nodes. They are essentially the same as
     :class:`StackNodes <StackNode>` but they are :class:`ParamNodes <ParamNode>`.
@@ -3078,7 +3078,7 @@ class ParamStackNode(ParamNode):
 ###############################################################################
 #                                    EDGES                                    #
 ###############################################################################
-class Edge:
+class Edge:  # MARK: Edge
     """
     Base class for edges. Should be subclassed by any new class of edges.
 
@@ -3428,7 +3428,7 @@ class Edge:
 AbstractStackNode = Union[StackNode, ParamStackNode]
 
 
-class StackEdge(Edge):
+class StackEdge(Edge):  # MARK: StackEdge
     """
     Class for stacked edges. They are just like :class:`Edges <Edge>` but used
     when stacking a collection of nodes into a :class:`StackNode`. When doing
@@ -3728,7 +3728,7 @@ def disconnect(edge: Union[Edge, StackEdge]) -> Union[Tuple[Edge, Edge],
 ###############################################################################
 #                                   SUCCESSOR                                 #
 ###############################################################################
-class Successor:
+class Successor:  # MARK: Successor
     """
     Class for successors. This is a sort of cache memory for :class:`Operations
     <Operation>` that have been already computed.
@@ -3807,7 +3807,7 @@ class Successor:
 ###############################################################################
 #                                TENSOR NETWORK                               #
 ###############################################################################
-class TensorNetwork(nn.Module):
+class TensorNetwork(nn.Module):  # MARK: TensorNetwork
     """
     Class for arbitrary Tensor Networks. Subclass of **PyTorch**
     ``torch.nn.Module``.

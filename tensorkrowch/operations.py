@@ -56,7 +56,7 @@ def copy_func(f):
 ###############################################################################
 
 
-class Operation:
+class Operation:  # MARK: Operation
     """
     Class for node operations.
     
@@ -111,6 +111,7 @@ class Operation:
 ###############################################################################
 
 #################################   PERMUTE    ################################
+# MARK: permute
 def _check_first_permute(node: AbstractNode,
                          axes: Sequence[Ax]) -> Optional[Successor]:
     args = (node, tuple(axes))
@@ -329,6 +330,7 @@ AbstractNode.permute_ = permute_node_
 
 
 ##################################   TPROD    #################################
+# MARK: tprod
 def _check_first_tprod(node1: AbstractNode,
                        node2: AbstractNode) -> Optional[Successor]:
     args = (node1, node2)
@@ -473,6 +475,7 @@ AbstractNode.__mod__ = tprod_node
 
 
 ###################################   MUL    ##################################
+# MARK: mul
 def _check_first_mul(node1: AbstractNode,
                      node2: AbstractNode) -> Optional[Successor]:
     args = (node1, node2)
@@ -606,6 +609,7 @@ AbstractNode.__mul__ = mul_node
 
 
 ###################################   ADD    ##################################
+# MARK: add
 def _check_first_add(node1: AbstractNode,
                      node2: AbstractNode) -> Optional[Successor]:
     args = (node1, node2)
@@ -739,6 +743,7 @@ AbstractNode.__add__ = add_node
 
 
 ###################################   SUB    ##################################
+# MARK: sub
 def _check_first_sub(node1: AbstractNode,
                      node2: AbstractNode) -> Optional[Successor]:
     args = (node1, node2)
@@ -876,6 +881,7 @@ AbstractNode.__sub__ = sub_node
 ###############################################################################
 
 ##################################   SPLIT    #################################
+# MARK: split
 def _check_first_split(node: AbstractNode,
                        node1_axes: Sequence[Ax],
                        node2_axes: Sequence[Ax],
@@ -2318,6 +2324,7 @@ Edge.rq_ = rq_edge_
 
 
 ################################   CONTRACT    ################################
+# MARK: contract_edges
 def _check_first_contract_edges(edges: Optional[List[Edge]],
                                 node1: AbstractNode,
                                 node2: AbstractNode) -> Optional[Successor]:
@@ -3034,6 +3041,7 @@ AbstractNode.contract_between_ = contract_between_node_
 
 
 #####################################   STACK   ###############################
+# MARK: stack
 def _check_first_stack(nodes: Sequence[AbstractNode]) -> Optional[Successor]:
     if not nodes:
         raise ValueError('`nodes` should be a non-empty sequence of nodes')
@@ -3280,6 +3288,7 @@ def stack(nodes: Sequence[AbstractNode]):
 
 
 ##################################   UNBIND   #################################
+# MARK: unbind
 def _check_first_unbind(node: AbstractStackNode) -> Optional[Successor]:
     args = (node,)
     successors = node._successors.get('unbind')
@@ -3538,6 +3547,7 @@ def unbind(node: AbstractStackNode) -> List[Node]:
 
 
 ##################################   EINSUM   #################################
+# MARK: einsum
 def _check_first_einsum(string: Text,
                         *nodes: AbstractNode) -> Optional[Successor]:
     if not nodes:

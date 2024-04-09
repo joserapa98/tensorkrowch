@@ -1528,8 +1528,8 @@ def split_(node: AbstractNode,
     """
     node1, node2 = split(node, node1_axes, node2_axes,
                          mode, side, rank, cum_percentage, cutoff)
-    node1.reattach_edges(True)
-    node2.reattach_edges(True)
+    node1.reattach_edges(override=True)
+    node2.reattach_edges(override=True)
     node1._unrestricted_set_tensor(node1.tensor.detach())
     node2._unrestricted_set_tensor(node2.tensor.detach())
 
@@ -2786,7 +2786,7 @@ def contract_(edge: Edge) -> Node:
     >>> del nodeB
     """
     result = contract_edges_op([edge], edge.node1, edge.node2)
-    result.reattach_edges(True)
+    result.reattach_edges(override=True)
     result._unrestricted_set_tensor(result.tensor.detach())
 
     # Delete nodes (and their edges) from the TN
@@ -2957,7 +2957,7 @@ def contract_between_(node1: AbstractNode,
     >>> del nodeB
     """
     result = contract_between(node1, node2)
-    result.reattach_edges(True)
+    result.reattach_edges(override=True)
     result._unrestricted_set_tensor(result.tensor.detach())
 
     # Delete nodes (and their edges) from the TN

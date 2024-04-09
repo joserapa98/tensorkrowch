@@ -13,9 +13,11 @@ This script contains:
     * binomial_coeffs
     * stack_unequal_tensors
     * list2slice
+    * split_sequence_into_regions
+    * random_unitary
 """
 
-from typing import List, Sequence, Text, Union
+from typing import Optional, List, Sequence, Text, Union
 
 import torch
 import torch.nn as nn
@@ -304,3 +306,17 @@ def split_sequence_into_regions(lst: Sequence[int]) -> List[List[int]]:
 
     regions.append(current_region)
     return regions
+
+def random_unitary(n, device: Optional[torch.device] = None):
+    """
+    Returns random unitary matrix from the Haar measure of size n x n.
+    
+    Unitary matrix is created as described in this `paper
+    <https://arxiv.org/abs/math-ph/0609050v2>`_.
+    """
+    mat = torch.randn(n, n, device=device)
+    q, r = torch.linalg.qr(mat)
+    d = torch.diagonal(r)
+    ph = d / d.abs()
+    q = q @ torch.diag(ph)
+    return q

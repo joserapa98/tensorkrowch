@@ -1444,6 +1444,32 @@ class TestConnect:
         node3[3] ^ node4[0]
         assert node3[3] != edge
         assert node3[3] == node4[0]
+    
+    def test_is_connected_to(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net)
+        node2 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        network=net)
+        node1['left'] ^ node2['right']
+        node1['right'] ^ node2['left']
+        
+        assert node1.is_connected_to(node2) == [(node1.get_axis('left'),
+                                                 node2.get_axis('right')),
+                                                (node1.get_axis('right'),
+                                                 node2.get_axis('left'))]
+        
+        node1.disconnect()
+        node1['left'] ^ node1['right']
+        assert node1.is_connected_to(node1) == [(node1.get_axis('left'),
+                                                 node1.get_axis('right')),
+                                                (node1.get_axis('right'),
+                                                 node1.get_axis('left'))]
+        assert node1.is_connected_to(node2) == []
 
     def test_disconnect(self):
         node1 = tk.Node(shape=(2, 5, 2),

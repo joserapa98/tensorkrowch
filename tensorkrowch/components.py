@@ -1019,7 +1019,9 @@ class AbstractNode(ABC):
             # Case of trace edges (attached to the node in two axes)
             return tuple(lst)
 
-    def reattach_edges(self, override: bool = False) -> None:
+    def reattach_edges(self,
+                       axis: Optional[Ax] = None,
+                       override: bool = False) -> None:
         """
         Substitutes current edges by copies of them that are attached to the node.
         It can happen that an edge is not attached to the node if it is the result
@@ -1033,7 +1035,10 @@ class AbstractNode(ABC):
 
         Parameters
         ----------
-        override: bool
+        axis : int, str or Axis, optional
+            The edge attached to this axis will be reattached. If ``None``, all
+            edges will be reattached.
+        override : bool
             Boolean indicating if the new, reattached edges should also replace
             the corresponding edges in the node's neighbours (``True``). Otherwise,
             the neighbours' edges will be pointing to the original nodes from which
@@ -1069,7 +1074,18 @@ class AbstractNode(ABC):
         If ``override`` is ``True``, ``nodeB['right']`` would be replaced by the
         new ``result['right']``.
         """
-        for i, (edge, node1) in enumerate(zip(self._edges, self.is_node1())):
+        if axis is None:
+            edges = list(enumerate(self._edges))
+        else:
+            axis_num = self.get_axis_num(axis)
+            edges = [(axis_num, self._edges[axis_num])]
+        
+        skip_edges = []
+        for i, edge in edges:
+            if i in skip_edges:
+                continue
+            
+            node1 = self._axes[i]._node1
             node = edge._nodes[1 - node1]
             if node != self:
                 # New edges are always a copy, so that the original
@@ -1082,17 +1098,20 @@ class AbstractNode(ABC):
 
                 # Case of trace edges (attached to the node in two axes)
                 neighbour = new_edge._nodes[node1]
-                if neighbour == node:
-                    for j, other_edge in enumerate(self._edges):
-                        if (other_edge == edge) and (i != j):
-                            self._edges[j] = new_edge
-                            new_edge._nodes[node1] = self
-                            new_edge._axes[node1] = self._axes[j]
+                if not new_edge.is_dangling():
+                    if neighbour != self:
+                        for j, other_edge in edges[(i + 1):]:
+                            if other_edge == edge:
+                                new_edge._nodes[node1] = self
+                                new_edge._axes[node1] = self._axes[j]
+                                self._edges[j] = new_edge
+                                skip_edges.append(j)
 
                 if override:
-                    if not new_edge.is_dangling() and (neighbour != node):
-                        neighbour._add_edge(
-                            new_edge, new_edge._axes[node1], not node1)
+                    if not new_edge.is_dangling():
+                        if new_edge._nodes[0] != new_edge._nodes[1]:
+                            new_edge._nodes[node1]._add_edge(
+                                new_edge, new_edge._axes[node1], not node1)
 
     def disconnect(self, axis: Optional[Ax] = None) -> None:
         """

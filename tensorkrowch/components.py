@@ -852,6 +852,17 @@ class AbstractNode(ABC):
                 node2 = edge._nodes[node1_list[i]]
                 neighbours.add(node2)
         return list(neighbours)
+    
+    def is_connected_to(self, other: 'AbstractNode') -> List[Tuple[Axis]]:
+        """Returns list of tuples of axes where the node is connected to ``other``"""
+        connected_axes = []
+        for i1, edge1 in enumerate(self._edges):
+            for i2, edge2 in enumerate(other._edges):
+                if (edge1 == edge2) and not edge1.is_dangling():
+                    if self.is_node1(i1) != other.is_node1(i2):
+                        connected_axes.append((self._axes[i1],
+                                               other._axes[i2]))
+        return connected_axes
 
     def _change_axis_name(self, axis: Axis, name: Text) -> None:
         """

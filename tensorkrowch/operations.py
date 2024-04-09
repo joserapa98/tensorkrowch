@@ -3084,8 +3084,12 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
                     all_same_ref = False
                     node_ref_is_stack = False
                     continue
-
-                stack_indices.append(node._tensor_info['index'][0])
+                
+                aux_index = node._tensor_info['index']
+                if isinstance(aux_index, int):
+                    stack_indices.append(aux_index)
+                else:
+                    stack_indices.append(aux_index[0])
 
             else:
                 all_same_ref = False
@@ -3305,7 +3309,13 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
         else:
             edges_lists.append([edge] * len(tensors))
             node1_lists.append([True] * len(tensors))
-    lst = list(zip(tensors, list(zip(*edges_lists)), list(zip(*node1_lists))))
+    
+    if node._edges[1:]:
+        lst = list(zip(tensors,
+                       list(zip(*edges_lists)),
+                       list(zip(*node1_lists))))
+    else:
+        lst = [(t, [], []) for t in tensors]
 
     net = node._network
     for i, (tensor, edges, node1_list) in enumerate(lst):
@@ -3364,7 +3374,6 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
                         index.append(slice(0, None))
                     else:
                         index.append(slice(max_dim - dim, max_dim))
-                new_node._tensor_info['index'] = index
 
             else:
                 node_index = node._tensor_info['index']
@@ -3389,7 +3398,7 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
 
                 else:
                     # If node has the same shape as the original stack
-                    for j, (max_dim, dim) in enumerate(zip(node.shape[1:],
+                    for j, (max_dim, dim) in enumerate(zip(node._shape[1:],
                                                            new_node._shape)):
                         if new_node._axes[j]._batch:
                             # Admit any size in batch edges
@@ -3397,7 +3406,9 @@ def _unbind_first(node: AbstractStackNode) -> List[Node]:
                         else:
                             index.append(slice(max_dim - dim, max_dim))
 
-                new_node._tensor_info['index'] = index
+            if len(index) == 1:
+                index = index[0]
+            new_node._tensor_info['index'] = index
 
     # Create successor
     args = (node,)

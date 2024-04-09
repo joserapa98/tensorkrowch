@@ -4767,7 +4767,10 @@ class TensorNetwork(nn.Module):
         stack_node = self._virtual_nodes.get('stack_data_memory')
 
         if stack_node is not None:
-            data = data.movedim(-2, 0)
+            if isinstance(data, Tensor):
+                data = data.movedim(-2, 0)
+            else:
+                data = torch.stack(data, dim=0)
             stack_node.tensor = data
             for i, data_node in enumerate(list(self._data_nodes.values())):
                 data_node._shape = data[i].shape

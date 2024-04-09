@@ -139,6 +139,19 @@ class TestInitNode:
         assert not node.is_data()
         assert node.successors == dict()
 
+    def test_init_node_rank_0(self):
+        node = tk.Node(shape=tuple(),
+                       axes_names=tuple(),
+                       name='my_node',
+                       init_method='randn')
+
+        assert node.name == 'my_node'
+        assert node.shape == tuple()
+        assert node.tensor.shape == tuple()
+        assert node.axes_names == []
+        assert node.rank == 0
+        assert node.numel() == 1
+
     def test_init_node_data(self):
         node = tk.Node(shape=(2, 5, 2),
                        axes_names=('left', 'input', 'right'),
@@ -278,6 +291,19 @@ class TestInitParamNode:
         assert node.is_leaf()
         assert not node.is_data()
         assert node.successors == dict()
+
+    def test_init_paramnode_rank_0(self):
+        node = tk.ParamNode(shape=tuple(),
+                            axes_names=tuple(),
+                            name='my_node',
+                            init_method='randn')
+
+        assert node.name == 'my_node'
+        assert node.shape == tuple()
+        assert node.tensor.shape == tuple()
+        assert node.axes_names == []
+        assert node.rank == 0
+        assert node.numel() == 1
 
     def test_init_paramnode_virtual(self):
         # ParamNodes can be virtual, to store memory of ParamNodes

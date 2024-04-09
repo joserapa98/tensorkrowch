@@ -1001,7 +1001,7 @@ class AbstractNode(ABC):
         axis_num = self.get_axis_num(axis)
         return self._edges[axis_num]
 
-    def in_which_axis(self, edge: 'Edge') -> Union[Axis, List[Axis]]:
+    def in_which_axis(self, edge: 'Edge') -> Union[Axis, Tuple[Axis]]:
         """
         Returns :class:`Axis` given the :class:`Edge` that is attached
         to the node through it.
@@ -1017,7 +1017,7 @@ class AbstractNode(ABC):
             return lst[0]
         else:
             # Case of trace edges (attached to the node in two axes)
-            return lst
+            return tuple(lst)
 
     def reattach_edges(self, override: bool = False) -> None:
         """

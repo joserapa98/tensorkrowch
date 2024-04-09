@@ -1011,6 +1011,36 @@ class TestSetTensorParamNode:
         # node3 is also a parameter of the network
         assert torch.equal(net.param_node2_1, torch.ones(node2.shape))
 
+    def test_set_tensor_from_paramnode_then_stack(self):
+        net = tk.TensorNetwork()
+        
+        # First ParamNode with its own tensor
+        node1 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'batch', 'right'),
+                             name='node1',
+                             network=net,
+                             init_method='randn')
+        
+        # Second ParamNode uses tensor from node1
+        node2 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'batch', 'right'),
+                             name='node2',
+                             network=net)
+        node2.set_tensor_from(node1)
+        
+        # Stack with auto_stack moves memory of node1 to the stack,
+        # but node2 still makes reference to node1
+        stack = tk.stack([node1])
+        
+        assert node1._tensor_info['node_ref'] == stack
+        assert node2._tensor_info['node_ref'] == node1
+        
+        assert node1.tensor_address() == stack.name
+        
+        # NOTE: Be aware of this "undesired" behaviour
+        assert node2.tensor_address() == None  #node1's address
+
+
 class TestMoveToNetwork:
 
     def test_change_network(self):

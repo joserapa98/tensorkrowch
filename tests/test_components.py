@@ -1628,12 +1628,12 @@ class TestConnect:
         assert node4['right'].is_attached_to(node3)
 
         # Reattach a copy of the edges
-        node4.reattach_edges(True)
+        node4.reattach_edges(override=True)
 
         assert node4['right'].is_attached_to(node4)
         assert node4['right'].is_attached_to(node3)
 
-        # All edges connected to node4 are alse changed in its neighbours
+        # All edges connected to node4 are also changed in its neighbours
         assert node4['right'] == node3['left']
         assert node3['left'].is_attached_to(node4)
         assert node3['left'].is_attached_to(node3)
@@ -1646,6 +1646,110 @@ class TestConnect:
 
         assert node3['left'].is_dangling()
         assert node3['left'].is_attached_to(node3)
+    
+    def test_reattach_original_disconnect_two_resultants(self):
+        net = tk.TensorNetwork()
+        node1 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'input', 'right'),
+                             name='node1',
+                             init_method='randn',
+                             network=net)
+        node2 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'input', 'right'),
+                             name='node2',
+                             init_method='randn',
+                             network=net)
+        node3 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'input', 'right'),
+                             name='node3',
+                             init_method='randn',
+                             network=net)
+        node4 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'input', 'right'),
+                             name='node4',
+                             init_method='randn',
+                             network=net)
+        node1['right'] ^ node2['left']
+        node2['right'] ^ node3['left']
+        node3['right'] ^ node4['left']
+
+        node5 = node1 @ node2
+        node6 = node3 @ node4
+
+        assert node5['right'].is_attached_to(node2)
+        assert node5['right'].is_attached_to(node3)
+        
+        assert node6['left'].is_attached_to(node2)
+        assert node6['left'].is_attached_to(node3)
+        
+        assert node5['right'] == node6['left']
+
+        # Reattach a copy of the edges
+        node5.reattach_edges(override=True)
+
+        assert node5['right'].is_attached_to(node5)
+        assert node5['right'].is_attached_to(node3)
+
+        # All edges connected to node5 are also changed in its neighbours
+        assert node5['right'] == node3['left']
+        assert node3['left'].is_attached_to(node5)
+        assert node3['left'].is_attached_to(node3)
+        
+        # However, node6 is not seen as a neighbour, and still has the old edge
+        assert node5['right'] != node6['left']
+        assert node6['left'].is_attached_to(node2)
+        assert node6['left'].is_attached_to(node3)
+
+        # If we disconnect node4 from node3, now both nodes get new
+        # dangling edges
+        node5['right'].disconnect()
+        assert node5['right'].is_dangling()
+        assert node5['right'].is_attached_to(node5)
+
+        assert node3['left'].is_dangling()
+        assert node3['left'].is_attached_to(node3)
+        
+        # Again, node6 still doesn't see the disconnection
+        assert node6['left'].is_attached_to(node2)
+        assert node6['left'].is_attached_to(node3)
+    
+    def test_reattach_one_edge(self):
+        net = tk.TensorNetwork()
+        node1 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'input', 'right'),
+                             name='node1',
+                             init_method='randn',
+                             network=net)
+        node2 = tk.ParamNode(shape=(2, 2),
+                             axes_names=('left', 'right'),
+                             name='node2',
+                             init_method='randn',
+                             network=net)
+        node3 = tk.ParamNode(shape=(5,),
+                             axes_names=('input',),
+                             name='node3',
+                             init_method='randn',
+                             network=net)
+        node1['right'] ^ node2['left']
+
+        node4 = node1 @ node2
+
+        assert node4['right'] == node2['right']
+
+        # Reattach a copy of the edges
+        node4.reattach_edges(axis='input', override=False)
+
+        assert node4['right'] == node2['right']
+        
+        assert node4['input'].is_attached_to(node4)
+        assert node4['input'].is_dangling()
+        
+        # Now we can connect resultant node to node3 at axis "input"
+        node4['input'] ^ node3['input']
+        
+        assert node4['input'].is_attached_to(node4)
+        assert node4['input'].is_attached_to(node3)
+        assert node4['input'] == node3['input']
 
 
 class TestChangeSizeEdge:

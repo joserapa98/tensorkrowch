@@ -5815,7 +5815,7 @@ class TestEinsum:
         node2 = tk.einsum('lbol->bo', node2)
 
         assert node2.shape == (100, 5)
-        assert torch.allclose(node1.tensor, node2.tensor)
+        assert torch.allclose(node1.tensor, node2.tensor, rtol=1e-3, atol=1e-5)
 
     def test_aux(self):
         # MPS

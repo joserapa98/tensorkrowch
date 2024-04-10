@@ -1164,7 +1164,10 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         """Returns copy tensor (ones in the "diagonal", zeros elsewhere)."""
         copy_tensor = torch.zeros(shape, device=device)
         rank = len(shape)
-        i = torch.arange(min(shape), device=device)
+        if rank <= 1:
+            i = 0
+        else:
+            i = torch.arange(min(shape), device=device)
         copy_tensor[(i,) * rank] = 1.
         return copy_tensor
 

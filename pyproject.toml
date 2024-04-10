@@ -19,6 +19,7 @@ keywords = [
     "tensor network",
     "tensor networks",
     "mps",
+    "mpo",
     "peps",
     "quantum"
 ]

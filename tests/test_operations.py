@@ -51,6 +51,35 @@ class TestPermute:
                node[1]._nodes[node.is_node1('left')]
 
         assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
+        
+        # Repeat
+        permuted_node = node.permute((0, 2, 1))
+    
+    def test_permute_node_from_list(self):
+        node = tk.Node(shape=(2, 5, 2),
+                       axes_names=('left', 'input', 'right'),
+                       name='node',
+                       init_method='randn')
+        permuted_node = node.permute([0, 2, 1])
+
+        assert permuted_node['left']._nodes[permuted_node.is_node1('left')] == \
+               node['left']._nodes[node.is_node1('left')]
+        assert permuted_node['input']._nodes[permuted_node.is_node1('left')] == \
+               node['input']._nodes[node.is_node1('left')]
+        assert permuted_node['right']._nodes[permuted_node.is_node1('left')] == \
+               node['right']._nodes[node.is_node1('left')]
+
+        assert permuted_node[0]._nodes[permuted_node.is_node1('left')] == \
+               node[0]._nodes[node.is_node1('left')]
+        assert permuted_node[1]._nodes[permuted_node.is_node1('left')] == \
+               node[2]._nodes[node.is_node1('left')]
+        assert permuted_node[2]._nodes[permuted_node.is_node1('left')] == \
+               node[1]._nodes[node.is_node1('left')]
+
+        assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
+        
+        # Repeat
+        permuted_node = node.permute([0, 2, 1])
 
     def test_permute_node_in_place(self):
         node = tk.Node(shape=(2, 5, 2),

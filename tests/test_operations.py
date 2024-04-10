@@ -5533,7 +5533,53 @@ class TestStackUnbind:
         # Cannot unbind a node that is not a (Param)StackNode
         with pytest.raises(TypeError):
             result = tk.unbind(node)
-
+    
+    def test_unbind_stack_rank_0_tensors(self):
+        net = tk.TensorNetwork()
+        net.auto_unbind = False
+        
+        nodes = []
+        for _ in range(10):
+            node = tk.Node(shape=tuple(),
+                           axes_names=tuple(),
+                           network=net,
+                           init_method='randn')
+            nodes.append(node)
+        
+        stack = tk.stack(nodes)
+        result = tk.unbind(stack)
+        assert len(result) == len(nodes)
+        for node in result:
+            assert node.shape == tuple()
+            assert node.tensor.shape == tuple()
+    
+    def test_unbind_stack_rank_0_tensors_auto_unbind(self):
+        net = tk.TensorNetwork()
+        net.auto_unbind = True
+        
+        nodes = []
+        for _ in range(10):
+            node = tk.Node(shape=tuple(),
+                           axes_names=tuple(),
+                           network=net,
+                           init_method='randn')
+            nodes.append(node)
+        
+        stack = tk.stack(nodes)
+        result = tk.unbind(stack)
+        assert len(result) == len(nodes)
+        for node in result:
+            assert node.shape == tuple()
+            assert node.tensor.shape == tuple()
+        
+        for _ in range(10):
+            stack = tk.stack(result)
+            result = tk.unbind(stack)
+            assert len(result) == len(nodes)
+            for node in result:
+                assert node.shape == tuple()
+                assert node.tensor.shape == tuple()
+    
     def test_batches_auto_unbind(self):
         net = tk.TensorNetwork()
         net.auto_stack = False

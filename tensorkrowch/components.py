@@ -4320,9 +4320,8 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
         if isinstance(node.tensor, Parameter):
             if node._tensor_info['address'] is not None:
                 if not hasattr(self, 'param_' + node._name):
-                    self.register_parameter(
-                        'param_' + node._name,
-                        self._memory_nodes[node._name])
+                    self.register_parameter('param_' + node._name,
+                                            self._memory_nodes[node._name])
                 else:
                     # Nodes names are never repeated, so it is likely that
                     # this case will never occur
@@ -4421,10 +4420,9 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
 
         # Node is ParamNode and tensor is not None
         if isinstance(node.tensor, Parameter):
-            if not hasattr(self, '_'.join(['param', node._name])):
-                self.register_parameter(
-                    '_'.join(['param', node._name]),
-                    self._memory_nodes[node._name])
+            if not hasattr(self, 'param_' + node._name,):
+                self.register_parameter( 'param_' + node._name,
+                                        self._memory_nodes[node._name])
             else:
                 # Nodes names are never repeated, so it is likely that
                 # this case will never occur

@@ -340,7 +340,7 @@ title="Source repository"
 <span class="c1">###############################################################################</span>
 
 
-<div class="viewcode-block" id="Operation"><a class="viewcode-back" href="../../operations.html#tensorkrowch.Operation">[docs]</a><span class="k">class</span> <span class="nc">Operation</span><span class="p">:</span>
+<div class="viewcode-block" id="Operation"><a class="viewcode-back" href="../../operations.html#tensorkrowch.Operation">[docs]</a><span class="k">class</span> <span class="nc">Operation</span><span class="p">:</span>  <span class="c1"># MARK: Operation</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for node operations.</span>
 <span class="sd">    </span>
@@ -395,9 +395,10 @@ title="Source repository"
 <span class="c1">###############################################################################</span>
 
 <span class="c1">#################################   PERMUTE    ################################</span>
+<span class="c1"># MARK: permute</span>
 <span class="k">def</span> <span class="nf">_check_first_permute</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
                          <span class="n">axes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Successor</span><span class="p">]:</span>
-    <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">axes</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">axes</span><span class="p">))</span>
     <span class="n">successors</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_successors</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;permute&#39;</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">successors</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
@@ -423,7 +424,7 @@ title="Source repository"
 
     <span class="c1"># Create successor</span>
     <span class="n">net</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_network</span>
-    <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">axes</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">axes</span><span class="p">))</span>
     <span class="n">successor</span> <span class="o">=</span> <span class="n">Successor</span><span class="p">(</span><span class="n">node_ref</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">node_ref</span><span class="p">(),</span>
                           <span class="n">index</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">],</span>
                           <span class="n">child</span><span class="o">=</span><span class="n">new_node</span><span class="p">,</span>
@@ -613,6 +614,7 @@ title="Source repository"
 
 
 <span class="c1">##################################   TPROD    #################################</span>
+<span class="c1"># MARK: tprod</span>
 <span class="k">def</span> <span class="nf">_check_first_tprod</span><span class="p">(</span><span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
                        <span class="n">node2</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Successor</span><span class="p">]:</span>
     <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span>
@@ -757,6 +759,7 @@ title="Source repository"
 
 
 <span class="c1">###################################   MUL    ##################################</span>
+<span class="c1"># MARK: mul</span>
 <span class="k">def</span> <span class="nf">_check_first_mul</span><span class="p">(</span><span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
                      <span class="n">node2</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Successor</span><span class="p">]:</span>
     <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span>
@@ -890,6 +893,7 @@ title="Source repository"
 
 
 <span class="c1">###################################   ADD    ##################################</span>
+<span class="c1"># MARK: add</span>
 <span class="k">def</span> <span class="nf">_check_first_add</span><span class="p">(</span><span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
                      <span class="n">node2</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Successor</span><span class="p">]:</span>
     <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span>
@@ -1023,6 +1027,7 @@ title="Source repository"
 
 
 <span class="c1">###################################   SUB    ##################################</span>
+<span class="c1"># MARK: sub</span>
 <span class="k">def</span> <span class="nf">_check_first_sub</span><span class="p">(</span><span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
                      <span class="n">node2</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Successor</span><span class="p">]:</span>
     <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span>
@@ -1160,6 +1165,7 @@ title="Source repository"
 <span class="c1">###############################################################################</span>
 
 <span class="c1">##################################   SPLIT    #################################</span>
+<span class="c1"># MARK: split</span>
 <span class="k">def</span> <span class="nf">_check_first_split</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
                        <span class="n">node1_axes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">],</span>
                        <span class="n">node2_axes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">],</span>
@@ -1190,9 +1196,9 @@ title="Source repository"
                  <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">Node</span><span class="p">]:</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node1_axes</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node1_axes</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`node1_edges` should be list or tuple type&#39;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node2_axes</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node2_axes</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`node2_edges` should be list or tuple type&#39;</span><span class="p">)</span>
     
     <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node</span><span class="p">,</span>
@@ -1812,8 +1818,8 @@ title="Source repository"
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span> <span class="o">=</span> <span class="n">split</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">node1_axes</span><span class="p">,</span> <span class="n">node2_axes</span><span class="p">,</span>
                          <span class="n">mode</span><span class="p">,</span> <span class="n">side</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">cum_percentage</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">)</span>
-    <span class="n">node1</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">node2</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">node1</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">override</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">node2</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">override</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">node1</span><span class="o">.</span><span class="n">_unrestricted_set_tensor</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span>
     <span class="n">node2</span><span class="o">.</span><span class="n">_unrestricted_set_tensor</span><span class="p">(</span><span class="n">node2</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span>
 
@@ -2602,6 +2608,7 @@ title="Source repository"
 
 
 <span class="c1">################################   CONTRACT    ################################</span>
+<span class="c1"># MARK: contract_edges</span>
 <span class="k">def</span> <span class="nf">_check_first_contract_edges</span><span class="p">(</span><span class="n">edges</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Edge</span><span class="p">]],</span>
                                 <span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
                                 <span class="n">node2</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Successor</span><span class="p">]:</span>
@@ -3070,7 +3077,7 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; del nodeB</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">contract_edges_op</span><span class="p">([</span><span class="n">edge</span><span class="p">],</span> <span class="n">edge</span><span class="o">.</span><span class="n">node1</span><span class="p">,</span> <span class="n">edge</span><span class="o">.</span><span class="n">node2</span><span class="p">)</span>
-    <span class="n">result</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">result</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">override</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">result</span><span class="o">.</span><span class="n">_unrestricted_set_tensor</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span>
 
     <span class="c1"># Delete nodes (and their edges) from the TN</span>
@@ -3241,7 +3248,7 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; del nodeB</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">contract_between</span><span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span>
-    <span class="n">result</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">result</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">override</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">result</span><span class="o">.</span><span class="n">_unrestricted_set_tensor</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span>
 
     <span class="c1"># Delete nodes (and their edges) from the TN</span>
@@ -3318,6 +3325,7 @@ title="Source repository"
 
 
 <span class="c1">#####################################   STACK   ###############################</span>
+<span class="c1"># MARK: stack</span>
 <span class="k">def</span> <span class="nf">_check_first_stack</span><span class="p">(</span><span class="n">nodes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Successor</span><span class="p">]:</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">nodes</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`nodes` should be a non-empty sequence of nodes&#39;</span><span class="p">)</span>
@@ -3340,7 +3348,7 @@ title="Source repository"
     <span class="n">stack_indices</span> <span class="o">=</span> <span class="p">[]</span>        <span class="c1"># In the case above, stack indices of each node in</span>
                               <span class="c1"># the reference node&#39;s memory</span>
 
-    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">AbstractNode</span><span class="p">)):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">AbstractNode</span><span class="p">)):</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`nodes` should be a list or tuple of AbstractNodes&#39;</span><span class="p">)</span>
 
     <span class="n">net</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">_network</span>
@@ -3368,15 +3376,19 @@ title="Source repository"
                     <span class="n">all_same_ref</span> <span class="o">=</span> <span class="kc">False</span>
                     <span class="n">node_ref_is_stack</span> <span class="o">=</span> <span class="kc">False</span>
                     <span class="k">continue</span>
-
-                <span class="n">stack_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+                
+                <span class="n">aux_index</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">aux_index</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                    <span class="n">stack_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">aux_index</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">stack_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">aux_index</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">all_same_ref</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="k">if</span> <span class="n">all_param</span> <span class="ow">and</span> <span class="n">node_ref_is_stack</span> <span class="ow">and</span> <span class="n">net</span><span class="o">.</span><span class="n">_auto_stack</span><span class="p">:</span>
         <span class="n">stack_node</span> <span class="o">=</span> <span class="n">ParamStackNode</span><span class="p">(</span><span class="n">nodes</span><span class="o">=</span><span class="n">nodes</span><span class="p">,</span>
-                                    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_stack&#39;</span><span class="p">,</span>
+                                    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_result&#39;</span><span class="p">,</span>
                                     <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">stack_node</span> <span class="o">=</span> <span class="n">StackNode</span><span class="o">.</span><span class="n">_create_resultant</span><span class="p">(</span><span class="n">nodes</span><span class="o">=</span><span class="n">nodes</span><span class="p">,</span>
@@ -3534,7 +3546,7 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;stack&quot;``. If this</span>
 <span class="sd">    operation returns a ``virtual`` :class:`ParamStackNode`, it will be called</span>
-<span class="sd">    ``&quot;virtual_stack&quot;``. See :class:AbstractNode` to learn about this **reserved</span>
+<span class="sd">    ``&quot;virtual_result&quot;``. See :class:AbstractNode` to learn about this **reserved</span>
 <span class="sd">    name**.  The node that keeps information about the :class:`Successor` is</span>
 <span class="sd">    ``nodes[0]``, the first stacked node.</span>
 
@@ -3560,6 +3572,7 @@ title="Source repository"
 
 
 <span class="c1">##################################   UNBIND   #################################</span>
+<span class="c1"># MARK: unbind</span>
 <span class="k">def</span> <span class="nf">_check_first_unbind</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">AbstractStackNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Successor</span><span class="p">]:</span>
     <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node</span><span class="p">,)</span>
     <span class="n">successors</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_successors</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;unbind&#39;</span><span class="p">)</span>
@@ -3589,7 +3602,13 @@ title="Source repository"
         <span class="k">else</span><span class="p">:</span>
             <span class="n">edges_lists</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">edge</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">))</span>
             <span class="n">node1_lists</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="kc">True</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">))</span>
-    <span class="n">lst</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">edges_lists</span><span class="p">)),</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">node1_lists</span><span class="p">))))</span>
+    
+    <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="n">lst</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span>
+                       <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">edges_lists</span><span class="p">)),</span>
+                       <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">node1_lists</span><span class="p">))))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">lst</span> <span class="o">=</span> <span class="p">[(</span><span class="n">t</span><span class="p">,</span> <span class="p">[],</span> <span class="p">[])</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tensors</span><span class="p">]</span>
 
     <span class="n">net</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_network</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">edges</span><span class="p">,</span> <span class="n">node1_list</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lst</span><span class="p">):</span>
@@ -3648,7 +3667,6 @@ title="Source repository"
                         <span class="n">index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="n">index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="n">max_dim</span> <span class="o">-</span> <span class="n">dim</span><span class="p">,</span> <span class="n">max_dim</span><span class="p">))</span>
-                <span class="n">new_node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
 
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">node_index</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span>
@@ -3673,7 +3691,7 @@ title="Source repository"
 
                 <span class="k">else</span><span class="p">:</span>
                     <span class="c1"># If node has the same shape as the original stack</span>
-                    <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="p">(</span><span class="n">max_dim</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span>
+                    <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="p">(</span><span class="n">max_dim</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span>
                                                            <span class="n">new_node</span><span class="o">.</span><span class="n">_shape</span><span class="p">)):</span>
                         <span class="k">if</span> <span class="n">new_node</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">_batch</span><span class="p">:</span>
                             <span class="c1"># Admit any size in batch edges</span>
@@ -3681,7 +3699,9 @@ title="Source repository"
                         <span class="k">else</span><span class="p">:</span>
                             <span class="n">index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="n">max_dim</span> <span class="o">-</span> <span class="n">dim</span><span class="p">,</span> <span class="n">max_dim</span><span class="p">))</span>
 
-                <span class="n">new_node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">new_node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
 
     <span class="c1"># Create successor</span>
     <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node</span><span class="p">,)</span>
@@ -3811,6 +3831,7 @@ title="Source repository"
 
 
 <span class="c1">##################################   EINSUM   #################################</span>
+<span class="c1"># MARK: einsum</span>
 <span class="k">def</span> <span class="nf">_check_first_einsum</span><span class="p">(</span><span class="n">string</span><span class="p">:</span> <span class="n">Text</span><span class="p">,</span>
                         <span class="o">*</span><span class="n">nodes</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Successor</span><span class="p">]:</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">nodes</span><span class="p">:</span>

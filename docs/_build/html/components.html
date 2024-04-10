@@ -745,10 +745,10 @@ data tensor from which each <code class="docutils literal notranslate"><span cla
 There should be at most one <code class="docutils literal notranslate"><span class="pre">&quot;stack_data_memory&quot;</span></code> in the network.
 To learn more about this, see <a class="reference internal" href="#tensorkrowch.TensorNetwork.set_data_nodes" title="tensorkrowch.TensorNetwork.set_data_nodes"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_data_nodes()</span></code></a> and
 <a class="reference internal" href="#tensorkrowch.TensorNetwork.add_data" title="tensorkrowch.TensorNetwork.add_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_data()</span></code></a>.</p></li>
-<li><p><strong>“virtual_stack”</strong>: Name of the <code class="docutils literal notranslate"><span class="pre">virtual</span></code> <a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a> that
+<li><p><strong>“virtual_result”</strong>: Name of the <code class="docutils literal notranslate"><span class="pre">virtual</span></code> <a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a> that
 results from stacking <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNodes</span></code></a> as the first
 operation in the network contraction, if <code class="docutils literal notranslate"><span class="pre">auto_stack</span></code> mode is set to
-<code class="docutils literal notranslate"><span class="pre">True</span></code>. There might be as much <code class="docutils literal notranslate"><span class="pre">&quot;virtual_stack&quot;</span></code> nodes as stacks are
+<code class="docutils literal notranslate"><span class="pre">True</span></code>. There might be as much <code class="docutils literal notranslate"><span class="pre">&quot;virtual_result&quot;</span></code> nodes as stacks are
 created from <code class="docutils literal notranslate"><span class="pre">ParamNodes</span></code>. To learn more about this, see
 <a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a>.</p></li>
 <li><p><strong>“virtual_uniform”</strong>: Name of the <code class="docutils literal notranslate"><span class="pre">virtual</span></code> <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> or
@@ -969,6 +969,12 @@ neighbours.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.AbstractNode.is_connected_to">
+<span class="sig-name descname"><span class="pre">is_connected_to</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.is_connected_to"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.is_connected_to" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns list of tuples of axes where the node is connected to <code class="docutils literal notranslate"><span class="pre">other</span></code></p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.get_axis">
 <span class="sig-name descname"><span class="pre">get_axis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axis</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.get_axis"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.get_axis" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns <a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><code class="xref py py-class docutils literal notranslate"><span class="pre">Axis</span></code></a> given its <code class="docutils literal notranslate"><span class="pre">name</span></code> or <code class="docutils literal notranslate"><span class="pre">num</span></code>.</p>
@@ -996,7 +1002,7 @@ to the node through it.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.reattach_edges">
-<span class="sig-name descname"><span class="pre">reattach_edges</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">override</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.reattach_edges"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.reattach_edges" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">reattach_edges</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.reattach_edges"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.reattach_edges" title="Permalink to this definition">#</a></dt>
 <dd><p>Substitutes current edges by copies of them that are attached to the node.
 It can happen that an edge is not attached to the node if it is the result
 of an <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operation</span></code></a> and, hence, it inherits edges from the operands.
@@ -1007,10 +1013,14 @@ replacing each previous <code class="docutils literal notranslate"><span class="
 to (de)parameterize nodes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>override</strong> (<em>bool</em>) – Boolean indicating if the new, reattached edges should also replace
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – The edge attached to this axis will be reattached. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, all
+edges will be reattached.</p></li>
+<li><p><strong>override</strong> (<em>bool</em>) – Boolean indicating if the new, reattached edges should also replace
 the corresponding edges in the node’s neighbours (<code class="docutils literal notranslate"><span class="pre">True</span></code>). Otherwise,
 the neighbours’ edges will be pointing to the original nodes from which
-the current node inherits its edges (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p>
+the current node inherits its edges (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+</ul>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
@@ -1929,6 +1939,21 @@ copy of the tensor (<code class="docutils literal notranslate"><span class="pre"
 </div>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.Node.change_type">
+<span class="sig-name descname"><span class="pre">change_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">leaf</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">virtual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#Node.change_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.Node.change_type" title="Permalink to this definition">#</a></dt>
+<dd><p>Changes node type, only if node is not a resultant node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>leaf</strong> (<em>bool</em>) – Boolean indicating if the new node type is <code class="docutils literal notranslate"><span class="pre">leaf</span></code>.</p></li>
+<li><p><strong>data</strong> (<em>bool</em>) – Boolean indicating if the new node type is <code class="docutils literal notranslate"><span class="pre">data</span></code>.</p></li>
+<li><p><strong>virtual</strong> (<em>bool</em>) – Boolean indicating if the new node type is <code class="docutils literal notranslate"><span class="pre">virtual</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 </section>
@@ -2178,6 +2203,20 @@ param-node (<code class="docutils literal notranslate"><span class="pre">True</s
 </div>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.ParamNode.change_type">
+<span class="sig-name descname"><span class="pre">change_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">leaf</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">virtual</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#ParamNode.change_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamNode.change_type" title="Permalink to this definition">#</a></dt>
+<dd><p>Changes node type, only if node is not a resultant node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>leaf</strong> (<em>bool</em>) – Boolean indicating if the new node type is <code class="docutils literal notranslate"><span class="pre">leaf</span></code>.</p></li>
+<li><p><strong>virtual</strong> (<em>bool</em>) – Boolean indicating if the new node type is <code class="docutils literal notranslate"><span class="pre">virtual</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 </section>
@@ -2293,6 +2332,13 @@ that axis.</p>
 is the list with the <code class="docutils literal notranslate"><span class="pre">node1</span></code> attribute of that axis for all nodes.</p>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.StackNode.reconnect">
+<span class="sig-name descname"><span class="pre">reconnect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#StackNode.reconnect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.StackNode.reconnect" title="Permalink to this definition">#</a></dt>
+<dd><p>Re-connects the <code class="docutils literal notranslate"><span class="pre">StackNode</span></code> to another <code class="docutils literal notranslate"><span class="pre">(Param)StackNode</span></code>, in the
+axes where the original stacked nodes were already connected.</p>
+</dd></dl>
+
 </dd></dl>
 
 </section>
@@ -2311,7 +2357,7 @@ reference to a slide of a greater <code class="docutils literal notranslate"><sp
 attribute of the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>). Hence, that
 first <a class="reference internal" href="operations.html#tensorkrowch.stack" title="tensorkrowch.stack"><code class="xref py py-func docutils literal notranslate"><span class="pre">stack()</span></code></a> is never actually computed.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">ParamStackNode</span></code> that results from this process uses the reserved name
-<code class="docutils literal notranslate"><span class="pre">&quot;virtual_stack&quot;</span></code>, as explained <a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">here</span></code></a>. This node
+<code class="docutils literal notranslate"><span class="pre">&quot;virtual_result&quot;</span></code>, as explained <a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">here</span></code></a>. This node
 stores the tensor from which all the stacked <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNodes</span></code></a>
 just take one <cite>slice</cite>.</p>
 <p>This behaviour occurs when stacking param-nodes via <a class="reference internal" href="operations.html#tensorkrowch.stack" title="tensorkrowch.stack"><code class="xref py py-func docutils literal notranslate"><span class="pre">stack()</span></code></a>, not when
@@ -2398,6 +2444,13 @@ that axis.</p>
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">node1_lists_dict</span></span><a class="headerlink" href="#tensorkrowch.ParamStackNode.node1_lists_dict" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns dictionary where the keys are the axes. For each axis, the value
 is the list with the <code class="docutils literal notranslate"><span class="pre">node1</span></code> attribute of that axis for all nodes.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.ParamStackNode.reconnect">
+<span class="sig-name descname"><span class="pre">reconnect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#ParamStackNode.reconnect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.ParamStackNode.reconnect" title="Permalink to this definition">#</a></dt>
+<dd><p>Re-connects the <code class="docutils literal notranslate"><span class="pre">StackNode</span></code> to another <code class="docutils literal notranslate"><span class="pre">(Param)StackNode</span></code>, in the
+axes where the original stacked nodes were already connected.</p>
 </dd></dl>
 
 </dd></dl>
@@ -3324,7 +3377,7 @@ edges from <code class="docutils literal notranslate"><span class="pre">virtual<
 <dt class="sig sig-object py" id="tensorkrowch.TensorNetwork.auto_stack">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">auto_stack</span></span><a class="headerlink" href="#tensorkrowch.TensorNetwork.auto_stack" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns boolean indicating whether <code class="docutils literal notranslate"><span class="pre">auto_stack</span></code> mode is active. By
-default, it is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+default, it is <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
 <p>This mode indicates whether the operation <a class="reference internal" href="operations.html#tensorkrowch.stack" title="tensorkrowch.stack"><code class="xref py py-func docutils literal notranslate"><span class="pre">stack()</span></code></a> can take control
 of the memory management of the network to skip some steps in future
 computations. If <code class="docutils literal notranslate"><span class="pre">auto_stack</span></code> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code> and a collection of
@@ -3599,7 +3652,7 @@ is created when <a class="reference internal" href="operations.html#tensorkrowch
 node in the network from which all <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes take their tensor,
 this is not modified.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">virtual</span></code>: Only virtual nodes created in <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">operations</span></code></a> are <a class="reference internal" href="#tensorkrowch.TensorNetwork.delete_node" title="tensorkrowch.TensorNetwork.delete_node"><code class="xref py py-meth docutils literal notranslate"><span class="pre">deleted</span></code></a>. This only includes
-nodes using the reserved name <code class="docutils literal notranslate"><span class="pre">&quot;virtual_stack&quot;</span></code>.</p></li>
+nodes using the reserved name <code class="docutils literal notranslate"><span class="pre">&quot;virtual_result&quot;</span></code>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">resultant</span></code>: These nodes are <a class="reference internal" href="#tensorkrowch.TensorNetwork.delete_node" title="tensorkrowch.TensorNetwork.delete_node"><code class="xref py py-meth docutils literal notranslate"><span class="pre">deleted</span></code></a> from the
 network.</p></li>
 </ul>

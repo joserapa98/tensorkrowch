@@ -207,7 +207,7 @@ images::
             stack_input = tk.stack(self.input_nodes)
             stack_data = tk.stack(list(self.data_nodes.values()))
 
-            stack_input['input'] ^ stack_data['feature']
+            stack_input ^ stack_data
             stack_result = stack_input @ stack_data
 
             stack_result = tk.unbind(stack_result)
@@ -231,7 +231,7 @@ Now we can instantiate our model::
 Since our model is a subclass of ``torch.nn.Module``, we can take advantage of
 its methods. For instance, we can easily send the model to the GPU::
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     mps = mps.to(device)
 
 Note that only the ``ParamNodes`` are parameters of the model. Thus if your
@@ -313,6 +313,7 @@ already comes with a handful of widely-known models that you can use:
 
 * :class:`MPS`
 * :class:`MPSLayer`
+* :class:`MPO`
 * :class:`PEPS`
 * :class:`Tree`
 

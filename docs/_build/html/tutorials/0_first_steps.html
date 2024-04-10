@@ -572,17 +572,19 @@ also serve to test your installation of <code class="docutils literal notranslat
 <h3>4. Instantiate the Tensor Network Model<a class="headerlink" href="#instantiate-the-tensor-network-model" title="Permalink to this headline">#</a></h3>
 <p>We are going to train a Matrix Product State (MPS) model. <code class="docutils literal notranslate"><span class="pre">TensorKrowch</span></code> comes
 with some built-in models like <code class="docutils literal notranslate"><span class="pre">MPSLayer</span></code>, which is a MPS with one output node
-with a dangling edge. Hence, when the whole tensor netwok gets contracted, we
+with a dangling edge. Hence, when the whole tensor network gets contracted, we
 obtain a vector with the probabilities that an image belongs to one of the 10
 possible classes.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Check if GPU is available</span>
 <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
 
 <span class="c1"># Instantiate model</span>
-<span class="n">mps</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MPSLayer</span><span class="p">(</span><span class="n">n_features</span><span class="o">=</span><span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+<span class="n">mps</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MPSLayer</span><span class="p">(</span><span class="n">n_features</span><span class="o">=</span><span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
                          <span class="n">in_dim</span><span class="o">=</span><span class="n">in_dim</span><span class="p">,</span>
                          <span class="n">out_dim</span><span class="o">=</span><span class="n">out_dim</span><span class="p">,</span>
-                         <span class="n">bond_dim</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">)</span>
+                         <span class="n">bond_dim</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">,</span>
+                         <span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;randn_eye&#39;</span><span class="p">,</span>
+                         <span class="n">std</span><span class="o">=</span><span class="mf">1e-9</span><span class="p">)</span>
 
 <span class="c1"># Send model to GPU</span>
 <span class="n">mps</span> <span class="o">=</span> <span class="n">mps</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
@@ -664,16 +666,16 @@ possible classes.</p>
           <span class="sa">f</span><span class="s1">&#39;Train. Acc.: </span><span class="si">{</span><span class="n">running_train_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
           <span class="sa">f</span><span class="s1">&#39;Test Acc.: </span><span class="si">{</span><span class="n">running_test_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 
-<span class="c1"># * Epoch 1: Train. Loss: 0.9456, Train. Acc.: 0.6752, Test Acc.: 0.8924</span>
-<span class="c1"># * Epoch 2: Train. Loss: 0.2921, Train. Acc.: 0.9122, Test Acc.: 0.9360</span>
-<span class="c1"># * Epoch 3: Train. Loss: 0.2066, Train. Acc.: 0.9378, Test Acc.: 0.9443</span>
-<span class="c1"># * Epoch 4: Train. Loss: 0.1642, Train. Acc.: 0.9502, Test Acc.: 0.9595</span>
-<span class="c1"># * Epoch 5: Train. Loss: 0.1317, Train. Acc.: 0.9601, Test Acc.: 0.9632</span>
-<span class="c1"># * Epoch 6: Train. Loss: 0.1135, Train. Acc.: 0.9654, Test Acc.: 0.9655</span>
-<span class="c1"># * Epoch 7: Train. Loss: 0.1046, Train. Acc.: 0.9687, Test Acc.: 0.9669</span>
-<span class="c1"># * Epoch 8: Train. Loss: 0.0904, Train. Acc.: 0.9720, Test Acc.: 0.9723</span>
-<span class="c1"># * Epoch 9: Train. Loss: 0.0836, Train. Acc.: 0.9740, Test Acc.: 0.9725</span>
-<span class="c1"># * Epoch 10: Train. Loss: 0.0751, Train. Acc.: 0.9764, Test Acc.: 0.9748</span>
+<span class="c1"># * Epoch 1: Train. Loss: 1.1955, Train. Acc.: 0.5676, Test Acc.: 0.8820</span>
+<span class="c1"># * Epoch 2: Train. Loss: 0.3083, Train. Acc.: 0.9053, Test Acc.: 0.9371</span>
+<span class="c1"># * Epoch 3: Train. Loss: 0.1990, Train. Acc.: 0.9396, Test Acc.: 0.9509</span>
+<span class="c1"># * Epoch 4: Train. Loss: 0.1573, Train. Acc.: 0.9526, Test Acc.: 0.9585</span>
+<span class="c1"># * Epoch 5: Train. Loss: 0.1308, Train. Acc.: 0.9600, Test Acc.: 0.9621</span>
+<span class="c1"># * Epoch 6: Train. Loss: 0.1123, Train. Acc.: 0.9668, Test Acc.: 0.9625</span>
+<span class="c1"># * Epoch 7: Train. Loss: 0.0998, Train. Acc.: 0.9696, Test Acc.: 0.9677</span>
+<span class="c1"># * Epoch 8: Train. Loss: 0.0913, Train. Acc.: 0.9721, Test Acc.: 0.9729</span>
+<span class="c1"># * Epoch 9: Train. Loss: 0.0820, Train. Acc.: 0.9743, Test Acc.: 0.9736</span>
+<span class="c1"># * Epoch 10: Train. Loss: 0.0728, Train. Acc.: 0.9775, Test Acc.: 0.9734</span>
 </pre></div>
 </div>
 </section>
@@ -689,8 +691,8 @@ possible classes.</p>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Nº params:     </span><span class="si">{</span><span class="n">n_params</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Memory module: </span><span class="si">{</span><span class="n">memory</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="o">**</span><span class="mi">2</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1"> MB&#39;</span><span class="p">)</span>  <span class="c1"># MegaBytes</span>
 
-<span class="c1"># Nº params:     235660</span>
-<span class="c1"># Memory module: 0.8990 MB</span>
+<span class="c1"># Nº params:     236220</span>
+<span class="c1"># Memory module: 0.9011 MB</span>
 </pre></div>
 </div>
 <p>To prune the model, we take the <strong>canonical form</strong> of the <code class="docutils literal notranslate"><span class="pre">MPSLayer</span></code>. In this
@@ -699,10 +701,19 @@ cutting off the least singular values, we are <cite>pruning</cite> the network, 
 that we are losing a lot of uninformative (useless) parameters.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Canonicalize SVD</span>
 <span class="c1"># ----------------</span>
-<span class="n">mps</span><span class="o">.</span><span class="n">canonicalize</span><span class="p">(</span><span class="n">cum_percentage</span><span class="o">=</span><span class="mf">0.98</span><span class="p">)</span>
-<span class="n">mps</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">in_dim</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">canonicalize</span><span class="p">(</span><span class="n">cum_percentage</span><span class="o">=</span><span class="mf">0.99</span><span class="p">)</span>
+
+<span class="c1"># Number of parametrs</span>
+<span class="n">n_params</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">memory</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">mps</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
+    <span class="n">n_params</span> <span class="o">+=</span> <span class="n">p</span><span class="o">.</span><span class="n">nelement</span><span class="p">()</span>
+    <span class="n">memory</span> <span class="o">+=</span> <span class="n">p</span><span class="o">.</span><span class="n">nelement</span><span class="p">()</span> <span class="o">*</span> <span class="n">p</span><span class="o">.</span><span class="n">element_size</span><span class="p">()</span>  <span class="c1"># Bytes</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Nº params:     </span><span class="si">{</span><span class="n">n_params</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Memory module: </span><span class="si">{</span><span class="n">memory</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="o">**</span><span class="mi">2</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1"> MB</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>  <span class="c1"># MegaBytes</span>
 
 <span class="c1"># New test accuracy</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">in_dim</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
 <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
     <span class="n">running_acc</span> <span class="o">=</span> <span class="mf">0.0</span>
 
@@ -719,19 +730,10 @@ that we are losing a lot of uninformative (useless) parameters.</p>
 
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Test Acc.: </span><span class="si">{</span><span class="n">running_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
-<span class="c1"># Number of parametrs</span>
-<span class="n">n_params</span> <span class="o">=</span> <span class="mi">0</span>
-<span class="n">memory</span> <span class="o">=</span> <span class="mi">0</span>
-<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">mps</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
-    <span class="n">n_params</span> <span class="o">+=</span> <span class="n">p</span><span class="o">.</span><span class="n">nelement</span><span class="p">()</span>
-    <span class="n">memory</span> <span class="o">+=</span> <span class="n">p</span><span class="o">.</span><span class="n">nelement</span><span class="p">()</span> <span class="o">*</span> <span class="n">p</span><span class="o">.</span><span class="n">element_size</span><span class="p">()</span>  <span class="c1"># Bytes</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Nº params:     </span><span class="si">{</span><span class="n">n_params</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Memory module: </span><span class="si">{</span><span class="n">memory</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="o">**</span><span class="mi">2</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1"> MB</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>  <span class="c1"># MegaBytes</span>
+<span class="c1"># Nº params:     161204</span>
+<span class="c1"># Memory module: 0.6149 MB</span>
 
-<span class="c1"># Test Acc.: 0.9194</span>
-
-<span class="c1"># Nº params:     150710</span>
-<span class="c1"># Memory module: 0.5749 MB</span>
+<span class="c1"># Test Acc.: 0.9400</span>
 </pre></div>
 </div>
 <p>We could continue training to improve performance after pruning, and pruning
@@ -786,13 +788,13 @@ again, until we reach an <cite>equilibrium</cite> point:</p>
           <span class="sa">f</span><span class="s1">&#39;Train. Acc.: </span><span class="si">{</span><span class="n">running_train_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
           <span class="sa">f</span><span class="s1">&#39;Test Acc.: </span><span class="si">{</span><span class="n">running_test_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 
-<span class="c1"># * Epoch 1: Train. Loss: 0.1018, Train. Acc.: 0.9684, Test Acc.: 0.9693</span>
-<span class="c1"># * Epoch 2: Train. Loss: 0.0815, Train. Acc.: 0.9745, Test Acc.: 0.9699</span>
-<span class="c1"># * Epoch 3: Train. Loss: 0.0716, Train. Acc.: 0.9777, Test Acc.: 0.9721</span>
+<span class="c1"># * Epoch 1: Train. Loss: 0.0983, Train. Acc.: 0.9700, Test Acc.: 0.9738</span>
+<span class="c1"># * Epoch 2: Train. Loss: 0.0750, Train. Acc.: 0.9768, Test Acc.: 0.9743</span>
+<span class="c1"># * Epoch 3: Train. Loss: 0.0639, Train. Acc.: 0.9793, Test Acc.: 0.9731</span>
 </pre></div>
 </div>
-<p>After all the pruning an re-training, we have reduced around 36% of the total
-amount of parameters losing less than 0.3% in accuracy.</p>
+<p>After all the pruning an re-training, we have reduced around 32% of the total
+amount of parameters without losing accuracy.</p>
 </section>
 </section>
 </section>

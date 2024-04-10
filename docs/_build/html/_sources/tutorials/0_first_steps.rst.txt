@@ -127,7 +127,7 @@ Put **MNIST** into ``DataLoaders``::
 
 We are going to train a Matrix Product State (MPS) model. ``TensorKrowch`` comes
 with some built-in models like ``MPSLayer``, which is a MPS with one output node
-with a dangling edge. Hence, when the whole tensor netwok gets contracted, we
+with a dangling edge. Hence, when the whole tensor network gets contracted, we
 obtain a vector with the probabilities that an image belongs to one of the 10
 possible classes.
 
@@ -137,10 +137,12 @@ possible classes.
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Instantiate model
-    mps = tk.models.MPSLayer(n_features=image_size[0] * image_size[1],
+    mps = tk.models.MPSLayer(n_features=image_size[0] * image_size[1] + 1,
                              in_dim=in_dim,
                              out_dim=out_dim,
-                             bond_dim=bond_dim)
+                             bond_dim=bond_dim,
+                             init_method='randn_eye',
+                             std=1e-9)
 
     # Send model to GPU
     mps = mps.to(device)
@@ -225,16 +227,16 @@ We use a common training loop used when training neural networks in ``PyTorch``:
               f'Train. Acc.: {running_train_acc / num_batches["train"]:.4f}, '
               f'Test Acc.: {running_test_acc / num_batches["test"]:.4f}')
 
-    # * Epoch 1: Train. Loss: 0.9456, Train. Acc.: 0.6752, Test Acc.: 0.8924
-    # * Epoch 2: Train. Loss: 0.2921, Train. Acc.: 0.9122, Test Acc.: 0.9360
-    # * Epoch 3: Train. Loss: 0.2066, Train. Acc.: 0.9378, Test Acc.: 0.9443
-    # * Epoch 4: Train. Loss: 0.1642, Train. Acc.: 0.9502, Test Acc.: 0.9595
-    # * Epoch 5: Train. Loss: 0.1317, Train. Acc.: 0.9601, Test Acc.: 0.9632
-    # * Epoch 6: Train. Loss: 0.1135, Train. Acc.: 0.9654, Test Acc.: 0.9655
-    # * Epoch 7: Train. Loss: 0.1046, Train. Acc.: 0.9687, Test Acc.: 0.9669
-    # * Epoch 8: Train. Loss: 0.0904, Train. Acc.: 0.9720, Test Acc.: 0.9723
-    # * Epoch 9: Train. Loss: 0.0836, Train. Acc.: 0.9740, Test Acc.: 0.9725
-    # * Epoch 10: Train. Loss: 0.0751, Train. Acc.: 0.9764, Test Acc.: 0.9748
+    # * Epoch 1: Train. Loss: 1.1955, Train. Acc.: 0.5676, Test Acc.: 0.8820
+    # * Epoch 2: Train. Loss: 0.3083, Train. Acc.: 0.9053, Test Acc.: 0.9371
+    # * Epoch 3: Train. Loss: 0.1990, Train. Acc.: 0.9396, Test Acc.: 0.9509
+    # * Epoch 4: Train. Loss: 0.1573, Train. Acc.: 0.9526, Test Acc.: 0.9585
+    # * Epoch 5: Train. Loss: 0.1308, Train. Acc.: 0.9600, Test Acc.: 0.9621
+    # * Epoch 6: Train. Loss: 0.1123, Train. Acc.: 0.9668, Test Acc.: 0.9625
+    # * Epoch 7: Train. Loss: 0.0998, Train. Acc.: 0.9696, Test Acc.: 0.9677
+    # * Epoch 8: Train. Loss: 0.0913, Train. Acc.: 0.9721, Test Acc.: 0.9729
+    # * Epoch 9: Train. Loss: 0.0820, Train. Acc.: 0.9743, Test Acc.: 0.9736
+    # * Epoch 10: Train. Loss: 0.0728, Train. Acc.: 0.9775, Test Acc.: 0.9734
 
 
 7. Prune the Model
@@ -251,8 +253,8 @@ Let's count how many parameters our model has before pruning::
     print(f'Nº params:     {n_params}')
     print(f'Memory module: {memory / 1024**2:.4f} MB')  # MegaBytes
 
-    # Nº params:     235660
-    # Memory module: 0.8990 MB
+    # Nº params:     236220
+    # Memory module: 0.9011 MB
 
 To prune the model, we take the **canonical form** of the ``MPSLayer``. In this
 process, many Singular Value Decompositions are performed in the network. By
@@ -263,10 +265,19 @@ that we are losing a lot of uninformative (useless) parameters.
 
     # Canonicalize SVD
     # ----------------
-    mps.canonicalize(cum_percentage=0.98)
-    mps.trace(torch.zeros(1, image_size[0] * image_size[1], in_dim).to(device))
+    mps.canonicalize(cum_percentage=0.99)
+
+    # Number of parametrs
+    n_params = 0
+    memory = 0
+    for p in mps.parameters():
+        n_params += p.nelement()
+        memory += p.nelement() * p.element_size()  # Bytes
+    print(f'Nº params:     {n_params}')
+    print(f'Memory module: {memory / 1024**2:.4f} MB\n')  # MegaBytes
 
     # New test accuracy
+    mps.trace(torch.zeros(1, image_size[0] * image_size[1], in_dim).to(device))
     with torch.no_grad():
         running_acc = 0.0
 
@@ -283,19 +294,10 @@ that we are losing a lot of uninformative (useless) parameters.
 
     print(f'Test Acc.: {running_acc / num_batches["test"]:.4f}\n')
 
-    # Number of parametrs
-    n_params = 0
-    memory = 0
-    for p in mps.parameters():
-        n_params += p.nelement()
-        memory += p.nelement() * p.element_size()  # Bytes
-    print(f'Nº params:     {n_params}')
-    print(f'Memory module: {memory / 1024**2:.4f} MB\n')  # MegaBytes
+    # Nº params:     161204
+    # Memory module: 0.6149 MB
 
-    # Test Acc.: 0.9194
-
-    # Nº params:     150710
-    # Memory module: 0.5749 MB
+    # Test Acc.: 0.9400
 
 We could continue training to improve performance after pruning, and pruning
 again, until we reach an `equilibrium` point::
@@ -350,9 +352,9 @@ again, until we reach an `equilibrium` point::
               f'Train. Acc.: {running_train_acc / num_batches["train"]:.4f}, '
               f'Test Acc.: {running_test_acc / num_batches["test"]:.4f}')
 
-    # * Epoch 1: Train. Loss: 0.1018, Train. Acc.: 0.9684, Test Acc.: 0.9693
-    # * Epoch 2: Train. Loss: 0.0815, Train. Acc.: 0.9745, Test Acc.: 0.9699
-    # * Epoch 3: Train. Loss: 0.0716, Train. Acc.: 0.9777, Test Acc.: 0.9721
+    # * Epoch 1: Train. Loss: 0.0983, Train. Acc.: 0.9700, Test Acc.: 0.9738
+    # * Epoch 2: Train. Loss: 0.0750, Train. Acc.: 0.9768, Test Acc.: 0.9743
+    # * Epoch 3: Train. Loss: 0.0639, Train. Acc.: 0.9793, Test Acc.: 0.9731
 
-After all the pruning an re-training, we have reduced around 36% of the total
-amount of parameters losing less than 0.3% in accuracy.
+After all the pruning an re-training, we have reduced around 32% of the total
+amount of parameters without losing accuracy.

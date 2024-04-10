@@ -57,7 +57,9 @@ Now we can define the model::
                     in_channels=7,
                     bond_dim=bond_dim,
                     out_channels=10,
-                    kernel_size=image_size[0] // 2)
+                    kernel_size=image_size[0] // 2,
+                    init_method='randn_eye',
+                    std=1e-9)
                 self.layers.append(mps)
             
             self.softmax = nn.Softmax(dim=1)
@@ -99,7 +101,7 @@ Now we set the parameters for the training algorithm and our model::
 
 Initialize our model and send it to the appropiate device::
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     cnn_snake = CNN_SnakeSBS(in_channels, bond_dim, image_size)
     cnn_snake = cnn_snake.to(device)
@@ -210,15 +212,15 @@ Let the training begin!
                   f'Train. Loss: {running_train_loss / num_batches["train"]:.4f}, '
                   f'Train. Acc.: {running_train_acc / num_batches["train"]:.4f}, '
                   f'Test Acc.: {running_test_acc / num_batches["test"]:.4f}')
-
-    # * Epoch 10: Train. Loss: 0.3824, Train. Acc.: 0.8599, Test Acc.: 0.8570
-    # * Epoch 20: Train. Loss: 0.3245, Train. Acc.: 0.8814, Test Acc.: 0.8758
-    # * Epoch 30: Train. Loss: 0.2924, Train. Acc.: 0.8915, Test Acc.: 0.8829
-    # * Epoch 40: Train. Loss: 0.2694, Train. Acc.: 0.8993, Test Acc.: 0.8884
-    # * Epoch 50: Train. Loss: 0.2463, Train. Acc.: 0.9078, Test Acc.: 0.8860
-    # * Epoch 60: Train. Loss: 0.2257, Train. Acc.: 0.9163, Test Acc.: 0.8958
-    # * Epoch 70: Train. Loss: 0.2083, Train. Acc.: 0.9219, Test Acc.: 0.8969
-    # * Epoch 80: Train. Loss: 0.2013, Train. Acc.: 0.9226, Test Acc.: 0.8979
+    
+    # * Epoch 10: Train. Loss: 0.3714, Train. Acc.: 0.8627, Test Acc.: 0.8502
+    # * Epoch 20: Train. Loss: 0.3149, Train. Acc.: 0.8851, Test Acc.: 0.8795
+    # * Epoch 30: Train. Loss: 0.2840, Train. Acc.: 0.8948, Test Acc.: 0.8848
+    # * Epoch 40: Train. Loss: 0.2618, Train. Acc.: 0.9026, Test Acc.: 0.8915
+    # * Epoch 50: Train. Loss: 0.2357, Train. Acc.: 0.9125, Test Acc.: 0.8901
+    # * Epoch 60: Train. Loss: 0.2203, Train. Acc.: 0.9174, Test Acc.: 0.9009
+    # * Epoch 70: Train. Loss: 0.2052, Train. Acc.: 0.9231, Test Acc.: 0.8984
+    # * Epoch 80: Train. Loss: 0.1878, Train. Acc.: 0.9284, Test Acc.: 0.9011
 
 Wow! That's almost 90% accuracy with just the first model we try!
 
@@ -227,13 +229,13 @@ Let's check how many parameters our model has::
     # Original number of parametrs
     n_params = 0
     memory = 0
-    for p in mps.parameters():
+    for p in cnn_snake.parameters():
         n_params += p.nelement()
         memory += p.nelement() * p.element_size()  # Bytes
     print(f'Nº params:     {n_params}')
     print(f'Memory module: {memory / 1024**2:.4f} MB')  # MegaBytes
 
-    # Nº params:     136940
+    # Nº params:     553186
     # Memory module: 0.5224 MB
 
 Since we are using tensor networks we can **prune** our model in 4 lines of
@@ -250,7 +252,21 @@ singular values, reducing the sizes of the edges in our network::
 
 Let's see how much our model has changed after pruning with **canonical forms**::
 
+    # Number of parametrs
+    n_params = 0
+    memory = 0
+    for p in mps.parameters():
+        n_params += p.nelement()
+        memory += p.nelement() * p.element_size()  # Bytes
+    print(f'Nº params:     {n_params}')
+    print(f'Memory module: {memory / 1024**2:.4f} MB\n')  # MegaBytes
+
     # New test accuracy
+    for mps in cnn_snake.layers:
+        # Since the nodes are different now, we have to re-trace
+        mps.trace(torch.zeros(
+            1, 7, image_size[0]//2, image_size[1]//2).to(device))
+
     with torch.no_grad():
         running_test_acc = 0.0
 
@@ -267,19 +283,7 @@ Let's see how much our model has changed after pruning with **canonical forms**:
 
     print(f'Test Acc.: {running_test_acc / num_batches["test"]:.4f}\n')
 
-    # Test Acc.: 0.8908
+    # Nº params:     499320
+    # Memory module: 1.9048 MB
 
-    # Number of parametrs
-    n_params = 0
-    memory = 0
-    for p in mps.parameters():
-        n_params += p.nelement()
-        memory += p.nelement() * p.element_size()  # Bytes
-    print(f'Nº params:     {n_params}')
-    print(f'Memory module: {memory / 1024**2:.4f} MB\n')  # MegaBytes
-
-    # Nº params:     110753
-    # Memory module: 0.4225 MB
-
-We have reduced around 20% of the total amount of parameters losing less than
-1% in accuracy.
+    # Test Acc.: 0.8968

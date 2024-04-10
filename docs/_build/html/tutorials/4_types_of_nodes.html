@@ -514,7 +514,7 @@ tensors:</p>
     <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor_address</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;virtual_uniform&#39;</span>
 </pre></div>
 </div>
-<p>giving the <code class="docutils literal notranslate"><span class="pre">uniform_node</span></code> the role of <code class="docutils literal notranslate"><span class="pre">virtual</span></code> makes more sense,
+<p>Giving the <code class="docutils literal notranslate"><span class="pre">uniform_node</span></code> the role of <code class="docutils literal notranslate"><span class="pre">virtual</span></code> makes more sense,
 since it is a node that one wouldn’t desire to see as a <code class="docutils literal notranslate"><span class="pre">leaf</span></code> node
 of the network. Instead it is <cite>hidden</cite>.</p>
 <p>In the next section you will see that the name <code class="docutils literal notranslate"><span class="pre">&quot;virtual_uniform&quot;</span></code> that
@@ -529,8 +529,7 @@ tensor networks.</p>
 They are intermediate nodes that (almost always) inherit edges from <code class="docutils literal notranslate"><span class="pre">leaf</span></code>
 and <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes, the ones that really form the network. These nodes can
 store their own tensors or use other node’s tensor. The names of the
-<code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes are the name of the <code class="docutils literal notranslate"><span class="pre">Operation</span></code> that originated
-it:</p>
+<code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes are the name of the <code class="docutils literal notranslate"><span class="pre">Operation</span></code> that originated it:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">node1</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
 <span class="n">node2</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
 <span class="n">node1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">^</span> <span class="n">node2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -580,11 +579,13 @@ this, see <a class="reference internal" href="../components.html#tensorkrowch.Te
 </pre></div>
 </div>
 </li>
-<li><p><strong>“virtual_stack”</strong>: Name of the <code class="docutils literal notranslate"><span class="pre">virtual</span></code> <a class="reference internal" href="../components.html#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a> that
+<li><p><strong>“virtual_result”</strong>: Name of the <code class="docutils literal notranslate"><span class="pre">virtual</span></code> <a class="reference internal" href="../components.html#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a> that
 results from stacking <code class="docutils literal notranslate"><span class="pre">ParamNodes</span></code> as the first operation in the network
 contraction, if <code class="docutils literal notranslate"><span class="pre">auto_stack</span></code> mode is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>. There might be as
-much <code class="docutils literal notranslate"><span class="pre">&quot;virtual_stack&quot;</span></code> nodes as stacks are created from <code class="docutils literal notranslate"><span class="pre">ParamNodes</span></code>. To
-learn more about this, see <a class="reference internal" href="../components.html#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a>.</p>
+much <code class="docutils literal notranslate"><span class="pre">&quot;virtual_result&quot;</span></code> nodes as stacks are created from <code class="docutils literal notranslate"><span class="pre">ParamNodes</span></code>. To
+learn more about this, see <a class="reference internal" href="../components.html#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a>. This special name can
+be used for all sort of <code class="docutils literal notranslate"><span class="pre">virtual</span></code> nodes that are not part of the network
+explicitly, but are required in some situations.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">net</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">()</span>
 <span class="n">net</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="kc">True</span>
 
@@ -599,7 +600,7 @@ learn more about this, see <a class="reference internal" href="../components.htm
 
 <span class="c1"># All ParamNodes use a slice of the tensor in stack_node</span>
 <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
-    <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor_address</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;virtual_stack&#39;</span>
+    <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor_address</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;virtual_result&#39;</span>
 </pre></div>
 </div>
 </li>

@@ -586,7 +586,8 @@ the stacks:</p>
 <span class="n">stack_node</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
 <span class="n">stack_data_node</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">data_nodes</span><span class="p">)</span>
 
-<span class="n">stack_node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack_data_node</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+<span class="c1"># reconnect stacks</span>
+<span class="n">stack_node</span> <span class="o">^</span> <span class="n">stack_data_node</span>
 </pre></div>
 </div>
 </li>
@@ -675,7 +676,7 @@ contractions, which will save us some time:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">stack_node</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
 <span class="n">stack_data_node</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">data_nodes</span><span class="p">)</span>
 
-<span class="n">stack_node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack_data_node</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+<span class="n">stack_node</span> <span class="o">^</span> <span class="n">stack_data_node</span>
 
 <span class="n">stack_result</span> <span class="o">=</span> <span class="n">stack_node</span> <span class="o">@</span> <span class="n">stack_data_node</span>
 <span class="n">unbind_result</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">stack_result</span><span class="p">)</span>

@@ -3452,6 +3452,44 @@ class TestContractEdge:
         assert node1.successors == dict()
         assert node2.successors == dict()
 
+    def test_contract_edge_in_place_with_trace(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node2 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        init_method='randn',
+                        network=net)
+        node1[0] ^ node2[0]
+        edge = node1[2] ^ node2[2]
+
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 0
+
+        assert node1.successors == dict()
+        assert node2.successors == dict()
+
+        # Contract edge
+        node3 = edge.contract_()  # Same as node1.contract_between_(node2, [2])
+        assert node3['left_0'] != node1['left']
+        assert node3['input_0'] != node1['input']
+        assert node3['left_1'] != node2['left']
+        assert node3['input_1'] != node2['input']
+        
+        assert node3.is_connected_to(node3)
+
+        assert len(net.nodes) == 1
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
+
+        assert node1.successors == dict()
+        assert node2.successors == dict()
+
 
 class TestContractBetween:
 

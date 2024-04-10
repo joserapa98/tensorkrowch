@@ -465,10 +465,9 @@ class AbstractNode(ABC):  # MARK: AbstractNode
             if not isinstance(shape, (tuple, list, Size)):
                 raise TypeError(
                     '`shape` should be tuple[int], list[int] or torch.Size type')
-            if isinstance(shape, (tuple, list)):
-                for i in shape:
-                    if not isinstance(i, int):
-                        raise TypeError('`shape` elements should be int type')
+            if isinstance(shape, Sequence):
+                if any([not isinstance(i, int) for i in shape]):
+                    raise TypeError('`shape` elements should be int type')
             aux_shape = Size(shape)
         else:
             aux_shape = tensor.shape
@@ -483,7 +482,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
             axes = [Axis(num=i, name=f'axis_{i}', node=self)
                     for i, _ in enumerate(aux_shape)]
         else:
-            if not isinstance(axes_names, (tuple, list)):
+            if not isinstance(axes_names, Sequence):
                 raise TypeError(
                     '`axes_names` should be tuple[str] or list[str] type')
             if len(axes_names) != len(aux_shape):
@@ -2751,12 +2750,10 @@ class StackNode(Node):  # MARK: StackNode
                  node1_list: Optional[List[bool]] = None) -> None:
 
         if nodes is not None:
-            if not isinstance(nodes, (list, tuple)):
+            if not isinstance(nodes, Sequence):
                 raise TypeError('`nodes` should be a list or tuple of nodes')
-            for node in nodes:
-                if isinstance(node, (StackNode, ParamStackNode)):
-                    raise TypeError(
-                        'Cannot create a stack using (Param)StackNode\'s')
+            if any([isinstance(node, (StackNode, ParamStackNode)) for node in nodes]):
+                raise TypeError('Cannot create a stack using (Param)StackNode\'s')
             if tensor is not None:
                 raise ValueError(
                     'If `nodes` are provided, `tensor` must not be given')
@@ -2980,13 +2977,10 @@ class ParamStackNode(ParamNode):  # MARK: ParamStackNode
                  virtual: bool = False,
                  override_node: bool = False) -> None:
 
-        if not isinstance(nodes, (list, tuple)):
+        if not isinstance(nodes, Sequence):
             raise TypeError('`nodes` should be a list or tuple of nodes')
-
-        for node in nodes:
-            if isinstance(node, (StackNode, ParamStackNode)):
-                raise TypeError(
-                    'Cannot create a stack using (Param)StackNode\'s')
+        if any([isinstance(node, (StackNode, ParamStackNode)) for node in nodes]):
+                raise TypeError('Cannot create a stack using (Param)StackNode\'s')
 
         for i in range(len(nodes[:-1])):
             if not isinstance(nodes[i], type(nodes[i + 1])):

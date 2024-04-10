@@ -912,9 +912,9 @@ def _split_first(node: AbstractNode,
                  rank: Optional[int] = None,
                  cum_percentage: Optional[float] = None,
                  cutoff: Optional[float] = None) -> Tuple[Node, Node]:
-    if not isinstance(node1_axes, (list, tuple)):
+    if not isinstance(node1_axes, Sequence):
         raise TypeError('`node1_edges` should be list or tuple type')
-    if not isinstance(node2_axes, (list, tuple)):
+    if not isinstance(node2_axes, Sequence):
         raise TypeError('`node2_edges` should be list or tuple type')
     
     args = (node,
@@ -3064,7 +3064,7 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
     stack_indices = []        # In the case above, stack indices of each node in
                               # the reference node's memory
 
-    if not (isinstance(nodes, (list, tuple)) and isinstance(nodes[0], AbstractNode)):
+    if not (isinstance(nodes, Sequence) and isinstance(nodes[0], AbstractNode)):
         raise TypeError('`nodes` should be a list or tuple of AbstractNodes')
 
     net = nodes[0]._network

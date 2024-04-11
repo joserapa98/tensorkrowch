@@ -182,6 +182,11 @@
      Embeddings
     </a>
    </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="decompositions.html">
+     Decompositions
+    </a>
+   </li>
   </ul>
  </li>
 </ul>
@@ -1382,7 +1387,8 @@ Operation names can be checked via <code class="docutils literal notranslate"><s
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">permute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#permute"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.permute" title="Permalink to this definition">#</a></dt>
 <dd><p>Permutes the nodes’ tensor, as well as its axes and edges to match the new
 shape.</p>
-<p>See <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.permute.html">permute</a>.</p>
+<p>See <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.permute.html">permute</a>
+in the <strong>PyTorch</strong> documentation.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;permute&quot;</span></code>. The node
 that keeps information about the <a class="reference internal" href="components.html#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">node</span></code>.</p>
 <p>This operation is the same as <a class="reference internal" href="components.html#tensorkrowch.AbstractNode.permute" title="tensorkrowch.AbstractNode.permute"><code class="xref py py-meth docutils literal notranslate"><span class="pre">permute()</span></code></a>.</p>
@@ -1449,7 +1455,6 @@ underscore indicate <strong>in-place</strong> operations.</p>
 operator <code class="docutils literal notranslate"><span class="pre">%</span></code>.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;tprod&quot;</span></code>. The node
 that keeps information about the <a class="reference internal" href="components.html#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">node1</span></code>.</p>
-<p>This operation is the same as <code class="xref py py-meth docutils literal notranslate"><span class="pre">tprod()</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -1484,7 +1489,6 @@ resultant node.</p></li>
 operator <code class="docutils literal notranslate"><span class="pre">*</span></code>.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;mul&quot;</span></code>. The node
 that keeps information about the <a class="reference internal" href="components.html#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">node1</span></code>.</p>
-<p>This operation is the same as <code class="xref py py-meth docutils literal notranslate"><span class="pre">mul()</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -1517,7 +1521,6 @@ that keeps information about the <a class="reference internal" href="components.
 operator <code class="docutils literal notranslate"><span class="pre">+</span></code>.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;add&quot;</span></code>. The node
 that keeps information about the <a class="reference internal" href="components.html#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">node1</span></code>.</p>
-<p>This operation is the same as <code class="xref py py-meth docutils literal notranslate"><span class="pre">add()</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -1550,7 +1553,6 @@ that keeps information about the <a class="reference internal" href="components.
 the operator <code class="docutils literal notranslate"><span class="pre">-</span></code>.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;sub&quot;</span></code>. The node
 that keeps information about the <a class="reference internal" href="components.html#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">node1</span></code>.</p>
-<p>This operation is the same as <code class="xref py py-meth docutils literal notranslate"><span class="pre">sub()</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -1584,7 +1586,7 @@ that keeps information about the <a class="reference internal" href="components.
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">split</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node1_axes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2_axes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'svd'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">side</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'left'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cum_percentage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#split"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.split" title="Permalink to this definition">#</a></dt>
 <dd><p>Splits one node in two via the decomposition specified in <code class="docutils literal notranslate"><span class="pre">mode</span></code>. To
 perform this operation the set of edges has to be split in two sets,
-corresponding to the edges of the first and second <code class="docutils literal notranslate"><span class="pre">resultant</span> <span class="pre">nodes</span></code>.
+corresponding to the edges of the first and second <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes.
 Batch edges that don’t appear in any of the lists will be repeated in both
 nodes, and will appear as the first edges of the <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes, in
 the order they appeared in <code class="docutils literal notranslate"><span class="pre">node</span></code>.</p>
@@ -1805,7 +1807,7 @@ last in the list of inherited edges of the resultant node.</p></li>
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">contract_between</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#contract_between"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.contract_between" title="Permalink to this definition">#</a></dt>
 <dd><p>Contracts all edges shared between two nodes. Batch contraction is
 automatically performed when both nodes have batch edges with the same
-names.</p>
+names. It can also be performed using the operator <code class="docutils literal notranslate"><span class="pre">&#64;</span></code>.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;contract_edges&quot;</span></code>.
 The node that keeps information about the <a class="reference internal" href="components.html#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">node1</span></code>.</p>
 <p>This operation is the same as <a class="reference internal" href="components.html#tensorkrowch.AbstractNode.contract_between" title="tensorkrowch.AbstractNode.contract_between"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract_between()</span></code></a>.</p>

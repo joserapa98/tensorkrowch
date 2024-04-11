@@ -362,7 +362,7 @@ title="Source repository"
 <span class="sd">        to ``n_features`` (if ``boundary = &quot;pbc&quot;``) or ``n_features - 1`` (if</span>
 <span class="sd">        ``boundary = &quot;obc&quot;``). The i-th bond dimension is always the dimension</span>
 <span class="sd">        of the right edge of the i-th node.</span>
-<span class="sd">    boundary : {&quot;obc&quot;, &quot;pbc&quot;}, optional</span>
+<span class="sd">    boundary : {&quot;obc&quot;, &quot;pbc&quot;}</span>
 <span class="sd">        String indicating whether periodic or open boundary conditions should</span>
 <span class="sd">        be used.</span>
 <span class="sd">    tensors: list[torch.Tensor] or tuple[torch.Tensor], optional</span>
@@ -509,7 +509,7 @@ title="Source repository"
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` should be int, tuple[int] or list[int]&#39;</span>
                                 <span class="s1">&#39; type&#39;</span><span class="p">)</span>
-                
+        
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`tensors` should be a tuple[torch.Tensor] or &#39;</span>
@@ -2622,25 +2622,37 @@ title="Source repository"
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    n_features : int</span>
+<span class="sd">    n_features : int, optional</span>
 <span class="sd">        Number of nodes that will be in ``mats_env``. That is, number of nodes</span>
 <span class="sd">        without taking into account ``left_node`` and ``right_node``.</span>
-<span class="sd">    phys_dim : int, list[int] or tuple[int]</span>
+<span class="sd">    phys_dim : int, list[int] or tuple[int], optional</span>
 <span class="sd">        Physical dimension(s). If given as a sequence, its length should be</span>
 <span class="sd">        equal to ``n_features``.</span>
-<span class="sd">    bond_dim : int, list[int] or tuple[int]</span>
+<span class="sd">    bond_dim : int, list[int] or tuple[int], optional</span>
 <span class="sd">        Bond dimension(s). If given as a sequence, its length should be equal</span>
 <span class="sd">        to ``n_features`` (if ``boundary = &quot;pbc&quot;``) or ``n_features - 1`` (if</span>
 <span class="sd">        ``boundary = &quot;obc&quot;``). The i-th bond dimension is always the dimension</span>
 <span class="sd">        of the right edge of the i-th node.</span>
+<span class="sd">    boundary : {&quot;obc&quot;, &quot;pbc&quot;}</span>
+<span class="sd">        String indicating whether periodic or open boundary conditions should</span>
+<span class="sd">        be used.</span>
 <span class="sd">    n_batches : int</span>
 <span class="sd">        Number of batch edges of the MPS nodes. Usually ``n_batches = 1``</span>
 <span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
 <span class="sd">        be ``n_batches = 2`` (one edge for data batched, other edge for image</span>
 <span class="sd">        patches in convolutional layers).</span>
-<span class="sd">    boundary : {&quot;obc&quot;, &quot;pbc&quot;}</span>
-<span class="sd">        String indicating whether periodic or open boundary conditions should</span>
-<span class="sd">        be used.</span>
+<span class="sd">    tensors: list[torch.Tensor] or tuple[torch.Tensor], optional</span>
+<span class="sd">        Instead of providing ``n_features``, ``phys_dim``, ``bond_dim`` and</span>
+<span class="sd">        ``boundary``, a list of MPS tensors can be provided. In such case, all</span>
+<span class="sd">        mentioned attributes will be inferred from the given tensors. All</span>
+<span class="sd">        tensors should be rank-(n+3) tensors, with shape</span>
+<span class="sd">        ``(batch_1, ..., batch_n, bond_dim, phys_dim, bond_dim)``. If the first</span>
+<span class="sd">        and last elements are rank-(n+2) tensors, with shapes</span>
+<span class="sd">        ``(batch_1, ..., batch_n, phys_dim, bond_dim)``,</span>
+<span class="sd">        ``(batch_1, ..., batch_n, bond_dim, phys_dim)``, respectively,</span>
+<span class="sd">        the inferred boundary conditions will be &quot;obc&quot;. Also, if ``tensors``</span>
+<span class="sd">        contains a single element, it can be rank-(n+1) (&quot;obc&quot;) or rank-(n+3)</span>
+<span class="sd">        (&quot;pbc&quot;).</span>
 <span class="sd">    init_method : {&quot;zeros&quot;, &quot;ones&quot;, &quot;copy&quot;, &quot;rand&quot;, &quot;randn&quot;}, optional</span>
 <span class="sd">        Initialization method. Check :meth:`initialize` for a more detailed</span>
 <span class="sd">        explanation of the different initialization methods. By default it is</span>
@@ -2667,69 +2679,133 @@ title="Source repository"
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                 <span class="n">n_features</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-                 <span class="n">phys_dim</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
-                 <span class="n">bond_dim</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
-                 <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                 <span class="n">n_features</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">phys_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">bond_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">boundary</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span><span class="p">,</span>
+                 <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                 <span class="n">tensors</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">init_method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;mps_data&#39;</span><span class="p">)</span>
         
-        <span class="c1"># boundary</span>
-        <span class="k">if</span> <span class="n">boundary</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;obc&#39;</span><span class="p">,</span> <span class="s1">&#39;pbc&#39;</span><span class="p">]:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`boundary` should be one of &quot;obc&quot; or &quot;pbc&quot;&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">=</span> <span class="n">boundary</span>
-
-        <span class="c1"># n_features</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_features</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`n_features` should be int type&#39;</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">n_features</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`n_features` should be at least 1&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">=</span> <span class="n">n_features</span>
-
-        <span class="c1"># phys_dim</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">phys_dim</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">phys_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_features</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;If `phys_dim` is given as a sequence of int, &#39;</span>
-                                    <span class="s1">&#39;its length should be equal to `n_features`&#39;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">phys_dim</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">phys_dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">phys_dim</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_features</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`phys_dim` should be int, tuple[int] or list[int] &#39;</span>
-                            <span class="s1">&#39;type&#39;</span><span class="p">)</span>
-
-        <span class="c1"># bond_dim</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
-            <span class="k">if</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="s1">&#39;If `bond_dim` is given as a sequence of int, and &#39;</span>
-                        <span class="s1">&#39;`boundary` is &quot;obc&quot;, its length should be equal &#39;</span>
-                        <span class="s1">&#39;to `n_features` - 1&#39;</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">:</span>
-                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_features</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="s1">&#39;If `bond_dim` is given as a sequence of int, and &#39;</span>
-                        <span class="s1">&#39;`boundary` is &quot;pbc&quot;, its length should be equal &#39;</span>
-                        <span class="s1">&#39;to `n_features`&#39;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">bond_dim</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">bond_dim</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_features</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` should be int, tuple[int] or list[int]&#39;</span>
-                            <span class="s1">&#39; type&#39;</span><span class="p">)</span>
-        
         <span class="c1"># n_batches</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_batches</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`n_batches` should be int type&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span> <span class="o">=</span> <span class="n">n_batches</span>
+        
+        <span class="k">if</span> <span class="n">tensors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># boundary</span>
+            <span class="k">if</span> <span class="n">boundary</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;obc&#39;</span><span class="p">,</span> <span class="s1">&#39;pbc&#39;</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`boundary` should be one of &quot;obc&quot; or &quot;pbc&quot;&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">=</span> <span class="n">boundary</span>
+
+            <span class="c1"># n_features</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_features</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`n_features` should be int type&#39;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">n_features</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`n_features` should be at least 1&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">=</span> <span class="n">n_features</span>
+
+            <span class="c1"># phys_dim</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">phys_dim</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">phys_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_features</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;If `phys_dim` is given as a sequence of int, &#39;</span>
+                                        <span class="s1">&#39;its length should be equal to `n_features`&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">phys_dim</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">phys_dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">phys_dim</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_features</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`phys_dim` should be int, tuple[int] or list[int] &#39;</span>
+                                <span class="s1">&#39;type&#39;</span><span class="p">)</span>
+
+            <span class="c1"># bond_dim</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                            <span class="s1">&#39;If `bond_dim` is given as a sequence of int, and &#39;</span>
+                            <span class="s1">&#39;`boundary` is &quot;obc&quot;, its length should be equal &#39;</span>
+                            <span class="s1">&#39;to `n_features` - 1&#39;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_features</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                            <span class="s1">&#39;If `bond_dim` is given as a sequence of int, and &#39;</span>
+                            <span class="s1">&#39;`boundary` is &quot;pbc&quot;, its length should be equal &#39;</span>
+                            <span class="s1">&#39;to `n_features`&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">bond_dim</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">bond_dim</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_features</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` should be int, tuple[int] or list[int]&#39;</span>
+                                <span class="s1">&#39; type&#39;</span><span class="p">)</span>
+        
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`tensors` should be a tuple[torch.Tensor] or &#39;</span>
+                                <span class="s1">&#39;list[torch.Tensor] type&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">tensors</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+                        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`tensors` should be a tuple[torch.Tensor]&#39;</span>
+                                        <span class="s1">&#39; or list[torch.Tensor] type&#39;</span><span class="p">)</span>
+                    
+                    <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">n_batches</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                                                <span class="n">n_batches</span> <span class="o">+</span> <span class="mi">2</span><span class="p">,</span>
+                                                <span class="n">n_batches</span> <span class="o">+</span> <span class="mi">3</span><span class="p">]:</span>
+                            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                                <span class="s1">&#39;The first and last elements in `tensors` &#39;</span>
+                                <span class="s1">&#39;should be both rank-(n+2) or rank-(n+3) tensors.&#39;</span>
+                                <span class="s1">&#39; If the first element is also the last one,&#39;</span>
+                                <span class="s1">&#39; it should be a rank-(n+1) tensor&#39;</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_batches</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_batches</span> <span class="o">+</span> <span class="mi">2</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">=</span> <span class="s1">&#39;pbc&#39;</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">):</span>
+                            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                                <span class="s1">&#39;The first and last elements in `tensors` &#39;</span>
+                                <span class="s1">&#39;should have the same rank. Both should be &#39;</span>
+                                <span class="s1">&#39;rank-(n+2) or rank-(n+3) tensors. If the first&#39;</span>
+                                <span class="s1">&#39; element is also the last one, it should &#39;</span>
+                                <span class="s1">&#39;be a rank-(n+1) tensor&#39;</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_batches</span> <span class="o">+</span> <span class="mi">2</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]:</span>
+                                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                                    <span class="s1">&#39;If the first and last elements in `tensors`&#39;</span>
+                                    <span class="s1">&#39; are rank-(n+3) tensors, the first dimension&#39;</span>
+                                    <span class="s1">&#39; of the first element should coincide with&#39;</span>
+                                    <span class="s1">&#39; the last dimension of the last element &#39;</span>
+                                    <span class="s1">&#39;(ignoring batch dimensions)&#39;</span><span class="p">)</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_batches</span> <span class="o">+</span> <span class="mi">3</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                                <span class="s1">&#39;The elements of `tensors` should be rank-(n+3) &#39;</span>
+                                <span class="s1">&#39;tensors, except the first and lest elements&#39;</span>
+                                <span class="s1">&#39; if boundary is &quot;obc&quot;&#39;</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
         
         <span class="c1"># Properties</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">=</span> <span class="kc">None</span>
@@ -2739,8 +2815,11 @@ title="Source repository"
         <span class="c1"># Create Tensor Network</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">init_method</span><span class="o">=</span><span class="n">init_method</span><span class="p">,</span>
-                        <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
-                        <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                            <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
+                            <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">tensors</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_data</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">tensors</span><span class="p">)</span>
     
     <span class="c1"># ----------</span>
     <span class="c1"># Properties</span>

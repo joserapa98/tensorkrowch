@@ -1707,8 +1707,8 @@ def svd(edge: Edge,
     
     Original nodes still exist in the network
     
-    >>> nodeA.network == new_nodeA.network
-    >>> nodeB.network == new_nodeB.network
+    >>> assert nodeA.network == new_nodeA.network
+    >>> assert nodeB.network == new_nodeB.network
     """
     if edge.is_dangling():
         raise ValueError('Edge should be connected to perform SVD')
@@ -1827,8 +1827,8 @@ svd_edge.__doc__ = \
     
     Original nodes still exist in the network
     
-    >>> nodeA.network == new_nodeA.network
-    >>> nodeB.network == new_nodeB.network
+    >>> assert nodeA.network == new_nodeA.network
+    >>> assert nodeB.network == new_nodeB.network
     """
 
 Edge.svd = svd_edge
@@ -2096,8 +2096,8 @@ def svdr(edge: Edge,
     
     Original nodes still exist in the network
     
-    >>> nodeA.network == new_nodeA.network
-    >>> nodeB.network == new_nodeB.network
+    >>> assert nodeA.network == new_nodeA.network
+    >>> assert nodeB.network == new_nodeB.network
     """
     if edge.is_dangling():
         raise ValueError('Edge should be connected to perform SVD')
@@ -2216,8 +2216,8 @@ svdr_edge.__doc__ = \
     
     Original nodes still exist in the network
     
-    >>> nodeA.network == new_nodeA.network
-    >>> nodeB.network == new_nodeB.network
+    >>> assert nodeA.network == new_nodeA.network
+    >>> assert nodeB.network == new_nodeB.network
     """
 
 Edge.svdr = svdr_edge
@@ -2463,8 +2463,8 @@ def qr(edge: Edge) -> Tuple[Node, Node]:
     
     Original nodes still exist in the network
     
-    >>> nodeA.network == new_nodeA.network
-    >>> nodeB.network == new_nodeB.network
+    >>> assert nodeA.network == new_nodeA.network
+    >>> assert nodeB.network == new_nodeB.network
     """
     if edge.is_dangling():
         raise ValueError('Edge should be connected to perform SVD')
@@ -2558,8 +2558,8 @@ qr_edge.__doc__ = \
     
     Original nodes still exist in the network
     
-    >>> nodeA.network == new_nodeA.network
-    >>> nodeB.network == new_nodeB.network
+    >>> assert nodeA.network == new_nodeA.network
+    >>> assert nodeB.network == new_nodeB.network
     """
 
 Edge.qr = qr_edge
@@ -2758,8 +2758,8 @@ def rq(edge: Edge) -> Tuple[Node, Node]:
     
     Original nodes still exist in the network
     
-    >>> nodeA.network == new_nodeA.network
-    >>> nodeB.network == new_nodeB.network
+    >>> assert nodeA.network == new_nodeA.network
+    >>> assert nodeB.network == new_nodeB.network
     """
     if edge.is_dangling():
         raise ValueError('Edge should be connected to perform SVD')
@@ -2853,8 +2853,8 @@ rq_edge.__doc__ = \
     
     Original nodes still exist in the network
     
-    >>> nodeA.network == new_nodeA.network
-    >>> nodeB.network == new_nodeB.network
+    >>> assert nodeA.network == new_nodeA.network
+    >>> assert nodeB.network == new_nodeB.network
     """
 
 Edge.rq = rq_edge

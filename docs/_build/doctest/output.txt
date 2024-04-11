@@ -1,29 +1,5 @@
-Results of doctest builder run on 2024-04-10 03:01:01
+Results of doctest builder run on 2024-04-11 18:02:10
 =====================================================
-
-Document: operations
---------------------
-1 items passed all tests:
- 139 tests in default
-139 tests in 1 items.
-139 passed and 0 failed.
-Test passed.
-
-Document: models
-----------------
-1 items passed all tests:
- 112 tests in default
-112 tests in 1 items.
-112 passed and 0 failed.
-Test passed.
-
-Document: embeddings
---------------------
-1 items passed all tests:
-  21 tests in default
-21 tests in 1 items.
-21 passed and 0 failed.
-Test passed.
 
 Document: components
 --------------------
@@ -35,8 +11,8 @@ Expected:
     tensor([[-0.2799, -0.4383, -0.8387],
             [ 1.6225, -0.3370, -1.2316]])
 Got:
-    tensor([[ 0.2608,  0.2404, -0.4142],
-            [ 0.0477,  0.5525, -1.2237]])
+    tensor([[-0.1219, -2.3252, -0.8724],
+            [ 1.2443, -0.9175, -0.3032]])
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -44,7 +20,7 @@ Failed example:
 Expected:
     tensor(-1.5029)
 Got:
-    tensor(-0.5365)
+    tensor(-3.2960)
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -52,7 +28,7 @@ Failed example:
 Expected:
     tensor([ 1.3427, -0.7752, -2.0704])
 Got:
-    tensor([ 0.3085,  0.7929, -1.6378])
+    tensor([ 1.1224, -3.2427, -1.1757])
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -61,8 +37,8 @@ Expected:
     tensor([[ 1.4005, -0.0521, -1.2091],
             [ 1.9844,  0.3513, -0.5920]])
 Got:
-    tensor([[-0.1590,  0.2773, -0.5695],
-            [ 0.7475, -0.3006,  0.2396]])
+    tensor([[-0.1891, -1.0099, -1.4104],
+            [ 2.1168, -1.2711,  0.1962]])
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -70,7 +46,7 @@ Failed example:
 Expected:
     tensor(0.3139)
 Got:
-    tensor(0.0392)
+    tensor(-0.2612)
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -78,7 +54,7 @@ Failed example:
 Expected:
     tensor([ 1.6925,  0.1496, -0.9006])
 Got:
-    tensor([ 0.2942, -0.0116, -0.1649])
+    tensor([ 0.9638, -1.1405, -0.6071])
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -87,8 +63,8 @@ Expected:
     tensor([[ 0.2111, -0.9551, -0.7812],
             [ 0.2254,  0.3381, -0.2461]])
 Got:
-    tensor([[ 0.0106,  0.7061, -1.7738],
-            [ 0.3009, -0.8125,  2.6256]])
+    tensor([[-1.2689, -0.0949, -1.2119],
+            [ 0.5080,  1.9905,  0.0435]])
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -96,7 +72,7 @@ Failed example:
 Expected:
     tensor(0.5567)
 Got:
-    tensor(1.4902)
+    tensor(1.2091)
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -104,7 +80,7 @@ Failed example:
 Expected:
     tensor([0.0101, 0.9145, 0.3784])
 Got:
-    tensor([0.2053, 1.0738, 3.1108])
+    tensor([1.2564, 1.4746, 0.8877])
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -113,8 +89,8 @@ Expected:
     tensor([[ 1.5570,  1.8441, -0.0743],
             [ 0.4572,  0.7592,  0.6356]])
 Got:
-    tensor([[-0.0825, -0.6589,  2.0878],
-            [-0.7890,  1.7419, -0.7536]])
+    tensor([[-0.5903, -0.7778, -0.4268],
+            [-2.3166, -0.1547,  0.2808]])
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -122,7 +98,7 @@ Failed example:
 Expected:
     tensor(2.6495)
 Got:
-    tensor(3.0041)
+    tensor(2.5700)
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -130,7 +106,7 @@ Failed example:
 Expected:
     tensor([1.6227, 1.9942, 0.6399])
 Got:
-    tensor([0.7933, 1.8623, 2.2197])
+    tensor([2.3907, 0.7930, 0.5109])
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -161,17 +137,17 @@ Got:
     Node(
      	name: my_node
     	tensor:
-    		tensor([[[-0.9444, -1.2464],
-    		         [-1.1748, -1.1119],
-    		         [ 0.1074,  1.2608],
-    		         [-0.4249,  0.9456],
-    		         [ 2.0303,  1.5733]],
+    		tensor([[[ 1.4295,  0.1283],
+    		         [ 1.1383,  1.1168],
+    		         [ 2.1515, -0.1561],
+    		         [-0.0887,  0.5357],
+    		         [ 0.2939, -0.4856]],
     		
-    		        [[ 1.1585, -0.2354],
-    		         [-0.0599, -0.3751],
-    		         [ 0.5416, -1.3569],
-    		         [ 1.2183, -0.4644],
-    		         [ 1.9830, -2.0196]]])
+    		        [[-0.6956, -0.3208],
+    		         [ 0.2184,  1.0338],
+    		         [ 2.3664, -0.1228],
+    		         [-1.8931, -0.9765],
+    		         [-0.8333, -0.0849]]])
     	axes:
     		[left
     		 input
@@ -210,17 +186,17 @@ Got:
     Node(
      	name: node
     	tensor:
-    		tensor([[[-0.9176, -0.3718],
-    		         [ 0.8072, -0.5067],
-    		         [-0.4642, -1.2742],
-    		         [-0.4693,  1.6268],
-    		         [-1.4203, -1.2261]],
+    		tensor([[[ 0.3628,  0.0797],
+    		         [ 1.4617, -0.8756],
+    		         [-0.6883, -0.2079],
+    		         [ 0.2615, -1.5922],
+    		         [ 0.9903, -0.8747]],
     		
-    		        [[ 0.0380, -0.8227],
-    		         [-0.3646,  0.0979],
-    		         [-1.6761, -0.3271],
-    		         [-0.3728,  0.2532],
-    		         [-0.8580, -0.0169]]])
+    		        [[-1.9576, -1.4872],
+    		         [-0.7789,  0.1509],
+    		         [-0.2408, -0.6513],
+    		         [ 0.0925, -1.4727],
+    		         [-0.0393,  0.2477]]])
     	axes:
     		[axis_0
     		 axis_1
@@ -272,17 +248,17 @@ Got:
      	name: my_paramnode
     	tensor:
     		Parameter containing:
-    		tensor([[[-0.8930, -1.1045],
-    		         [-0.3155,  0.2096],
-    		         [-0.0599, -1.4143],
-    		         [-1.6343, -0.3484],
-    		         [ 0.6402, -0.6991]],
+    		tensor([[[-1.0928,  0.2937],
+    		         [-0.8518, -0.2853],
+    		         [ 1.5718, -0.2156],
+    		         [-0.8808,  0.6242],
+    		         [-0.2076, -0.9708]],
     		
-    		        [[ 1.2535,  0.4295],
-    		         [-1.1174, -1.1045],
-    		         [ 0.5023,  1.6890],
-    		         [-0.7469, -0.5482],
-    		         [-0.2292, -0.1320]]], requires_grad=True)
+    		        [[-0.8541, -0.2215],
+    		         [-0.5111,  1.0442],
+    		         [-0.0752, -0.0264],
+    		         [ 1.1594, -1.2355],
+    		         [ 0.4730, -0.7184]]], requires_grad=True)
     	axes:
     		[left
     		 input
@@ -323,17 +299,17 @@ Got:
      	name: paramnode
     	tensor:
     		Parameter containing:
-    		tensor([[[ 0.2605,  0.7027],
-    		         [-0.7899, -1.1425],
-    		         [-0.0304, -0.3101],
-    		         [ 1.5629,  1.9281],
-    		         [-0.2528,  1.3928]],
+    		tensor([[[-0.3541,  0.5708],
+    		         [ 1.5133, -0.3104],
+    		         [ 0.4016, -1.3471],
+    		         [-2.0898,  0.1388],
+    		         [ 0.7335,  0.4841]],
     		
-    		        [[-0.2677,  1.9157],
-    		         [-1.8499,  0.1189],
-    		         [-1.2685, -0.4878],
-    		         [-0.6465, -0.1386],
-    		         [ 1.1994,  1.1025]]], requires_grad=True)
+    		        [[ 2.7531,  0.3534],
+    		         [-0.7456, -0.2700],
+    		         [-1.8255,  0.6406],
+    		         [-1.1440, -0.4266],
+    		         [ 0.0210,  0.4156]]], requires_grad=True)
     	axes:
     		[axis_0
     		 axis_1
@@ -352,8 +328,8 @@ Expected:
             [ 1.3371,  1.4761,  0.6551]], requires_grad=True)
 Got:
     Parameter containing:
-    tensor([[-0.0476,  0.6504, -0.1137],
-            [-0.1228,  0.3251,  0.4189]], requires_grad=True)
+    tensor([[ 2.2676, -0.2417, -0.8696],
+            [ 0.0352, -0.8772, -0.2657]], requires_grad=True)
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -404,14 +380,38 @@ Got:
     		 data_0[feature] <-> nodeA[input]])
 **********************************************************************
 1 items had failures:
-  21 of 331 in default
-331 tests in 1 items.
-310 passed and 21 failed.
+  21 of 371 in default
+371 tests in 1 items.
+350 passed and 21 failed.
 ***Test Failed*** 21 failures.
+
+Document: operations
+--------------------
+1 items passed all tests:
+ 186 tests in default
+186 tests in 1 items.
+186 passed and 0 failed.
+Test passed.
+
+Document: models
+----------------
+1 items passed all tests:
+ 112 tests in default
+112 tests in 1 items.
+112 passed and 0 failed.
+Test passed.
+
+Document: embeddings
+--------------------
+1 items passed all tests:
+  21 tests in default
+21 tests in 1 items.
+21 passed and 0 failed.
+Test passed.
 
 Doctest summary
 ===============
-  603 tests
+  690 tests
    21 failures in tests
     0 failures in setup code
     0 failures in cleanup code

@@ -3090,9 +3090,10 @@ class Edge:  # MARK: Edge
     
     |
 
-    Furthermore, edges have specific operations like :meth:`contract_` or
-    :meth:`svd_` (and its variations) that allow in-place modification of the
-    :class:`TensorNetwork`.
+    Furthermore, edges have specific operations like :meth:`contract` or
+    :meth:`svd` (and its variations), as well as in-place versions of them 
+    (:meth:`contract_`, :meth:`svd_`, etc.) that allow in-place modification
+    of the :class:`TensorNetwork`.
     
     |
 

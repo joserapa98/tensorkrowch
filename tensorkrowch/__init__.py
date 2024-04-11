@@ -23,8 +23,8 @@ import tensorkrowch.embeddings as embeddings
 
 # Edge operations
 from tensorkrowch.components import connect, connect_stack, disconnect
-from tensorkrowch.operations import svd_, svdr_, qr_, rq_
-from tensorkrowch.operations import contract, contract_
+from tensorkrowch.operations import (svd, svd_, svdr, svdr_, qr, qr_, rq, rq_,
+                                     contract, contract_)
 
 # Node operations
 from tensorkrowch.operations import Operation

@@ -745,18 +745,21 @@ data tensor from which each <code class="docutils literal notranslate"><span cla
 There should be at most one <code class="docutils literal notranslate"><span class="pre">&quot;stack_data_memory&quot;</span></code> in the network.
 To learn more about this, see <a class="reference internal" href="#tensorkrowch.TensorNetwork.set_data_nodes" title="tensorkrowch.TensorNetwork.set_data_nodes"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_data_nodes()</span></code></a> and
 <a class="reference internal" href="#tensorkrowch.TensorNetwork.add_data" title="tensorkrowch.TensorNetwork.add_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_data()</span></code></a>.</p></li>
-<li><p><strong>“virtual_result”</strong>: Name of the <code class="docutils literal notranslate"><span class="pre">virtual</span></code> <a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a> that
+<li><p><strong>“virtual_result”</strong>: Name of <code class="docutils literal notranslate"><span class="pre">virtual</span></code> nodes that are not explicitly
+part of the network, but are required for some situations during
+contraction. For instance, the <a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a> that
 results from stacking <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNodes</span></code></a> as the first
 operation in the network contraction, if <code class="docutils literal notranslate"><span class="pre">auto_stack</span></code> mode is set to
-<code class="docutils literal notranslate"><span class="pre">True</span></code>. There might be as much <code class="docutils literal notranslate"><span class="pre">&quot;virtual_result&quot;</span></code> nodes as stacks are
-created from <code class="docutils literal notranslate"><span class="pre">ParamNodes</span></code>. To learn more about this, see
-<a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a>.</p></li>
+<code class="docutils literal notranslate"><span class="pre">True</span></code>. To learn more about this, see <a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a>.</p></li>
 <li><p><strong>“virtual_uniform”</strong>: Name of the <code class="docutils literal notranslate"><span class="pre">virtual</span></code> <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a> or
 <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNode</span></code></a> that is used in uniform (translationally invariant)
 tensor networks to store the tensor that will be shared by all <code class="docutils literal notranslate"><span class="pre">leaf</span></code>
 nodes. There might be as much <code class="docutils literal notranslate"><span class="pre">&quot;virtual_uniform&quot;</span></code> nodes as shared
 memories are used for the <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes in the network (usually just one).</p></li>
 </ul>
+<p>For <code class="docutils literal notranslate"><span class="pre">&quot;virtual_result&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;virtual_uniform&quot;</span></code>, these special
+behaviours are not restricted to nodes having those names, but also nodes
+whose names contain those strings.</p>
 <p>Although these names can in principle be used for other nodes, this can lead
 to undesired behaviour.</p>
 <p>See <a class="reference internal" href="#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> to learn more about the importance of these
@@ -1002,7 +1005,7 @@ to the node through it.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.reattach_edges">
-<span class="sig-name descname"><span class="pre">reattach_edges</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.reattach_edges"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.reattach_edges" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">reattach_edges</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.reattach_edges"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.reattach_edges" title="Permalink to this definition">#</a></dt>
 <dd><p>Substitutes current edges by copies of them that are attached to the node.
 It can happen that an edge is not attached to the node if it is the result
 of an <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operation</span></code></a> and, hence, it inherits edges from the operands.
@@ -1014,8 +1017,8 @@ to (de)parameterize nodes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – The edge attached to this axis will be reattached. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, all
-edges will be reattached.</p></li>
+<li><p><strong>axis</strong> (<em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em><em>, </em><em>optional</em>) – The edge attached to these axes will be reattached. If <code class="docutils literal notranslate"><span class="pre">None</span></code>,
+all edges will be reattached.</p></li>
 <li><p><strong>override</strong> (<em>bool</em>) – Boolean indicating if the new, reattached edges should also replace
 the corresponding edges in the node’s neighbours (<code class="docutils literal notranslate"><span class="pre">True</span></code>). Otherwise,
 the neighbours’ edges will be pointing to the original nodes from which
@@ -1662,7 +1665,7 @@ cum\_percentage\]</div>
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.split_">
 <span class="sig-name descname"><span class="pre">split_</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node1_axes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2_axes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'svd'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">side</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'left'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cum_percentage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.AbstractNode.split_" title="Permalink to this definition">#</a></dt>
-<dd><p>In-place version of <a class="reference internal" href="#tensorkrowch.AbstractNode.split" title="tensorkrowch.AbstractNode.split"><code class="xref py py-func docutils literal notranslate"><span class="pre">split()</span></code></a>.</p>
+<dd><p>In-place version of <a class="reference internal" href="#tensorkrowch.AbstractNode.split" title="tensorkrowch.AbstractNode.split"><code class="xref py py-meth docutils literal notranslate"><span class="pre">split()</span></code></a>.</p>
 <p>Following the <strong>PyTorch</strong> convention, names of functions ended with an
 underscore indicate <strong>in-place</strong> operations.</p>
 <p>Since the node is <cite>split</cite> in two, a new edge appears connecting both
@@ -1698,10 +1701,9 @@ cum\_percentage\]</div>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">node</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>
 <span class="gp">... </span>                <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">node_left</span><span class="p">,</span> <span class="n">node_right</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">split_</span><span class="p">(</span><span class="n">node</span><span class="p">,</span>
-<span class="gp">... </span>                                  <span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">],</span>
-<span class="gp">... </span>                                  <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;svd&#39;</span><span class="p">,</span>
-<span class="gp">... </span>                                  <span class="n">rank</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">node_left</span><span class="p">,</span> <span class="n">node_right</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">split_</span><span class="p">([</span><span class="s1">&#39;left&#39;</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">],</span>
+<span class="gp">... </span>                                    <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;svd&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                                    <span class="n">rank</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">node_left</span><span class="o">.</span><span class="n">shape</span>
 <span class="go">torch.Size([100, 10, 5])</span>
 </pre></div>
@@ -2339,6 +2341,58 @@ is the list with the <code class="docutils literal notranslate"><span class="pre
 axes where the original stacked nodes were already connected.</p>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.StackNode.unbind">
+<span class="sig-name descname"><span class="pre">unbind</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.StackNode.unbind" title="Permalink to this definition">#</a></dt>
+<dd><p>Unbinds a <a class="reference internal" href="#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">StackNode</span></code></a> or <a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a>, where the first
+dimension is assumed to be the stack dimension.</p>
+<p>If <a class="reference internal" href="#tensorkrowch.TensorNetwork.auto_unbind" title="tensorkrowch.TensorNetwork.auto_unbind"><code class="xref py py-meth docutils literal notranslate"><span class="pre">auto_unbind()</span></code></a> is set to <code class="docutils literal notranslate"><span class="pre">False</span></code>, each resultant
+node will store its own tensor. Otherwise, they will have only a reference
+to the corresponding slice of the <code class="docutils literal notranslate"><span class="pre">(Param)StackNode</span></code>.</p>
+<p>See <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> to learn how the <code class="docutils literal notranslate"><span class="pre">auto_unbind</span></code> mode affects
+the computation of <a class="reference internal" href="operations.html#tensorkrowch.unbind" title="tensorkrowch.unbind"><code class="xref py py-func docutils literal notranslate"><span class="pre">unbind()</span></code></a>.</p>
+<p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;unbind&quot;</span></code>. The node
+that keeps information about the <a class="reference internal" href="#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">net</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+<span class="gp">... </span>                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                  <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">)</span>
+<span class="gp">... </span>         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,),</span>
+<span class="gp">... </span>                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;feature&#39;</span><span class="p">,),</span>
+<span class="gp">... </span>                 <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">)</span>
+<span class="gp">... </span>        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">_</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stack_nodes</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stack_data</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># It is necessary to re-connect stacks</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">stack_nodes</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack_data</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">stack_nodes</span> <span class="o">@</span> <span class="n">stack_data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">unbind</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="go">unbind_0</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">axes</span>
+<span class="go">[Axis( left (0) ), Axis( right (1) )]</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([2, 2])</span>
+</pre></div>
+</div>
+</dd></dl>
+
 </dd></dl>
 
 </section>
@@ -2356,7 +2410,8 @@ the param-nodes no longer store their own tensors, but rather they make
 reference to a slide of a greater <code class="docutils literal notranslate"><span class="pre">ParamStackNode</span></code> (if <code class="docutils literal notranslate"><span class="pre">auto_stack</span></code>
 attribute of the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>). Hence, that
 first <a class="reference internal" href="operations.html#tensorkrowch.stack" title="tensorkrowch.stack"><code class="xref py py-func docutils literal notranslate"><span class="pre">stack()</span></code></a> is never actually computed.</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">ParamStackNode</span></code> that results from this process uses the reserved name
+<p>The <code class="docutils literal notranslate"><span class="pre">ParamStackNode</span></code> that results from this process has the name
+<code class="docutils literal notranslate"><span class="pre">&quot;virtual_result_stack&quot;</span></code>, which contains the reserved name
 <code class="docutils literal notranslate"><span class="pre">&quot;virtual_result&quot;</span></code>, as explained <a class="reference internal" href="#tensorkrowch.AbstractNode" title="tensorkrowch.AbstractNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">here</span></code></a>. This node
 stores the tensor from which all the stacked <a class="reference internal" href="#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamNodes</span></code></a>
 just take one <cite>slice</cite>.</p>
@@ -2453,6 +2508,58 @@ is the list with the <code class="docutils literal notranslate"><span class="pre
 axes where the original stacked nodes were already connected.</p>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.ParamStackNode.unbind">
+<span class="sig-name descname"><span class="pre">unbind</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.ParamStackNode.unbind" title="Permalink to this definition">#</a></dt>
+<dd><p>Unbinds a <a class="reference internal" href="#tensorkrowch.StackNode" title="tensorkrowch.StackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">StackNode</span></code></a> or <a class="reference internal" href="#tensorkrowch.ParamStackNode" title="tensorkrowch.ParamStackNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParamStackNode</span></code></a>, where the first
+dimension is assumed to be the stack dimension.</p>
+<p>If <a class="reference internal" href="#tensorkrowch.TensorNetwork.auto_unbind" title="tensorkrowch.TensorNetwork.auto_unbind"><code class="xref py py-meth docutils literal notranslate"><span class="pre">auto_unbind()</span></code></a> is set to <code class="docutils literal notranslate"><span class="pre">False</span></code>, each resultant
+node will store its own tensor. Otherwise, they will have only a reference
+to the corresponding slice of the <code class="docutils literal notranslate"><span class="pre">(Param)StackNode</span></code>.</p>
+<p>See <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> to learn how the <code class="docutils literal notranslate"><span class="pre">auto_unbind</span></code> mode affects
+the computation of <a class="reference internal" href="operations.html#tensorkrowch.unbind" title="tensorkrowch.unbind"><code class="xref py py-func docutils literal notranslate"><span class="pre">unbind()</span></code></a>.</p>
+<p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;unbind&quot;</span></code>. The node
+that keeps information about the <a class="reference internal" href="#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">net</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+<span class="gp">... </span>                  <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                  <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">)</span>
+<span class="gp">... </span>         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,),</span>
+<span class="gp">... </span>                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;feature&#39;</span><span class="p">,),</span>
+<span class="gp">... </span>                 <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">)</span>
+<span class="gp">... </span>        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">_</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stack_nodes</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stack_data</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># It is necessary to re-connect stacks</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">stack_nodes</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack_data</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">stack_nodes</span> <span class="o">@</span> <span class="n">stack_data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">unbind</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="go">unbind_0</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">axes</span>
+<span class="go">[Axis( left (0) ), Axis( right (1) )]</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([2, 2])</span>
+</pre></div>
+</div>
+</dd></dl>
+
 </dd></dl>
 
 </section>
@@ -2475,9 +2582,10 @@ contracting and splitting nodes.</p>
 <div class="line-block">
 <div class="line"><br /></div>
 </div>
-<p>Furthermore, edges have specific operations like <a class="reference internal" href="operations.html#tensorkrowch.contract_" title="tensorkrowch.contract_"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract_()</span></code></a> or
-<a class="reference internal" href="operations.html#tensorkrowch.svd_" title="tensorkrowch.svd_"><code class="xref py py-meth docutils literal notranslate"><span class="pre">svd_()</span></code></a> (and its variations) that allow in-place modification of the
-<a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>.</p>
+<p>Furthermore, edges have specific operations like <a class="reference internal" href="operations.html#tensorkrowch.contract" title="tensorkrowch.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a> or
+<a class="reference internal" href="operations.html#tensorkrowch.svd" title="tensorkrowch.svd"><code class="xref py py-meth docutils literal notranslate"><span class="pre">svd()</span></code></a> (and its variations), as well as in-place versions of them
+(<a class="reference internal" href="operations.html#tensorkrowch.contract_" title="tensorkrowch.contract_"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract_()</span></code></a>, <a class="reference internal" href="operations.html#tensorkrowch.svd_" title="tensorkrowch.svd_"><code class="xref py py-meth docutils literal notranslate"><span class="pre">svd_()</span></code></a>, etc.) that allow in-place modification
+of the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a>.</p>
 <div class="line-block">
 <div class="line"><br /></div>
 </div>
@@ -2685,8 +2793,8 @@ be computed.</p>
 <p>Note that this connectes edges from <code class="docutils literal notranslate"><span class="pre">leaf</span></code> (or <code class="docutils literal notranslate"><span class="pre">data</span></code>, <code class="docutils literal notranslate"><span class="pre">virtual</span></code>)
 nodes, but never from <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes. If one tries to connect
 one of the inherited edges of a <code class="docutils literal notranslate"><span class="pre">resultant</span></code> node, the new connected
-edge will be attached to the original <code class="docutils literal notranslate"><span class="pre">leaf`</span> <span class="pre">nodes</span> <span class="pre">from</span> <span class="pre">which</span> <span class="pre">the</span>
-<span class="pre">``resultant</span></code> node inherited its edges. Hence, the <code class="docutils literal notranslate"><span class="pre">resultant</span></code> node
+edge will be attached to the original <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes from which the
+<code class="docutils literal notranslate"><span class="pre">resultant</span></code> node inherited its edges. Hence, the <code class="docutils literal notranslate"><span class="pre">resultant</span></code> node
 will not “see” the connection until the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> is
 <a class="reference internal" href="#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>.</p>
 <p>If the nodes that are being connected come from different networks, the
@@ -2778,17 +2886,13 @@ The node that keeps information about the <a class="reference internal" href="#t
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.Edge.contract_">
 <span class="sig-name descname"><span class="pre">contract_</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.Edge.contract_" title="Permalink to this definition">#</a></dt>
-<dd><p>In-place version of <a class="reference internal" href="#tensorkrowch.Edge.contract" title="tensorkrowch.Edge.contract"><code class="xref py py-func docutils literal notranslate"><span class="pre">contract()</span></code></a>.</p>
+<dd><p>In-place version of <a class="reference internal" href="#tensorkrowch.Edge.contract" title="tensorkrowch.Edge.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a>.</p>
 <p>Following the <strong>PyTorch</strong> convention, names of functions ended with an
 underscore indicate <strong>in-place</strong> operations.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;contract_edges_ip&quot;</span></code>.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>edge</strong> (<a class="reference internal" href="#tensorkrowch.Edge" title="tensorkrowch.Edge"><em>Edge</em></a>) – Edges that is to be contracted. Batch contraction is automatically
-performed when both nodes have batch edges with the same names.</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
@@ -2802,7 +2906,7 @@ performed when both nodes have batch edges with the same names.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;one&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">nodeB</span><span class="p">[</span><span class="s1">&#39;one&#39;</span><span class="p">]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;two&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">nodeB</span><span class="p">[</span><span class="s1">&#39;two&#39;</span><span class="p">]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;three&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">nodeB</span><span class="p">[</span><span class="s1">&#39;three&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">contract_</span><span class="p">(</span><span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;one&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;one&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">contract_</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">shape</span>
 <span class="go">torch.Size([15, 20, 15, 20])</span>
 </pre></div>
@@ -2823,10 +2927,56 @@ performed when both nodes have batch edges with the same names.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.Edge.qr">
+<span class="sig-name descname"><span class="pre">qr</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.Edge.qr" title="Permalink to this definition">#</a></dt>
+<dd><p>Contracts an edge via <a class="reference internal" href="#tensorkrowch.Edge.contract" title="tensorkrowch.Edge.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a> and splits it via
+<a class="reference internal" href="#tensorkrowch.AbstractNode.split" title="tensorkrowch.AbstractNode.split"><code class="xref py py-meth docutils literal notranslate"><span class="pre">split()</span></code></a> using <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">&quot;qr&quot;</span></code>. See <a class="reference internal" href="operations.html#tensorkrowch.split" title="tensorkrowch.split"><code class="xref py py-func docutils literal notranslate"><span class="pre">split()</span></code></a> for
+a more complete explanation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeA&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodeB</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeB&#39;</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_edge</span> <span class="o">=</span> <span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">nodeB</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_nodeA</span><span class="p">,</span> <span class="n">new_nodeB</span> <span class="o">=</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">qr</span><span class="p">()</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_nodeA</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([10, 10, 100])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">new_nodeB</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([10, 20, 100])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">new_nodeA</span><span class="o">.</span><span class="n">axes_names</span><span class="p">)</span>
+<span class="go">[&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">new_nodeB</span><span class="o">.</span><span class="n">axes_names</span><span class="p">)</span>
+<span class="go">[&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
+</pre></div>
+</div>
+<p>Original nodes still exist in the network</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">nodeA</span><span class="o">.</span><span class="n">network</span> <span class="o">==</span> <span class="n">new_nodeA</span><span class="o">.</span><span class="n">network</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">nodeB</span><span class="o">.</span><span class="n">network</span> <span class="o">==</span> <span class="n">new_nodeB</span><span class="o">.</span><span class="n">network</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.Edge.qr_">
 <span class="sig-name descname"><span class="pre">qr_</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.Edge.qr_" title="Permalink to this definition">#</a></dt>
-<dd><p>Contracts an edge in-place via <a class="reference internal" href="#tensorkrowch.Edge.contract_" title="tensorkrowch.Edge.contract_"><code class="xref py py-func docutils literal notranslate"><span class="pre">contract_()</span></code></a> and splits
-it in-place via <a class="reference internal" href="#tensorkrowch.AbstractNode.split_" title="tensorkrowch.AbstractNode.split_"><code class="xref py py-func docutils literal notranslate"><span class="pre">split_()</span></code></a> using <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">&quot;qr&quot;</span></code>. See
+<dd><p>In-place version of <a class="reference internal" href="#tensorkrowch.Edge.qr" title="tensorkrowch.Edge.qr"><code class="xref py py-meth docutils literal notranslate"><span class="pre">qr()</span></code></a>.</p>
+<p>Contracts an edge in-place via <a class="reference internal" href="#tensorkrowch.Edge.contract_" title="tensorkrowch.Edge.contract_"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract_()</span></code></a> and splits
+it in-place via <a class="reference internal" href="#tensorkrowch.AbstractNode.split_" title="tensorkrowch.AbstractNode.split_"><code class="xref py py-meth docutils literal notranslate"><span class="pre">split_()</span></code></a> using <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">&quot;qr&quot;</span></code>. See
 <a class="reference internal" href="operations.html#tensorkrowch.split" title="tensorkrowch.split"><code class="xref py py-func docutils literal notranslate"><span class="pre">split()</span></code></a> for a more complete explanation.</p>
 <p>Following the <strong>PyTorch</strong> convention, names of functions ended with an
 underscore indicate <strong>in-place</strong> operations.</p>
@@ -2867,10 +3017,56 @@ nodes connected by <code class="docutils literal notranslate"><span class="pre">
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.Edge.rq">
+<span class="sig-name descname"><span class="pre">rq</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.Edge.rq" title="Permalink to this definition">#</a></dt>
+<dd><p>Contracts an edge via <a class="reference internal" href="#tensorkrowch.Edge.contract" title="tensorkrowch.Edge.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a> and splits it via
+<a class="reference internal" href="#tensorkrowch.AbstractNode.split" title="tensorkrowch.AbstractNode.split"><code class="xref py py-meth docutils literal notranslate"><span class="pre">split()</span></code></a> using <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">&quot;rq&quot;</span></code>. See <a class="reference internal" href="operations.html#tensorkrowch.split" title="tensorkrowch.split"><code class="xref py py-func docutils literal notranslate"><span class="pre">split()</span></code></a> for
+a more complete explanation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeA&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodeB</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeB&#39;</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_edge</span> <span class="o">=</span> <span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">nodeB</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_nodeA</span><span class="p">,</span> <span class="n">new_nodeB</span> <span class="o">=</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">rq</span><span class="p">()</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_nodeA</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([10, 10, 100])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">new_nodeB</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([10, 20, 100])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">new_nodeA</span><span class="o">.</span><span class="n">axes_names</span><span class="p">)</span>
+<span class="go">[&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">new_nodeB</span><span class="o">.</span><span class="n">axes_names</span><span class="p">)</span>
+<span class="go">[&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
+</pre></div>
+</div>
+<p>Original nodes still exist in the network</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">nodeA</span><span class="o">.</span><span class="n">network</span> <span class="o">==</span> <span class="n">new_nodeA</span><span class="o">.</span><span class="n">network</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">nodeB</span><span class="o">.</span><span class="n">network</span> <span class="o">==</span> <span class="n">new_nodeB</span><span class="o">.</span><span class="n">network</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.Edge.rq_">
 <span class="sig-name descname"><span class="pre">rq_</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.Edge.rq_" title="Permalink to this definition">#</a></dt>
-<dd><p>Contracts an edge in-place via <a class="reference internal" href="#tensorkrowch.Edge.contract_" title="tensorkrowch.Edge.contract_"><code class="xref py py-func docutils literal notranslate"><span class="pre">contract_()</span></code></a> and splits
-it in-place via <a class="reference internal" href="#tensorkrowch.AbstractNode.split_" title="tensorkrowch.AbstractNode.split_"><code class="xref py py-func docutils literal notranslate"><span class="pre">split_()</span></code></a> using <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">&quot;qr&quot;</span></code>. See
+<dd><p>In-place version of <a class="reference internal" href="#tensorkrowch.Edge.rq" title="tensorkrowch.Edge.rq"><code class="xref py py-meth docutils literal notranslate"><span class="pre">rq()</span></code></a>.</p>
+<p>Contracts an edge in-place via <a class="reference internal" href="#tensorkrowch.Edge.contract_" title="tensorkrowch.Edge.contract_"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract_()</span></code></a> and splits
+it in-place via <a class="reference internal" href="#tensorkrowch.AbstractNode.split_" title="tensorkrowch.AbstractNode.split_"><code class="xref py py-meth docutils literal notranslate"><span class="pre">split_()</span></code></a> using <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">&quot;qr&quot;</span></code>. See
 <a class="reference internal" href="operations.html#tensorkrowch.split" title="tensorkrowch.split"><code class="xref py py-func docutils literal notranslate"><span class="pre">split()</span></code></a> for a more complete explanation.</p>
 <p>Following the <strong>PyTorch</strong> convention, names of functions ended with an
 underscore indicate <strong>in-place</strong> operations.</p>
@@ -2911,10 +3107,73 @@ nodes connected by <code class="docutils literal notranslate"><span class="pre">
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.Edge.svd">
+<span class="sig-name descname"><span class="pre">svd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">side</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'left'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cum_percentage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.Edge.svd" title="Permalink to this definition">#</a></dt>
+<dd><p>Contracts an edge via <a class="reference internal" href="#tensorkrowch.Edge.contract" title="tensorkrowch.Edge.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a> and splits it via
+<a class="reference internal" href="#tensorkrowch.AbstractNode.split" title="tensorkrowch.AbstractNode.split"><code class="xref py py-meth docutils literal notranslate"><span class="pre">split()</span></code></a> using <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">&quot;svd&quot;</span></code>. See <a class="reference internal" href="operations.html#tensorkrowch.split" title="tensorkrowch.split"><code class="xref py py-func docutils literal notranslate"><span class="pre">split()</span></code></a> for
+a more complete explanation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>side</strong> (<em>str</em><em>, </em><em>optional</em>) – Indicates the side to which the diagonal matrix <span class="math notranslate nohighlight">\(S\)</span> should be
+contracted. If “left”, the first resultant node’s tensor will be
+<span class="math notranslate nohighlight">\(US\)</span>, and the other node’s tensor will be <span class="math notranslate nohighlight">\(V^{\dagger}\)</span>.
+If “right”, their tensors will be <span class="math notranslate nohighlight">\(U\)</span> and <span class="math notranslate nohighlight">\(SV^{\dagger}\)</span>,
+respectively.</p></li>
+<li><p><strong>rank</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of singular values to keep.</p></li>
+<li><p><strong>cum_percentage</strong> (<em>float</em><em>, </em><em>optional</em>) – <p>Proportion that should be satisfied between the sum of all singular
+values kept and the total sum of all singular values.</p>
+<div class="math notranslate nohighlight">
+\[\frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+cum\_percentage\]</div>
+</p></li>
+<li><p><strong>cutoff</strong> (<em>float</em><em>, </em><em>optional</em>) – Quantity that lower bounds singular values in order to be kept.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>tuple[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeA&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodeB</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeB&#39;</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_edge</span> <span class="o">=</span> <span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">nodeB</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_nodeA</span><span class="p">,</span> <span class="n">new_nodeB</span> <span class="o">=</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_nodeA</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([10, 7, 100])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">new_nodeB</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([7, 20, 100])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">new_nodeA</span><span class="o">.</span><span class="n">axes_names</span><span class="p">)</span>
+<span class="go">[&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">new_nodeB</span><span class="o">.</span><span class="n">axes_names</span><span class="p">)</span>
+<span class="go">[&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
+</pre></div>
+</div>
+<p>Original nodes still exist in the network</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">nodeA</span><span class="o">.</span><span class="n">network</span> <span class="o">==</span> <span class="n">new_nodeA</span><span class="o">.</span><span class="n">network</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">nodeB</span><span class="o">.</span><span class="n">network</span> <span class="o">==</span> <span class="n">new_nodeB</span><span class="o">.</span><span class="n">network</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.Edge.svd_">
 <span class="sig-name descname"><span class="pre">svd_</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">side</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'left'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cum_percentage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.Edge.svd_" title="Permalink to this definition">#</a></dt>
-<dd><p>Contracts an edge in-place via <a class="reference internal" href="#tensorkrowch.Edge.contract_" title="tensorkrowch.Edge.contract_"><code class="xref py py-func docutils literal notranslate"><span class="pre">contract_()</span></code></a> and splits
-it in-place via <a class="reference internal" href="#tensorkrowch.AbstractNode.split_" title="tensorkrowch.AbstractNode.split_"><code class="xref py py-func docutils literal notranslate"><span class="pre">split_()</span></code></a> using <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">&quot;svd&quot;</span></code>. See
+<dd><p>In-place version of <a class="reference internal" href="#tensorkrowch.Edge.svd" title="tensorkrowch.Edge.svd"><code class="xref py py-meth docutils literal notranslate"><span class="pre">svd()</span></code></a>.</p>
+<p>Contracts an edge in-place via <a class="reference internal" href="#tensorkrowch.Edge.contract_" title="tensorkrowch.Edge.contract_"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract_()</span></code></a> and splits
+it in-place via <a class="reference internal" href="#tensorkrowch.AbstractNode.split_" title="tensorkrowch.AbstractNode.split_"><code class="xref py py-meth docutils literal notranslate"><span class="pre">split_()</span></code></a> using <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">&quot;svd&quot;</span></code>. See
 <a class="reference internal" href="operations.html#tensorkrowch.split" title="tensorkrowch.split"><code class="xref py py-func docutils literal notranslate"><span class="pre">split()</span></code></a> for a more complete explanation.</p>
 <p>Following the <strong>PyTorch</strong> convention, names of functions ended with an
 underscore indicate <strong>in-place</strong> operations.</p>
@@ -2972,10 +3231,73 @@ cum\_percentage\]</div>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.Edge.svdr">
+<span class="sig-name descname"><span class="pre">svdr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">side</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'left'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cum_percentage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.Edge.svdr" title="Permalink to this definition">#</a></dt>
+<dd><p>Contracts an edge via <a class="reference internal" href="#tensorkrowch.Edge.contract" title="tensorkrowch.Edge.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a> and splits it via
+<a class="reference internal" href="#tensorkrowch.AbstractNode.split" title="tensorkrowch.AbstractNode.split"><code class="xref py py-meth docutils literal notranslate"><span class="pre">split()</span></code></a> using <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">&quot;svdr&quot;</span></code>. See <a class="reference internal" href="operations.html#tensorkrowch.split" title="tensorkrowch.split"><code class="xref py py-func docutils literal notranslate"><span class="pre">split()</span></code></a> for
+a more complete explanation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>side</strong> (<em>str</em><em>, </em><em>optional</em>) – Indicates the side to which the diagonal matrix <span class="math notranslate nohighlight">\(S\)</span> should be
+contracted. If “left”, the first resultant node’s tensor will be
+<span class="math notranslate nohighlight">\(US\)</span>, and the other node’s tensor will be <span class="math notranslate nohighlight">\(V^{\dagger}\)</span>.
+If “right”, their tensors will be <span class="math notranslate nohighlight">\(U\)</span> and <span class="math notranslate nohighlight">\(SV^{\dagger}\)</span>,
+respectively.</p></li>
+<li><p><strong>rank</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of singular values to keep.</p></li>
+<li><p><strong>cum_percentage</strong> (<em>float</em><em>, </em><em>optional</em>) – <p>Proportion that should be satisfied between the sum of all singular
+values kept and the total sum of all singular values.</p>
+<div class="math notranslate nohighlight">
+\[\frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+cum\_percentage\]</div>
+</p></li>
+<li><p><strong>cutoff</strong> (<em>float</em><em>, </em><em>optional</em>) – Quantity that lower bounds singular values in order to be kept.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>tuple[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeA&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodeB</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">),</span>
+<span class="gp">... </span>                 <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nodeB&#39;</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_edge</span> <span class="o">=</span> <span class="n">nodeA</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">nodeB</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_nodeA</span><span class="p">,</span> <span class="n">new_nodeB</span> <span class="o">=</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">svdr</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_nodeA</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([10, 7, 100])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">new_nodeB</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([7, 20, 100])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">new_nodeA</span><span class="o">.</span><span class="n">axes_names</span><span class="p">)</span>
+<span class="go">[&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">new_nodeB</span><span class="o">.</span><span class="n">axes_names</span><span class="p">)</span>
+<span class="go">[&#39;left&#39;, &#39;right&#39;, &#39;batch&#39;]</span>
+</pre></div>
+</div>
+<p>Original nodes still exist in the network</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">nodeA</span><span class="o">.</span><span class="n">network</span> <span class="o">==</span> <span class="n">new_nodeA</span><span class="o">.</span><span class="n">network</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">nodeB</span><span class="o">.</span><span class="n">network</span> <span class="o">==</span> <span class="n">new_nodeB</span><span class="o">.</span><span class="n">network</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.Edge.svdr_">
 <span class="sig-name descname"><span class="pre">svdr_</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">side</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'left'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cum_percentage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.Edge.svdr_" title="Permalink to this definition">#</a></dt>
-<dd><p>Contracts an edge in-place via <a class="reference internal" href="#tensorkrowch.Edge.contract_" title="tensorkrowch.Edge.contract_"><code class="xref py py-func docutils literal notranslate"><span class="pre">contract_()</span></code></a> and splits
-it in-place via <a class="reference internal" href="#tensorkrowch.AbstractNode.split_" title="tensorkrowch.AbstractNode.split_"><code class="xref py py-func docutils literal notranslate"><span class="pre">split_()</span></code></a> using <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">&quot;svdr&quot;</span></code>. See
+<dd><p>In-place version of <a class="reference internal" href="#tensorkrowch.Edge.svdr" title="tensorkrowch.Edge.svdr"><code class="xref py py-meth docutils literal notranslate"><span class="pre">svdr()</span></code></a>.</p>
+<p>Contracts an edge in-place via <a class="reference internal" href="#tensorkrowch.Edge.contract_" title="tensorkrowch.Edge.contract_"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract_()</span></code></a> and splits
+it in-place via <a class="reference internal" href="#tensorkrowch.AbstractNode.split_" title="tensorkrowch.AbstractNode.split_"><code class="xref py py-meth docutils literal notranslate"><span class="pre">split_()</span></code></a> using <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">&quot;svdr&quot;</span></code>. See
 <a class="reference internal" href="operations.html#tensorkrowch.split" title="tensorkrowch.split"><code class="xref py py-func docutils literal notranslate"><span class="pre">split()</span></code></a> for a more complete explanation.</p>
 <p>Following the <strong>PyTorch</strong> convention, names of functions ended with an
 underscore indicate <strong>in-place</strong> operations.</p>
@@ -3235,7 +3557,7 @@ thus returning a single node. Very much like <code class="docutils literal notra
 method that describes how the components of the network are combined.
 Hence, in <code class="docutils literal notranslate"><span class="pre">TensorNetwork</span></code> the <a class="reference internal" href="#tensorkrowch.TensorNetwork.forward" title="tensorkrowch.TensorNetwork.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> method shall not be
 overriden, since it will just call <a class="reference internal" href="#tensorkrowch.TensorNetwork.set_data_nodes" title="tensorkrowch.TensorNetwork.set_data_nodes"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_data_nodes()</span></code></a>, if needed,
-<a class="reference internal" href="#tensorkrowch.TensorNetwork.add_data" title="tensorkrowch.TensorNetwork.add_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_data()</span></code></a> and <a class="reference internal" href="#tensorkrowch.TensorNetwork.contract" title="tensorkrowch.TensorNetwork.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a> and then it will return the tensor
+<a class="reference internal" href="#tensorkrowch.TensorNetwork.add_data" title="tensorkrowch.TensorNetwork.add_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_data()</span></code></a> and <a class="reference internal" href="operations.html#tensorkrowch.contract" title="tensorkrowch.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a> and then it will return the tensor
 corresponding to the last <code class="docutils literal notranslate"><span class="pre">resultant</span></code> node. Hence, the order in which
 <code class="docutils literal notranslate"><span class="pre">Operations</span></code> are called from <code class="docutils literal notranslate"><span class="pre">contract</span></code> is important. The last
 operation must be the one returning the final node.</p></li>
@@ -3692,8 +4014,8 @@ is contracted with some input data, an example tensor with batch dimension
 In case the tensor network is contracted with some input data, an
 example tensor with batch dimension 1 and filled with zeros would
 be enough to trace the contraction.</p></li>
-<li><p><strong>args</strong> – Arguments that might be used in <a class="reference internal" href="#tensorkrowch.TensorNetwork.contract" title="tensorkrowch.TensorNetwork.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a>.</p></li>
-<li><p><strong>kwargs</strong> – Keyword arguments that might be used in <a class="reference internal" href="#tensorkrowch.TensorNetwork.contract" title="tensorkrowch.TensorNetwork.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a>.</p></li>
+<li><p><strong>args</strong> – Arguments that might be used in <a class="reference internal" href="operations.html#tensorkrowch.contract" title="tensorkrowch.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a>.</p></li>
+<li><p><strong>kwargs</strong> – Keyword arguments that might be used in <a class="reference internal" href="operations.html#tensorkrowch.contract" title="tensorkrowch.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -3715,13 +4037,13 @@ the <code class="docutils literal notranslate"><span class="pre">__call__</span>
 <p>Overrides the <code class="docutils literal notranslate"><span class="pre">forward</span></code> method of <strong>PyTorch</strong>’s <code class="docutils literal notranslate"><span class="pre">torch.nn.Module</span></code>.
 Sets data nodes automatically whenever <a class="reference internal" href="#tensorkrowch.TensorNetwork.set_data_nodes" title="tensorkrowch.TensorNetwork.set_data_nodes"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_data_nodes()</span></code></a> is
 overriden, <a class="reference internal" href="#tensorkrowch.TensorNetwork.add_data" title="tensorkrowch.TensorNetwork.add_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">adds</span> <span class="pre">data</span></code></a> tensor(s) to these nodes, and
-contracts the whole network according to <a class="reference internal" href="#tensorkrowch.TensorNetwork.contract" title="tensorkrowch.TensorNetwork.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a>, returning a
+contracts the whole network according to <a class="reference internal" href="operations.html#tensorkrowch.contract" title="tensorkrowch.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a>, returning a
 single <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code>.</p>
 <p>Furthermore, to optimize the contraction algorithm during training,
 once the <a class="reference internal" href="#tensorkrowch.TensorNetwork" title="tensorkrowch.TensorNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">TensorNetwork</span></code></a> is <a class="reference internal" href="#tensorkrowch.TensorNetwork.trace" title="tensorkrowch.TensorNetwork.trace"><code class="xref py py-meth docutils literal notranslate"><span class="pre">traced</span></code></a>, all that
 <code class="docutils literal notranslate"><span class="pre">forward</span></code> does is calling the different <a class="reference internal" href="operations.html#tensorkrowch.Operation" title="tensorkrowch.Operation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Operations</span></code></a>
-used in <a class="reference internal" href="#tensorkrowch.TensorNetwork.contract" title="tensorkrowch.TensorNetwork.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a> in the same order they appeared in the code.
-Hence, the <strong>last operation</strong> in <a class="reference internal" href="#tensorkrowch.TensorNetwork.contract" title="tensorkrowch.TensorNetwork.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a> should be the one that
+used in <a class="reference internal" href="operations.html#tensorkrowch.contract" title="tensorkrowch.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a> in the same order they appeared in the code.
+Hence, the <strong>last operation</strong> in <a class="reference internal" href="operations.html#tensorkrowch.contract" title="tensorkrowch.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a> should be the one that
 <strong>returns the single output</strong> <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></a>.</p>
 <p>For an example, check this <a class="reference internal" href="tutorials/5_subclass_tensor_network.html#tutorial-5"><span class="std std-ref">tutorial</span></a>.</p>
 <dl class="field-list simple">
@@ -3740,8 +4062,8 @@ feature\_dim\]</div>
 <p>Also, it is not necessary that the network has <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes, thus
 <code class="docutils literal notranslate"><span class="pre">None</span></code> is also valid.</p>
 </p></li>
-<li><p><strong>args</strong> – Arguments that might be used in <a class="reference internal" href="#tensorkrowch.TensorNetwork.contract" title="tensorkrowch.TensorNetwork.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a>.</p></li>
-<li><p><strong>kwargs</strong> – Keyword arguments that might be used in <a class="reference internal" href="#tensorkrowch.TensorNetwork.contract" title="tensorkrowch.TensorNetwork.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a>.</p></li>
+<li><p><strong>args</strong> – Arguments that might be used in <a class="reference internal" href="operations.html#tensorkrowch.contract" title="tensorkrowch.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a>.</p></li>
+<li><p><strong>kwargs</strong> – Keyword arguments that might be used in <a class="reference internal" href="operations.html#tensorkrowch.contract" title="tensorkrowch.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>

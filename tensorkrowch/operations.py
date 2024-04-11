@@ -196,10 +196,13 @@ def permute(node: AbstractNode, axes: Sequence[Ax]) -> Node:
     Permutes the nodes' tensor, as well as its axes and edges to match the new
     shape.
 
-    See `permute <https://pytorch.org/docs/stable/generated/torch.permute.html>`_.
+    See `permute <https://pytorch.org/docs/stable/generated/torch.permute.html>`_
+    in the **PyTorch** documentation.
     
     Nodes ``resultant`` from this operation are called ``"permute"``. The node
     that keeps information about the :class:`Successor` is ``node``.
+    
+    This operation is the same as :meth:`~AbstractNode.permute`.
 
     Parameters
     ----------
@@ -228,7 +231,8 @@ permute_node.__doc__ = \
     Permutes the nodes' tensor, as well as its axes and edges to match the new
     shape.
     
-    See `permute <https://pytorch.org/docs/stable/generated/torch.permute.html>`_.
+    See `permute <https://pytorch.org/docs/stable/generated/torch.permute.html>`_
+    in the **PyTorch** documentation.
     
     Nodes ``resultant`` from this operation are called ``"permute"``. The node
     that keeps information about the :class:`Successor` is ``self``.
@@ -264,6 +268,8 @@ def permute_(node: AbstractNode, axes: Sequence[Ax]) -> Node:
     See `permute <https://pytorch.org/docs/stable/generated/torch.permute.html>`_.
     
     Nodes ``resultant`` from this operation use the same name as ``node``.
+    
+    This operation is the same as :meth:`~AbstractNode.permute_`.
 
     Parameters
     ----------
@@ -1280,7 +1286,7 @@ def split(node: AbstractNode,
     r"""
     Splits one node in two via the decomposition specified in ``mode``. To
     perform this operation the set of edges has to be split in two sets,
-    corresponding to the edges of the first and second ``resultant nodes``.
+    corresponding to the edges of the first and second ``resultant`` nodes.
     Batch edges that don't appear in any of the lists will be repeated in both
     nodes, and will appear as the first edges of the ``resultant`` nodes, in
     the order they appeared in ``node``.
@@ -1336,6 +1342,8 @@ def split(node: AbstractNode,
     
     Nodes ``resultant`` from this operation are called ``"split"``. The node
     that keeps information about the :class:`Successor` is ``node``.
+    
+    This operation is the same as :meth:`~AbstractNode.split`.
 
     Parameters
     ----------
@@ -1476,6 +1484,8 @@ def split_(node: AbstractNode,
     nodes. The axis that corresponds to this edge has the name ``"split"``.
     
     Nodes ``resultant`` from this operation are called ``"split_ip"``.
+    
+    This operation is the same as :meth:`~AbstractNode.split_`.
 
     Parameters
     ----------
@@ -1653,6 +1663,8 @@ def svd(edge: Edge,
     r"""
     Contracts an edge via :func:`contract` and splits it via :func:`split`
     using ``mode = "svd"``. See :func:`split` for a more complete explanation.
+    
+    This operation is the same as :meth:`~Edge.svd`.
 
     Parameters
     ----------
@@ -1851,6 +1863,8 @@ def svd_(edge: Edge,
     
     Nodes ``resultant`` from this operation use the same names as the original
     nodes connected by ``edge``.
+    
+    This operation is the same as :meth:`~Edge.svd_`.
 
     Parameters
     ----------
@@ -2042,6 +2056,8 @@ def svdr(edge: Edge,
     r"""
     Contracts an edge via :func:`contract` and splits it via :func:`split`
     using ``mode = "svdr"``. See :func:`split` for a more complete explanation.
+    
+    This operation is the same as :meth:`~Edge.svdr`.
 
     Parameters
     ----------
@@ -2240,6 +2256,8 @@ def svdr_(edge: Edge,
     
     Nodes ``resultant`` from this operation use the same names as the original
     nodes connected by ``edge``.
+    
+    This operation is the same as :meth:`~Edge.svdr_`.
 
     Parameters
     ----------
@@ -2427,6 +2445,8 @@ def qr(edge: Edge) -> Tuple[Node, Node]:
     r"""
     Contracts an edge via :func:`contract` and splits it via :func:`split`
     using ``mode = "qr"``. See :func:`split` for a more complete explanation.
+    
+    This operation is the same as :meth:`~Edge.qr`.
 
     Parameters
     ----------
@@ -2578,6 +2598,8 @@ def qr_(edge) -> Tuple[Node, Node]:
     
     Nodes ``resultant`` from this operation use the same names as the original
     nodes connected by ``edge``.
+    
+    This operation is the same as :meth:`~Edge.qr_`.
 
     Parameters
     ----------
@@ -2722,6 +2744,8 @@ def rq(edge: Edge) -> Tuple[Node, Node]:
     r"""
     Contracts an edge via :func:`contract` and splits it via :func:`split`
     using ``mode = "rq"``. See :func:`split` for a more complete explanation.
+    
+    This operation is the same as :meth:`~Edge.rq`.
 
     Parameters
     ----------
@@ -2873,6 +2897,8 @@ def rq_(edge) -> Tuple[Node, Node]:
     
     Nodes ``resultant`` from this operation use the same names as the original
     nodes connected by ``edge``.
+    
+    This operation is the same as :meth:`~Edge.rq_`.
 
     Parameters
     ----------
@@ -3374,6 +3400,8 @@ def contract(edge: Edge) -> Node:
     Nodes ``resultant`` from this operation are called ``"contract_edges"``.
     The node that keeps information about the :class:`Successor` is
     ``edge.node1``.
+    
+    This operation is the same as :meth:`~Edge.contract`.
 
     Parameters
     ----------
@@ -3444,6 +3472,8 @@ def contract_(edge: Edge) -> Node:
     underscore indicate **in-place** operations.
     
     Nodes ``resultant`` from this operation are called ``"contract_edges_ip"``.
+    
+    This operation is the same as :meth:`~Edge.contract_`.
 
     Parameters
     ----------
@@ -3576,10 +3606,12 @@ def contract_between(node1: AbstractNode,
     """
     Contracts all edges shared between two nodes. Batch contraction is
     automatically performed when both nodes have batch edges with the same
-    names.
+    names. It can also be performed using the operator ``@``.
     
     Nodes ``resultant`` from this operation are called ``"contract_edges"``.
     The node that keeps information about the :class:`Successor` is ``node1``.
+    
+    This operation is the same as :meth:`~AbstractNode.contract_between`.
 
     Parameters
     ----------
@@ -3659,6 +3691,8 @@ def contract_between_(node1: AbstractNode,
     underscore indicate **in-place** operations.
     
     Nodes ``resultant`` from this operation are called ``"contract_edges_ip"``.
+    
+    This operation is the same as :meth:`~AbstractNode.contract_between_`.
 
     Parameters
     ----------
@@ -4281,6 +4315,62 @@ def unbind(node: AbstractStackNode) -> List[Node]:
     torch.Size([2, 2])
     """
     return unbind_op(node)
+
+
+unbind_node = copy_func(unbind)
+unbind_node.__doc__ = \
+    """
+    Unbinds a :class:`StackNode` or :class:`ParamStackNode`, where the first
+    dimension is assumed to be the stack dimension.
+
+    If :meth:`~TensorNetwork.auto_unbind` is set to ``False``, each resultant
+    node will store its own tensor. Otherwise, they will have only a reference
+    to the corresponding slice of the ``(Param)StackNode``.
+    
+    See :class:`TensorNetwork` to learn how the ``auto_unbind`` mode affects
+    the computation of :func:`unbind`.
+    
+    Nodes ``resultant`` from this operation are called ``"unbind"``. The node
+    that keeps information about the :class:`Successor` is ``self``.
+
+    Returns
+    -------
+    list[Node]
+    
+    Examples
+    --------
+    >>> net = tk.TensorNetwork()
+    >>> nodes = [tk.randn(shape=(2, 4, 2),
+    ...                   axes_names=('left', 'input', 'right'),
+    ...                   network=net)
+    ...          for _ in range(10)]
+    >>> data = [tk.randn(shape=(4,),
+    ...                  axes_names=('feature',),
+    ...                  network=net)
+    ...         for _ in range(10)]
+    ...
+    >>> for i in range(10):
+    ...     _ = nodes[i]['input'] ^ data[i]['feature']
+    ...
+    >>> stack_nodes = tk.stack(nodes)
+    >>> stack_data = tk.stack(data)
+    ...
+    >>> # It is necessary to re-connect stacks
+    >>> _ = stack_nodes['input'] ^ stack_data['feature']
+    >>> result = stack_nodes @ stack_data
+    >>> result = result.unbind()
+    >>> print(result[0].name)
+    unbind_0
+
+    >>> result[0].axes
+    [Axis( left (0) ), Axis( right (1) )]
+
+    >>> result[0].shape
+    torch.Size([2, 2])
+    """
+
+StackNode.unbind = unbind_node
+ParamStackNode.unbind = unbind_node
 
 
 ##################################   EINSUM   #################################

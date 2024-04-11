@@ -19,21 +19,41 @@ disconnect
 ^^^^^^^^^^
 .. autofunction:: disconnect
 
+svd
+^^^
+.. autofunction:: svd
+
 svd\_
 ^^^^^
 .. autofunction:: svd_
+
+svdr
+^^^^
+.. autofunction:: svdr
 
 svdr\_
 ^^^^^^
 .. autofunction:: svdr_
 
+qr
+^^
+.. autofunction:: qr
+
 qr\_
 ^^^^
 .. autofunction:: qr_
 
+rq
+^^
+.. autofunction:: rq
+
 rq\_
 ^^^^
 .. autofunction:: rq_
+
+contract
+^^^^^^^^
+.. autofunction:: contract
 
 contract\_
 ^^^^^^^^^^

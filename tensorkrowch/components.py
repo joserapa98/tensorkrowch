@@ -3342,7 +3342,7 @@ class Edge:  # MARK: Edge
         Note that this connectes edges from ``leaf`` (or ``data``, ``virtual``)
         nodes, but never from ``resultant`` nodes. If one tries to connect
         one of the inherited edges of a ``resultant`` node, the new connected
-        edge will be attached to the original ``leaf` nodes from which the
+        edge will be attached to the original ``leaf`` nodes from which the
         ``resultant`` node inherited its edges. Hence, the ``resultant`` node
         will not "see" the connection until the :class:`TensorNetwork` is
         :meth:`~TensorNetwork.reset`.
@@ -3546,7 +3546,7 @@ def connect(edge1: Edge, edge2: Edge) -> Edge:
     Note that this connectes edges from ``leaf`` (or ``data``, ``virtual``)
     nodes, but never from ``resultant`` nodes. If one tries to connect one of
     the inherited edges of a ``resultant`` node, the new connected edge will be
-    attached to the original ``leaf` nodes from which the ``resultant`` node
+    attached to the original ``leaf`` nodes from which the ``resultant`` node
     inherited its edges. Hence, the ``resultant`` node will not "see" the
     connection until the :class:`TensorNetwork` is :meth:`~TensorNetwork.reset`.
     

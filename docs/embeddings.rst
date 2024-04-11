@@ -16,3 +16,11 @@ add_ones
 poly
 ^^^^
 .. autofunction:: poly
+
+discretize
+^^^^^^^^^^
+.. autofunction:: discretize
+
+basis
+^^^^^
+.. autofunction:: basis

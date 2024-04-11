@@ -39,7 +39,7 @@ def unit(data: torch.Tensor, dim: int = 2, axis: int = -1) -> torch.Tensor:
         
         .. math::
         
-            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+            (batch_0 \times \cdots \times batch_n \times) n_{features}
         
         That is, ``data`` is a (batch) vector with :math:`n_{features}`
         components. The :math:`batch` sizes are optional.
@@ -52,7 +52,7 @@ def unit(data: torch.Tensor, dim: int = 2, axis: int = -1) -> torch.Tensor:
         
         .. math::
         
-            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+            (batch_0 \times \cdots \times batch_n \times) n_{features}
             \times dim
             
     Returns
@@ -120,7 +120,7 @@ def add_ones(data: torch.Tensor, axis: int = -1) -> torch.Tensor:
         
         .. math::
         
-            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+            (batch_0 \times \cdots \times batch_n \times) n_{features}
         
         That is, ``data`` is a (batch) vector with :math:`n_{features}`
         components. The :math:`batch` sizes are optional.
@@ -131,7 +131,7 @@ def add_ones(data: torch.Tensor, axis: int = -1) -> torch.Tensor:
         
         .. math::
         
-            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+            (batch_0 \times \cdots \times batch_n \times) n_{features}
             \times 2
             
     Returns
@@ -195,7 +195,7 @@ def poly(data: torch.Tensor, degree: int = 2, axis: int = -1) -> torch.Tensor:
         
         .. math::
         
-            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+            (batch_0 \times \cdots \times batch_n \times) n_{features}
         
         That is, ``data`` is a (batch) vector with :math:`n_{features}`
         components. The :math:`batch` sizes are optional.
@@ -209,7 +209,7 @@ def poly(data: torch.Tensor, degree: int = 2, axis: int = -1) -> torch.Tensor:
         
         .. math::
         
-            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+            (batch_0 \times \cdots \times batch_n \times) n_{features}
             \times (degree + 1)
             
     Returns
@@ -268,7 +268,7 @@ def discretize(data: torch.Tensor,
         \hat{x} = \begin{bmatrix}
                         \lfloor x_1 b^1 \rfloor \mod b & \cdots &
                             \lfloor x_1 b^{l} \rfloor \mod b\\
-                        \vdots & \cdots & \vdots\\
+                        \vdots & \ddots & \vdots\\
                         \lfloor x_N b^1 \rfloor \mod b & \cdots &
                             \lfloor x_N b^{l} \rfloor \mod b
                   \end{bmatrix}
@@ -282,7 +282,7 @@ def discretize(data: torch.Tensor,
         
         .. math::
         
-            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+            (batch_0 \times \cdots \times batch_n \times) n_{features}
         
         That is, ``data`` is a (batch) vector with :math:`n_{features}`
         components. The :math:`batch` sizes are optional. The ``data`` tensor
@@ -299,7 +299,7 @@ def discretize(data: torch.Tensor,
         
         .. math::
         
-            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+            (batch_0 \times \cdots \times batch_n \times) n_{features}
             \times level
             
     Returns
@@ -372,7 +372,7 @@ def basis(data: torch.Tensor, dim: int = 2, axis: int = -1) -> torch.Tensor:
         
         .. math::
         
-            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+            (batch_0 \times \cdots \times batch_n \times) n_{features}
         
         That is, ``data`` is a (batch) vector with :math:`n_{features}`
         components. The :math:`batch` sizes are optional. The ``data`` tensor
@@ -387,7 +387,7 @@ def basis(data: torch.Tensor, dim: int = 2, axis: int = -1) -> torch.Tensor:
         
         .. math::
         
-            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+            (batch_0 \times \cdots \times batch_n \times) n_{features}
             \times dim
             
     Returns

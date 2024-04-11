@@ -284,10 +284,16 @@ title="Source repository"
   <h1>Source code for tensorkrowch.models.mps</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">This script contains:</span>
-<span class="sd">    * MPS</span>
-<span class="sd">    * UMPS</span>
-<span class="sd">    * ConvMPS</span>
-<span class="sd">    * ConvUMPS</span>
+<span class="sd">    * MPS:</span>
+<span class="sd">        + UMPS</span>
+<span class="sd">        + MPSLayer</span>
+<span class="sd">        + UMPSLayer</span>
+<span class="sd">    * MPSData</span>
+<span class="sd">    * AbstractConvClass:</span>
+<span class="sd">        + ConvMPS</span>
+<span class="sd">        + ConvUMPS</span>
+<span class="sd">        + ConvMPSLayer</span>
+<span class="sd">        + ConvUMPSLayer</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">abstractmethod</span><span class="p">,</span> <span class="n">ABC</span>
@@ -1111,7 +1117,11 @@ title="Source repository"
 <div class="viewcode-block" id="MPS.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                 <span class="n">marginalize_output</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+                 <span class="n">marginalize_output</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">embedding_matrices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span>
+                                        <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                                              <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span>
+                 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the whole MPS.</span>
 <span class="sd">        </span>
@@ -1132,11 +1142,43 @@ title="Source repository"
 <span class="sd">            itself connecting output nodes to itselves at ``&quot;input&quot;`` edges. If</span>
 <span class="sd">            ``False``, output nodes are left with their ``&quot;input&quot;`` edges</span>
 <span class="sd">            disconnected.</span>
+<span class="sd">        embedding_matrices : torch.Tensor, list[torch.Tensor] or tuple[torch.Tensor], optional</span>
+<span class="sd">            If ``marginalize_output = True``, a matrix can be introduced</span>
+<span class="sd">            between each output node and its copy, connecting the ``&quot;input&quot;``</span>
+<span class="sd">            edges. This can be useful when data vectors are not represented</span>
+<span class="sd">            as qubits in the computational basis, but are transformed via</span>
+<span class="sd">            some :ref:`Embeddings` function.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        Node</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">embedding_matrices</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">embedding_matrices</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">embedding_matrices</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_out_features</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s1">&#39;`embedding_matrices` should have the same amount of &#39;</span>
+                        <span class="s1">&#39;elements as output nodes are in the MPS&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">embedding_matrices</span> <span class="o">=</span> <span class="p">[</span><span class="n">embedding_matrices</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_out_features</span><span class="p">)</span>
+                
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">embedding_matrices</span><span class="p">,</span>
+                                                <span class="bp">self</span><span class="o">.</span><span class="n">out_env</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                        <span class="s1">&#39;`embedding_matrices` should be torch.Tensor type&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mat</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s1">&#39;`embedding_matrices should ne rank-2 tensors&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">mat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">mat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s1">&#39;`embedding_matrices` should have equal dimensions&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">!=</span> <span class="n">mat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s1">&#39;`embedding_matrices` dimensions should be equal &#39;</span>
+                        <span class="s1">&#39;to the input dimensions of the corresponding MPS &#39;</span>
+                        <span class="s1">&#39;output nodes&#39;</span><span class="p">)</span>
+            
         <span class="n">in_regions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_regions</span>
         <span class="n">out_regions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_regions</span>
         
@@ -1183,14 +1225,25 @@ title="Source repository"
                 <span class="c1"># Contract all output nodes sequentially</span>
                 <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inline_contraction</span><span class="p">(</span><span class="n">nodes_out_env</span><span class="p">)</span>
             
-            <span class="k">else</span><span class="p">:</span>      
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">embedding_matrices</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">nodes_out_env</span><span class="p">):</span>
+                        <span class="n">node</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
+                        <span class="n">mat_node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">tensor</span><span class="o">=</span><span class="n">embedding_matrices</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                        <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;output&#39;</span><span class="p">),</span>
+                                        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_result_mat&#39;</span><span class="p">,</span>
+                                        <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+                                        <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                        <span class="n">mat_node</span><span class="p">[</span><span class="s1">&#39;output&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
+                        <span class="n">nodes_out_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">mat_node</span> <span class="o">@</span> <span class="n">node</span>
+                
                 <span class="c1"># Copy output nodes sharing tensors and connect them to input edges</span>
                 <span class="n">copied_nodes</span> <span class="o">=</span> <span class="p">[]</span>
                 <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes_out_env</span><span class="p">:</span>
-                    <span class="n">node</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;input&#39;</span><span class="p">)</span>
+                    <span class="n">node</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
                     <span class="n">new_node</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_shape</span><span class="p">,</span>
                                               <span class="n">axes_names</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">,</span>
-                                              <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_result&#39;</span><span class="p">,</span>
+                                              <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_result_copy&#39;</span><span class="p">,</span>
                                               <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
                                               <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
                     <span class="n">new_node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
@@ -1548,10 +1601,10 @@ title="Source repository"
         
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
             <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">@</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">)</span>
+            <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
             
             <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span>
-            <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">)</span>
+            <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
 
         <span class="n">new_tensors</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">left_nodeC</span> <span class="o">=</span> <span class="kc">None</span>

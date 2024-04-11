@@ -385,8 +385,6 @@ starting from each side of the images (top, bottom, left, right).</p>
                 <span class="n">std</span><span class="o">=</span><span class="mf">1e-9</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mps</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">softmax</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Softmax</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">embedding</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
         <span class="n">ones</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>

@@ -62,8 +62,6 @@ Now we can define the model::
                     std=1e-9)
                 self.layers.append(mps)
             
-            self.softmax = nn.Softmax(dim=1)
-            
         @staticmethod
         def embedding(x):
             ones = torch.ones_like(x[:, 0]).unsqueeze(1)

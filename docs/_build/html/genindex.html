@@ -349,6 +349,8 @@ title="Source repository"
 <h2 id="B">B</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="embeddings.html#tensorkrowch.embeddings.basis">basis() (in module tensorkrowch.embeddings)</a>
+</li>
       <li><a href="models.html#tensorkrowch.models.MPO.bond_dim">bond_dim (tensorkrowch.models.MPO property)</a>
 
       <ul>
@@ -409,9 +411,11 @@ title="Source repository"
       </ul></li>
       <li><a href="operations.html#tensorkrowch.connect_stack">connect_stack() (in module tensorkrowch)</a>
 </li>
-      <li><a href="components.html#tensorkrowch.Edge.contract">contract() (tensorkrowch.Edge method)</a>
+      <li><a href="operations.html#tensorkrowch.contract">contract() (in module tensorkrowch)</a>
 
       <ul>
+        <li><a href="components.html#tensorkrowch.Edge.contract">(tensorkrowch.Edge method)</a>
+</li>
         <li><a href="models.html#tensorkrowch.models.MPO.contract">(tensorkrowch.models.MPO method)</a>
 </li>
         <li><a href="models.html#tensorkrowch.models.MPS.contract">(tensorkrowch.models.MPS method)</a>
@@ -537,6 +541,8 @@ title="Source repository"
         <li><a href="components.html#tensorkrowch.Edge.disconnect">(tensorkrowch.Edge method)</a>
 </li>
       </ul></li>
+      <li><a href="embeddings.html#tensorkrowch.embeddings.discretize">discretize() (in module tensorkrowch.embeddings)</a>
+</li>
       <li><a href="components.html#tensorkrowch.AbstractNode.dtype">dtype (tensorkrowch.AbstractNode property)</a>
 </li>
   </ul></td>
@@ -979,6 +985,14 @@ title="Source repository"
 <h2 id="Q">Q</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="operations.html#tensorkrowch.qr">qr() (in module tensorkrowch)</a>
+
+      <ul>
+        <li><a href="components.html#tensorkrowch.Edge.qr">(tensorkrowch.Edge method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="operations.html#tensorkrowch.qr_">qr_() (in module tensorkrowch)</a>
 
       <ul>
@@ -1007,10 +1021,10 @@ title="Source repository"
       </ul></li>
       <li><a href="components.html#tensorkrowch.TensorNetwork.reset">reset() (tensorkrowch.TensorNetwork method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.AbstractNode.reset_tensor_address">reset_tensor_address() (tensorkrowch.AbstractNode method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.TensorNetwork.resultant_nodes">resultant_nodes (tensorkrowch.TensorNetwork property)</a>
 </li>
       <li><a href="models.html#tensorkrowch.models.MPO.right_node">right_node (tensorkrowch.models.MPO property)</a>
@@ -1019,6 +1033,12 @@ title="Source repository"
         <li><a href="models.html#tensorkrowch.models.MPS.right_node">(tensorkrowch.models.MPS property)</a>
 </li>
         <li><a href="models.html#tensorkrowch.models.MPSData.right_node">(tensorkrowch.models.MPSData property)</a>
+</li>
+      </ul></li>
+      <li><a href="operations.html#tensorkrowch.rq">rq() (in module tensorkrowch)</a>
+
+      <ul>
+        <li><a href="components.html#tensorkrowch.Edge.rq">(tensorkrowch.Edge method)</a>
 </li>
       </ul></li>
       <li><a href="operations.html#tensorkrowch.rq_">rq_() (in module tensorkrowch)</a>
@@ -1081,12 +1101,12 @@ title="Source repository"
       </ul></li>
       <li><a href="operations.html#tensorkrowch.stack">stack() (in module tensorkrowch)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="operations.html#tensorkrowch.stacked_einsum">stacked_einsum() (in module tensorkrowch)</a>
 </li>
       <li><a href="components.html#tensorkrowch.StackEdge">StackEdge (class in tensorkrowch)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="components.html#tensorkrowch.StackNode">StackNode (class in tensorkrowch)</a>
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.std">std() (tensorkrowch.AbstractNode method)</a>
@@ -1117,10 +1137,22 @@ title="Source repository"
 </li>
       <li><a href="components.html#tensorkrowch.AbstractNode.sum">sum() (tensorkrowch.AbstractNode method)</a>
 </li>
+      <li><a href="operations.html#tensorkrowch.svd">svd() (in module tensorkrowch)</a>
+
+      <ul>
+        <li><a href="components.html#tensorkrowch.Edge.svd">(tensorkrowch.Edge method)</a>
+</li>
+      </ul></li>
       <li><a href="operations.html#tensorkrowch.svd_">svd_() (in module tensorkrowch)</a>
 
       <ul>
         <li><a href="components.html#tensorkrowch.Edge.svd_">(tensorkrowch.Edge method)</a>
+</li>
+      </ul></li>
+      <li><a href="operations.html#tensorkrowch.svdr">svdr() (in module tensorkrowch)</a>
+
+      <ul>
+        <li><a href="components.html#tensorkrowch.Edge.svdr">(tensorkrowch.Edge method)</a>
 </li>
       </ul></li>
       <li><a href="operations.html#tensorkrowch.svdr_">svdr_() (in module tensorkrowch)</a>
@@ -1162,7 +1194,13 @@ title="Source repository"
       <li><a href="models.html#tensorkrowch.models.UMPSLayer">UMPSLayer (class in tensorkrowch.models)</a>
 </li>
       <li><a href="operations.html#tensorkrowch.unbind">unbind() (in module tensorkrowch)</a>
+
+      <ul>
+        <li><a href="components.html#tensorkrowch.ParamStackNode.unbind">(tensorkrowch.ParamStackNode method)</a>
 </li>
+        <li><a href="components.html#tensorkrowch.StackNode.unbind">(tensorkrowch.StackNode method)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="embeddings.html#tensorkrowch.embeddings.unit">unit() (in module tensorkrowch.embeddings)</a>

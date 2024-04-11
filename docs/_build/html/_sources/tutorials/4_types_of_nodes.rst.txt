@@ -190,13 +190,12 @@ Other thing one should take into account are **reserved nodes' names**:
     # Batch edge has size 1 when created
     assert net['stack_data_memory'].shape == (100, 1, 5)
     
-* **"virtual_result"**: Name of the ``virtual`` :class:`ParamStackNode` that
-  results from stacking ``ParamNodes`` as the first operation in the network
-  contraction, if ``auto_stack`` mode is set to ``True``. There might be as
-  much ``"virtual_result"`` nodes as stacks are created from ``ParamNodes``. To
-  learn more about this, see :class:`ParamStackNode`. This special name can
-  be used for all sort of ``virtual`` nodes that are not part of the network
-  explicitly, but are required in some situations.
+* **"virtual_result"**: Name of ``virtual`` nodes that are not explicitly
+  part of the network, but are required for some situations during contraction.
+  For instance, the :class:`ParamStackNode` that results from stacking
+  :class:`ParamNodes <ParamNode>` as the first operation in the network
+  contraction, if ``auto_stack`` mode is set to ``True``. To learn more about
+  this, see :class:`ParamStackNode`.
 
   ::
 
@@ -222,6 +221,10 @@ Other thing one should take into account are **reserved nodes' names**:
   ``"virtual_uniform"`` nodes as shared memories are used for the ``leaf``
   nodes in the network (usually just one). An example of this can be seen in
   the previous section, when ``virtual`` nodes were defined.
+
+For ``"virtual_result"`` and ``"virtual_uniform"``, these special behaviours
+are not restricted to nodes having those names, but also nodes whose names
+contain those strings.
     
 Although these names can in principle be used for other nodes, this can lead
 to undesired behaviour.

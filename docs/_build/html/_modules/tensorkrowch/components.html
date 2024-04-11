@@ -668,18 +668,22 @@ title="Source repository"
 <span class="sd">      To learn more about this, see :meth:`~TensorNetwork.set_data_nodes` and</span>
 <span class="sd">      :meth:`~TensorNetwork.add_data`.</span>
 <span class="sd">    </span>
-<span class="sd">    * **&quot;virtual_result&quot;**: Name of the ``virtual`` :class:`ParamStackNode` that</span>
+<span class="sd">    * **&quot;virtual_result&quot;**: Name of ``virtual`` nodes that are not explicitly</span>
+<span class="sd">      part of the network, but are required for some situations during</span>
+<span class="sd">      contraction. For instance, the :class:`ParamStackNode` that</span>
 <span class="sd">      results from stacking :class:`ParamNodes &lt;ParamNode&gt;` as the first</span>
 <span class="sd">      operation in the network contraction, if ``auto_stack`` mode is set to</span>
-<span class="sd">      ``True``. There might be as much ``&quot;virtual_result&quot;`` nodes as stacks are</span>
-<span class="sd">      created from ``ParamNodes``. To learn more about this, see</span>
-<span class="sd">      :class:`ParamStackNode`.</span>
+<span class="sd">      ``True``. To learn more about this, see :class:`ParamStackNode`.</span>
 <span class="sd">    </span>
 <span class="sd">    * **&quot;virtual_uniform&quot;**: Name of the ``virtual`` :class:`Node` or</span>
 <span class="sd">      :class:`ParamNode` that is used in uniform (translationally invariant)</span>
 <span class="sd">      tensor networks to store the tensor that will be shared by all ``leaf``</span>
 <span class="sd">      nodes. There might be as much ``&quot;virtual_uniform&quot;`` nodes as shared</span>
 <span class="sd">      memories are used for the ``leaf`` nodes in the network (usually just one).</span>
+<span class="sd">    </span>
+<span class="sd">    For ``&quot;virtual_result&quot;`` and ``&quot;virtual_uniform&quot;``, these special</span>
+<span class="sd">    behaviours are not restricted to nodes having those names, but also nodes</span>
+<span class="sd">    whose names contain those strings.</span>
 <span class="sd">      </span>
 <span class="sd">    Although these names can in principle be used for other nodes, this can lead</span>
 <span class="sd">    to undesired behaviour.</span>
@@ -1314,7 +1318,7 @@ title="Source repository"
             <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">lst</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="AbstractNode.reattach_edges"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.reattach_edges">[docs]</a>    <span class="k">def</span> <span class="nf">reattach_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                       <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Ax</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                       <span class="n">axes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                        <span class="n">override</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Substitutes current edges by copies of them that are attached to the node.</span>
@@ -1329,9 +1333,9 @@ title="Source repository"
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        axis : int, str or Axis, optional</span>
-<span class="sd">            The edge attached to this axis will be reattached. If ``None``, all</span>
-<span class="sd">            edges will be reattached.</span>
+<span class="sd">        axis : list[int, str or Axis] or tuple[int, str or Axis], optional</span>
+<span class="sd">            The edge attached to these axes will be reattached. If ``None``,</span>
+<span class="sd">            all edges will be reattached.</span>
 <span class="sd">        override : bool</span>
 <span class="sd">            Boolean indicating if the new, reattached edges should also replace</span>
 <span class="sd">            the corresponding edges in the node&#39;s neighbours (``True``). Otherwise,</span>
@@ -1368,11 +1372,13 @@ title="Source repository"
 <span class="sd">        If ``override`` is ``True``, ``nodeB[&#39;right&#39;]`` would be replaced by the</span>
 <span class="sd">        new ``result[&#39;right&#39;]``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">axes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">edges</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">axis_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
-            <span class="n">edges</span> <span class="o">=</span> <span class="p">[(</span><span class="n">axis_num</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">[</span><span class="n">axis_num</span><span class="p">])]</span>
+            <span class="n">edges</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">axis</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">:</span>
+                <span class="n">axis_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
+                <span class="n">edges</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">axis_num</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]))</span>
         
         <span class="n">skip_edges</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">edges</span><span class="p">:</span>
@@ -3180,7 +3186,8 @@ title="Source repository"
 <span class="sd">    attribute of the :class:`TensorNetwork` is set to ``True``). Hence, that</span>
 <span class="sd">    first :func:`stack` is never actually computed.</span>
 <span class="sd">    </span>
-<span class="sd">    The ``ParamStackNode`` that results from this process uses the reserved name</span>
+<span class="sd">    The ``ParamStackNode`` that results from this process has the name</span>
+<span class="sd">    ``&quot;virtual_result_stack&quot;``, which contains the reserved name</span>
 <span class="sd">    ``&quot;virtual_result&quot;``, as explained :class:`here &lt;AbstractNode&gt;`. This node</span>
 <span class="sd">    stores the tensor from which all the stacked :class:`ParamNodes &lt;ParamNode&gt;`</span>
 <span class="sd">    just take one `slice`.</span>
@@ -3374,9 +3381,10 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    |</span>
 
-<span class="sd">    Furthermore, edges have specific operations like :meth:`contract_` or</span>
-<span class="sd">    :meth:`svd_` (and its variations) that allow in-place modification of the</span>
-<span class="sd">    :class:`TensorNetwork`.</span>
+<span class="sd">    Furthermore, edges have specific operations like :meth:`contract` or</span>
+<span class="sd">    :meth:`svd` (and its variations), as well as in-place versions of them </span>
+<span class="sd">    (:meth:`contract_`, :meth:`svd_`, etc.) that allow in-place modification</span>
+<span class="sd">    of the :class:`TensorNetwork`.</span>
 <span class="sd">    </span>
 <span class="sd">    |</span>
 
@@ -3618,7 +3626,7 @@ title="Source repository"
 <span class="sd">        Note that this connectes edges from ``leaf`` (or ``data``, ``virtual``)</span>
 <span class="sd">        nodes, but never from ``resultant`` nodes. If one tries to connect</span>
 <span class="sd">        one of the inherited edges of a ``resultant`` node, the new connected</span>
-<span class="sd">        edge will be attached to the original ``leaf` nodes from which the</span>
+<span class="sd">        edge will be attached to the original ``leaf`` nodes from which the</span>
 <span class="sd">        ``resultant`` node inherited its edges. Hence, the ``resultant`` node</span>
 <span class="sd">        will not &quot;see&quot; the connection until the :class:`TensorNetwork` is</span>
 <span class="sd">        :meth:`~TensorNetwork.reset`.</span>
@@ -3822,7 +3830,7 @@ title="Source repository"
 <span class="sd">    Note that this connectes edges from ``leaf`` (or ``data``, ``virtual``)</span>
 <span class="sd">    nodes, but never from ``resultant`` nodes. If one tries to connect one of</span>
 <span class="sd">    the inherited edges of a ``resultant`` node, the new connected edge will be</span>
-<span class="sd">    attached to the original ``leaf` nodes from which the ``resultant`` node</span>
+<span class="sd">    attached to the original ``leaf`` nodes from which the ``resultant`` node</span>
 <span class="sd">    inherited its edges. Hence, the ``resultant`` node will not &quot;see&quot; the</span>
 <span class="sd">    connection until the :class:`TensorNetwork` is :meth:`~TensorNetwork.reset`.</span>
 <span class="sd">    </span>
@@ -5102,8 +5110,9 @@ title="Source repository"
             <span class="n">aux_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_virtual_nodes</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">aux_dict</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
                 <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">_virtual</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;virtual_result&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">):</span>
-                    <span class="c1"># Virtual nodes named &quot;virtual_result&quot; are ParamStackNodes</span>
-                    <span class="c1"># that result from stacking a collection of ParamNodes</span>
+                    <span class="c1"># Virtual nodes named &quot;virtual_result&quot; are nodes that are</span>
+                    <span class="c1"># required in some situations during contraction, like</span>
+                    <span class="c1"># ParamStackNodes</span>
                     <span class="c1"># This condition is satisfied by the rest of virtual nodes</span>
                     <span class="k">continue</span>
 
@@ -5144,7 +5153,6 @@ title="Source repository"
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">aux_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
                 <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">_virtual</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;virtual_result&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">):</span>
                     <span class="c1"># This condition is satisfied by the rest of virtual nodes</span>
-                    <span class="c1"># (e.g. &quot;virtual_feature&quot;, &quot;virtual_n_features&quot;)</span>
                     <span class="k">continue</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">delete_node</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span></div>
 

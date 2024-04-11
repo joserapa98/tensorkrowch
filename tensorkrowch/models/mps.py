@@ -1264,10 +1264,10 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         if self._boundary == 'obc':
             nodes[0] = self._left_node @ nodes[0]
-            nodes[0].reattach_edges('input')
+            nodes[0].reattach_edges(axes=['input'])
             
             nodes[-1] = nodes[-1] @ self._right_node
-            nodes[-1].reattach_edges('input')
+            nodes[-1].reattach_edges(axes=['input'])
 
         new_tensors = []
         left_nodeC = None

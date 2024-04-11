@@ -1,9 +1,7 @@
 """
 This script contains:
-    * MPS
-    * UMPS
-    * ConvMPS
-    * ConvUMPS
+    * MPO:
+        + UMPO
 """
 
 from typing import (List, Optional, Sequence,

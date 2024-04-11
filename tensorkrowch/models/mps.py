@@ -1,9 +1,15 @@
 """
 This script contains:
-    * MPS
-    * UMPS
-    * ConvMPS
-    * ConvUMPS
+    * MPS:
+        + UMPS
+        + MPSLayer
+        + UMPSLayer
+    * MPSData
+    * AbstractConvClass:
+        + ConvMPS
+        + ConvUMPS
+        + ConvMPSLayer
+        + ConvUMPSLayer
 """
 
 from abc import abstractmethod, ABC

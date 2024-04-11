@@ -1,3 +1,5 @@
+.. _Embeddings:
+
 Embeddings
 ==========
 

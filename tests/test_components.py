@@ -1737,7 +1737,7 @@ class TestConnect:
         assert node4['right'] == node2['right']
 
         # Reattach a copy of the edges
-        node4.reattach_edges(axis='input', override=False)
+        node4.reattach_edges(axes=['input'], override=False)
 
         assert node4['right'] == node2['right']
         

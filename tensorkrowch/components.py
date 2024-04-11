@@ -1030,7 +1030,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
             return tuple(lst)
 
     def reattach_edges(self,
-                       axis: Optional[Ax] = None,
+                       axes: Optional[Sequence[Ax]] = None,
                        override: bool = False) -> None:
         """
         Substitutes current edges by copies of them that are attached to the node.
@@ -1045,9 +1045,9 @@ class AbstractNode(ABC):  # MARK: AbstractNode
 
         Parameters
         ----------
-        axis : int, str or Axis, optional
-            The edge attached to this axis will be reattached. If ``None``, all
-            edges will be reattached.
+        axis : list[int, str or Axis] or tuple[int, str or Axis], optional
+            The edge attached to these axes will be reattached. If ``None``,
+            all edges will be reattached.
         override : bool
             Boolean indicating if the new, reattached edges should also replace
             the corresponding edges in the node's neighbours (``True``). Otherwise,
@@ -1084,11 +1084,13 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         If ``override`` is ``True``, ``nodeB['right']`` would be replaced by the
         new ``result['right']``.
         """
-        if axis is None:
+        if axes is None:
             edges = list(enumerate(self._edges))
         else:
-            axis_num = self.get_axis_num(axis)
-            edges = [(axis_num, self._edges[axis_num])]
+            edges = []
+            for axis in axes:
+                axis_num = self.get_axis_num(axis)
+                edges.append((axis_num, self._edges[axis_num]))
         
         skip_edges = []
         for i, edge in edges:

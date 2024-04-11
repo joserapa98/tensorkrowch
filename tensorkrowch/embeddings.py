@@ -9,7 +9,7 @@ import torch
 from tensorkrowch.utils import binomial_coeffs
 
 
-def unit(data: torch.Tensor, dim: int = 2) -> torch.Tensor:
+def unit(data: torch.Tensor, dim: int = 2, axis: int = -1) -> torch.Tensor:
     r"""
     Embedds the data tensor using the local feature map defined in the original
     `paper <https://arxiv.org/abs/1605.05775>`_ by E. Miles Stoudenmire and David
@@ -45,16 +45,19 @@ def unit(data: torch.Tensor, dim: int = 2) -> torch.Tensor:
         components. The :math:`batch` sizes are optional.
     dim : int
         New feature dimension.
-            
-    Returns
-    -------
-    torch.Tensor
-        New data tensor with shape
+    axis : int
+        Axis where the ``data`` tensor is 'expanded'. Should be between 0 and
+        the rank of ``data``. By default, it is -1, which returns a tensor with
+        shape  
         
         .. math::
         
             (batch_0 \times \cdots \times batch_n \ times) n_{features}
             \times dim
+            
+    Returns
+    -------
+    torch.Tensor
             
     Examples
     --------
@@ -84,10 +87,10 @@ def unit(data: torch.Tensor, dim: int = 2) -> torch.Tensor:
               (pi / 2 * data).cos().pow(dim - i) * \
               (pi / 2 * data).sin().pow(i - 1)
         lst_tensors.append(aux)
-    return torch.stack(lst_tensors, dim=-1)
+    return torch.stack(lst_tensors, dim=axis)
 
 
-def add_ones(data: torch.Tensor) -> torch.Tensor:
+def add_ones(data: torch.Tensor, axis: int = -1) -> torch.Tensor:
     r"""
     Embedds the data tensor adding 1's as the first component of each vector.
     That is, given a vector
@@ -121,16 +124,19 @@ def add_ones(data: torch.Tensor) -> torch.Tensor:
         
         That is, ``data`` is a (batch) vector with :math:`n_{features}`
         components. The :math:`batch` sizes are optional.
-            
-    Returns
-    -------
-    torch.Tensor
-        New data tensor with shape
+    axis : int
+        Axis where the ``data`` tensor is 'expanded'. Should be between 0 and
+        the rank of ``data``. By default, it is -1, which returns a tensor with
+        shape  
         
         .. math::
         
             (batch_0 \times \cdots \times batch_n \ times) n_{features}
             \times 2
+            
+    Returns
+    -------
+    torch.Tensor
     
     Examples
     --------
@@ -153,10 +159,10 @@ def add_ones(data: torch.Tensor) -> torch.Tensor:
     """
     if not isinstance(data, torch.Tensor):
         raise TypeError('`data` should be torch.Tensor type')
-    return torch.stack([torch.ones_like(data), data], dim=-1)
+    return torch.stack([torch.ones_like(data), data], dim=axis)
 
 
-def poly(data: torch.Tensor, degree: int = 2) -> torch.Tensor:
+def poly(data: torch.Tensor, degree: int = 2, axis: int = -1) -> torch.Tensor:
     r"""
     Embedds the data tensor stacking powers of it. That is, given the vector
     
@@ -196,16 +202,19 @@ def poly(data: torch.Tensor, degree: int = 2) -> torch.Tensor:
     degree : int
         Maximum degree of the monomials. The feature dimension will be
         ``degree + 1``.
-            
-    Returns
-    -------
-    torch.Tensor
-        New data tensor with shape
+    axis : int
+        Axis where the ``data`` tensor is 'expanded'. Should be between 0 and
+        the rank of ``data``. By default, it is -1, which returns a tensor with
+        shape  
         
         .. math::
         
             (batch_0 \times \cdots \times batch_n \ times) n_{features}
             \times (degree + 1)
+            
+    Returns
+    -------
+    torch.Tensor
     
     Examples
     --------
@@ -232,10 +241,13 @@ def poly(data: torch.Tensor, degree: int = 2) -> torch.Tensor:
     lst_powers = []
     for i in range(degree + 1):
         lst_powers.append(data.pow(i))
-    return torch.stack(lst_powers, dim=-1)
+    return torch.stack(lst_powers, dim=axis)
 
 
-def discretize(data: torch.Tensor, level: int, base: int = 2) -> torch.Tensor:
+def discretize(data: torch.Tensor,
+               level: int,
+               base: int = 2,
+               axis: int = -1) -> torch.Tensor:
     r"""
     Embedds the data tensor discretizing each variable in a certain ``basis``
     and with a certain ``level`` of precision, assuming the values to discretize
@@ -280,16 +292,19 @@ def discretize(data: torch.Tensor, level: int, base: int = 2) -> torch.Tensor:
         dimension.
     base : int
         The base of the discretization.
-            
-    Returns
-    -------
-    torch.Tensor
-        New data tensor with shape
+    axis : int
+        Axis where the ``data`` tensor is 'expanded'. Should be between 0 and
+        the rank of ``data``. By default, it is -1, which returns a tensor with
+        shape  
         
         .. math::
         
             (batch_0 \times \cdots \times batch_n \ times) n_{features}
             \times level
+            
+    Returns
+    -------
+    torch.Tensor
             
     Examples
     --------
@@ -322,11 +337,11 @@ def discretize(data: torch.Tensor, level: int, base: int = 2) -> torch.Tensor:
     base = torch.tensor(base, device=data.device)
     ids = [torch.remainder((data * base.pow(i)).floor(), base)
            for i in range(1, level + 1)]
-    ids = torch.stack(ids, dim=-1)
+    ids = torch.stack(ids, dim=axis)
     return ids
 
 
-def basis(data: torch.Tensor, dim: int = 2) -> torch.Tensor:
+def basis(data: torch.Tensor, dim: int = 2, axis: int = -1) -> torch.Tensor:
     r"""
     Embedds the data tensor transforming each value, assumed to be an integer
     between 0 and ``dim - 1``, into the corresponding vector of the
@@ -365,16 +380,19 @@ def basis(data: torch.Tensor, dim: int = 2) -> torch.Tensor:
     dim : int
         The dimension of the computational basis. This will be the new feature
         dimension.
-            
-    Returns
-    -------
-    torch.Tensor
-        New data tensor with shape
+    axis : int
+        Axis where the ``data`` tensor is 'expanded'. Should be between 0 and
+        the rank of ``data``. By default, it is -1, which returns a tensor with
+        shape  
         
         .. math::
         
             (batch_0 \times \cdots \times batch_n \ times) n_{features}
             \times dim
+            
+    Returns
+    -------
+    torch.Tensor
             
     Examples
     --------
@@ -406,4 +424,5 @@ def basis(data: torch.Tensor, dim: int = 2) -> torch.Tensor:
     
     ids = torch.arange(dim, device=data.device).repeat(*data.shape, 1)
     ids = torch.where(ids == data.unsqueeze(-1), 1, 0)
+    ids = ids.movedim(-1, axis)
     return ids

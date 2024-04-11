@@ -373,7 +373,7 @@ class TestMPO:
                                 for node in mpo.mats_env:
                                     assert node.grad is not None
     
-    def test_mpo_batch_mps(self):
+    def test_mpo_mps_data_manually(self):
         mpo = tk.models.MPO(n_features=10,
                             in_dim=2,
                             out_dim=2,
@@ -413,6 +413,51 @@ class TestMPO:
         result = mpo()
         
         assert result.shape == tuple([100] + [2] * 10)
+    
+    def test_mpo_mps_data_all_algorithms(self):
+        for n_features in [1, 2, 4, 10]:
+            for mpo_boundary in ['pbc']:
+                for mps_boundary in ['obc', 'pbc']:
+                    for inline_input in [True, False]:
+                        for inline_mats in [True, False]:
+                            phys_dim = torch.randint(low=2, high=10,
+                                                     size=(n_features,)).tolist()
+                            bond_dim = torch.randint(low=5, high=8,
+                                                     size=(n_features,)).tolist()
+                            
+                            mpo = tk.models.MPO(
+                                n_features=n_features,
+                                in_dim=phys_dim,
+                                out_dim=2,
+                                bond_dim=10,
+                                boundary=mpo_boundary)
+                            mps_data = tk.models.MPSData(
+                                n_features=n_features,
+                                phys_dim=phys_dim,
+                                bond_dim=bond_dim[:-1] \
+                                    if mps_boundary == 'obc' else bond_dim,
+                                boundary=mps_boundary)
+                            
+                            tensors = [
+                                torch.randn(10,
+                                            bond_dim[i - 1],
+                                            phys_dim[i],
+                                            bond_dim[i]) 
+                                for i in range(n_features)]
+                            if mps_boundary == 'obc':
+                                tensors[0] = tensors[0][:, 0]
+                                tensors[-1] = tensors[-1][..., 0]
+                            
+                            for mps_node, mpo_node in zip(mps_data.mats_env,
+                                                          mpo.mats_env):
+                                mps_node['feature'] ^ mpo_node['input']
+                            
+                            mps_data.add_data(tensors)
+                            result = mpo(mps=mps_data,
+                                         inline_input=inline_input,
+                                         inline_mats=inline_mats)
+                            
+                            assert result.shape == tuple([10] + [2] * n_features)
 
 
 class TestUMPO:

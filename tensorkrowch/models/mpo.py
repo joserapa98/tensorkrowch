@@ -12,6 +12,7 @@ import torch
 import tensorkrowch.operations as op
 from tensorkrowch.components import AbstractNode, Node, ParamNode
 from tensorkrowch.components import TensorNetwork
+from tensorkrowch.models import MPSData
 
 
 class MPO(TensorNetwork):  # MARK: MPO
@@ -529,29 +530,25 @@ class MPO(TensorNetwork):  # MARK: MPO
                 return []
 
     @staticmethod
-    def _inline_contraction(nodes: List[Node], from_left: bool = True) -> Node:
+    def _inline_contraction(nodes: List[Node]) -> Node:
         """Contracts sequence of MPO nodes (matrices) inline."""
-        if from_left:
-            result_node = nodes[0]
-            for node in nodes[1:]:
-                result_node @= node
-            return result_node
-        else:
-            result_node = nodes[-1]
-            for node in nodes[-2::-1]:
-                result_node = node @ result_node
-            return result_node
+        result_node = nodes[0]
+        for node in nodes[1:]:
+            result_node @= node
+        return result_node
 
-    def _contract_envs_inline(self, mats_env: List[Node]) -> Node:
+    def _contract_envs_inline(self,
+                              mats_env: List[Node],
+                              mps: Optional[MPSData] = None) -> Node:
         """Contracts nodes environments inline."""
-        from_left = True
+        if (mps is not None) and (mps._boundary == 'obc'):
+            mats_env[0] = mps._left_node @ mats_env[0]
+            mats_env[-1] = mats_env[-1] @ mps._right_node
+        
         if self._boundary == 'obc':
-            if mats_env[0].neighbours('left') is self._left_node:
-                mats_env = [self._left_node] + mats_env
-            if mats_env[-1].neighbours('right') is self._right_node:
-                mats_env = mats_env + [self._right_node]
-                from_left = False
-        return self._inline_contraction(mats_env, from_left)
+            mats_env = [self._left_node] + mats_env
+            mats_env = mats_env + [self._right_node]
+        return self._inline_contraction(mats_env)
 
     def _aux_pairwise(self, nodes: List[Node]) -> Tuple[List[Node],
     List[Node]]:
@@ -569,7 +566,7 @@ class MPO(TensorNetwork):  # MARK: MPO
             stack1 = op.stack(even_nodes)
             stack2 = op.stack(odd_nodes)
 
-            stack1['right'] ^ stack2['left']
+            stack1 ^ stack2
 
             aux_nodes = stack1 @ stack2
             aux_nodes = op.unbind(aux_nodes)
@@ -577,7 +574,9 @@ class MPO(TensorNetwork):  # MARK: MPO
             return aux_nodes, leftover
         return nodes, []
 
-    def _pairwise_contraction(self, mats_nodes: List[Node]) -> Node:
+    def _pairwise_contraction(self,
+                              mats_nodes: List[Node],
+                              mps: Optional[MPSData] = None) -> Node:
         """Contracts nodes environments pairwise."""
         length = len(mats_nodes)
         aux_nodes = mats_nodes
@@ -590,13 +589,14 @@ class MPO(TensorNetwork):  # MARK: MPO
                 length = len(aux1)
 
             aux_nodes = aux_nodes + leftovers
-            return self._pairwise_contraction(aux_nodes)
+            return self._pairwise_contraction(aux_nodes, mps)
 
-        return self._contract_envs_inline(aux_nodes)
+        return self._contract_envs_inline(aux_nodes, mps)
     
     def contract(self,
                  inline_input: bool = False,
-                 inline_mats: bool = False) -> Node:
+                 inline_mats: bool = False,
+                 mps: Optional[MPSData] = None) -> Node:
         """
         Contracts the whole MPO.
         
@@ -610,6 +610,13 @@ class MPO(TensorNetwork):  # MARK: MPO
             Boolean indicating whether the sequence of matrices (resultant
             after contracting the input ``data`` nodes) should be contracted
             inline or as a sequence of pairwise stacked contrations.
+        mps : MPSData, optional
+            MPS that is to be contracted with the MPO. To do that, the MPS has
+            to be already connected to the MPO. In this case, new data can be
+            put into the MPS via :meth:`MPSData.add_data`, and the MPS-MPO
+            contraction is performed by calling ``mpo(mps=mps_data)``, without
+            passing the input data again, as it is already stored in the MPS
+            cores.
 
         Returns
         -------
@@ -618,14 +625,13 @@ class MPO(TensorNetwork):  # MARK: MPO
         mats_env = self._input_contraction(self._mats_env, inline_input)
         
         if inline_mats:
-            result = self._contract_envs_inline(mats_env)
+            result = self._contract_envs_inline(mats_env, mps)
         else:
-            result = self._pairwise_contraction(mats_env)
+            result = self._pairwise_contraction(mats_env, mps)
             
         # Contract periodic edge
-        if self._boundary == 'pbc':
-            if result.is_connected_to(result):
-                result @= result
+        if result.is_connected_to(result):
+            result @= result
         
         # Put batch edges in first positions
         batch_edges = []

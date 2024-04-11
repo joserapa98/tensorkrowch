@@ -661,6 +661,214 @@ class TestMPS:  # MARK: TestMPS
                                 result.sum().backward()
                                 for node in mps.mats_env:
                                     assert node.grad is not None
+    
+    def test_all_algorithms_marginalize_with_list_matrices(self):
+        for n_features in [1, 2, 3, 4, 10]:
+            for boundary in ['obc', 'pbc']:
+                example = torch.randn(1, n_features // 2, 5) # batch x n_features x feature_dim
+                data = torch.randn(100, n_features // 2, 5)
+                
+                if example.numel() == 0:
+                    example = None
+                    data = None
+                
+                in_features = torch.randint(low=0,
+                                            high=n_features,
+                                            size=(n_features // 2,)).tolist()
+                in_features = list(set(in_features))
+                
+                mps = tk.models.MPS(n_features=n_features,
+                                    phys_dim=5,
+                                    bond_dim=2,
+                                    boundary=boundary,
+                                    in_features=in_features)
+                
+                embedding_matrices = [torch.randn(5, 5)
+                                      for _ in range(len(mps.out_features))]
+
+                for auto_stack in [True, False]:
+                    for auto_unbind in [True, False]:
+                        for inline_input in [True, False]:
+                            for inline_mats in [True, False]:
+                                print(n_features, boundary, inline_input, inline_mats)
+                                mps.auto_stack = auto_stack
+                                mps.auto_unbind = auto_unbind
+
+                                mps.trace(example,
+                                          inline_input=inline_input,
+                                          inline_mats=inline_mats,
+                                          marginalize_output=True,
+                                          embedding_matrices=embedding_matrices)
+                                result = mps(data,
+                                             inline_input=inline_input,
+                                             inline_mats=inline_mats,
+                                             marginalize_output=True,
+                                             embedding_matrices=embedding_matrices)
+
+                                if in_features:
+                                    assert result.shape == (100,)
+                                    
+                                    if not inline_input and auto_stack:
+                                        assert len(mps.virtual_nodes) == \
+                                            (2 + 2 * len(mps.out_features))
+                                    else:
+                                        assert len(mps.virtual_nodes) == \
+                                            (1 + 2 * len(mps.out_features))
+                                        
+                                else:
+                                    assert result.shape == tuple()
+                                    assert len(mps.virtual_nodes) == \
+                                        2 * len(mps.out_features)
+                                
+                                if boundary == 'obc':
+                                    assert len(mps.leaf_nodes) == n_features + 2
+                                else:
+                                    assert len(mps.leaf_nodes) == n_features
+                                    
+                                assert len(mps.data_nodes) == len(in_features)
+                                
+                                result.sum().backward()
+                                for node in mps.mats_env:
+                                    assert node.grad is not None
+    
+    def test_all_algorithms_marginalize_with_matrix(self):
+        for n_features in [1, 2, 3, 4, 10]:
+            for boundary in ['obc', 'pbc']:
+                example = torch.randn(1, n_features // 2, 5) # batch x n_features x feature_dim
+                data = torch.randn(100, n_features // 2, 5)
+                
+                if example.numel() == 0:
+                    example = None
+                    data = None
+                
+                in_features = torch.randint(low=0,
+                                            high=n_features,
+                                            size=(n_features // 2,)).tolist()
+                in_features = list(set(in_features))
+                
+                mps = tk.models.MPS(n_features=n_features,
+                                    phys_dim=5,
+                                    bond_dim=2,
+                                    boundary=boundary,
+                                    in_features=in_features)
+                
+                embedding_matrix = torch.randn(5, 5)
+
+                for auto_stack in [True, False]:
+                    for auto_unbind in [True, False]:
+                        for inline_input in [True, False]:
+                            for inline_mats in [True, False]:
+                                print(n_features, boundary, inline_input, inline_mats)
+                                mps.auto_stack = auto_stack
+                                mps.auto_unbind = auto_unbind
+
+                                mps.trace(example,
+                                          inline_input=inline_input,
+                                          inline_mats=inline_mats,
+                                          marginalize_output=True,
+                                          embedding_matrices=embedding_matrix)
+                                result = mps(data,
+                                             inline_input=inline_input,
+                                             inline_mats=inline_mats,
+                                             marginalize_output=True,
+                                             embedding_matrices=embedding_matrix)
+
+                                if in_features:
+                                    assert result.shape == (100,)
+                                    
+                                    if not inline_input and auto_stack:
+                                        assert len(mps.virtual_nodes) == \
+                                            (2 + 2 * len(mps.out_features))
+                                    else:
+                                        assert len(mps.virtual_nodes) == \
+                                            (1 + 2 * len(mps.out_features))
+                                        
+                                else:
+                                    assert result.shape == tuple()
+                                    assert len(mps.virtual_nodes) == \
+                                        2 * len(mps.out_features)
+                                
+                                if boundary == 'obc':
+                                    assert len(mps.leaf_nodes) == n_features + 2
+                                else:
+                                    assert len(mps.leaf_nodes) == n_features
+                                    
+                                assert len(mps.data_nodes) == len(in_features)
+                                
+                                result.sum().backward()
+                                for node in mps.mats_env:
+                                    assert node.grad is not None
+    
+    def test_all_algorithms_marginalize_with_matrix_cuda(self):
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        for n_features in [1, 2, 3, 4, 10]:
+            for boundary in ['obc', 'pbc']:
+                # batch x n_features x feature_dim
+                example = torch.randn(1, n_features // 2, 5, device=device)
+                data = torch.randn(100, n_features // 2, 5, device=device)
+                
+                if example.numel() == 0:
+                    example = None
+                    data = None
+                
+                in_features = torch.randint(low=0,
+                                            high=n_features,
+                                            size=(n_features // 2,)).tolist()
+                in_features = list(set(in_features))
+                
+                mps = tk.models.MPS(n_features=n_features,
+                                    phys_dim=5,
+                                    bond_dim=2,
+                                    boundary=boundary,
+                                    in_features=in_features)
+                mps = mps.to(device)
+                
+                embedding_matrix = torch.randn(5, 5, device=device)
+
+                for auto_stack in [True, False]:
+                    for auto_unbind in [True, False]:
+                        for inline_input in [True, False]:
+                            for inline_mats in [True, False]:
+                                print(n_features, boundary, inline_input, inline_mats)
+                                mps.auto_stack = auto_stack
+                                mps.auto_unbind = auto_unbind
+
+                                mps.trace(example,
+                                          inline_input=inline_input,
+                                          inline_mats=inline_mats,
+                                          marginalize_output=True,
+                                          embedding_matrices=embedding_matrix)
+                                result = mps(data,
+                                             inline_input=inline_input,
+                                             inline_mats=inline_mats,
+                                             marginalize_output=True,
+                                             embedding_matrices=embedding_matrix)
+
+                                if in_features:
+                                    assert result.shape == (100,)
+                                    
+                                    if not inline_input and auto_stack:
+                                        assert len(mps.virtual_nodes) == \
+                                            (2 + 2 * len(mps.out_features))
+                                    else:
+                                        assert len(mps.virtual_nodes) == \
+                                            (1 + 2 * len(mps.out_features))
+                                        
+                                else:
+                                    assert result.shape == tuple()
+                                    assert len(mps.virtual_nodes) == \
+                                        2 * len(mps.out_features)
+                                
+                                if boundary == 'obc':
+                                    assert len(mps.leaf_nodes) == n_features + 2
+                                else:
+                                    assert len(mps.leaf_nodes) == n_features
+                                    
+                                assert len(mps.data_nodes) == len(in_features)
+                                
+                                result.sum().backward()
+                                for node in mps.mats_env:
+                                    assert node.grad is not None
                                     
     def test_all_algorithms_no_marginalize(self):
         for n_features in [1, 2, 3, 4, 10]:

@@ -1,10 +1,8 @@
 """
 Tests for mps:
 
-    * TestMPS
-    * TestUMPS
-    * TestConvMPS
-    * TestConvUMPS
+    * TestMPO
+    * TestUMPO
 """
 
 import pytest

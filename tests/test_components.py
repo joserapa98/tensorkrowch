@@ -8,6 +8,7 @@ This script contains tests for components:
     * TestSetTensorNode
     * TestSettensorParamNode
     * TestMoveToNetwork
+    * TestChangeType
     * TestMeasures
     * TestConnect
     * TestChangeSizeEdge

@@ -3,8 +3,10 @@ Tests for mps:
 
     * TestMPS
     * TestUMPS
-    * TestConvMPS
-    * TestConvUMPS
+    * TestMPSLayer
+    * TestUMPSLayer
+    * TestMPSData
+    * TestConvModels
 """
 
 import pytest

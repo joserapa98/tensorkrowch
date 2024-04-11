@@ -1,5 +1,5 @@
 """
-Tests for mps:
+Tests for mpo:
 
     * TestMPO
     * TestUMPO

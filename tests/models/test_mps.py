@@ -405,8 +405,6 @@ class TestMPS:  # MARK: TestMPS
                 example = torch.randn(1, n_features, 5, device=device)
                 data = torch.randn(100, n_features, 5, device=device)
                 
-                print(n_features, boundary)
-                
                 mps = tk.models.MPS(n_features=n_features,
                                     phys_dim=5,
                                     bond_dim=2,
@@ -692,7 +690,6 @@ class TestMPS:  # MARK: TestMPS
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                print(n_features, boundary, inline_input, inline_mats)
                                 mps.auto_stack = auto_stack
                                 mps.auto_unbind = auto_unbind
 
@@ -760,7 +757,6 @@ class TestMPS:  # MARK: TestMPS
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                print(n_features, boundary, inline_input, inline_mats)
                                 mps.auto_stack = auto_stack
                                 mps.auto_unbind = auto_unbind
 
@@ -831,7 +827,6 @@ class TestMPS:  # MARK: TestMPS
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                print(n_features, boundary, inline_input, inline_mats)
                                 mps.auto_stack = auto_stack
                                 mps.auto_unbind = auto_unbind
 
@@ -979,19 +974,11 @@ class TestMPS:  # MARK: TestMPS
                 for oc in range(n_features):
                     for mode in ['svd', 'svdr', 'qr']:
                         for renormalize in [True, False]:
-                            print(n_features,
-                                  boundary,
-                                  oc,
-                                  mode,
-                                  renormalize)
                             mps = tk.models.MPS(n_features=n_features,
                                                 phys_dim=2,
                                                 bond_dim=10,
                                                 boundary=boundary,
                                                 in_features=[])
-                            
-                            print(mps.norm())
-                            mps.reset()
                             
                             mps_tensor = mps()
                             assert mps_tensor.shape == (2,) * n_features
@@ -1031,9 +1018,6 @@ class TestMPS:  # MARK: TestMPS
                             mps.in_features = []
                             approx_mps_tensor = mps()
                             assert approx_mps_tensor.shape == (2,) * n_features
-                            
-                            mps.reset()
-                            print(mps.norm())
     
     def test_canonicalize_univocal(self):
         for n_features in [1, 2, 3, 4, 10]:
@@ -1542,7 +1526,6 @@ class TestMPSLayer:  # MARK: TestMPSLayer
         methods = ['zeros', 'ones', 'copy', 'rand', 'randn', 'randn_eye']
         for n in [1, 2, 5]:
             for init_method in methods:
-                print(n, init_method)
                 # PBC
                 mps = tk.models.MPSLayer(boundary='pbc',
                                          n_features=n,
@@ -1584,7 +1567,6 @@ class TestMPSLayer:  # MARK: TestMPSLayer
         methods = ['zeros', 'ones', 'copy', 'rand', 'randn', 'randn_eye']
         for n in [1, 2, 5]:
             for init_method in methods:
-                print(n, init_method)
                 # PBC
                 mps = tk.models.MPSLayer(boundary='pbc',
                                          n_features=n,
@@ -1892,8 +1874,6 @@ class TestMPSData:   # MARK: TestMPSData
         for n_features in [1, 2, 5]:
             for boundary in ['obc', 'pbc']:
                 for n_batches in [1, 2, 3]:
-                    print(n_features, boundary, n_batches)
-                    
                     mps = tk.models.MPSData(boundary=boundary,
                                             n_features=n_features,
                                             phys_dim=2,

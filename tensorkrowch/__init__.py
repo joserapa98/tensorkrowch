@@ -21,6 +21,9 @@ from tensorkrowch.initializers import empty, zeros, ones, copy, rand, randn
 # Embeddings
 import tensorkrowch.embeddings as embeddings
 
+# Decompositions
+import tensorkrowch.decompositions as decompositions
+
 # Edge operations
 from tensorkrowch.components import connect, connect_stack, disconnect
 from tensorkrowch.operations import (svd, svd_, svdr, svdr_, qr, qr_, rq, rq_,

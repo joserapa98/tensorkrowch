@@ -50,7 +50,11 @@ readme = {file = "README.md", content-type = "text/markdown"}
 
 
 [tool.setuptools]
-packages = ["tensorkrowch", "tensorkrowch.models"]
+packages = [
+    "tensorkrowch",
+    "tensorkrowch.models",
+    "tensorkrowch.decompositions"
+]
 
 
 [project.urls]

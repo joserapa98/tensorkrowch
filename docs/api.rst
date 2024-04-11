@@ -9,3 +9,4 @@ API Reference
    models
    initializers
    embeddings
+   decompositions

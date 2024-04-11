@@ -827,7 +827,11 @@ class MPS(TensorNetwork):  # MARK: MPS
     def contract(self,
                  inline_input: bool = False,
                  inline_mats: bool = False,
-                 marginalize_output: bool = False) -> Node:
+                 marginalize_output: bool = False,
+                 embedding_matrices: Optional[
+                                        Union[torch.Tensor,
+                                              Sequence[torch.Tensor]]] = None
+                 ) -> Node:
         """
         Contracts the whole MPS.
         
@@ -848,11 +852,43 @@ class MPS(TensorNetwork):  # MARK: MPS
             itself connecting output nodes to itselves at ``"input"`` edges. If
             ``False``, output nodes are left with their ``"input"`` edges
             disconnected.
+        embedding_matrices : torch.Tensor, list[torch.Tensor] or tuple[torch.Tensor], optional
+            If ``marginalize_output = True``, a matrix can be introduced
+            between each output node and its copy, connecting the ``"input"``
+            edges. This can be useful when data vectors are not represented
+            as qubits in the computational basis, but are transformed via
+            some :ref:`Embeddings` function.
 
         Returns
         -------
         Node
         """
+        if embedding_matrices is not None:
+            if isinstance(embedding_matrices, Sequence):
+                if len(embedding_matrices) != len(self._out_features):
+                    raise ValueError(
+                        '`embedding_matrices` should have the same amount of '
+                        'elements as output nodes are in the MPS')
+            else:
+                embedding_matrices = [embedding_matrices] * len(self._out_features)
+                
+            for i, (mat, node) in enumerate(zip(embedding_matrices,
+                                                self.out_env)):
+                if not isinstance(mat, torch.Tensor):
+                    raise TypeError(
+                        '`embedding_matrices` should be torch.Tensor type')
+                if len(mat.shape) != 2:
+                    raise ValueError(
+                        '`embedding_matrices should ne rank-2 tensors')
+                if mat.shape[0] != mat.shape[1]:
+                    raise ValueError(
+                        '`embedding_matrices` should have equal dimensions')
+                if node['input'].size() != mat.shape[0]:
+                    raise ValueError(
+                        '`embedding_matrices` dimensions should be equal '
+                        'to the input dimensions of the corresponding MPS '
+                        'output nodes')
+            
         in_regions = self.in_regions
         out_regions = self.out_regions
         
@@ -899,14 +935,25 @@ class MPS(TensorNetwork):  # MARK: MPS
                 # Contract all output nodes sequentially
                 result = self._inline_contraction(nodes_out_env)
             
-            else:      
+            else:
+                if embedding_matrices is not None:
+                    for i, node in enumerate(nodes_out_env):
+                        node.reattach_edges(axes=['input'])
+                        mat_node = Node(tensor=embedding_matrices[i],
+                                        axes_names=('input', 'output'),
+                                        name='virtual_result_mat',
+                                        network=self,
+                                        virtual=True)
+                        mat_node['output'] ^ node['input']
+                        nodes_out_env[i] = mat_node @ node
+                
                 # Copy output nodes sharing tensors and connect them to input edges
                 copied_nodes = []
                 for node in nodes_out_env:
-                    node.reattach_edges(axis='input')
+                    node.reattach_edges(axes=['input'])
                     new_node = node.__class__(shape=node._shape,
                                               axes_names=node.axes_names,
-                                              name='virtual_result',
+                                              name='virtual_result_copy',
                                               network=self,
                                               virtual=True)
                     new_node.set_tensor_from(node)

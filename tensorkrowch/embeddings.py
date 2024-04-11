@@ -39,10 +39,10 @@ def unit(data: torch.Tensor, dim: int = 2) -> torch.Tensor:
         
         .. math::
         
-            batch\_size \times n_{features}
+            (batch_0 \times \cdots \times batch_n \ times) n_{features}
         
         That is, ``data`` is a (batch) vector with :math:`n_{features}`
-        components. The :math:`batch\_size` is optional.
+        components. The :math:`batch` sizes are optional.
     dim : int
         New feature dimension.
             
@@ -53,7 +53,8 @@ def unit(data: torch.Tensor, dim: int = 2) -> torch.Tensor:
         
         .. math::
         
-            batch\_size \times n_{features} \times dim
+            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+            \times dim
             
     Examples
     --------
@@ -70,10 +71,13 @@ def unit(data: torch.Tensor, dim: int = 2) -> torch.Tensor:
             [-4.3711e-08,  1.0000e+00]])
     
     >>> b = torch.randn(100, 5)
-    >>> emb_b = tk.embeddings.unit(b)
+    >>> emb_b = tk.embeddings.unit(b, dim=6)
     >>> emb_b.shape
-    torch.Size([100, 5, 2])
+    torch.Size([100, 5, 6])
     """
+    if not isinstance(data, torch.Tensor):
+        raise TypeError('`data` should be torch.Tensor type')
+    
     lst_tensors = []
     for i in range(1, dim + 1):
         aux = sqrt(binomial_coeffs(dim - 1, i - 1)) * \
@@ -83,7 +87,7 @@ def unit(data: torch.Tensor, dim: int = 2) -> torch.Tensor:
     return torch.stack(lst_tensors, dim=-1)
 
 
-def add_ones(data: torch.Tensor, axis: int = -1) -> torch.Tensor:
+def add_ones(data: torch.Tensor) -> torch.Tensor:
     r"""
     Embedds the data tensor adding 1's as the first component of each vector.
     That is, given a vector
@@ -109,26 +113,24 @@ def add_ones(data: torch.Tensor, axis: int = -1) -> torch.Tensor:
     Parameters
     ----------
     data : torch.Tensor
-        Data tensor with shape  
+        Data tensor with shape 
         
         .. math::
         
-            batch\_size \times n_{features}
-            
+            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+        
         That is, ``data`` is a (batch) vector with :math:`n_{features}`
-        components. The :math:`batch\_size` is optional.
-    axis : int
-        Axis where the ``data`` tensor is 'expanded' with the 1's. Should be
-        between 0 and the rank of ``data``. By default, it is -1, which returns
-        a tensor with shape  
-        
-        .. math::
-        
-            batch\_size \times n_{features} \times 2
+        components. The :math:`batch` sizes are optional.
             
     Returns
     -------
     torch.Tensor
+        New data tensor with shape
+        
+        .. math::
+        
+            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+            \times 2
     
     Examples
     --------
@@ -149,10 +151,12 @@ def add_ones(data: torch.Tensor, axis: int = -1) -> torch.Tensor:
     >>> emb_b.shape
     torch.Size([100, 5, 2])
     """
-    return torch.stack([torch.ones_like(data), data], dim=axis)
+    if not isinstance(data, torch.Tensor):
+        raise TypeError('`data` should be torch.Tensor type')
+    return torch.stack([torch.ones_like(data), data], dim=-1)
 
 
-def poly(data: torch.Tensor, degree: int = 2, axis: int = -1) -> torch.Tensor:
+def poly(data: torch.Tensor, degree: int = 2) -> torch.Tensor:
     r"""
     Embedds the data tensor stacking powers of it. That is, given the vector
     
@@ -185,24 +189,23 @@ def poly(data: torch.Tensor, degree: int = 2, axis: int = -1) -> torch.Tensor:
         
         .. math::
         
-            batch\_size \times n_{features}
-            
+            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+        
         That is, ``data`` is a (batch) vector with :math:`n_{features}`
-        components. The :math:`batch\_size` is optional.
+        components. The :math:`batch` sizes are optional.
     degree : int
-        Maximum degree of the monomials.
-    axis : int
-        Axis where the ``data`` tensor is 'expanded' with monomials. Should be
-        between 0 and the rank of ``data``. By default, it is -1, which returns
-        a tensor with shape 
-        
-        .. math::
-        
-            batch\_size \times n_{features} \times (degree + 1)
+        Maximum degree of the monomials. The feature dimension will be
+        ``degree + 1``.
             
     Returns
     -------
     torch.Tensor
+        New data tensor with shape
+        
+        .. math::
+        
+            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+            \times (degree + 1)
     
     Examples
     --------
@@ -219,11 +222,188 @@ def poly(data: torch.Tensor, degree: int = 2, axis: int = -1) -> torch.Tensor:
             [1., 2., 4.]])
     
     >>> b = torch.randn(100, 5)
-    >>> emb_b = tk.embeddings.poly(b)
+    >>> emb_b = tk.embeddings.poly(b, degree=3)
     >>> emb_b.shape
-    torch.Size([100, 5, 3])
+    torch.Size([100, 5, 4])
     """
+    if not isinstance(data, torch.Tensor):
+        raise TypeError('`data` should be torch.Tensor type')
+    
     lst_powers = []
     for i in range(degree + 1):
         lst_powers.append(data.pow(i))
-    return torch.stack(lst_powers, dim=axis)
+    return torch.stack(lst_powers, dim=-1)
+
+
+def discretize(data: torch.Tensor, level: int, base: int = 2) -> torch.Tensor:
+    r"""
+    Embedds the data tensor discretizing each variable in a certain ``basis``
+    and with a certain ``level`` of precision, assuming the values to discretize
+    are all between 0 and 1. That is, given a vector
+    
+    .. math::
+
+        x = \begin{bmatrix}
+                x_1\\
+                \vdots\\
+                x_N
+            \end{bmatrix}
+            
+    returns a matrix
+    
+    .. math::
+
+        \hat{x} = \begin{bmatrix}
+                        \lfloor x_1 b^1 \rfloor \mod b & \cdots &
+                            \lfloor x_1 b^{l} \rfloor \mod b\\
+                        \vdots & \cdots & \vdots\\
+                        \lfloor x_N b^1 \rfloor \mod b & \cdots &
+                            \lfloor x_N b^{l} \rfloor \mod b
+                  \end{bmatrix}
+    
+    where :math:`b` stands for ``base``, and :math:`l` for ``level``.
+    
+    Parameters
+    ----------
+    data : torch.Tensor
+        Data tensor with shape 
+        
+        .. math::
+        
+            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+        
+        That is, ``data`` is a (batch) vector with :math:`n_{features}`
+        components. The :math:`batch` sizes are optional. The ``data`` tensor
+        is assumed to have elements between 0 and 1.
+    level : int
+        Level of precision of the discretization. This will be the new feature
+        dimension.
+    base : int
+        The base of the discretization.
+            
+    Returns
+    -------
+    torch.Tensor
+        New data tensor with shape
+        
+        .. math::
+        
+            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+            \times level
+            
+    Examples
+    --------
+    >>> a = torch.tensor([0, 0.5, 0.75, 1])
+    >>> a
+    tensor([0.0000, 0.5000, 0.7500, 1.0000])
+    
+    >>> emb_a = tk.embeddings.discretize(a, level=3)
+    >>> emb_a
+    tensor([[0., 0., 0.],
+            [1., 0., 0.],
+            [1., 1., 0.],
+            [1., 1., 1.]])
+    
+    >>> b = torch.rand(100, 5)
+    >>> emb_b = tk.embeddings.discretize(b, level=3)
+    >>> emb_b.shape
+    torch.Size([100, 5, 3])
+    """
+    if not isinstance(data, torch.Tensor):
+        raise TypeError('`data` should be torch.Tensor type')
+    if not torch.ge(data, torch.zeros_like(data)).all():
+        raise ValueError('Elements of `data` should be between 0 and 1')
+    if not torch.le(data, torch.ones_like(data)).all():
+        raise ValueError('Elements of `data` should be between 0 and 1')
+
+    max_discr_value = sum([base ** -i for i in range(1, level + 1)])
+    data = torch.where(data > max_discr_value, max_discr_value, data)
+    
+    base = torch.tensor(base, device=data.device)
+    ids = [torch.remainder((data * base.pow(i)).floor(), base)
+           for i in range(1, level + 1)]
+    ids = torch.stack(ids, dim=-1)
+    return ids
+
+
+def basis(data: torch.Tensor, dim: int = 2) -> torch.Tensor:
+    r"""
+    Embedds the data tensor transforming each value, assumed to be an integer
+    between 0 and ``dim - 1``, into the corresponding vector of the
+    computational basis. That is, given a vector
+    
+    .. math::
+
+        x = \begin{bmatrix}
+                x_1\\
+                \vdots\\
+                x_N
+            \end{bmatrix}
+            
+    returns a matrix
+    
+    .. math::
+
+        \hat{x} = \begin{bmatrix}
+                      \lvert x_1 \rangle\\
+                      \vdots\\
+                      \lvert x_N \rangle
+                  \end{bmatrix}
+    
+    Parameters
+    ----------
+    data : torch.Tensor
+        Data tensor with shape 
+        
+        .. math::
+        
+            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+        
+        That is, ``data`` is a (batch) vector with :math:`n_{features}`
+        components. The :math:`batch` sizes are optional. The ``data`` tensor
+        is assumed to have integer elements between 0 and ``dim - 1``.
+    dim : int
+        The dimension of the computational basis. This will be the new feature
+        dimension.
+            
+    Returns
+    -------
+    torch.Tensor
+        New data tensor with shape
+        
+        .. math::
+        
+            (batch_0 \times \cdots \times batch_n \ times) n_{features}
+            \times dim
+            
+    Examples
+    --------
+    >>> a = torch.arange(5)
+    >>> a
+    tensor([0, 1, 2, 3, 4])
+    
+    >>> emb_a = tk.embeddings.basis(a, dim=5)
+    >>> emb_a
+    tensor([[1, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 1, 0, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1]])
+    
+    >>> b = torch.randint(low=0, high=10, size=(100, 5))
+    >>> emb_b = tk.embeddings.basis(b, dim=10)
+    >>> emb_b.shape
+    torch.Size([100, 5, 10])
+    """
+    if not isinstance(data, torch.Tensor):
+        raise TypeError('`data` should be torch.Tensor type')
+    if torch.is_floating_point(data):
+        raise ValueError('`data` should be a tensor of integers')
+    if not torch.ge(data, torch.zeros_like(data)).all():
+        raise ValueError('Elements of `data` should be between 0 and (dim - 1)')
+    if not torch.le(data, torch.ones_like(data) * (dim - 1)).all():
+        raise ValueError('Elements of `data` should be between 0 and (dim - 1)')
+    
+    ids = torch.arange(dim, device=data.device).repeat(*data.shape, 1)
+    ids = torch.where(ids == data.unsqueeze(-1), 1, 0)
+    return ids

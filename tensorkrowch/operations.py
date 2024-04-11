@@ -3841,7 +3841,7 @@ def _stack_first(nodes: Sequence[AbstractNode]) -> StackNode:
 
     if all_param and node_ref_is_stack and net._auto_stack:
         stack_node = ParamStackNode(nodes=nodes,
-                                    name='virtual_result',
+                                    name='virtual_result_stack',
                                     virtual=True)
     else:
         stack_node = StackNode._create_resultant(nodes=nodes,
@@ -3999,9 +3999,9 @@ def stack(nodes: Sequence[AbstractNode]):
     
     Nodes ``resultant`` from this operation are called ``"stack"``. If this
     operation returns a ``virtual`` :class:`ParamStackNode`, it will be called
-    ``"virtual_result"``. See :class:AbstractNode` to learn about this **reserved
-    name**.  The node that keeps information about the :class:`Successor` is
-    ``nodes[0]``, the first stacked node.
+    ``"virtual_result_stack"``. See :class:AbstractNode` to learn about this
+    **reserved name**.  The node that keeps information about the
+    :class:`Successor` is ``nodes[0]``, the first stacked node.
 
     Parameters
     ----------

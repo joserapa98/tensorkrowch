@@ -384,18 +384,22 @@ class AbstractNode(ABC):  # MARK: AbstractNode
       To learn more about this, see :meth:`~TensorNetwork.set_data_nodes` and
       :meth:`~TensorNetwork.add_data`.
     
-    * **"virtual_result"**: Name of the ``virtual`` :class:`ParamStackNode` that
+    * **"virtual_result"**: Name of ``virtual`` nodes that are not explicitly
+      part of the network, but are required for some situations during
+      contraction. For instance, the :class:`ParamStackNode` that
       results from stacking :class:`ParamNodes <ParamNode>` as the first
       operation in the network contraction, if ``auto_stack`` mode is set to
-      ``True``. There might be as much ``"virtual_result"`` nodes as stacks are
-      created from ``ParamNodes``. To learn more about this, see
-      :class:`ParamStackNode`.
+      ``True``. To learn more about this, see :class:`ParamStackNode`.
     
     * **"virtual_uniform"**: Name of the ``virtual`` :class:`Node` or
       :class:`ParamNode` that is used in uniform (translationally invariant)
       tensor networks to store the tensor that will be shared by all ``leaf``
       nodes. There might be as much ``"virtual_uniform"`` nodes as shared
       memories are used for the ``leaf`` nodes in the network (usually just one).
+    
+    For ``"virtual_result"`` and ``"virtual_uniform"``, these special
+    behaviours are not restricted to nodes having those names, but also nodes
+    whose names contain those strings.
       
     Although these names can in principle be used for other nodes, this can lead
     to undesired behaviour.
@@ -2898,7 +2902,8 @@ class ParamStackNode(ParamNode):  # MARK: ParamStackNode
     attribute of the :class:`TensorNetwork` is set to ``True``). Hence, that
     first :func:`stack` is never actually computed.
     
-    The ``ParamStackNode`` that results from this process uses the reserved name
+    The ``ParamStackNode`` that results from this process has the name
+    ``"virtual_result_stack"``, which contains the reserved name
     ``"virtual_result"``, as explained :class:`here <AbstractNode>`. This node
     stores the tensor from which all the stacked :class:`ParamNodes <ParamNode>`
     just take one `slice`.
@@ -4821,8 +4826,9 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
             aux_dict.update(self._virtual_nodes)
             for node in aux_dict.values():
                 if node._virtual and ('virtual_result' not in node._name):
-                    # Virtual nodes named "virtual_result" are ParamStackNodes
-                    # that result from stacking a collection of ParamNodes
+                    # Virtual nodes named "virtual_result" are nodes that are
+                    # required in some situations during contraction, like
+                    # ParamStackNodes
                     # This condition is satisfied by the rest of virtual nodes
                     continue
 
@@ -4863,7 +4869,6 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
             for node in list(aux_dict.values()):
                 if node._virtual and ('virtual_result' not in node._name):
                     # This condition is satisfied by the rest of virtual nodes
-                    # (e.g. "virtual_feature", "virtual_n_features")
                     continue
                 self.delete_node(node, False)
 

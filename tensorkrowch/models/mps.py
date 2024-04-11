@@ -73,7 +73,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         to ``n_features`` (if ``boundary = "pbc"``) or ``n_features - 1`` (if
         ``boundary = "obc"``). The i-th bond dimension is always the dimension
         of the right edge of the i-th node.
-    boundary : {"obc", "pbc"}, optional
+    boundary : {"obc", "pbc"}
         String indicating whether periodic or open boundary conditions should
         be used.
     tensors: list[torch.Tensor] or tuple[torch.Tensor], optional
@@ -220,7 +220,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             else:
                 raise TypeError('`bond_dim` should be int, tuple[int] or list[int]'
                                 ' type')
-                
+        
         else:
             if not isinstance(tensors, Sequence):
                 raise TypeError('`tensors` should be a tuple[torch.Tensor] or '
@@ -2333,25 +2333,37 @@ class MPSData(TensorNetwork):  # MARK: MPSData
 
     Parameters
     ----------
-    n_features : int
+    n_features : int, optional
         Number of nodes that will be in ``mats_env``. That is, number of nodes
         without taking into account ``left_node`` and ``right_node``.
-    phys_dim : int, list[int] or tuple[int]
+    phys_dim : int, list[int] or tuple[int], optional
         Physical dimension(s). If given as a sequence, its length should be
         equal to ``n_features``.
-    bond_dim : int, list[int] or tuple[int]
+    bond_dim : int, list[int] or tuple[int], optional
         Bond dimension(s). If given as a sequence, its length should be equal
         to ``n_features`` (if ``boundary = "pbc"``) or ``n_features - 1`` (if
         ``boundary = "obc"``). The i-th bond dimension is always the dimension
         of the right edge of the i-th node.
+    boundary : {"obc", "pbc"}
+        String indicating whether periodic or open boundary conditions should
+        be used.
     n_batches : int
         Number of batch edges of the MPS nodes. Usually ``n_batches = 1``
         (where the batch edge is used for the data batched) but it could also
         be ``n_batches = 2`` (one edge for data batched, other edge for image
         patches in convolutional layers).
-    boundary : {"obc", "pbc"}
-        String indicating whether periodic or open boundary conditions should
-        be used.
+    tensors: list[torch.Tensor] or tuple[torch.Tensor], optional
+        Instead of providing ``n_features``, ``phys_dim``, ``bond_dim`` and
+        ``boundary``, a list of MPS tensors can be provided. In such case, all
+        mentioned attributes will be inferred from the given tensors. All
+        tensors should be rank-(n+3) tensors, with shape
+        ``(batch_1, ..., batch_n, bond_dim, phys_dim, bond_dim)``. If the first
+        and last elements are rank-(n+2) tensors, with shapes
+        ``(batch_1, ..., batch_n, phys_dim, bond_dim)``,
+        ``(batch_1, ..., batch_n, bond_dim, phys_dim)``, respectively,
+        the inferred boundary conditions will be "obc". Also, if ``tensors``
+        contains a single element, it can be rank-(n+1) ("obc") or rank-(n+3)
+        ("pbc").
     init_method : {"zeros", "ones", "copy", "rand", "randn"}, optional
         Initialization method. Check :meth:`initialize` for a more detailed
         explanation of the different initialization methods. By default it is
@@ -2378,69 +2390,133 @@ class MPSData(TensorNetwork):  # MARK: MPSData
     """
 
     def __init__(self,
-                 n_features: int,
-                 phys_dim: Union[int, Sequence[int]],
-                 bond_dim: Union[int, Sequence[int]],
-                 n_batches: int = 1,
+                 n_features: Optional[int] = None,
+                 phys_dim: Optional[Union[int, Sequence[int]]] = None,
+                 bond_dim: Optional[Union[int, Sequence[int]]] = None,
                  boundary: Text = 'obc',
+                 n_batches: int = 1,
+                 tensors: Optional[Sequence[torch.Tensor]] = None,
                  init_method: Optional[Text] = None,
                  device: Optional[torch.device] = None,
                  **kwargs) -> None:
 
         super().__init__(name='mps_data')
         
-        # boundary
-        if boundary not in ['obc', 'pbc']:
-            raise ValueError('`boundary` should be one of "obc" or "pbc"')
-        self._boundary = boundary
-
-        # n_features
-        if not isinstance(n_features, int):
-            raise TypeError('`n_features` should be int type')
-        elif n_features < 1:
-            raise ValueError('`n_features` should be at least 1')
-        self._n_features = n_features
-
-        # phys_dim
-        if isinstance(phys_dim, (list, tuple)):
-            if len(phys_dim) != n_features:
-                raise ValueError('If `phys_dim` is given as a sequence of int, '
-                                    'its length should be equal to `n_features`')
-            self._phys_dim = list(phys_dim)
-        elif isinstance(phys_dim, int):
-            self._phys_dim = [phys_dim] * n_features
-        else:
-            raise TypeError('`phys_dim` should be int, tuple[int] or list[int] '
-                            'type')
-
-        # bond_dim
-        if isinstance(bond_dim, (list, tuple)):
-            if boundary == 'obc':
-                if len(bond_dim) != n_features - 1:
-                    raise ValueError(
-                        'If `bond_dim` is given as a sequence of int, and '
-                        '`boundary` is "obc", its length should be equal '
-                        'to `n_features` - 1')
-            elif boundary == 'pbc':
-                if len(bond_dim) != n_features:
-                    raise ValueError(
-                        'If `bond_dim` is given as a sequence of int, and '
-                        '`boundary` is "pbc", its length should be equal '
-                        'to `n_features`')
-            self._bond_dim = list(bond_dim)
-        elif isinstance(bond_dim, int):
-            if boundary == 'obc':
-                self._bond_dim = [bond_dim] * (n_features - 1)
-            elif boundary == 'pbc':
-                self._bond_dim = [bond_dim] * n_features
-        else:
-            raise TypeError('`bond_dim` should be int, tuple[int] or list[int]'
-                            ' type')
-        
         # n_batches
         if not isinstance(n_batches, int):
             raise TypeError('`n_batches` should be int type')
         self._n_batches = n_batches
+        
+        if tensors is None:
+            # boundary
+            if boundary not in ['obc', 'pbc']:
+                raise ValueError('`boundary` should be one of "obc" or "pbc"')
+            self._boundary = boundary
+
+            # n_features
+            if not isinstance(n_features, int):
+                raise TypeError('`n_features` should be int type')
+            elif n_features < 1:
+                raise ValueError('`n_features` should be at least 1')
+            self._n_features = n_features
+
+            # phys_dim
+            if isinstance(phys_dim, (list, tuple)):
+                if len(phys_dim) != n_features:
+                    raise ValueError('If `phys_dim` is given as a sequence of int, '
+                                        'its length should be equal to `n_features`')
+                self._phys_dim = list(phys_dim)
+            elif isinstance(phys_dim, int):
+                self._phys_dim = [phys_dim] * n_features
+            else:
+                raise TypeError('`phys_dim` should be int, tuple[int] or list[int] '
+                                'type')
+
+            # bond_dim
+            if isinstance(bond_dim, (list, tuple)):
+                if boundary == 'obc':
+                    if len(bond_dim) != n_features - 1:
+                        raise ValueError(
+                            'If `bond_dim` is given as a sequence of int, and '
+                            '`boundary` is "obc", its length should be equal '
+                            'to `n_features` - 1')
+                elif boundary == 'pbc':
+                    if len(bond_dim) != n_features:
+                        raise ValueError(
+                            'If `bond_dim` is given as a sequence of int, and '
+                            '`boundary` is "pbc", its length should be equal '
+                            'to `n_features`')
+                self._bond_dim = list(bond_dim)
+            elif isinstance(bond_dim, int):
+                if boundary == 'obc':
+                    self._bond_dim = [bond_dim] * (n_features - 1)
+                elif boundary == 'pbc':
+                    self._bond_dim = [bond_dim] * n_features
+            else:
+                raise TypeError('`bond_dim` should be int, tuple[int] or list[int]'
+                                ' type')
+        
+        else:
+            if not isinstance(tensors, Sequence):
+                raise TypeError('`tensors` should be a tuple[torch.Tensor] or '
+                                'list[torch.Tensor] type')
+            else:
+                self._n_features = len(tensors)
+                self._phys_dim = []
+                self._bond_dim = []
+                for i, t in enumerate(tensors):
+                    if not isinstance(t, torch.Tensor):
+                        raise TypeError('`tensors` should be a tuple[torch.Tensor]'
+                                        ' or list[torch.Tensor] type')
+                    
+                    if i == 0:
+                        if len(t.shape) not in [n_batches + 1,
+                                                n_batches + 2,
+                                                n_batches + 3]:
+                            raise ValueError(
+                                'The first and last elements in `tensors` '
+                                'should be both rank-(n+2) or rank-(n+3) tensors.'
+                                ' If the first element is also the last one,'
+                                ' it should be a rank-(n+1) tensor')
+                        if len(t.shape) == n_batches + 1:
+                            self._boundary = 'obc'
+                            self._phys_dim.append(t.shape[-1])
+                        elif len(t.shape) == n_batches + 2:
+                            self._boundary = 'obc'
+                            self._phys_dim.append(t.shape[-2])
+                            self._bond_dim.append(t.shape[-1])
+                        else:
+                            self._boundary = 'pbc'
+                            self._phys_dim.append(t.shape[-2])
+                            self._bond_dim.append(t.shape[-1])
+                    elif i == (self._n_features - 1):
+                        if len(t.shape) != len(tensors[0].shape):
+                            raise ValueError(
+                                'The first and last elements in `tensors` '
+                                'should have the same rank. Both should be '
+                                'rank-(n+2) or rank-(n+3) tensors. If the first'
+                                ' element is also the last one, it should '
+                                'be a rank-(n+1) tensor')
+                        if len(t.shape) == n_batches + 2:
+                            self._phys_dim.append(t.shape[-1])
+                        else:
+                            if t.shape[-1] != tensors[0].shape[-3]:
+                                raise ValueError(
+                                    'If the first and last elements in `tensors`'
+                                    ' are rank-(n+3) tensors, the first dimension'
+                                    ' of the first element should coincide with'
+                                    ' the last dimension of the last element '
+                                    '(ignoring batch dimensions)')
+                            self._phys_dim.append(t.shape[-2])
+                            self._bond_dim.append(t.shape[-1])
+                    else:
+                        if len(t.shape) != n_batches + 3:
+                            raise ValueError(
+                                'The elements of `tensors` should be rank-(n+3) '
+                                'tensors, except the first and lest elements'
+                                ' if boundary is "obc"')
+                        self._phys_dim.append(t.shape[-2])
+                        self._bond_dim.append(t.shape[-1])
         
         # Properties
         self._left_node = None
@@ -2450,8 +2526,11 @@ class MPSData(TensorNetwork):  # MARK: MPSData
         # Create Tensor Network
         self._make_nodes()
         self.initialize(init_method=init_method,
-                        device=device,
-                        **kwargs)
+                            device=device,
+                            **kwargs)
+        
+        if tensors is not None:
+            self.add_data(data=tensors)
     
     # ----------
     # Properties

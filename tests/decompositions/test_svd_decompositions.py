@@ -37,11 +37,10 @@ class TestSVDDecompositions:
                 bond_dims = [tensor.shape[-1] for tensor in tensors[:-1]]
                 
                 if i - j > 0:
-                    mps = tk.models.MPSData(n_features=i - j,
-                                            phys_dim=dims[j:].tolist(),
-                                            bond_dim=bond_dims,
+                    mps = tk.models.MPSData(tensors=tensors,
                                             n_batches=j)
-                    mps.add_data(tensors)
+                    assert mps.phys_dim == dims[j:].tolist()
+                    assert mps.bond_dim == bond_dims
     
     def test_mat_to_mpo(self):
         for i in range(1, 6):
@@ -63,8 +62,11 @@ class TestSVDDecompositions:
                 else:
                     assert tensor.shape[-2] == dims[2 * k]
                     assert tensor.shape[-1] == dims[2 * k + 1]
+            
+            bond_dims = [tensor.shape[-2] for tensor in tensors[:-1]]
                     
             mpo = tk.models.MPO(tensors=tensors)
             assert mpo.in_dim == [dims[2 * j] for j in range(i)]
             assert mpo.out_dim == [dims[2 * j + 1] for j in range(i)]
+            assert mpo.bond_dim == bond_dims
           

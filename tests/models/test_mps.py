@@ -1841,6 +1841,84 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
 
 class TestMPSData:   # MARK: TestMPSData
     
+    def test_initialize_with_tensors(self):
+        for n in [1, 2, 5]:
+            # PBC
+            tensors = [torch.randn(20, 10, 2, 10) for _ in range(n)]
+            mps = tk.models.MPSData(tensors=tensors)
+            assert mps.n_features == n
+            assert mps.boundary == 'pbc'
+            assert mps.phys_dim == [2] * n
+            assert mps.bond_dim == [10] * n
+            
+            # OBC
+            tensors = [torch.randn(20, 10, 2, 10) for _ in range(n)]
+            tensors[0] = tensors[0][0]
+            tensors[-1] = tensors[-1][..., 0]
+            mps = tk.models.MPSData(tensors=tensors)
+            assert mps.n_features == n
+            assert mps.boundary == 'obc'
+            assert mps.phys_dim == [2] * n
+            assert mps.bond_dim == [10] * (n - 1)
+    
+    def test_initialize_with_tensors_cuda(self):
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        
+        for n in [1, 2, 5]:
+            # PBC
+            tensors = [torch.randn(20, 10, 2, 10, device=device) for _ in range(n)]
+            mps = tk.models.MPSData(tensors=tensors)
+            assert mps.n_features == n
+            assert mps.boundary == 'pbc'
+            assert mps.phys_dim == [2] * n
+            assert mps.bond_dim == [10] * n
+            for node in mps.mats_env:
+                assert node.device == device
+            
+            # OBC
+            tensors = [torch.randn(20, 10, 2, 10, device=device) for _ in range(n)]
+            tensors[0] = tensors[0][0]
+            tensors[-1] = tensors[-1][..., 0]
+            mps = tk.models.MPSData(tensors=tensors)
+            assert mps.n_features == n
+            assert mps.boundary == 'obc'
+            assert mps.phys_dim == [2] * n
+            assert mps.bond_dim == [10] * (n - 1)
+            for node in mps.mats_env:
+                assert node.device == device
+    
+    def test_initialize_with_tensors_ignore_rest(self):
+        tensors = [torch.randn(20, 10, 2, 10) for _ in range(10)]
+        mps = tk.models.MPSData(tensors=tensors,
+                                boundary='obc',
+                                n_features=3,
+                                phys_dim=4,
+                                bond_dim=7)
+        assert mps.boundary == 'pbc'
+        assert mps.n_features == 10
+        assert mps.phys_dim == [2] * 10
+        assert mps.bond_dim == [10] * 10
+        
+    def test_initialize_with_tensors_errors(self):
+        # Number of batches should coincide with n_batches
+        tensors = [torch.randn(20, 20, 5, 2, 5) for _ in range(10)]
+        with pytest.raises(ValueError):
+            mps = tk.models.MPSData(tensors=tensors,
+                                    n_batches=1)
+        
+        # First and last tensors should have the same rank
+        tensors = [torch.randn(20, 10, 2, 10) for _ in range(10)]
+        tensors[0] = tensors[0][:, 0]
+        with pytest.raises(ValueError):
+            mps = tk.models.MPSData(tensors=tensors)
+        
+        # First and last bond dims should coincide
+        tensors = [torch.randn(20, 10, 2, 10) for _ in range(10)]
+        tensors[0] = tensors[0][:, :5]
+        tensors[-1] = tensors[-1][..., :3]
+        with pytest.raises(ValueError):
+            mps = tk.models.MPSData(tensors=tensors)
+    
     def test_initialize_init_method(self):
         methods = ['zeros', 'ones', 'copy', 'rand', 'randn']
         for n_features in [1, 2, 5]:

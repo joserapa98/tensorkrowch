@@ -178,6 +178,11 @@
      Embeddings
     </a>
    </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../decompositions.html">
+     Decompositions
+    </a>
+   </li>
   </ul>
  </li>
 </ul>
@@ -480,7 +485,8 @@ title="Source repository"
 <span class="sd">    Permutes the nodes&#39; tensor, as well as its axes and edges to match the new</span>
 <span class="sd">    shape.</span>
 
-<span class="sd">    See `permute &lt;https://pytorch.org/docs/stable/generated/torch.permute.html&gt;`_.</span>
+<span class="sd">    See `permute &lt;https://pytorch.org/docs/stable/generated/torch.permute.html&gt;`_</span>
+<span class="sd">    in the **PyTorch** documentation.</span>
 <span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;permute&quot;``. The node</span>
 <span class="sd">    that keeps information about the :class:`Successor` is ``node``.</span>
@@ -514,7 +520,8 @@ title="Source repository"
 <span class="sd">    Permutes the nodes&#39; tensor, as well as its axes and edges to match the new</span>
 <span class="sd">    shape.</span>
 <span class="sd">    </span>
-<span class="sd">    See `permute &lt;https://pytorch.org/docs/stable/generated/torch.permute.html&gt;`_.</span>
+<span class="sd">    See `permute &lt;https://pytorch.org/docs/stable/generated/torch.permute.html&gt;`_</span>
+<span class="sd">    in the **PyTorch** documentation.</span>
 <span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;permute&quot;``. The node</span>
 <span class="sd">    that keeps information about the :class:`Successor` is ``self``.</span>
@@ -709,8 +716,6 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;tprod&quot;``. The node</span>
 <span class="sd">    that keeps information about the :class:`Successor` is ``node1``.</span>
-<span class="sd">    </span>
-<span class="sd">    This operation is the same as :meth:`~AbstractNode.tprod`.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -848,8 +853,6 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;mul&quot;``. The node</span>
 <span class="sd">    that keeps information about the :class:`Successor` is ``node1``.</span>
-<span class="sd">    </span>
-<span class="sd">    This operation is the same as :meth:`~AbstractNode.mul`.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -984,8 +987,6 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;add&quot;``. The node</span>
 <span class="sd">    that keeps information about the :class:`Successor` is ``node1``.</span>
-<span class="sd">    </span>
-<span class="sd">    This operation is the same as :meth:`~AbstractNode.add`.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1120,8 +1121,6 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;sub&quot;``. The node</span>
 <span class="sd">    that keeps information about the :class:`Successor` is ``node1``.</span>
-<span class="sd">    </span>
-<span class="sd">    This operation is the same as :meth:`~AbstractNode.sub`.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1576,7 +1575,7 @@ title="Source repository"
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Splits one node in two via the decomposition specified in ``mode``. To</span>
 <span class="sd">    perform this operation the set of edges has to be split in two sets,</span>
-<span class="sd">    corresponding to the edges of the first and second ``resultant nodes``.</span>
+<span class="sd">    corresponding to the edges of the first and second ``resultant`` nodes.</span>
 <span class="sd">    Batch edges that don&#39;t appear in any of the lists will be repeated in both</span>
 <span class="sd">    nodes, and will appear as the first edges of the ``resultant`` nodes, in</span>
 <span class="sd">    the order they appeared in ``node``.</span>
@@ -3896,7 +3895,7 @@ title="Source repository"
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts all edges shared between two nodes. Batch contraction is</span>
 <span class="sd">    automatically performed when both nodes have batch edges with the same</span>
-<span class="sd">    names.</span>
+<span class="sd">    names. It can also be performed using the operator ``@``.</span>
 <span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;contract_edges&quot;``.</span>
 <span class="sd">    The node that keeps information about the :class:`Successor` is ``node1``.</span>

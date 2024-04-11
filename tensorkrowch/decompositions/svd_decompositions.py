@@ -18,7 +18,7 @@ def vec_to_mps(vec: torch.Tensor,
     r"""
     Splits a vector into a sequence of MPS tensors via consecutive SVD
     decompositions. The resultant tensors can be used to instantiate a
-    :class:`MPS` with ``boundary = "obc"``.
+    :class:`~tensorkrowch.models.MPS` with ``boundary = "obc"``.
     
     The number of resultant tensors and their respective physical dimensions
     depend on the shape of the input vector. That is, if one expects to recover
@@ -39,8 +39,8 @@ def vec_to_mps(vec: torch.Tensor,
     
     the number of batch dimensions :math:`m` can be specified in ``n_batches``.
     In this case, the resultant tensors will all have the extra batch dimensions.
-    These tensors can be used to instantiate a :class:`MPSData` with
-    ``boundary = "obc"``.
+    These tensors can be used to instantiate a :class:`~tensorkrowch.models.MPSData`
+    with ``boundary = "obc"``.
     
     To specify the bond dimension of each cut done via SVD, one can use the
     arguments ``rank``, ``cum_percentage`` and ``cutoff``.
@@ -141,7 +141,7 @@ def mat_to_mpo(mat: torch.Tensor,
     r"""
     Splits a matrix into a sequence of MPO tensors via consecutive SVD
     decompositions. The resultant tensors can be used to instantiate a
-    :class:`MPO` with ``boundary = "obc"``.
+    :class:`~tensorkrowch.models.MPO` with ``boundary = "obc"``.
     
     The number of resultant tensors and their respective input/output dimensions
     depend on the shape of the input matrix. That is, if one expects to recover

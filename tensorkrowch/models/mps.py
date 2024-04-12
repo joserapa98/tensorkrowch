@@ -2374,7 +2374,7 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
                     eye_tensor = torch.eye(node.shape[0],
                                            node.shape[2],
                                            device=device)
-                    if node == 0:
+                    if i == 0:
                         aux_tensor[:, 0, :] += eye_tensor
                     else:
                         eye_tensor = eye_tensor.unsqueeze(1)

@@ -4528,8 +4528,8 @@ class TensorNetwork(nn.Module):  # MARK: TensorNetwork
             in-place (``True``) or copied and then parameterized (``False``).
         """
         if self._resultant_nodes:
-            warnings.warn('Resultant nodes will be removed before parameterizing'
-                          ' the TN')
+            warnings.warn(
+                'Resultant nodes will be removed before parameterizing the TN')
             self.reset()
 
         if override:

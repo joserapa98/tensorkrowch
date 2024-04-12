@@ -655,6 +655,63 @@ class TestSetTensorNode:
         with pytest.raises(TypeError):
             # Node and ParamNode cannot share tensor
             node1.set_tensor_from(node2)
+    
+    def test_set_tensor_then_parameterize(self, setup):
+        node1, node2, tensor = setup
+        node1.set_tensor_from(node2)
+        assert node1.tensor_address() == node2.name
+        
+        # NOTE: If tensor is set beforehand, nodes can be (de)parameterize
+        # without restrictions. In this situation, one would want to
+        # parameterize both nodes, so this might not cause many problems
+        
+        # When creating the ParamNode node1, we give to it the tensor from node2
+        # but now node1 stores its own tensor
+        node1 = node1.parameterize()
+        assert isinstance(node1, tk.ParamNode)
+        assert isinstance(node2, tk.Node)
+        
+        # When creating the ParamNode node2, as it stored its own tensor, we are
+        # just putting it again into the new node2
+        node2 = node2.parameterize()
+        assert isinstance(node1, tk.ParamNode)
+        assert isinstance(node2, tk.ParamNode)
+        
+        # But now node1 makes no reference to node2
+        assert not node1.tensor_address() == node2.name
+        
+        # We have to set the tensor addres from node2 again
+        node1.set_tensor_from(node2)
+        assert node1.tensor_address() == node2.name
+    
+    def test_set_tensor_then_parameterize_other_order(self, setup):
+        node1, node2, tensor = setup
+        node1.set_tensor_from(node2)
+        
+        node2 = node2.parameterize()
+        assert isinstance(node1, tk.Node)
+        assert isinstance(node2, tk.ParamNode)
+        
+        # NOTE: If we do this in the opposite order it fails, since node1 still
+        # references the original node2, which is not a part of the network
+        # any more and thus it doesn't have a tensor address in the memory.
+        # It fails when trying to get node1's tensor
+        with pytest.raises(TypeError):
+            tensor = node1.tensor
+        
+        # node1 = node1.parameterize()
+        # assert isinstance(node1, tk.ParamNode)
+        # assert isinstance(node2, tk.ParamNode)
+    
+    def test_set_tensor_then_parameterize_network(self, setup):
+        node1, node2, tensor = setup
+        node1.set_tensor_from(node2)
+        
+        net = node1.network
+        net.parameterize(set_param=True, override=True)
+        
+        for node in net.leaf_nodes.values():
+            assert isinstance(node, tk.ParamNode)
 
     def test_set_tensor_from_other_network(self, setup):
         node1, node2, tensor = setup

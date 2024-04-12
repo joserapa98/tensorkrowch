@@ -4,6 +4,7 @@ This script contains:
         + UMPO
 """
 
+import warnings
 from typing import (List, Optional, Sequence,
                     Text, Tuple, Union)
 
@@ -504,6 +505,41 @@ class MPO(TensorNetwork):  # MARK: MPO
                 new_node.tensor = node.tensor.clone()
         
         return new_mpo
+
+    def parameterize(self,
+                     set_param: bool = True,
+                     override: bool = False) -> 'TensorNetwork':
+        """
+        Parameterizes all nodes of the MPO. If there are ``resultant`` nodes
+        in the MPO, it will be first :meth:`~tensorkrowch.TensorNetwork.reset`.
+
+        Parameters
+        ----------
+        set_param : bool
+            Boolean indicating whether the tensor network has to be parameterized
+            (``True``) or de-parameterized (``False``).
+        override : bool
+            Boolean indicating whether the tensor network should be parameterized
+            in-place (``True``) or copied and then parameterized (``False``).
+        """
+        if self._resultant_nodes:
+            warnings.warn(
+                'Resultant nodes will be removed before parameterizing the TN')
+            self.reset()
+
+        if override:
+            net = self
+        else:
+            net = self.copy(share_tensors=False)
+        
+        for i in range(self._n_features):
+            net._mats_env[i] = net._mats_env[i].parameterize(set_param)
+        
+        if net._boundary == 'obc':
+            net._left_node = net._left_node.parameterize(set_param)
+            net._right_node = net._right_node.parameterize(set_param)
+            
+        return net
     
     def _input_contraction(self,
                            nodes_env: List[Node],
@@ -600,7 +636,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         """
         Contracts the whole MPO with input data nodes. The input can be in the
         form of an :class:`MPSData`, which may be convenient for tensorizing
-        vector - matrix multiplication in the form of MPS - MPO contraction.
+        vector - matrix multiplication in the form of MPS-MPO contraction.
         
         If the ``MPO`` is contracted with a ``MPSData``, it is recommended that
         the MPS nodes are moved to the MPO network before connecting the
@@ -614,6 +650,12 @@ class MPO(TensorNetwork):  # MARK: MPO
         dimensions for each iteration, and this may cause undesired behaviour
         when reusing some information of previous calls to
         :func:~tensorkrowch.stack` with the previous data tensors.
+        
+        To perform the MPS-MPO contraction, first input data tensors have to
+        be put into the :class:`MPSData` via :meth:`MPSData.add_data`. Then,
+        contraction is carried out by calling ``mpo(mps=mps_data)``, without
+        passing the input data again, as it is already stored in the MPSData
+        nodes.
         
         Parameters
         ----------
@@ -637,6 +679,13 @@ class MPO(TensorNetwork):  # MARK: MPO
         -------
         Node
         """
+        if mps is not None:
+            if not isinstance(mps, MPSData):
+                raise TypeError('`mps` should be MPSData type')
+            if mps._n_features != self._n_features:
+                raise ValueError(
+                    '`mps` should have as many features as the MPO')
+                
         mats_env = self._input_contraction(self._mats_env, inline_input)
         
         if inline_mats:
@@ -674,7 +723,7 @@ class UMPO(MPO):  # MARK: UMPO
     |
     
     For a more detailed list of inherited properties and methods,
-    check :class:`MPSO`.
+    check :class:`MPO`.
 
     Parameters
     ----------
@@ -865,3 +914,43 @@ class UMPO(MPO):  # MARK: UMPO
         else:
             new_mpo.uniform_memory.tensor = self.uniform_memory.tensor.clone()
         return new_mpo
+    
+    def parameterize(self,
+                     set_param: bool = True,
+                     override: bool = False) -> 'TensorNetwork':
+        """
+        Parameterizes all nodes of the MPO. If there are ``resultant`` nodes
+        in the MPO, it will be first :meth:`~tensorkrowch.TensorNetwork.reset`.
+
+        Parameters
+        ----------
+        set_param : bool
+            Boolean indicating whether the tensor network has to be parameterized
+            (``True``) or de-parameterized (``False``).
+        override : bool
+            Boolean indicating whether the tensor network should be parameterized
+            in-place (``True``) or copied and then parameterized (``False``).
+        """
+        if self._resultant_nodes:
+            warnings.warn(
+                'Resultant nodes will be removed before parameterizing the TN')
+            self.reset()
+
+        if override:
+            net = self
+        else:
+            net = self.copy(share_tensors=False)
+        
+        for i in range(self._n_features):
+            net._mats_env[i] = net._mats_env[i].parameterize(set_param)
+        
+        # It is important that uniform_memory is parameterized after the rest
+        # of the nodes
+        net.uniform_memory = net.uniform_memory.parameterize(set_param)
+        
+        # Tensor addresses have to be reassigned to reference
+        # the uniform memory
+        for node in net._mats_env:
+            node.set_tensor_from(net.uniform_memory)
+            
+        return net

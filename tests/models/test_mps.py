@@ -328,8 +328,7 @@ class TestMPS:  # MARK: TestMPS
         for n_features in [1, 2, 3, 4, 6]:
             for boundary in ['obc', 'pbc']:
                 for share_tensors in [True, False]:
-                    phys_dim = torch.randint(low=2,
-                                             high=12,
+                    phys_dim = torch.randint(low=2, high=12,
                                              size=(n_features,)).tolist()
                     bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
                     bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
@@ -355,6 +354,37 @@ class TestMPS:  # MARK: TestMPS
                             assert node.tensor is copied_node.tensor
                         else: 
                             assert node.tensor is not copied_node.tensor
+    
+    def test_deparameterize(self):
+        for n_features in [1, 2, 3, 4, 6]:
+            for boundary in ['obc', 'pbc']:
+                for override in [True, False]:
+                    phys_dim = torch.randint(low=2, high=12,
+                                             size=(n_features,)).tolist()
+                    bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
+                    bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
+                    
+                    mps = tk.models.MPS(n_features=n_features,
+                                        phys_dim=phys_dim,
+                                        bond_dim=bond_dim,
+                                        boundary=boundary)
+                    
+                    non_param_mps = mps.parameterize(set_param=False,
+                                                     override=override)
+                    
+                    if override:
+                        assert non_param_mps is mps
+                    else:
+                        assert non_param_mps is not mps
+                    
+                    new_nodes = non_param_mps.mats_env
+                    if boundary == 'obc':
+                        new_nodes += [non_param_mps.left_node,
+                                      non_param_mps.right_node]
+                        
+                    for node in new_nodes:
+                        assert isinstance(node, tk.Node)
+                        assert not isinstance(node.tensor, torch.nn.Parameter)
         
     def test_all_algorithms(self):
         for n_features in [1, 2, 3, 4, 10]:
@@ -740,8 +770,7 @@ class TestMPS:  # MARK: TestMPS
                     example = None
                     data = None
                 
-                in_features = torch.randint(low=0,
-                                            high=n_features,
+                in_features = torch.randint(low=0, high=n_features,
                                             size=(n_features // 2,)).tolist()
                 in_features = list(set(in_features))
                 
@@ -809,8 +838,7 @@ class TestMPS:  # MARK: TestMPS
                     example = None
                     data = None
                 
-                in_features = torch.randint(low=0,
-                                            high=n_features,
+                in_features = torch.randint(low=0, high=n_features,
                                             size=(n_features // 2,)).tolist()
                 in_features = list(set(in_features))
                 
@@ -866,6 +894,185 @@ class TestMPS:  # MARK: TestMPS
                                 result.sum().backward()
                                 for node in mps.mats_env:
                                     assert node.grad is not None
+    
+    def test_all_algorithms_marginalize_with_mpo(self):
+        for n_features in [1, 2, 3, 4, 10]:
+            for mps_boundary in ['obc', 'pbc']:
+                for mpo_boundary in ['obc', 'pbc']:
+                    # batch x n_features x feature_dim
+                    example = torch.randn(1, n_features // 2, 5)
+                    data = torch.randn(100, n_features // 2, 5)
+                    
+                    if example.numel() == 0:
+                        example = None
+                        data = None
+                    
+                    in_features = torch.randint(low=0, high=n_features,
+                                                size=(n_features // 2,)).tolist()
+                    in_features = list(set(in_features))
+                    
+                    mps = tk.models.MPS(n_features=n_features,
+                                        phys_dim=5,
+                                        bond_dim=2,
+                                        boundary=mps_boundary,
+                                        in_features=in_features)
+                    
+                    mpo = tk.models.MPO(n_features=n_features - len(in_features),
+                                        in_dim=5,
+                                        out_dim=5,
+                                        bond_dim=2,
+                                        boundary=mpo_boundary)
+                    
+                    # De-parameterize MPO nodes to only train MPS nodes
+                    mpo = mpo.parameterize(set_param=False, override=True)
+                    
+                    # This moves all the connected component
+                    mpo.mats_env[0].move_to_network(mps)
+                    
+                    # Connect MPO to MPS
+                    for mpo_node, mps_node in zip(mpo.mats_env, mps.out_env):
+                        mpo_node['output'] ^ mps_node['input']
+
+                    for auto_stack in [True, False]:
+                        for auto_unbind in [True, False]:
+                            for inline_input in [True, False]:
+                                for inline_mats in [True, False]:
+                                    mps.auto_stack = auto_stack
+                                    mps.auto_unbind = auto_unbind
+
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              marginalize_output=True,
+                                              mpo=mpo)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 marginalize_output=True,
+                                                 mpo=mpo)
+                                    
+                                    if in_features:
+                                        assert result.shape == (100,)
+                                    else:
+                                        assert result.shape == tuple()
+                                    
+                                    if mps_boundary == 'obc':
+                                        if mpo_boundary == 'obc':
+                                            leaf = (n_features + 2) + \
+                                                (n_features - len(in_features) + 2)
+                                            assert len(mps.leaf_nodes) == leaf
+                                        else:
+                                            leaf = (n_features + 2) + \
+                                                (n_features - len(in_features))
+                                            assert len(mps.leaf_nodes) == leaf
+                                    else:
+                                        if mpo_boundary == 'obc':
+                                            leaf = n_features + \
+                                                (n_features - len(in_features) + 2)
+                                            assert len(mps.leaf_nodes) == leaf
+                                        else:
+                                            leaf = n_features + \
+                                                (n_features - len(in_features))
+                                            assert len(mps.leaf_nodes) == leaf
+                                    
+                                    result.sum().backward()
+                                    for node in mps.mats_env:
+                                        assert node.grad is not None
+                                    for node in mpo.mats_env:
+                                        assert node.tensor.grad is None
+    
+    def test_all_algorithms_marginalize_with_mpo_cuda(self):
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        for n_features in [1, 2, 3, 4, 10]:
+            for mps_boundary in ['obc', 'pbc']:
+                for mpo_boundary in ['obc', 'pbc']:
+                    # batch x n_features x feature_dim
+                    example = torch.randn(1, n_features // 2, 5, device=device)
+                    data = torch.randn(100, n_features // 2, 5, device=device)
+                    
+                    if example.numel() == 0:
+                        example = None
+                        data = None
+                    
+                    in_features = torch.randint(low=0, high=n_features,
+                                                size=(n_features // 2,)).tolist()
+                    in_features = list(set(in_features))
+                    
+                    mps = tk.models.MPS(n_features=n_features,
+                                        phys_dim=5,
+                                        bond_dim=2,
+                                        boundary=mps_boundary,
+                                        in_features=in_features)
+                    mps = mps.to(device)
+                    
+                    mpo = tk.models.MPO(n_features=n_features - len(in_features),
+                                        in_dim=5,
+                                        out_dim=5,
+                                        bond_dim=2,
+                                        boundary=mpo_boundary)
+                    
+                    # Send mpo to cuda before deparameterizing, so that all
+                    # nodes are still in the state_dict of the model and are
+                    # automatically sent to cuda
+                    mpo = mpo.to(device)
+                    
+                    # De-parameterize MPO nodes to only train MPS nodes
+                    mpo = mpo.parameterize(set_param=False, override=True)
+                    
+                    # This moves all the connected component
+                    mpo.mats_env[0].move_to_network(mps)
+                    
+                    # Connect MPO to MPS
+                    for mpo_node, mps_node in zip(mpo.mats_env, mps.out_env):
+                        mpo_node['output'] ^ mps_node['input']
+
+                    for auto_stack in [True, False]:
+                        for auto_unbind in [True, False]:
+                            for inline_input in [True, False]:
+                                for inline_mats in [True, False]:
+                                    mps.auto_stack = auto_stack
+                                    mps.auto_unbind = auto_unbind
+
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              marginalize_output=True,
+                                              mpo=mpo)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 marginalize_output=True,
+                                                 mpo=mpo)
+                                    
+                                    if in_features:
+                                        assert result.shape == (100,)
+                                    else:
+                                        assert result.shape == tuple()
+                                    
+                                    if mps_boundary == 'obc':
+                                        if mpo_boundary == 'obc':
+                                            leaf = (n_features + 2) + \
+                                                (n_features - len(in_features) + 2)
+                                            assert len(mps.leaf_nodes) == leaf
+                                        else:
+                                            leaf = (n_features + 2) + \
+                                                (n_features - len(in_features))
+                                            assert len(mps.leaf_nodes) == leaf
+                                    else:
+                                        if mpo_boundary == 'obc':
+                                            leaf = n_features + \
+                                                (n_features - len(in_features) + 2)
+                                            assert len(mps.leaf_nodes) == leaf
+                                        else:
+                                            leaf = n_features + \
+                                                (n_features - len(in_features))
+                                            assert len(mps.leaf_nodes) == leaf
+                                    
+                                    result.sum().backward()
+                                    for node in mps.mats_env:
+                                        assert node.grad is not None
+                                    for node in mpo.mats_env:
+                                        assert node.tensor.grad is None
                                     
     def test_all_algorithms_no_marginalize(self):
         for n_features in [1, 2, 3, 4, 10]:
@@ -1261,9 +1468,7 @@ class TestUMPS:  # MARK: TestUMPS
     def test_copy(self):
         for n_features in [1, 2, 3, 4, 6]:
             for share_tensors in [True, False]:
-                phys_dim = torch.randint(low=2,
-                                         high=12,
-                                         size=(1,)).item()
+                phys_dim = torch.randint(low=2, high=12, size=(1,)).item()
                 bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
                 
                 mps = tk.models.UMPS(n_features=n_features,
@@ -1286,6 +1491,29 @@ class TestUMPS:  # MARK: TestUMPS
                         assert node.tensor is copied_node.tensor
                     else: 
                         assert node.tensor is not copied_node.tensor
+    
+    def test_deparameterize(self):
+        for n_features in [1, 2, 3, 4, 6]:
+            for override in [True, False]:
+                phys_dim = torch.randint(low=2, high=12, size=(1,)).item()
+                bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
+                
+                mps = tk.models.UMPS(n_features=n_features,
+                                     phys_dim=phys_dim,
+                                     bond_dim=bond_dim)
+                
+                non_param_mps = mps.parameterize(set_param=False,
+                                                 override=override)
+                
+                if override:
+                    assert non_param_mps is mps
+                else:
+                    assert non_param_mps is not mps
+                    
+                for node in non_param_mps.mats_env:
+                    assert isinstance(node, tk.Node)
+                    assert not isinstance(node.tensor, torch.nn.Parameter)
+                    assert node.tensor_address() == 'virtual_uniform'
 
     def test_all_algorithms(self):
         for n_features in [1, 2, 3, 4, 10]:
@@ -1664,12 +1892,9 @@ class TestMPSLayer:  # MARK: TestMPSLayer
         for n_features in [1, 2, 3, 4, 6]:
             for boundary in ['obc', 'pbc']:
                 for share_tensors in [True, False]:
-                    in_dim = torch.randint(low=2,
-                                           high=12,
+                    in_dim = torch.randint(low=2, high=12,
                                            size=(n_features - 1,)).tolist()
-                    out_dim = torch.randint(low=2,
-                                            high=12,
-                                            size=(1,)).item()
+                    out_dim = torch.randint(low=2, high=12, size=(1,)).item()
                     bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
                     bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
                     
@@ -1696,6 +1921,39 @@ class TestMPSLayer:  # MARK: TestMPSLayer
                             assert node.tensor is copied_node.tensor
                         else: 
                             assert node.tensor is not copied_node.tensor
+    
+    def test_deparameterize(self):
+        for n_features in [1, 2, 3, 4, 6]:
+            for boundary in ['obc', 'pbc']:
+                for override in [True, False]:
+                    in_dim = torch.randint(low=2, high=12,
+                                           size=(n_features - 1,)).tolist()
+                    out_dim = torch.randint(low=2, high=12, size=(1,)).item()
+                    bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
+                    bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
+                    
+                    mps = tk.models.MPSLayer(n_features=n_features,
+                                             in_dim=in_dim,
+                                             out_dim=out_dim,
+                                             bond_dim=bond_dim,
+                                             boundary=boundary)
+                    
+                    non_param_mps = mps.parameterize(set_param=False,
+                                                     override=override)
+                    
+                    if override:
+                        assert non_param_mps is mps
+                    else:
+                        assert non_param_mps is not mps
+                    
+                    new_nodes = non_param_mps.mats_env
+                    if boundary == 'obc':
+                        new_nodes += [non_param_mps.left_node,
+                                      non_param_mps.right_node]
+                        
+                    for node in new_nodes:
+                        assert isinstance(node, tk.Node)
+                        assert not isinstance(node.tensor, torch.nn.Parameter)
 
 
 class TestUMPSLayer:  # MARK: TestUMPSLayer
@@ -1789,12 +2047,8 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
     def test_copy(self):
         for n_features in [1, 2, 3, 4, 6]:
             for share_tensors in [True, False]:
-                in_dim = torch.randint(low=2,
-                                       high=12,
-                                       size=(1,)).item()
-                out_dim = torch.randint(low=2,
-                                        high=12,
-                                        size=(1,)).item()
+                in_dim = torch.randint(low=2, high=12, size=(1,)).item()
+                out_dim = torch.randint(low=2, high=12, size=(1,)).item()
                 bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
                 
                 mps = tk.models.UMPSLayer(n_features=n_features,
@@ -1819,6 +2073,31 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
                         assert node.tensor is copied_node.tensor
                     else: 
                         assert node.tensor is not copied_node.tensor
+    
+    def test_deparameterize(self):
+        for n_features in [1, 2, 3, 4, 6]:
+            for override in [True, False]:
+                in_dim = torch.randint(low=2, high=12, size=(1,)).item()
+                out_dim = torch.randint(low=2, high=12, size=(1,)).item()
+                bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
+                
+                mps = tk.models.UMPSLayer(n_features=n_features,
+                                          in_dim=in_dim,
+                                          out_dim=out_dim,
+                                          bond_dim=bond_dim)
+                
+                non_param_mps = mps.parameterize(set_param=False,
+                                                 override=override)
+                
+                if override:
+                    assert non_param_mps is mps
+                else:
+                    assert non_param_mps is not mps
+                    
+                for node in non_param_mps.mats_env:
+                    assert isinstance(node, tk.Node)
+                    assert not isinstance(node.tensor, torch.nn.Parameter)
+                    assert node.tensor_address() == 'virtual_uniform'
     
     def test_canonicalize_error(self):
         mps = tk.models.UMPSLayer(n_features=10,

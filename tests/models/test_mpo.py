@@ -254,12 +254,10 @@ class TestMPO:
         for n_features in [1, 2, 3, 4, 6]:
             for boundary in ['obc', 'pbc']:
                 for share_tensors in [True, False]:
-                    in_dim = torch.randint(low=2,
-                                             high=12,
-                                             size=(n_features,)).tolist()
-                    out_dim = torch.randint(low=2,
-                                             high=12,
-                                             size=(n_features,)).tolist()
+                    in_dim = torch.randint(low=2, high=12,
+                                           size=(n_features,)).tolist()
+                    out_dim = torch.randint(low=2, high=12,
+                                            size=(n_features,)).tolist()
                     bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
                     bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
                     
@@ -284,6 +282,40 @@ class TestMPO:
                             assert node.tensor is copied_node.tensor
                         else: 
                             assert node.tensor is not copied_node.tensor
+    
+    def test_deparameterize(self):
+        for n_features in [1, 2, 3, 4, 6]:
+            for boundary in ['obc', 'pbc']:
+                for override in [True, False]:
+                    in_dim = torch.randint(low=2, high=12,
+                                           size=(n_features,)).tolist()
+                    out_dim = torch.randint(low=2, high=12,
+                                            size=(n_features,)).tolist()
+                    bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
+                    bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
+                    
+                    mpo = tk.models.MPO(n_features=n_features,
+                                        in_dim=in_dim,
+                                        out_dim=out_dim,
+                                        bond_dim=bond_dim,
+                                        boundary=boundary)
+                    
+                    non_param_mpo = mpo.parameterize(set_param=False,
+                                                     override=override)
+                    
+                    if override:
+                        assert non_param_mpo is mpo
+                    else:
+                        assert non_param_mpo is not mpo
+                    
+                    new_nodes = non_param_mpo.mats_env
+                    if boundary == 'obc':
+                        new_nodes += [non_param_mpo.left_node,
+                                      non_param_mpo.right_node]
+                        
+                    for node in new_nodes:
+                        assert isinstance(node, tk.Node)
+                        assert not isinstance(node.tensor, torch.nn.Parameter)
     
     def test_all_algorithms(self):
         for n_features in [1, 2, 3, 4, 10]:
@@ -622,6 +654,31 @@ class TestUMPO:
                         assert node.tensor is copied_node.tensor
                     else: 
                         assert node.tensor is not copied_node.tensor
+    
+    def test_deparameterize(self):
+        for n_features in [1, 2, 3, 4, 6]:
+            for override in [True, False]:
+                in_dim = torch.randint(low=2, high=12, size=(1,)).item()
+                out_dim = torch.randint(low=2, high=12, size=(1,)).item()
+                bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
+                
+                mpo = tk.models.UMPO(n_features=n_features,
+                                     in_dim=in_dim,
+                                     out_dim=out_dim,
+                                     bond_dim=bond_dim,)
+                
+                non_param_mpo = mpo.parameterize(set_param=False,
+                                                 override=override)
+                
+                if override:
+                    assert non_param_mpo is mpo
+                else:
+                    assert non_param_mpo is not mpo
+                    
+                for node in non_param_mpo.mats_env:
+                    assert isinstance(node, tk.Node)
+                    assert not isinstance(node.tensor, torch.nn.Parameter)
+                    assert node.tensor_address() == 'virtual_uniform'
     
     def test_all_algorithms(self):
         for n_features in [1, 2, 3, 4, 10]:

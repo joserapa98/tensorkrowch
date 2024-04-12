@@ -4,7 +4,6 @@ This script contains:
         + UMPS
         + MPSLayer
         + UMPSLayer
-    * MPSData
     * AbstractConvClass:
         + ConvMPS
         + ConvUMPS
@@ -12,6 +11,7 @@ This script contains:
         + ConvUMPSLayer
 """
 
+import warnings
 from abc import abstractmethod, ABC
 from typing import (List, Optional, Sequence,
                     Text, Tuple, Union)
@@ -24,6 +24,8 @@ import torch.nn as nn
 import tensorkrowch.operations as op
 from tensorkrowch.components import AbstractNode, Node, ParamNode
 from tensorkrowch.components import TensorNetwork
+from tensorkrowch.models import MPO
+
 from tensorkrowch.utils import split_sequence_into_regions, random_unitary
 
 
@@ -739,6 +741,41 @@ class MPS(TensorNetwork):  # MARK: MPS
             for new_node, node in zip(new_mps._mats_env, self._mats_env):
                 new_node.tensor = node.tensor.clone()
         return new_mps
+    
+    def parameterize(self,
+                     set_param: bool = True,
+                     override: bool = False) -> 'TensorNetwork':
+        """
+        Parameterizes all nodes of the MPS. If there are ``resultant`` nodes
+        in the MPS, it will be first :meth:`~tensorkrowch.TensorNetwork.reset`.
+
+        Parameters
+        ----------
+        set_param : bool
+            Boolean indicating whether the tensor network has to be parameterized
+            (``True``) or de-parameterized (``False``).
+        override : bool
+            Boolean indicating whether the tensor network should be parameterized
+            in-place (``True``) or copied and then parameterized (``False``).
+        """
+        if self._resultant_nodes:
+            warnings.warn(
+                'Resultant nodes will be removed before parameterizing the TN')
+            self.reset()
+
+        if override:
+            net = self
+        else:
+            net = self.copy(share_tensors=False)
+        
+        for i in range(self._n_features):
+            net._mats_env[i] = net._mats_env[i].parameterize(set_param)
+        
+        if net._boundary == 'obc':
+            net._left_node = net._left_node.parameterize(set_param)
+            net._right_node = net._right_node.parameterize(set_param)
+            
+        return net
 
     def _input_contraction(self,
                            nodes_env: List[Node],
@@ -836,10 +873,34 @@ class MPS(TensorNetwork):  # MARK: MPS
                  marginalize_output: bool = False,
                  embedding_matrices: Optional[
                                         Union[torch.Tensor,
-                                              Sequence[torch.Tensor]]] = None
+                                              Sequence[torch.Tensor]]] = None,
+                 mpo: Optional[MPO] = None
                  ) -> Node:
         """
         Contracts the whole MPS.
+        
+        If the MPS has input nodes, these are contracted against input ``data``
+        nodes.
+        
+        If the MPS has output nodes, these can be left with their ``"input"``
+        edges open, or can be marginalized, contracting the remaining output
+        nodes with themselves, if the argument ``"marginalize_output"`` is set
+        to ``True``.
+        
+        In the latter case, one can add additional nodes in between the MPS-MPS
+        contraction:
+        
+        * ``embedding_matrices``: A list of matrices with appropiate physical
+          dimensions can be passed, one for each output node. These matrices
+          will connect the two ``"input"`` edges of the corresponding nodes.
+        
+        * ``mpo``: If an :class:`MPO` is passed, it is assumed that the output
+          nodes of the MPS are already connected to the ``"output"`` edges of
+          the MPO nodes, and that the MPO nodes have been moved to the MPS, so
+          that all nodes belong to the MPS network. In this case, each MPO node
+          will connect the two ``"input"`` edges of the corresponding MPS nodes.
+          When calling ``mps(marginalize_output=True, mpo=mpo)``, this will
+          perform the MPS-MPO-MPS contraction at the output nodes of the MPS.
         
         Parameters
         ----------
@@ -864,6 +925,15 @@ class MPS(TensorNetwork):  # MARK: MPS
             edges. This can be useful when data vectors are not represented
             as qubits in the computational basis, but are transformed via
             some :ref:`Embeddings` function.
+        mpo : MPO, optional
+            MPO that is to be contracted with the MPS at the output nodes, if
+            ``marginalize_output = True``. To do that, in contrast with how
+            ``embedding_matrices`` works, the MPS has to be already connected
+            to the MPO (at the output nodes). That is, the ``"output"`` edges
+            of the MPO nodes should be connected to the ``"input"`` edges of
+            the MPS output nodes. If there are no input nodes, the MPS-MPO-MPS
+            is performed by calling ``mps(marginalize_output=True, mpo=mpo)``,
+            without passing extra data tensors.
 
         Returns
         -------
@@ -894,6 +964,13 @@ class MPS(TensorNetwork):  # MARK: MPS
                         '`embedding_matrices` dimensions should be equal '
                         'to the input dimensions of the corresponding MPS '
                         'output nodes')
+        elif mpo is not None:
+            if not isinstance(mpo, MPO):
+                raise TypeError('`mpo` should be MPO type')
+            if mpo._n_features != len(self._out_features):
+                raise ValueError(
+                    '`mpo` should have as many features as output nodes are '
+                    'in the MPS')
             
         in_regions = self.in_regions
         out_regions = self.out_regions
@@ -942,6 +1019,26 @@ class MPS(TensorNetwork):  # MARK: MPS
                 result = self._inline_contraction(nodes_out_env)
             
             else:
+                # Copy output nodes sharing tensors
+                copied_nodes = []
+                for node in nodes_out_env:
+                    new_node = node.__class__(shape=node._shape,
+                                              axes_names=node.axes_names,
+                                              name='virtual_result_copy',
+                                              network=self,
+                                              virtual=True)
+                    new_node.set_tensor_from(node)
+                    copied_nodes.append(new_node)
+                
+                # Connect with neighbours
+                for i in range(len(copied_nodes)):
+                    if (i == 0) and (self._boundary == 'pbc'):
+                        if nodes_out_env[i - 1].is_connected_to(nodes_out_env[i]):
+                            copied_nodes[i - 1]['right'] ^ copied_nodes[i]['left']
+                    elif i > 0:
+                        copied_nodes[i - 1]['right'] ^ copied_nodes[i]['left']
+                
+                # Contract with embedding matrices
                 if embedding_matrices is not None:
                     for i, node in enumerate(nodes_out_env):
                         node.reattach_edges(axes=['input'])
@@ -953,25 +1050,19 @@ class MPS(TensorNetwork):  # MARK: MPS
                         mat_node['output'] ^ node['input']
                         nodes_out_env[i] = mat_node @ node
                 
-                # Copy output nodes sharing tensors and connect them to input edges
-                copied_nodes = []
-                for node in nodes_out_env:
-                    node.reattach_edges(axes=['input'])
-                    new_node = node.__class__(shape=node._shape,
-                                              axes_names=node.axes_names,
-                                              name='virtual_result_copy',
-                                              network=self,
-                                              virtual=True)
-                    new_node.set_tensor_from(node)
-                    copied_nodes.append(new_node)
+                # Contract with mpo
+                elif mpo is not None:
+                    for i in range(len(nodes_out_env)):
+                        nodes_out_env[i] = nodes_out_env[i] @ mpo._mats_env[i]
                     
+                    if mpo._boundary == 'obc':
+                        nodes_out_env[0] = mpo._left_node @ nodes_out_env[0]
+                        nodes_out_env[-1] = nodes_out_env[-1] @ mpo._right_node
+                
+                # Reattach input edges of resultant output nodes and connect
+                # with copied nodes
                 for i in range(len(copied_nodes)):
-                    if (i == 0) and (self._boundary == 'pbc'):
-                        if nodes_out_env[i - 1].is_connected_to(nodes_out_env[i]):
-                            copied_nodes[i - 1]['right'] ^ copied_nodes[i]['left']
-                    elif i > 0:
-                        copied_nodes[i - 1]['right'] ^ copied_nodes[i]['left']
-                    
+                    nodes_out_env[i].reattach_edges(axes=['input'])
                     copied_nodes[i]['input'] ^ nodes_out_env[i]['input']
                 
                 # Contract all output_nodes
@@ -979,9 +1070,8 @@ class MPS(TensorNetwork):  # MARK: MPS
                 result = self._inline_contraction(mats_out_env)
             
         # Contract periodic edge
-        if self._boundary == 'pbc':
-            if result.is_connected_to(result):
-                result @= result
+        if result.is_connected_to(result):
+            result @= result
         
         # Put batch edges in first positions
         batch_edges = []
@@ -1593,6 +1683,46 @@ class UMPS(MPS):  # MARK: UMPS
         else:
             new_mps.uniform_memory.tensor = self.uniform_memory.tensor.clone()
         return new_mps
+    
+    def parameterize(self,
+                     set_param: bool = True,
+                     override: bool = False) -> 'TensorNetwork':
+        """
+        Parameterizes all nodes of the MPS. If there are ``resultant`` nodes
+        in the MPS, it will be first :meth:`~tensorkrowch.TensorNetwork.reset`.
+
+        Parameters
+        ----------
+        set_param : bool
+            Boolean indicating whether the tensor network has to be parameterized
+            (``True``) or de-parameterized (``False``).
+        override : bool
+            Boolean indicating whether the tensor network should be parameterized
+            in-place (``True``) or copied and then parameterized (``False``).
+        """
+        if self._resultant_nodes:
+            warnings.warn(
+                'Resultant nodes will be removed before parameterizing the TN')
+            self.reset()
+
+        if override:
+            net = self
+        else:
+            net = self.copy(share_tensors=False)
+        
+        for i in range(self._n_features):
+            net._mats_env[i] = net._mats_env[i].parameterize(set_param)
+        
+        # It is important that uniform_memory is parameterized after the rest
+        # of the nodes
+        net.uniform_memory = net.uniform_memory.parameterize(set_param)
+        
+        # Tensor addresses have to be reassigned to reference
+        # the uniform memory
+        for node in net._mats_env:
+            node.set_tensor_from(net.uniform_memory)
+            
+        return net
     
     def canonicalize(self,
                      oc: Optional[int] = None,
@@ -2287,6 +2417,46 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
             new_mps.uniform_memory.tensor = self.uniform_memory.tensor.clone()
             new_mps.out_node.tensor = self.out_node.tensor.clone()
         return new_mps
+    
+    def parameterize(self,
+                     set_param: bool = True,
+                     override: bool = False) -> 'TensorNetwork':
+        """
+        Parameterizes all nodes of the MPS. If there are ``resultant`` nodes
+        in the MPS, it will be first :meth:`~tensorkrowch.TensorNetwork.reset`.
+
+        Parameters
+        ----------
+        set_param : bool
+            Boolean indicating whether the tensor network has to be parameterized
+            (``True``) or de-parameterized (``False``).
+        override : bool
+            Boolean indicating whether the tensor network should be parameterized
+            in-place (``True``) or copied and then parameterized (``False``).
+        """
+        if self._resultant_nodes:
+            warnings.warn(
+                'Resultant nodes will be removed before parameterizing the TN')
+            self.reset()
+
+        if override:
+            net = self
+        else:
+            net = self.copy(share_tensors=False)
+        
+        for i in range(self._n_features):
+            net._mats_env[i] = net._mats_env[i].parameterize(set_param)
+        
+        # It is important that uniform_memory is parameterized after the rest
+        # of the nodes
+        net.uniform_memory = net.uniform_memory.parameterize(set_param)
+        
+        # Tensor addresses have to be reassigned to reference
+        # the uniform memory
+        for node in net._mats_env:
+            node.set_tensor_from(net.uniform_memory)
+        
+        return net
     
     def canonicalize(self,
                      oc: Optional[int] = None,

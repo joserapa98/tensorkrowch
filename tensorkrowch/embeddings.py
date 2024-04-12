@@ -331,7 +331,7 @@ def discretize(data: torch.Tensor,
     if not torch.le(data, torch.ones_like(data)).all():
         raise ValueError('Elements of `data` should be between 0 and 1')
 
-    max_discr_value = sum([base ** -i for i in range(1, level + 1)])
+    max_discr_value = (base - 1) * sum([base ** -i for i in range(1, level + 1)])
     data = torch.where(data > max_discr_value, max_discr_value, data)
     
     base = torch.tensor(base, device=data.device)

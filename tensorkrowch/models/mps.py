@@ -2680,40 +2680,71 @@ class MPSData(TensorNetwork):  # MARK: MPSData
         """
         Adds data to MPS data nodes. Input is a list of mps tensors.
         
+        The physical dimensions of the given data tensors should coincide with
+        the physical dimensions of the MPS. The bond dimensions can be different.
+        
         Parameters
         ----------
         data : list[torch.Tensor] or tuple[torch.Tensor]
             A sequence of tensors, one for each of the MPS nodes. If ``boundary``
             is ``"pbc"``, all tensors should have the same rank, with shapes
             ``(batch_0, ..., batch_n, bond_dim, phys_dim, bond_dim)``. If
-            ``boundary`` is ``"obc"``, the first and last tensorss should have
+            ``boundary`` is ``"obc"``, the first and last tensors should have
             shapes ``(batch_0, ..., batch_n, phys_dim, bond_dim)`` and
             ``(batch_0, ..., batch_n, bond_dim, phys_dim)``, respectively.
         """
+        if not isinstance(data, Sequence):
+            raise TypeError(
+                '`data` should be list[torch.Tensor] or tuple[torch.Tensor] type')
         if len(data) != self._n_features:
             raise ValueError('`data` should be a sequence of tensors of length'
                              ' equal to `n_features`')
+        if any([not isinstance(x, torch.Tensor) for x in data]):
+            raise TypeError(
+                '`data` should be list[torch.Tensor] or tuple[torch.Tensor] type')
+        
+        # Check physical dimensions coincide
+        for i, (data_tensor, node) in enumerate(zip(data, self._mats_env)):
+            if (self._boundary == 'obc') and (i == (self._n_features - 1)):
+                if data_tensor.shape[-1] != node.shape[-2]:
+                    raise ValueError(
+                        f'Physical dimension {data_tensor.shape[-1]} of '
+                        f'data tensor at position {i} does not coincide '
+                        f'with the corresponding physical dimension '
+                        f'{node.shape[-2]} of the MPS')
+            else:
+                if data_tensor.shape[-2] != node.shape[-2]:
+                    raise ValueError(
+                        f'Physical dimension {data_tensor.shape[-2]} of '
+                        f'data tensor at position {i} does not coincide '
+                        f'with the corresponding physical dimension '
+                        f'{node.shape[-2]} of the MPS')
+            
         for i, node in enumerate(self._mats_env):
             if self._boundary == 'obc':
                 aux_tensor = torch.zeros(*node.shape,
                                          device=data[i].device)
                 if (i == 0) and (i == (self._n_features - 1)):
-                    aux_tensor = aux_tensor.expand(*data[i].shape[:-1],
-                                                   -1, -1, -1).clone()
+                    aux_tensor = torch.zeros(*data[i].shape[:-1],
+                                             *node.shape[-3:],
+                                             device=data[i].device)
                     aux_tensor[..., 0, :, 0] = data[i]
                     data[i] = aux_tensor
                 elif i == 0:
-                    aux_tensor = aux_tensor.expand(*data[i].shape[:-2],
-                                                   -1, -1, -1).clone()
+                    aux_tensor = torch.zeros(*data[i].shape[:-2],
+                                             *node.shape[-3:-1],
+                                             data[i].shape[-1],
+                                             device=data[i].device)
                     aux_tensor[..., 0, :, :] = data[i]
                     data[i] = aux_tensor
                 elif i == (self._n_features - 1):
-                    aux_tensor = aux_tensor.expand(*data[i].shape[:-2],
-                                                   -1, -1, -1).clone()
+                    aux_tensor = torch.zeros(*data[i].shape[:-1],
+                                             *node.shape[-2:],
+                                             device=data[i].device)
                     aux_tensor[..., 0] = data[i]
                     data[i] = aux_tensor
                     
-            node.tensor = data[i]
+            node._direct_set_tensor(data[i])
 
 
 ###############################################################################

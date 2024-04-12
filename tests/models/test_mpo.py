@@ -420,14 +420,9 @@ class TestMPO:
                 for mps_boundary in ['obc', 'pbc']:
                     for inline_input in [True, False]:
                         for inline_mats in [True, False]:
-                            print(n_features,
-                                  mpo_boundary,
-                                  mps_boundary,
-                                  inline_input,
-                                  inline_mats)
                             phys_dim = torch.randint(low=2, high=10,
                                                      size=(n_features,)).tolist()
-                            bond_dim = torch.randint(low=5, high=8,
+                            bond_dim = torch.randint(low=2, high=8,
                                                      size=(n_features,)).tolist()
                             
                             mpo = tk.models.MPO(
@@ -444,26 +439,40 @@ class TestMPO:
                                     if mps_boundary == 'obc' else bond_dim,
                                 boundary=mps_boundary)
                             
+                            # To ensure MPSData nodes go to MPO network, and
+                            # not the other way
+                            mps_data.mats_env[0].move_to_network(mpo)
+                            
                             for mps_node, mpo_node in zip(mps_data.mats_env,
                                                           mpo.mats_env):
                                 mps_node['feature'] ^ mpo_node['input']
                             
-                            tensors = [
-                                torch.randn(10,
-                                            bond_dim[i - 1],
-                                            phys_dim[i],
-                                            bond_dim[i]) 
-                                for i in range(n_features)]
-                            if mps_boundary == 'obc':
-                                tensors[0] = tensors[0][:, 0]
-                                tensors[-1] = tensors[-1][..., 0]
-                            
-                            mps_data.add_data(tensors)
-                            result = mpo(mps=mps_data,
-                                         inline_input=inline_input,
-                                         inline_mats=inline_mats)
-                            
-                            assert result.shape == tuple([10] + [2] * n_features)
+                            for _ in range(10):
+                                # MPO needs to be reset each time if inline_input
+                                # or inline_mats are False, since the bond dims
+                                # of MPSData may change, and therefore the
+                                # computation of stacks may fail
+                                if not inline_input or not inline_mats:
+                                    mpo.reset()
+                                
+                                bond_dim = torch.randint(low=2, high=8,
+                                                         size=(n_features,)).tolist()
+                                tensors = [
+                                    torch.randn(10,
+                                                bond_dim[i - 1],
+                                                phys_dim[i],
+                                                bond_dim[i]) 
+                                    for i in range(n_features)]
+                                if mps_boundary == 'obc':
+                                    tensors[0] = tensors[0][:, 0]
+                                    tensors[-1] = tensors[-1][..., 0]
+                                
+                                mps_data.add_data(tensors)
+                                result = mpo(mps=mps_data,
+                                             inline_input=inline_input,
+                                             inline_mats=inline_mats)
+                                
+                                assert result.shape == tuple([10] + [2] * n_features)
 
 
 class TestUMPO:

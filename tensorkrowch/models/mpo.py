@@ -598,7 +598,22 @@ class MPO(TensorNetwork):  # MARK: MPO
                  inline_mats: bool = False,
                  mps: Optional[MPSData] = None) -> Node:
         """
-        Contracts the whole MPO.
+        Contracts the whole MPO with input data nodes. The input can be in the
+        form of an :class:`MPSData`, which may be convenient for tensorizing
+        vector - matrix multiplication in the form of MPS - MPO contraction.
+        
+        If the ``MPO`` is contracted with a ``MPSData``, it is recommended that
+        the MPS nodes are moved to the MPO network before connecting the
+        corresponding nodes.
+        
+        Also, in this case, if any of the contraction arguments, ``inline_input``
+        or ``inline_mats``, is set to ``False``, the MPO (already connected to
+        the MPS) should be :meth:`~tensorkrowch.TensorNetwork.reset` before
+        contraction if new data is set into the ``MPSData`` nodes. This is
+        because :class:`MPSData` admits data tensors with different bond
+        dimensions for each iteration, and this may cause undesired behaviour
+        when reusing some information of previous calls to
+        :func:~tensorkrowch.stack` with the previous data tensors.
         
         Parameters
         ----------

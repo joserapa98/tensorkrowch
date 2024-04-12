@@ -27,11 +27,6 @@ UMPSLayer
 .. autoclass:: UMPSLayer
     :members:
 
-MPSData
-^^^^^^^
-.. autoclass:: MPSData
-    :members:
-
 ConvMPS
 ^^^^^^^
 .. autoclass:: ConvMPS
@@ -59,6 +54,15 @@ ConvUMPSLayer
     :members:
 
     .. automethod:: forward
+
+
+MPSData
+-------
+
+MPSData
+^^^^^^^
+.. autoclass:: MPSData
+    :members:
 
 
 MPO

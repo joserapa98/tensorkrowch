@@ -360,11 +360,6 @@ title="Print to PDF"
     </a>
    </li>
    <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#mpsdata">
-     MPSData
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
     <a class="reference internal nav-link" href="#convmps">
      ConvMPS
     </a>
@@ -387,12 +382,24 @@ title="Print to PDF"
   </ul>
  </li>
  <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#mpsdata">
+   MPSData
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id35">
+     MPSData
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#mpo">
    MPO
   </a>
   <ul class="nav section-nav flex-column">
    <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#id35">
+    <a class="reference internal nav-link" href="#id36">
      MPO
     </a>
    </li>
@@ -409,7 +416,7 @@ title="Print to PDF"
   </a>
   <ul class="nav section-nav flex-column">
    <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#id36">
+    <a class="reference internal nav-link" href="#id37">
      Tree
     </a>
    </li>
@@ -436,7 +443,7 @@ title="Print to PDF"
   </a>
   <ul class="nav section-nav flex-column">
    <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#id53">
+    <a class="reference internal nav-link" href="#id54">
      PEPS
     </a>
    </li>
@@ -502,11 +509,6 @@ title="Print to PDF"
     </a>
    </li>
    <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#mpsdata">
-     MPSData
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
     <a class="reference internal nav-link" href="#convmps">
      ConvMPS
     </a>
@@ -529,12 +531,24 @@ title="Print to PDF"
   </ul>
  </li>
  <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#mpsdata">
+   MPSData
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id35">
+     MPSData
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#mpo">
    MPO
   </a>
   <ul class="nav section-nav flex-column">
    <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#id35">
+    <a class="reference internal nav-link" href="#id36">
      MPO
     </a>
    </li>
@@ -551,7 +565,7 @@ title="Print to PDF"
   </a>
   <ul class="nav section-nav flex-column">
    <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#id36">
+    <a class="reference internal nav-link" href="#id37">
      Tree
     </a>
    </li>
@@ -578,7 +592,7 @@ title="Print to PDF"
   </a>
   <ul class="nav section-nav flex-column">
    <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#id53">
+    <a class="reference internal nav-link" href="#id54">
      PEPS
     </a>
    </li>
@@ -886,9 +900,46 @@ to the same, unique, tensors.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPS.parameterize">
+<span class="sig-name descname"><span class="pre">parameterize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.parameterize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.parameterize" title="Permalink to this definition">#</a></dt>
+<dd><p>Parameterizes all nodes of the MPS. If there are <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes
+in the MPS, it will be first <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>set_param</strong> (<em>bool</em>) – Boolean indicating whether the tensor network has to be parameterized
+(<code class="docutils literal notranslate"><span class="pre">True</span></code>) or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+<li><p><strong>override</strong> (<em>bool</em>) – Boolean indicating whether the tensor network should be parameterized
+in-place (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or copied and then parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.models.MPS.contract">
-<span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inline_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inline_mats</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marginalize_output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">embedding_matrices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.contract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.contract" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inline_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inline_mats</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marginalize_output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">embedding_matrices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mpo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.contract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.contract" title="Permalink to this definition">#</a></dt>
 <dd><p>Contracts the whole MPS.</p>
+<p>If the MPS has input nodes, these are contracted against input <code class="docutils literal notranslate"><span class="pre">data</span></code>
+nodes.</p>
+<p>If the MPS has output nodes, these can be left with their <code class="docutils literal notranslate"><span class="pre">&quot;input&quot;</span></code>
+edges open, or can be marginalized, contracting the remaining output
+nodes with themselves, if the argument <code class="docutils literal notranslate"><span class="pre">&quot;marginalize_output&quot;</span></code> is set
+to <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
+<p>In the latter case, one can add additional nodes in between the MPS-MPS
+contraction:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">embedding_matrices</span></code>: A list of matrices with appropiate physical
+dimensions can be passed, one for each output node. These matrices
+will connect the two <code class="docutils literal notranslate"><span class="pre">&quot;input&quot;</span></code> edges of the corresponding nodes.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mpo</span></code>: If an <a class="reference internal" href="#tensorkrowch.models.MPO" title="tensorkrowch.models.MPO"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPO</span></code></a> is passed, it is assumed that the output
+nodes of the MPS are already connected to the <code class="docutils literal notranslate"><span class="pre">&quot;output&quot;</span></code> edges of
+the MPO nodes, and that the MPO nodes have been moved to the MPS, so
+that all nodes belong to the MPS network. In this case, each MPO node
+will connect the two <code class="docutils literal notranslate"><span class="pre">&quot;input&quot;</span></code> edges of the corresponding MPS nodes.
+When calling <code class="docutils literal notranslate"><span class="pre">mps(marginalize_output=True,</span> <span class="pre">mpo=mpo)</span></code>, this will
+perform the MPS-MPO-MPS contraction at the output nodes of the MPS.</p></li>
+</ul>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -909,6 +960,14 @@ between each output node and its copy, connecting the <code class="docutils lite
 edges. This can be useful when data vectors are not represented
 as qubits in the computational basis, but are transformed via
 some <a class="reference internal" href="embeddings.html#embeddings"><span class="std std-ref">Embeddings</span></a> function.</p></li>
+<li><p><strong>mpo</strong> (<a class="reference internal" href="#tensorkrowch.models.MPO" title="tensorkrowch.models.MPO"><em>MPO</em></a><em>, </em><em>optional</em>) – MPO that is to be contracted with the MPS at the output nodes, if
+<code class="docutils literal notranslate"><span class="pre">marginalize_output</span> <span class="pre">=</span> <span class="pre">True</span></code>. To do that, in contrast with how
+<code class="docutils literal notranslate"><span class="pre">embedding_matrices</span></code> works, the MPS has to be already connected
+to the MPO (at the output nodes). That is, the <code class="docutils literal notranslate"><span class="pre">&quot;output&quot;</span></code> edges
+of the MPO nodes should be connected to the <code class="docutils literal notranslate"><span class="pre">&quot;input&quot;</span></code> edges of
+the MPS output nodes. If there are no input nodes, the MPS-MPO-MPS
+is performed by calling <code class="docutils literal notranslate"><span class="pre">mps(marginalize_output=True,</span> <span class="pre">mpo=mpo)</span></code>,
+without passing extra data tensors.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
@@ -1089,6 +1148,23 @@ to the same, unique, tensor.</p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.models.UMPS" title="tensorkrowch.models.UMPS">UMPS</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.models.UMPS.parameterize">
+<span class="sig-name descname"><span class="pre">parameterize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#UMPS.parameterize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.UMPS.parameterize" title="Permalink to this definition">#</a></dt>
+<dd><p>Parameterizes all nodes of the MPS. If there are <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes
+in the MPS, it will be first <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>set_param</strong> (<em>bool</em>) – Boolean indicating whether the tensor network has to be parameterized
+(<code class="docutils literal notranslate"><span class="pre">True</span></code>) or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+<li><p><strong>override</strong> (<em>bool</em>) – Boolean indicating whether the tensor network should be parameterized
+in-place (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or copied and then parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -1418,169 +1494,19 @@ to the same, unique, tensors.</p>
 </dl>
 </dd></dl>
 
-</dd></dl>
-
-</section>
-<section id="mpsdata">
-<h3>MPSData<a class="headerlink" href="#mpsdata" title="Permalink to this headline">#</a></h3>
-<dl class="py class">
-<dt class="sig sig-object py" id="tensorkrowch.models.MPSData">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.models.</span></span><span class="sig-name descname"><span class="pre">MPSData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phys_dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bond_dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'obc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPSData"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPSData" title="Permalink to this definition">#</a></dt>
-<dd><p>Class for data vectors in the form of Matrix Product States. That is, this
-is a class similar to <a class="reference internal" href="#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a>, but where all nodes can have additional
-batch edges.</p>
-<p>Besides, since this class is intended to store data vectors, all
-<a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">nodes</span></code></a> are non-parametric, and are <code class="docutils literal notranslate"><span class="pre">data</span></code>
-nodes. Also, this class does not have an inherited <code class="docutils literal notranslate"><span class="pre">contract</span></code> method,
-since it is not intended to be contracted with input data, but rather
-act itself as input data of another tensor network model.</p>
-<p>Similar to <a class="reference internal" href="#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a>, <code class="docutils literal notranslate"><span class="pre">MPSData</span></code> is formed by:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">mats_env</span></code>: Environment of <cite>matrix</cite> nodes with axes
-<code class="docutils literal notranslate"><span class="pre">(&quot;batch_0&quot;,</span> <span class="pre">...,</span> <span class="pre">&quot;batch_n&quot;,</span> <span class="pre">&quot;left&quot;,</span> <span class="pre">&quot;feature&quot;,</span> <span class="pre">&quot;right&quot;)</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">left_node</span></code>, <code class="docutils literal notranslate"><span class="pre">right_node</span></code>: <cite>Vector</cite> nodes with axes <code class="docutils literal notranslate"><span class="pre">(&quot;right&quot;,)</span></code>
-and <code class="docutils literal notranslate"><span class="pre">(&quot;left&quot;,)</span></code>, respectively. These are used to close the boundary
-in the case <code class="docutils literal notranslate"><span class="pre">boudary</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;obc&quot;</span></code>. Otherwise, both are <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
-</ul>
-<p>Since <code class="docutils literal notranslate"><span class="pre">MPSData</span></code> is designed to store input data vectors, this can be
-accomplished by calling the custom <a class="reference internal" href="#tensorkrowch.models.MPSData.add_data" title="tensorkrowch.models.MPSData.add_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_data()</span></code></a> method with a given
-list of tensors. This is in contrast to the usual way of setting nodes’
-tensors in <a class="reference internal" href="#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a> and its derived classes via <a class="reference internal" href="#tensorkrowch.models.MPS.initialize" title="tensorkrowch.models.MPS.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">MPS.initialize()</span></code></a>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.models.UMPSLayer.parameterize">
+<span class="sig-name descname"><span class="pre">parameterize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#UMPSLayer.parameterize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.UMPSLayer.parameterize" title="Permalink to this definition">#</a></dt>
+<dd><p>Parameterizes all nodes of the MPS. If there are <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes
+in the MPS, it will be first <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>n_features</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of nodes that will be in <code class="docutils literal notranslate"><span class="pre">mats_env</span></code>. That is, number of nodes
-without taking into account <code class="docutils literal notranslate"><span class="pre">left_node</span></code> and <code class="docutils literal notranslate"><span class="pre">right_node</span></code>.</p></li>
-<li><p><strong>phys_dim</strong> (<em>int</em><em>, </em><em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em><em>, </em><em>optional</em>) – Physical dimension(s). If given as a sequence, its length should be
-equal to <code class="docutils literal notranslate"><span class="pre">n_features</span></code>.</p></li>
-<li><p><strong>bond_dim</strong> (<em>int</em><em>, </em><em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em><em>, </em><em>optional</em>) – Bond dimension(s). If given as a sequence, its length should be equal
-to <code class="docutils literal notranslate"><span class="pre">n_features</span></code> (if <code class="docutils literal notranslate"><span class="pre">boundary</span> <span class="pre">=</span> <span class="pre">&quot;pbc&quot;</span></code>) or <code class="docutils literal notranslate"><span class="pre">n_features</span> <span class="pre">-</span> <span class="pre">1</span></code> (if
-<code class="docutils literal notranslate"><span class="pre">boundary</span> <span class="pre">=</span> <span class="pre">&quot;obc&quot;</span></code>). The i-th bond dimension is always the dimension
-of the right edge of the i-th node.</p></li>
-<li><p><strong>boundary</strong> (<em>{&quot;obc&quot;</em><em>, </em><em>&quot;pbc&quot;}</em>) – String indicating whether periodic or open boundary conditions should
-be used.</p></li>
-<li><p><strong>n_batches</strong> (<em>int</em>) – Number of batch edges of the MPS nodes. Usually <code class="docutils literal notranslate"><span class="pre">n_batches</span> <span class="pre">=</span> <span class="pre">1</span></code>
-(where the batch edge is used for the data batched) but it could also
-be <code class="docutils literal notranslate"><span class="pre">n_batches</span> <span class="pre">=</span> <span class="pre">2</span></code> (one edge for data batched, other edge for image
-patches in convolutional layers).</p></li>
-<li><p><strong>tensors</strong> (<em>list</em><em>[</em><em>torch.Tensor</em><em>] or </em><em>tuple</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – Instead of providing <code class="docutils literal notranslate"><span class="pre">n_features</span></code>, <code class="docutils literal notranslate"><span class="pre">phys_dim</span></code>, <code class="docutils literal notranslate"><span class="pre">bond_dim</span></code> and
-<code class="docutils literal notranslate"><span class="pre">boundary</span></code>, a list of MPS tensors can be provided. In such case, all
-mentioned attributes will be inferred from the given tensors. All
-tensors should be rank-(n+3) tensors, with shape
-<code class="docutils literal notranslate"><span class="pre">(batch_1,</span> <span class="pre">...,</span> <span class="pre">batch_n,</span> <span class="pre">bond_dim,</span> <span class="pre">phys_dim,</span> <span class="pre">bond_dim)</span></code>. If the first
-and last elements are rank-(n+2) tensors, with shapes
-<code class="docutils literal notranslate"><span class="pre">(batch_1,</span> <span class="pre">...,</span> <span class="pre">batch_n,</span> <span class="pre">phys_dim,</span> <span class="pre">bond_dim)</span></code>,
-<code class="docutils literal notranslate"><span class="pre">(batch_1,</span> <span class="pre">...,</span> <span class="pre">batch_n,</span> <span class="pre">bond_dim,</span> <span class="pre">phys_dim)</span></code>, respectively,
-the inferred boundary conditions will be “obc”. Also, if <code class="docutils literal notranslate"><span class="pre">tensors</span></code>
-contains a single element, it can be rank-(n+1) (“obc”) or rank-(n+3)
-(“pbc”).</p></li>
-<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.MPSData.initialize" title="tensorkrowch.models.MPSData.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code></a> for a more detailed
-explanation of the different initialization methods. By default it is
-<code class="docutils literal notranslate"><span class="pre">None</span></code>, since <code class="docutils literal notranslate"><span class="pre">MPSData</span></code> is intended to store input data vectors in
-MPS form, rather than initializing its own random tensors. Check
-<a class="reference internal" href="#tensorkrowch.models.MPSData.add_data" title="tensorkrowch.models.MPSData.add_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_data()</span></code></a> to see how to initialize MPS nodes with data tensors.</p></li>
-<li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensors if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
-<li><p><strong>kwargs</strong> (<em>float</em>) – Keyword arguments for the different initialization methods. See
-<a class="reference internal" href="components.html#tensorkrowch.AbstractNode.make_tensor" title="tensorkrowch.AbstractNode.make_tensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">make_tensor()</span></code></a>.</p></li>
+<li><p><strong>set_param</strong> (<em>bool</em>) – Boolean indicating whether the tensor network has to be parameterized
+(<code class="docutils literal notranslate"><span class="pre">True</span></code>) or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+<li><p><strong>override</strong> (<em>bool</em>) – Boolean indicating whether the tensor network should be parameterized
+in-place (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or copied and then parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
 </ul>
-</dd>
-</dl>
-<p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">mps</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MPSData</span><span class="p">(</span><span class="n">n_features</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
-<span class="gp">... </span>                        <span class="n">phys_dim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-<span class="gp">... </span>                        <span class="n">bond_dim</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
-<span class="gp">... </span>                        <span class="n">boundary</span><span class="o">=</span><span class="s2">&quot;pbc&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># n_features * (batch_size x bond_dim x feature_size x bond_dim)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">)]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">mps</span><span class="o">.</span><span class="n">add_data</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">mps</span><span class="o">.</span><span class="n">mats_env</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
-</pre></div>
-</div>
-<dl class="py property">
-<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.n_features">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">n_features</span></span><a class="headerlink" href="#tensorkrowch.models.MPSData.n_features" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns number of nodes.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.phys_dim">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">phys_dim</span></span><a class="headerlink" href="#tensorkrowch.models.MPSData.phys_dim" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns physical dimensions.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.bond_dim">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">bond_dim</span></span><a class="headerlink" href="#tensorkrowch.models.MPSData.bond_dim" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns bond dimensions.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.boundary">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">boundary</span></span><a class="headerlink" href="#tensorkrowch.models.MPSData.boundary" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns boundary condition (“obc” or “pbc”).</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.n_batches">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">n_batches</span></span><a class="headerlink" href="#tensorkrowch.models.MPSData.n_batches" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns number of batch edges of the MPS nodes.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.left_node">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">left_node</span></span><a class="headerlink" href="#tensorkrowch.models.MPSData.left_node" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns the <code class="docutils literal notranslate"><span class="pre">left_node</span></code>.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.right_node">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">right_node</span></span><a class="headerlink" href="#tensorkrowch.models.MPSData.right_node" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns the <code class="docutils literal notranslate"><span class="pre">right_node</span></code>.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.mats_env">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mats_env</span></span><a class="headerlink" href="#tensorkrowch.models.MPSData.mats_env" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns the list of nodes in <code class="docutils literal notranslate"><span class="pre">mats_env</span></code>.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.initialize">
-<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">init_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'randn'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPSData.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPSData.initialize" title="Permalink to this definition">#</a></dt>
-<dd><p>Initializes all the nodes of the <a class="reference internal" href="#tensorkrowch.models.MPSData" title="tensorkrowch.models.MPSData"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPSData</span></code></a>. It can be called when
-instantiating the model, or to override the existing nodes’ tensors.</p>
-<p>There are different methods to initialize the nodes:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">{&quot;zeros&quot;,</span> <span class="pre">&quot;ones&quot;,</span> <span class="pre">&quot;copy&quot;,</span> <span class="pre">&quot;rand&quot;,</span> <span class="pre">&quot;randn&quot;}</span></code>: Each node is
-initialized calling <a class="reference internal" href="components.html#tensorkrowch.AbstractNode.set_tensor" title="tensorkrowch.AbstractNode.set_tensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_tensor()</span></code></a> with
-the given method, <code class="docutils literal notranslate"><span class="pre">device</span></code> and <code class="docutils literal notranslate"><span class="pre">kwargs</span></code>.</p></li>
-</ul>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.MPSData.add_data" title="tensorkrowch.models.MPSData.add_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_data()</span></code></a> to see how to
-initialize MPS nodes with data tensors.</p></li>
-<li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensors if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
-<li><p><strong>kwargs</strong> (<em>float</em>) – Keyword arguments for the different initialization methods. See
-<a class="reference internal" href="components.html#tensorkrowch.AbstractNode.make_tensor" title="tensorkrowch.AbstractNode.make_tensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">make_tensor()</span></code></a>.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.add_data">
-<span class="sig-name descname"><span class="pre">add_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPSData.add_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPSData.add_data" title="Permalink to this definition">#</a></dt>
-<dd><p>Adds data to MPS data nodes. Input is a list of mps tensors.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>data</strong> (<em>list</em><em>[</em><em>torch.Tensor</em><em>] or </em><em>tuple</em><em>[</em><em>torch.Tensor</em><em>]</em>) – A sequence of tensors, one for each of the MPS nodes. If <code class="docutils literal notranslate"><span class="pre">boundary</span></code>
-is <code class="docutils literal notranslate"><span class="pre">&quot;pbc&quot;</span></code>, all tensors should have the same rank, with shapes
-<code class="docutils literal notranslate"><span class="pre">(batch_0,</span> <span class="pre">...,</span> <span class="pre">batch_n,</span> <span class="pre">bond_dim,</span> <span class="pre">phys_dim,</span> <span class="pre">bond_dim)</span></code>. If
-<code class="docutils literal notranslate"><span class="pre">boundary</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;obc&quot;</span></code>, the first and last tensorss should have
-shapes <code class="docutils literal notranslate"><span class="pre">(batch_0,</span> <span class="pre">...,</span> <span class="pre">batch_n,</span> <span class="pre">phys_dim,</span> <span class="pre">bond_dim)</span></code> and
-<code class="docutils literal notranslate"><span class="pre">(batch_0,</span> <span class="pre">...,</span> <span class="pre">batch_n,</span> <span class="pre">bond_dim,</span> <span class="pre">phys_dim)</span></code>, respectively.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -2141,10 +2067,182 @@ respect to the same, unique, tensors.</p>
 
 </section>
 </section>
+<section id="mpsdata">
+<h2>MPSData<a class="headerlink" href="#mpsdata" title="Permalink to this headline">#</a></h2>
+<section id="id35">
+<h3>MPSData<a class="headerlink" href="#id35" title="Permalink to this headline">#</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPSData">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.models.</span></span><span class="sig-name descname"><span class="pre">MPSData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phys_dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bond_dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'obc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps_data.html#MPSData"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPSData" title="Permalink to this definition">#</a></dt>
+<dd><p>Class for data vectors in the form of Matrix Product States. That is, this
+is a class similar to <a class="reference internal" href="#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a>, but where all nodes can have additional
+batch edges.</p>
+<p>Besides, since this class is intended to store data vectors, all
+<a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><code class="xref py py-class docutils literal notranslate"><span class="pre">nodes</span></code></a> are non-parametric, and are <code class="docutils literal notranslate"><span class="pre">data</span></code>
+nodes. Also, this class does not have an inherited <code class="docutils literal notranslate"><span class="pre">contract</span></code> method,
+since it is not intended to be contracted with input data, but rather
+act itself as input data of another tensor network model.</p>
+<p>Similar to <a class="reference internal" href="#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a>, <code class="docutils literal notranslate"><span class="pre">MPSData</span></code> is formed by:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">mats_env</span></code>: Environment of <cite>matrix</cite> nodes with axes
+<code class="docutils literal notranslate"><span class="pre">(&quot;batch_0&quot;,</span> <span class="pre">...,</span> <span class="pre">&quot;batch_n&quot;,</span> <span class="pre">&quot;left&quot;,</span> <span class="pre">&quot;feature&quot;,</span> <span class="pre">&quot;right&quot;)</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">left_node</span></code>, <code class="docutils literal notranslate"><span class="pre">right_node</span></code>: <cite>Vector</cite> nodes with axes <code class="docutils literal notranslate"><span class="pre">(&quot;right&quot;,)</span></code>
+and <code class="docutils literal notranslate"><span class="pre">(&quot;left&quot;,)</span></code>, respectively. These are used to close the boundary
+in the case <code class="docutils literal notranslate"><span class="pre">boudary</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;obc&quot;</span></code>. Otherwise, both are <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+</ul>
+<p>Since <code class="docutils literal notranslate"><span class="pre">MPSData</span></code> is designed to store input data vectors, this can be
+accomplished by calling the custom <a class="reference internal" href="#tensorkrowch.models.MPSData.add_data" title="tensorkrowch.models.MPSData.add_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_data()</span></code></a> method with a given
+list of tensors. This is in contrast to the usual way of setting nodes’
+tensors in <a class="reference internal" href="#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a> and its derived classes via <a class="reference internal" href="#tensorkrowch.models.MPS.initialize" title="tensorkrowch.models.MPS.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">MPS.initialize()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_features</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of nodes that will be in <code class="docutils literal notranslate"><span class="pre">mats_env</span></code>. That is, number of nodes
+without taking into account <code class="docutils literal notranslate"><span class="pre">left_node</span></code> and <code class="docutils literal notranslate"><span class="pre">right_node</span></code>.</p></li>
+<li><p><strong>phys_dim</strong> (<em>int</em><em>, </em><em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em><em>, </em><em>optional</em>) – Physical dimension(s). If given as a sequence, its length should be
+equal to <code class="docutils literal notranslate"><span class="pre">n_features</span></code>.</p></li>
+<li><p><strong>bond_dim</strong> (<em>int</em><em>, </em><em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em><em>, </em><em>optional</em>) – Bond dimension(s). If given as a sequence, its length should be equal
+to <code class="docutils literal notranslate"><span class="pre">n_features</span></code> (if <code class="docutils literal notranslate"><span class="pre">boundary</span> <span class="pre">=</span> <span class="pre">&quot;pbc&quot;</span></code>) or <code class="docutils literal notranslate"><span class="pre">n_features</span> <span class="pre">-</span> <span class="pre">1</span></code> (if
+<code class="docutils literal notranslate"><span class="pre">boundary</span> <span class="pre">=</span> <span class="pre">&quot;obc&quot;</span></code>). The i-th bond dimension is always the dimension
+of the right edge of the i-th node.</p></li>
+<li><p><strong>boundary</strong> (<em>{&quot;obc&quot;</em><em>, </em><em>&quot;pbc&quot;}</em>) – String indicating whether periodic or open boundary conditions should
+be used.</p></li>
+<li><p><strong>n_batches</strong> (<em>int</em>) – Number of batch edges of the MPS nodes. Usually <code class="docutils literal notranslate"><span class="pre">n_batches</span> <span class="pre">=</span> <span class="pre">1</span></code>
+(where the batch edge is used for the data batched) but it could also
+be <code class="docutils literal notranslate"><span class="pre">n_batches</span> <span class="pre">=</span> <span class="pre">2</span></code> (one edge for data batched, other edge for image
+patches in convolutional layers).</p></li>
+<li><p><strong>tensors</strong> (<em>list</em><em>[</em><em>torch.Tensor</em><em>] or </em><em>tuple</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – Instead of providing <code class="docutils literal notranslate"><span class="pre">n_features</span></code>, <code class="docutils literal notranslate"><span class="pre">phys_dim</span></code>, <code class="docutils literal notranslate"><span class="pre">bond_dim</span></code> and
+<code class="docutils literal notranslate"><span class="pre">boundary</span></code>, a list of MPS tensors can be provided. In such case, all
+mentioned attributes will be inferred from the given tensors. All
+tensors should be rank-(n+3) tensors, with shape
+<code class="docutils literal notranslate"><span class="pre">(batch_1,</span> <span class="pre">...,</span> <span class="pre">batch_n,</span> <span class="pre">bond_dim,</span> <span class="pre">phys_dim,</span> <span class="pre">bond_dim)</span></code>. If the first
+and last elements are rank-(n+2) tensors, with shapes
+<code class="docutils literal notranslate"><span class="pre">(batch_1,</span> <span class="pre">...,</span> <span class="pre">batch_n,</span> <span class="pre">phys_dim,</span> <span class="pre">bond_dim)</span></code>,
+<code class="docutils literal notranslate"><span class="pre">(batch_1,</span> <span class="pre">...,</span> <span class="pre">batch_n,</span> <span class="pre">bond_dim,</span> <span class="pre">phys_dim)</span></code>, respectively,
+the inferred boundary conditions will be “obc”. Also, if <code class="docutils literal notranslate"><span class="pre">tensors</span></code>
+contains a single element, it can be rank-(n+1) (“obc”) or rank-(n+3)
+(“pbc”).</p></li>
+<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.MPSData.initialize" title="tensorkrowch.models.MPSData.initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code></a> for a more detailed
+explanation of the different initialization methods. By default it is
+<code class="docutils literal notranslate"><span class="pre">None</span></code>, since <code class="docutils literal notranslate"><span class="pre">MPSData</span></code> is intended to store input data vectors in
+MPS form, rather than initializing its own random tensors. Check
+<a class="reference internal" href="#tensorkrowch.models.MPSData.add_data" title="tensorkrowch.models.MPSData.add_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_data()</span></code></a> to see how to initialize MPS nodes with data tensors.</p></li>
+<li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensors if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
+<li><p><strong>kwargs</strong> (<em>float</em>) – Keyword arguments for the different initialization methods. See
+<a class="reference internal" href="components.html#tensorkrowch.AbstractNode.make_tensor" title="tensorkrowch.AbstractNode.make_tensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">make_tensor()</span></code></a>.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">mps</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MPSData</span><span class="p">(</span><span class="n">n_features</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+<span class="gp">... </span>                        <span class="n">phys_dim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<span class="gp">... </span>                        <span class="n">bond_dim</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+<span class="gp">... </span>                        <span class="n">boundary</span><span class="o">=</span><span class="s2">&quot;pbc&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># n_features * (batch_size x bond_dim x feature_size x bond_dim)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mps</span><span class="o">.</span><span class="n">add_data</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">mps</span><span class="o">.</span><span class="n">mats_env</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.n_features">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">n_features</span></span><a class="headerlink" href="#tensorkrowch.models.MPSData.n_features" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns number of nodes.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.phys_dim">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">phys_dim</span></span><a class="headerlink" href="#tensorkrowch.models.MPSData.phys_dim" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns physical dimensions.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.bond_dim">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">bond_dim</span></span><a class="headerlink" href="#tensorkrowch.models.MPSData.bond_dim" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns bond dimensions.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.boundary">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">boundary</span></span><a class="headerlink" href="#tensorkrowch.models.MPSData.boundary" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns boundary condition (“obc” or “pbc”).</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.n_batches">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">n_batches</span></span><a class="headerlink" href="#tensorkrowch.models.MPSData.n_batches" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns number of batch edges of the MPS nodes.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.left_node">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">left_node</span></span><a class="headerlink" href="#tensorkrowch.models.MPSData.left_node" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns the <code class="docutils literal notranslate"><span class="pre">left_node</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.right_node">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">right_node</span></span><a class="headerlink" href="#tensorkrowch.models.MPSData.right_node" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns the <code class="docutils literal notranslate"><span class="pre">right_node</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.mats_env">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mats_env</span></span><a class="headerlink" href="#tensorkrowch.models.MPSData.mats_env" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns the list of nodes in <code class="docutils literal notranslate"><span class="pre">mats_env</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">init_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'randn'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps_data.html#MPSData.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPSData.initialize" title="Permalink to this definition">#</a></dt>
+<dd><p>Initializes all the nodes of the <a class="reference internal" href="#tensorkrowch.models.MPSData" title="tensorkrowch.models.MPSData"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPSData</span></code></a>. It can be called when
+instantiating the model, or to override the existing nodes’ tensors.</p>
+<p>There are different methods to initialize the nodes:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">{&quot;zeros&quot;,</span> <span class="pre">&quot;ones&quot;,</span> <span class="pre">&quot;copy&quot;,</span> <span class="pre">&quot;rand&quot;,</span> <span class="pre">&quot;randn&quot;}</span></code>: Each node is
+initialized calling <a class="reference internal" href="components.html#tensorkrowch.AbstractNode.set_tensor" title="tensorkrowch.AbstractNode.set_tensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_tensor()</span></code></a> with
+the given method, <code class="docutils literal notranslate"><span class="pre">device</span></code> and <code class="docutils literal notranslate"><span class="pre">kwargs</span></code>.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;}</em><em>, </em><em>optional</em>) – Initialization method. Check <a class="reference internal" href="#tensorkrowch.models.MPSData.add_data" title="tensorkrowch.models.MPSData.add_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_data()</span></code></a> to see how to
+initialize MPS nodes with data tensors.</p></li>
+<li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensors if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
+<li><p><strong>kwargs</strong> (<em>float</em>) – Keyword arguments for the different initialization methods. See
+<a class="reference internal" href="components.html#tensorkrowch.AbstractNode.make_tensor" title="tensorkrowch.AbstractNode.make_tensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">make_tensor()</span></code></a>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPSData.add_data">
+<span class="sig-name descname"><span class="pre">add_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps_data.html#MPSData.add_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPSData.add_data" title="Permalink to this definition">#</a></dt>
+<dd><p>Adds data to MPS data nodes. Input is a list of mps tensors.</p>
+<p>The physical dimensions of the given data tensors should coincide with
+the physical dimensions of the MPS. The bond dimensions can be different.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>list</em><em>[</em><em>torch.Tensor</em><em>] or </em><em>tuple</em><em>[</em><em>torch.Tensor</em><em>]</em>) – A sequence of tensors, one for each of the MPS nodes. If <code class="docutils literal notranslate"><span class="pre">boundary</span></code>
+is <code class="docutils literal notranslate"><span class="pre">&quot;pbc&quot;</span></code>, all tensors should have the same rank, with shapes
+<code class="docutils literal notranslate"><span class="pre">(batch_0,</span> <span class="pre">...,</span> <span class="pre">batch_n,</span> <span class="pre">bond_dim,</span> <span class="pre">phys_dim,</span> <span class="pre">bond_dim)</span></code>. If
+<code class="docutils literal notranslate"><span class="pre">boundary</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;obc&quot;</span></code>, the first and last tensors should have
+shapes <code class="docutils literal notranslate"><span class="pre">(batch_0,</span> <span class="pre">...,</span> <span class="pre">batch_n,</span> <span class="pre">phys_dim,</span> <span class="pre">bond_dim)</span></code> and
+<code class="docutils literal notranslate"><span class="pre">(batch_0,</span> <span class="pre">...,</span> <span class="pre">batch_n,</span> <span class="pre">bond_dim,</span> <span class="pre">phys_dim)</span></code>, respectively.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
 <section id="mpo">
 <h2>MPO<a class="headerlink" href="#mpo" title="Permalink to this headline">#</a></h2>
-<section id="id35">
-<h3>MPO<a class="headerlink" href="#id35" title="Permalink to this headline">#</a></h3>
+<section id="id36">
+<h3>MPO<a class="headerlink" href="#id36" title="Permalink to this headline">#</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.models.MPO">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.models.</span></span><span class="sig-name descname"><span class="pre">MPO</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">in_dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bond_dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'obc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'randn'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mpo.html#MPO"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPO" title="Permalink to this definition">#</a></dt>
@@ -2337,9 +2435,44 @@ to the same, unique, tensors.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPO.parameterize">
+<span class="sig-name descname"><span class="pre">parameterize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mpo.html#MPO.parameterize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPO.parameterize" title="Permalink to this definition">#</a></dt>
+<dd><p>Parameterizes all nodes of the MPO. If there are <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes
+in the MPO, it will be first <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>set_param</strong> (<em>bool</em>) – Boolean indicating whether the tensor network has to be parameterized
+(<code class="docutils literal notranslate"><span class="pre">True</span></code>) or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+<li><p><strong>override</strong> (<em>bool</em>) – Boolean indicating whether the tensor network should be parameterized
+in-place (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or copied and then parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.models.MPO.contract">
 <span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inline_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inline_mats</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mpo.html#MPO.contract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPO.contract" title="Permalink to this definition">#</a></dt>
-<dd><p>Contracts the whole MPO.</p>
+<dd><p>Contracts the whole MPO with input data nodes. The input can be in the
+form of an <a class="reference internal" href="#tensorkrowch.models.MPSData" title="tensorkrowch.models.MPSData"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPSData</span></code></a>, which may be convenient for tensorizing
+vector - matrix multiplication in the form of MPS-MPO contraction.</p>
+<p>If the <code class="docutils literal notranslate"><span class="pre">MPO</span></code> is contracted with a <code class="docutils literal notranslate"><span class="pre">MPSData</span></code>, it is recommended that
+the MPS nodes are moved to the MPO network before connecting the
+corresponding nodes.</p>
+<p>Also, in this case, if any of the contraction arguments, <code class="docutils literal notranslate"><span class="pre">inline_input</span></code>
+or <code class="docutils literal notranslate"><span class="pre">inline_mats</span></code>, is set to <code class="docutils literal notranslate"><span class="pre">False</span></code>, the MPO (already connected to
+the MPS) should be <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> before
+contraction if new data is set into the <code class="docutils literal notranslate"><span class="pre">MPSData</span></code> nodes. This is
+because <a class="reference internal" href="#tensorkrowch.models.MPSData" title="tensorkrowch.models.MPSData"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPSData</span></code></a> admits data tensors with different bond
+dimensions for each iteration, and this may cause undesired behaviour
+when reusing some information of previous calls to
+:func:~tensorkrowch.stack` with the previous data tensors.</p>
+<p>To perform the MPS-MPO contraction, first input data tensors have to
+be put into the <a class="reference internal" href="#tensorkrowch.models.MPSData" title="tensorkrowch.models.MPSData"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPSData</span></code></a> via <a class="reference internal" href="#tensorkrowch.models.MPSData.add_data" title="tensorkrowch.models.MPSData.add_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">MPSData.add_data()</span></code></a>. Then,
+contraction is carried out by calling <code class="docutils literal notranslate"><span class="pre">mpo(mps=mps_data)</span></code>, without
+passing the input data again, as it is already stored in the MPSData
+nodes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -2379,7 +2512,7 @@ for each node, and boundary conditions are always periodic (<code class="docutil
 <div class="line"><br /></div>
 </div>
 <p>For a more detailed list of inherited properties and methods,
-check <code class="xref py py-class docutils literal notranslate"><span class="pre">MPSO</span></code>.</p>
+check <a class="reference internal" href="#tensorkrowch.models.MPO" title="tensorkrowch.models.MPO"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPO</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -2462,14 +2595,31 @@ to the same, unique, tensor.</p>
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.models.UMPO.parameterize">
+<span class="sig-name descname"><span class="pre">parameterize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">set_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mpo.html#UMPO.parameterize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.UMPO.parameterize" title="Permalink to this definition">#</a></dt>
+<dd><p>Parameterizes all nodes of the MPO. If there are <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes
+in the MPO, it will be first <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>set_param</strong> (<em>bool</em>) – Boolean indicating whether the tensor network has to be parameterized
+(<code class="docutils literal notranslate"><span class="pre">True</span></code>) or de-parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+<li><p><strong>override</strong> (<em>bool</em>) – Boolean indicating whether the tensor network should be parameterized
+in-place (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or copied and then parameterized (<code class="docutils literal notranslate"><span class="pre">False</span></code>).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 </section>
 </section>
 <section id="tree">
 <h2>Tree<a class="headerlink" href="#tree" title="Permalink to this headline">#</a></h2>
-<section id="id36">
-<h3>Tree<a class="headerlink" href="#id36" title="Permalink to this headline">#</a></h3>
+<section id="id37">
+<h3>Tree<a class="headerlink" href="#id37" title="Permalink to this headline">#</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.models.Tree">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.models.</span></span><span class="sig-name descname"><span class="pre">Tree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sites_per_layer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bond_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/tree.html#Tree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.Tree" title="Permalink to this definition">#</a></dt>
@@ -2893,8 +3043,8 @@ like <code class="docutils literal notranslate"><span class="pre">inline</span><
 </section>
 <section id="peps">
 <h2>PEPS<a class="headerlink" href="#peps" title="Permalink to this headline">#</a></h2>
-<section id="id53">
-<h3>PEPS<a class="headerlink" href="#id53" title="Permalink to this headline">#</a></h3>
+<section id="id54">
+<h3>PEPS<a class="headerlink" href="#id54" title="Permalink to this headline">#</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="tensorkrowch.models.PEPS">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tensorkrowch.models.</span></span><span class="sig-name descname"><span class="pre">PEPS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_rows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">in_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bond_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['obc',</span> <span class="pre">'obc']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/peps.html#PEPS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.PEPS" title="Permalink to this definition">#</a></dt>

@@ -293,6 +293,7 @@ title="Source repository"
 <span class="sd">        + UMPO</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
+<span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span><span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span>
                     <span class="n">Text</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">)</span>
 
@@ -793,6 +794,41 @@ title="Source repository"
                 <span class="n">new_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
         
         <span class="k">return</span> <span class="n">new_mpo</span></div>
+
+<div class="viewcode-block" id="MPO.parameterize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                     <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                     <span class="n">override</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TensorNetwork&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parameterizes all nodes of the MPO. If there are ``resultant`` nodes</span>
+<span class="sd">        in the MPO, it will be first :meth:`~tensorkrowch.TensorNetwork.reset`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        set_param : bool</span>
+<span class="sd">            Boolean indicating whether the tensor network has to be parameterized</span>
+<span class="sd">            (``True``) or de-parameterized (``False``).</span>
+<span class="sd">        override : bool</span>
+<span class="sd">            Boolean indicating whether the tensor network should be parameterized</span>
+<span class="sd">            in-place (``True``) or copied and then parameterized (``False``).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s1">&#39;Resultant nodes will be removed before parameterizing the TN&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">override</span><span class="p">:</span>
+            <span class="n">net</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">net</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">share_tensors</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">):</span>
+            <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">net</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+            <span class="n">net</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_left_node</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
+            <span class="n">net</span><span class="o">.</span><span class="n">_right_node</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_right_node</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
+            
+        <span class="k">return</span> <span class="n">net</span></div>
     
     <span class="k">def</span> <span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                            <span class="n">nodes_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
@@ -887,7 +923,28 @@ title="Source repository"
                  <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">mps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">MPSData</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Contracts the whole MPO.</span>
+<span class="sd">        Contracts the whole MPO with input data nodes. The input can be in the</span>
+<span class="sd">        form of an :class:`MPSData`, which may be convenient for tensorizing</span>
+<span class="sd">        vector - matrix multiplication in the form of MPS-MPO contraction.</span>
+<span class="sd">        </span>
+<span class="sd">        If the ``MPO`` is contracted with a ``MPSData``, it is recommended that</span>
+<span class="sd">        the MPS nodes are moved to the MPO network before connecting the</span>
+<span class="sd">        corresponding nodes.</span>
+<span class="sd">        </span>
+<span class="sd">        Also, in this case, if any of the contraction arguments, ``inline_input``</span>
+<span class="sd">        or ``inline_mats``, is set to ``False``, the MPO (already connected to</span>
+<span class="sd">        the MPS) should be :meth:`~tensorkrowch.TensorNetwork.reset` before</span>
+<span class="sd">        contraction if new data is set into the ``MPSData`` nodes. This is</span>
+<span class="sd">        because :class:`MPSData` admits data tensors with different bond</span>
+<span class="sd">        dimensions for each iteration, and this may cause undesired behaviour</span>
+<span class="sd">        when reusing some information of previous calls to</span>
+<span class="sd">        :func:~tensorkrowch.stack` with the previous data tensors.</span>
+<span class="sd">        </span>
+<span class="sd">        To perform the MPS-MPO contraction, first input data tensors have to</span>
+<span class="sd">        be put into the :class:`MPSData` via :meth:`MPSData.add_data`. Then,</span>
+<span class="sd">        contraction is carried out by calling ``mpo(mps=mps_data)``, without</span>
+<span class="sd">        passing the input data again, as it is already stored in the MPSData</span>
+<span class="sd">        nodes.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -911,6 +968,13 @@ title="Source repository"
 <span class="sd">        -------</span>
 <span class="sd">        Node</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">mps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mps</span><span class="p">,</span> <span class="n">MPSData</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`mps` should be MPSData type&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">mps</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`mps` should have as many features as the MPO&#39;</span><span class="p">)</span>
+                
         <span class="n">mats_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">,</span> <span class="n">inline_input</span><span class="p">)</span>
         
         <span class="k">if</span> <span class="n">inline_mats</span><span class="p">:</span>
@@ -948,7 +1012,7 @@ title="Source repository"
 <span class="sd">    |</span>
 <span class="sd">    </span>
 <span class="sd">    For a more detailed list of inherited properties and methods,</span>
-<span class="sd">    check :class:`MPSO`.</span>
+<span class="sd">    check :class:`MPO`.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1138,7 +1202,47 @@ title="Source repository"
             <span class="n">new_mpo</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">tensor</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">new_mpo</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">new_mpo</span></div></div>
+        <span class="k">return</span> <span class="n">new_mpo</span></div>
+    
+<div class="viewcode-block" id="UMPO.parameterize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UMPO.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                     <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                     <span class="n">override</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TensorNetwork&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parameterizes all nodes of the MPO. If there are ``resultant`` nodes</span>
+<span class="sd">        in the MPO, it will be first :meth:`~tensorkrowch.TensorNetwork.reset`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        set_param : bool</span>
+<span class="sd">            Boolean indicating whether the tensor network has to be parameterized</span>
+<span class="sd">            (``True``) or de-parameterized (``False``).</span>
+<span class="sd">        override : bool</span>
+<span class="sd">            Boolean indicating whether the tensor network should be parameterized</span>
+<span class="sd">            in-place (``True``) or copied and then parameterized (``False``).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s1">&#39;Resultant nodes will be removed before parameterizing the TN&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">override</span><span class="p">:</span>
+            <span class="n">net</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">net</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">share_tensors</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">):</span>
+            <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
+        
+        <span class="c1"># It is important that uniform_memory is parameterized after the rest</span>
+        <span class="c1"># of the nodes</span>
+        <span class="n">net</span><span class="o">.</span><span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
+        
+        <span class="c1"># Tensor addresses have to be reassigned to reference</span>
+        <span class="c1"># the uniform memory</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="n">net</span><span class="o">.</span><span class="n">uniform_memory</span><span class="p">)</span>
+            
+        <span class="k">return</span> <span class="n">net</span></div></div>
 </pre></div>
 
               </div>

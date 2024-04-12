@@ -293,7 +293,6 @@ title="Source repository"
 <span class="sd">        + UMPS</span>
 <span class="sd">        + MPSLayer</span>
 <span class="sd">        + UMPSLayer</span>
-<span class="sd">    * MPSData</span>
 <span class="sd">    * AbstractConvClass:</span>
 <span class="sd">        + ConvMPS</span>
 <span class="sd">        + ConvUMPS</span>
@@ -301,6 +300,7 @@ title="Source repository"
 <span class="sd">        + ConvUMPSLayer</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
+<span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">abstractmethod</span><span class="p">,</span> <span class="n">ABC</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span><span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span>
                     <span class="n">Text</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">)</span>
@@ -313,6 +313,8 @@ title="Source repository"
 <span class="kn">import</span> <span class="nn">tensorkrowch.operations</span> <span class="k">as</span> <span class="nn">op</span>
 <span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">Node</span><span class="p">,</span> <span class="n">ParamNode</span>
 <span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">TensorNetwork</span>
+<span class="kn">from</span> <span class="nn">tensorkrowch.models</span> <span class="kn">import</span> <span class="n">MPO</span>
+
 <span class="kn">from</span> <span class="nn">tensorkrowch.utils</span> <span class="kn">import</span> <span class="n">split_sequence_into_regions</span><span class="p">,</span> <span class="n">random_unitary</span>
 
 
@@ -1028,6 +1030,41 @@ title="Source repository"
             <span class="k">for</span> <span class="n">new_node</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">new_mps</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">):</span>
                 <span class="n">new_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">new_mps</span></div>
+    
+<div class="viewcode-block" id="MPS.parameterize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                     <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                     <span class="n">override</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TensorNetwork&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parameterizes all nodes of the MPS. If there are ``resultant`` nodes</span>
+<span class="sd">        in the MPS, it will be first :meth:`~tensorkrowch.TensorNetwork.reset`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        set_param : bool</span>
+<span class="sd">            Boolean indicating whether the tensor network has to be parameterized</span>
+<span class="sd">            (``True``) or de-parameterized (``False``).</span>
+<span class="sd">        override : bool</span>
+<span class="sd">            Boolean indicating whether the tensor network should be parameterized</span>
+<span class="sd">            in-place (``True``) or copied and then parameterized (``False``).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s1">&#39;Resultant nodes will be removed before parameterizing the TN&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">override</span><span class="p">:</span>
+            <span class="n">net</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">net</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">share_tensors</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">):</span>
+            <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">net</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+            <span class="n">net</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_left_node</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
+            <span class="n">net</span><span class="o">.</span><span class="n">_right_node</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_right_node</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
+            
+        <span class="k">return</span> <span class="n">net</span></div>
 
     <span class="k">def</span> <span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                            <span class="n">nodes_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
@@ -1125,10 +1162,34 @@ title="Source repository"
                  <span class="n">marginalize_output</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">embedding_matrices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span>
                                         <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
-                                              <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span>
+                                              <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">mpo</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">MPO</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
                  <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the whole MPS.</span>
+<span class="sd">        </span>
+<span class="sd">        If the MPS has input nodes, these are contracted against input ``data``</span>
+<span class="sd">        nodes.</span>
+<span class="sd">        </span>
+<span class="sd">        If the MPS has output nodes, these can be left with their ``&quot;input&quot;``</span>
+<span class="sd">        edges open, or can be marginalized, contracting the remaining output</span>
+<span class="sd">        nodes with themselves, if the argument ``&quot;marginalize_output&quot;`` is set</span>
+<span class="sd">        to ``True``.</span>
+<span class="sd">        </span>
+<span class="sd">        In the latter case, one can add additional nodes in between the MPS-MPS</span>
+<span class="sd">        contraction:</span>
+<span class="sd">        </span>
+<span class="sd">        * ``embedding_matrices``: A list of matrices with appropiate physical</span>
+<span class="sd">          dimensions can be passed, one for each output node. These matrices</span>
+<span class="sd">          will connect the two ``&quot;input&quot;`` edges of the corresponding nodes.</span>
+<span class="sd">        </span>
+<span class="sd">        * ``mpo``: If an :class:`MPO` is passed, it is assumed that the output</span>
+<span class="sd">          nodes of the MPS are already connected to the ``&quot;output&quot;`` edges of</span>
+<span class="sd">          the MPO nodes, and that the MPO nodes have been moved to the MPS, so</span>
+<span class="sd">          that all nodes belong to the MPS network. In this case, each MPO node</span>
+<span class="sd">          will connect the two ``&quot;input&quot;`` edges of the corresponding MPS nodes.</span>
+<span class="sd">          When calling ``mps(marginalize_output=True, mpo=mpo)``, this will</span>
+<span class="sd">          perform the MPS-MPO-MPS contraction at the output nodes of the MPS.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1153,6 +1214,15 @@ title="Source repository"
 <span class="sd">            edges. This can be useful when data vectors are not represented</span>
 <span class="sd">            as qubits in the computational basis, but are transformed via</span>
 <span class="sd">            some :ref:`Embeddings` function.</span>
+<span class="sd">        mpo : MPO, optional</span>
+<span class="sd">            MPO that is to be contracted with the MPS at the output nodes, if</span>
+<span class="sd">            ``marginalize_output = True``. To do that, in contrast with how</span>
+<span class="sd">            ``embedding_matrices`` works, the MPS has to be already connected</span>
+<span class="sd">            to the MPO (at the output nodes). That is, the ``&quot;output&quot;`` edges</span>
+<span class="sd">            of the MPO nodes should be connected to the ``&quot;input&quot;`` edges of</span>
+<span class="sd">            the MPS output nodes. If there are no input nodes, the MPS-MPO-MPS</span>
+<span class="sd">            is performed by calling ``mps(marginalize_output=True, mpo=mpo)``,</span>
+<span class="sd">            without passing extra data tensors.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -1183,6 +1253,13 @@ title="Source repository"
                         <span class="s1">&#39;`embedding_matrices` dimensions should be equal &#39;</span>
                         <span class="s1">&#39;to the input dimensions of the corresponding MPS &#39;</span>
                         <span class="s1">&#39;output nodes&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">mpo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mpo</span><span class="p">,</span> <span class="n">MPO</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`mpo` should be MPO type&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">mpo</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_out_features</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;`mpo` should have as many features as output nodes are &#39;</span>
+                    <span class="s1">&#39;in the MPS&#39;</span><span class="p">)</span>
             
         <span class="n">in_regions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_regions</span>
         <span class="n">out_regions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_regions</span>
@@ -1231,6 +1308,26 @@ title="Source repository"
                 <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inline_contraction</span><span class="p">(</span><span class="n">nodes_out_env</span><span class="p">)</span>
             
             <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Copy output nodes sharing tensors</span>
+                <span class="n">copied_nodes</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes_out_env</span><span class="p">:</span>
+                    <span class="n">new_node</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_shape</span><span class="p">,</span>
+                                              <span class="n">axes_names</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">,</span>
+                                              <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_result_copy&#39;</span><span class="p">,</span>
+                                              <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+                                              <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                    <span class="n">new_node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+                    <span class="n">copied_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_node</span><span class="p">)</span>
+                
+                <span class="c1"># Connect with neighbours</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">copied_nodes</span><span class="p">)):</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">):</span>
+                        <span class="k">if</span> <span class="n">nodes_out_env</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">is_connected_to</span><span class="p">(</span><span class="n">nodes_out_env</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+                            <span class="n">copied_nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">copied_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+                    <span class="k">elif</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">copied_nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">copied_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+                
+                <span class="c1"># Contract with embedding matrices</span>
                 <span class="k">if</span> <span class="n">embedding_matrices</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">nodes_out_env</span><span class="p">):</span>
                         <span class="n">node</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
@@ -1242,25 +1339,19 @@ title="Source repository"
                         <span class="n">mat_node</span><span class="p">[</span><span class="s1">&#39;output&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
                         <span class="n">nodes_out_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">mat_node</span> <span class="o">@</span> <span class="n">node</span>
                 
-                <span class="c1"># Copy output nodes sharing tensors and connect them to input edges</span>
-                <span class="n">copied_nodes</span> <span class="o">=</span> <span class="p">[]</span>
-                <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes_out_env</span><span class="p">:</span>
-                    <span class="n">node</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
-                    <span class="n">new_node</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_shape</span><span class="p">,</span>
-                                              <span class="n">axes_names</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">,</span>
-                                              <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_result_copy&#39;</span><span class="p">,</span>
-                                              <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
-                                              <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-                    <span class="n">new_node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-                    <span class="n">copied_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_node</span><span class="p">)</span>
+                <span class="c1"># Contract with mpo</span>
+                <span class="k">elif</span> <span class="n">mpo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">nodes_out_env</span><span class="p">)):</span>
+                        <span class="n">nodes_out_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes_out_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">@</span> <span class="n">mpo</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
                     
+                    <span class="k">if</span> <span class="n">mpo</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+                        <span class="n">nodes_out_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">mpo</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">@</span> <span class="n">nodes_out_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">nodes_out_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes_out_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">@</span> <span class="n">mpo</span><span class="o">.</span><span class="n">_right_node</span>
+                
+                <span class="c1"># Reattach input edges of resultant output nodes and connect</span>
+                <span class="c1"># with copied nodes</span>
                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">copied_nodes</span><span class="p">)):</span>
-                    <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">):</span>
-                        <span class="k">if</span> <span class="n">nodes_out_env</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">is_connected_to</span><span class="p">(</span><span class="n">nodes_out_env</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
-                            <span class="n">copied_nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">copied_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-                    <span class="k">elif</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                        <span class="n">copied_nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">copied_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-                    
+                    <span class="n">nodes_out_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
                     <span class="n">copied_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">nodes_out_env</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
                 
                 <span class="c1"># Contract all output_nodes</span>
@@ -1268,9 +1359,8 @@ title="Source repository"
                 <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inline_contraction</span><span class="p">(</span><span class="n">mats_out_env</span><span class="p">)</span>
             
         <span class="c1"># Contract periodic edge</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">is_connected_to</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
-                <span class="n">result</span> <span class="o">@=</span> <span class="n">result</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">is_connected_to</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
+            <span class="n">result</span> <span class="o">@=</span> <span class="n">result</span>
         
         <span class="c1"># Put batch edges in first positions</span>
         <span class="n">batch_edges</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1882,6 +1972,46 @@ title="Source repository"
         <span class="k">else</span><span class="p">:</span>
             <span class="n">new_mps</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">new_mps</span></div>
+    
+<div class="viewcode-block" id="UMPS.parameterize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UMPS.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                     <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                     <span class="n">override</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TensorNetwork&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parameterizes all nodes of the MPS. If there are ``resultant`` nodes</span>
+<span class="sd">        in the MPS, it will be first :meth:`~tensorkrowch.TensorNetwork.reset`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        set_param : bool</span>
+<span class="sd">            Boolean indicating whether the tensor network has to be parameterized</span>
+<span class="sd">            (``True``) or de-parameterized (``False``).</span>
+<span class="sd">        override : bool</span>
+<span class="sd">            Boolean indicating whether the tensor network should be parameterized</span>
+<span class="sd">            in-place (``True``) or copied and then parameterized (``False``).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s1">&#39;Resultant nodes will be removed before parameterizing the TN&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">override</span><span class="p">:</span>
+            <span class="n">net</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">net</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">share_tensors</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">):</span>
+            <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
+        
+        <span class="c1"># It is important that uniform_memory is parameterized after the rest</span>
+        <span class="c1"># of the nodes</span>
+        <span class="n">net</span><span class="o">.</span><span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
+        
+        <span class="c1"># Tensor addresses have to be reassigned to reference</span>
+        <span class="c1"># the uniform memory</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="n">net</span><span class="o">.</span><span class="n">uniform_memory</span><span class="p">)</span>
+            
+        <span class="k">return</span> <span class="n">net</span></div>
     
     <span class="k">def</span> <span class="nf">canonicalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                      <span class="n">oc</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -2577,6 +2707,46 @@ title="Source repository"
             <span class="n">new_mps</span><span class="o">.</span><span class="n">out_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">new_mps</span></div>
     
+<div class="viewcode-block" id="UMPSLayer.parameterize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UMPSLayer.parameterize">[docs]</a>    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                     <span class="n">set_param</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                     <span class="n">override</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TensorNetwork&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parameterizes all nodes of the MPS. If there are ``resultant`` nodes</span>
+<span class="sd">        in the MPS, it will be first :meth:`~tensorkrowch.TensorNetwork.reset`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        set_param : bool</span>
+<span class="sd">            Boolean indicating whether the tensor network has to be parameterized</span>
+<span class="sd">            (``True``) or de-parameterized (``False``).</span>
+<span class="sd">        override : bool</span>
+<span class="sd">            Boolean indicating whether the tensor network should be parameterized</span>
+<span class="sd">            in-place (``True``) or copied and then parameterized (``False``).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s1">&#39;Resultant nodes will be removed before parameterizing the TN&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">override</span><span class="p">:</span>
+            <span class="n">net</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">net</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">share_tensors</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">):</span>
+            <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
+        
+        <span class="c1"># It is important that uniform_memory is parameterized after the rest</span>
+        <span class="c1"># of the nodes</span>
+        <span class="n">net</span><span class="o">.</span><span class="n">uniform_memory</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
+        
+        <span class="c1"># Tensor addresses have to be reassigned to reference</span>
+        <span class="c1"># the uniform memory</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="n">net</span><span class="o">.</span><span class="n">uniform_memory</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">net</span></div>
+    
     <span class="k">def</span> <span class="nf">canonicalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                      <span class="n">oc</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                      <span class="n">mode</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;svd&#39;</span><span class="p">,</span>
@@ -2592,417 +2762,6 @@ title="Source repository"
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;:meta private:&quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
             <span class="s1">&#39;`canonicalize_univocal` not implemented for UMPSLayer&#39;</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="MPSData"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPSData">[docs]</a><span class="k">class</span> <span class="nc">MPSData</span><span class="p">(</span><span class="n">TensorNetwork</span><span class="p">):</span>  <span class="c1"># MARK: MPSData</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Class for data vectors in the form of Matrix Product States. That is, this</span>
-<span class="sd">    is a class similar to :class:`MPS`, but where all nodes can have additional</span>
-<span class="sd">    batch edges.</span>
-<span class="sd">    </span>
-<span class="sd">    Besides, since this class is intended to store data vectors, all </span>
-<span class="sd">    :class:`nodes &lt;tensorkrowch.Node&gt;` are non-parametric, and are ``data``</span>
-<span class="sd">    nodes. Also, this class does not have an inherited ``contract`` method,</span>
-<span class="sd">    since it is not intended to be contracted with input data, but rather</span>
-<span class="sd">    act itself as input data of another tensor network model.</span>
-<span class="sd">    </span>
-<span class="sd">    Similar to :class:`MPS`, ``MPSData`` is formed by:</span>
-<span class="sd">    </span>
-<span class="sd">    * ``mats_env``: Environment of `matrix` nodes with axes</span>
-<span class="sd">      ``(&quot;batch_0&quot;, ..., &quot;batch_n&quot;, &quot;left&quot;, &quot;feature&quot;, &quot;right&quot;)``.</span>
-<span class="sd">    </span>
-<span class="sd">    * ``left_node``, ``right_node``: `Vector` nodes with axes ``(&quot;right&quot;,)``</span>
-<span class="sd">      and ``(&quot;left&quot;,)``, respectively. These are used to close the boundary</span>
-<span class="sd">      in the case ``boudary`` is ``&quot;obc&quot;``. Otherwise, both are ``None``.</span>
-<span class="sd">    </span>
-<span class="sd">    Since ``MPSData`` is designed to store input data vectors, this can be</span>
-<span class="sd">    accomplished by calling the custom :meth:`add_data` method with a given</span>
-<span class="sd">    list of tensors. This is in contrast to the usual way of setting nodes&#39;</span>
-<span class="sd">    tensors in :class:`MPS` and its derived classes via :meth:`MPS.initialize`.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    n_features : int, optional</span>
-<span class="sd">        Number of nodes that will be in ``mats_env``. That is, number of nodes</span>
-<span class="sd">        without taking into account ``left_node`` and ``right_node``.</span>
-<span class="sd">    phys_dim : int, list[int] or tuple[int], optional</span>
-<span class="sd">        Physical dimension(s). If given as a sequence, its length should be</span>
-<span class="sd">        equal to ``n_features``.</span>
-<span class="sd">    bond_dim : int, list[int] or tuple[int], optional</span>
-<span class="sd">        Bond dimension(s). If given as a sequence, its length should be equal</span>
-<span class="sd">        to ``n_features`` (if ``boundary = &quot;pbc&quot;``) or ``n_features - 1`` (if</span>
-<span class="sd">        ``boundary = &quot;obc&quot;``). The i-th bond dimension is always the dimension</span>
-<span class="sd">        of the right edge of the i-th node.</span>
-<span class="sd">    boundary : {&quot;obc&quot;, &quot;pbc&quot;}</span>
-<span class="sd">        String indicating whether periodic or open boundary conditions should</span>
-<span class="sd">        be used.</span>
-<span class="sd">    n_batches : int</span>
-<span class="sd">        Number of batch edges of the MPS nodes. Usually ``n_batches = 1``</span>
-<span class="sd">        (where the batch edge is used for the data batched) but it could also</span>
-<span class="sd">        be ``n_batches = 2`` (one edge for data batched, other edge for image</span>
-<span class="sd">        patches in convolutional layers).</span>
-<span class="sd">    tensors: list[torch.Tensor] or tuple[torch.Tensor], optional</span>
-<span class="sd">        Instead of providing ``n_features``, ``phys_dim``, ``bond_dim`` and</span>
-<span class="sd">        ``boundary``, a list of MPS tensors can be provided. In such case, all</span>
-<span class="sd">        mentioned attributes will be inferred from the given tensors. All</span>
-<span class="sd">        tensors should be rank-(n+3) tensors, with shape</span>
-<span class="sd">        ``(batch_1, ..., batch_n, bond_dim, phys_dim, bond_dim)``. If the first</span>
-<span class="sd">        and last elements are rank-(n+2) tensors, with shapes</span>
-<span class="sd">        ``(batch_1, ..., batch_n, phys_dim, bond_dim)``,</span>
-<span class="sd">        ``(batch_1, ..., batch_n, bond_dim, phys_dim)``, respectively,</span>
-<span class="sd">        the inferred boundary conditions will be &quot;obc&quot;. Also, if ``tensors``</span>
-<span class="sd">        contains a single element, it can be rank-(n+1) (&quot;obc&quot;) or rank-(n+3)</span>
-<span class="sd">        (&quot;pbc&quot;).</span>
-<span class="sd">    init_method : {&quot;zeros&quot;, &quot;ones&quot;, &quot;copy&quot;, &quot;rand&quot;, &quot;randn&quot;}, optional</span>
-<span class="sd">        Initialization method. Check :meth:`initialize` for a more detailed</span>
-<span class="sd">        explanation of the different initialization methods. By default it is</span>
-<span class="sd">        ``None``, since ``MPSData`` is intended to store input data vectors in</span>
-<span class="sd">        MPS form, rather than initializing its own random tensors. Check</span>
-<span class="sd">        :meth:`add_data` to see how to initialize MPS nodes with data tensors.</span>
-<span class="sd">    device : torch.device, optional</span>
-<span class="sd">        Device where to initialize the tensors if ``init_method`` is provided.</span>
-<span class="sd">    kwargs : float</span>
-<span class="sd">        Keyword arguments for the different initialization methods. See</span>
-<span class="sd">        :meth:`~tensorkrowch.AbstractNode.make_tensor`.</span>
-<span class="sd">        </span>
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; mps = tk.models.MPSData(n_features=5,</span>
-<span class="sd">    ...                         phys_dim=2,</span>
-<span class="sd">    ...                         bond_dim=5,</span>
-<span class="sd">    ...                         boundary=&quot;pbc&quot;)</span>
-<span class="sd">    &gt;&gt;&gt; # n_features * (batch_size x bond_dim x feature_size x bond_dim)</span>
-<span class="sd">    &gt;&gt;&gt; data = [torch.ones(20, 5, 2, 5) for _ in range(5)]</span>
-<span class="sd">    &gt;&gt;&gt; mps.add_data(data)</span>
-<span class="sd">    &gt;&gt;&gt; for node in mps.mats_env:</span>
-<span class="sd">    ...     assert node.shape == (20, 5, 2, 5)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                 <span class="n">n_features</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="n">phys_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="n">bond_dim</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="n">boundary</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span><span class="p">,</span>
-                 <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-                 <span class="n">tensors</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="n">init_method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;mps_data&#39;</span><span class="p">)</span>
-        
-        <span class="c1"># n_batches</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_batches</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`n_batches` should be int type&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span> <span class="o">=</span> <span class="n">n_batches</span>
-        
-        <span class="k">if</span> <span class="n">tensors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="c1"># boundary</span>
-            <span class="k">if</span> <span class="n">boundary</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;obc&#39;</span><span class="p">,</span> <span class="s1">&#39;pbc&#39;</span><span class="p">]:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`boundary` should be one of &quot;obc&quot; or &quot;pbc&quot;&#39;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">=</span> <span class="n">boundary</span>
-
-            <span class="c1"># n_features</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_features</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`n_features` should be int type&#39;</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="n">n_features</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`n_features` should be at least 1&#39;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">=</span> <span class="n">n_features</span>
-
-            <span class="c1"># phys_dim</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">phys_dim</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
-                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">phys_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_features</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;If `phys_dim` is given as a sequence of int, &#39;</span>
-                                        <span class="s1">&#39;its length should be equal to `n_features`&#39;</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">phys_dim</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">phys_dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">phys_dim</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_features</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`phys_dim` should be int, tuple[int] or list[int] &#39;</span>
-                                <span class="s1">&#39;type&#39;</span><span class="p">)</span>
-
-            <span class="c1"># bond_dim</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
-                <span class="k">if</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                            <span class="s1">&#39;If `bond_dim` is given as a sequence of int, and &#39;</span>
-                            <span class="s1">&#39;`boundary` is &quot;obc&quot;, its length should be equal &#39;</span>
-                            <span class="s1">&#39;to `n_features` - 1&#39;</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_features</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                            <span class="s1">&#39;If `bond_dim` is given as a sequence of int, and &#39;</span>
-                            <span class="s1">&#39;`boundary` is &quot;pbc&quot;, its length should be equal &#39;</span>
-                            <span class="s1">&#39;to `n_features`&#39;</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bond_dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-                <span class="k">if</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">bond_dim</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">bond_dim</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_features</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`bond_dim` should be int, tuple[int] or list[int]&#39;</span>
-                                <span class="s1">&#39; type&#39;</span><span class="p">)</span>
-        
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`tensors` should be a tuple[torch.Tensor] or &#39;</span>
-                                <span class="s1">&#39;list[torch.Tensor] type&#39;</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span> <span class="o">=</span> <span class="p">[]</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[]</span>
-                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">tensors</span><span class="p">):</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
-                        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`tensors` should be a tuple[torch.Tensor]&#39;</span>
-                                        <span class="s1">&#39; or list[torch.Tensor] type&#39;</span><span class="p">)</span>
-                    
-                    <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">n_batches</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
-                                                <span class="n">n_batches</span> <span class="o">+</span> <span class="mi">2</span><span class="p">,</span>
-                                                <span class="n">n_batches</span> <span class="o">+</span> <span class="mi">3</span><span class="p">]:</span>
-                            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                                <span class="s1">&#39;The first and last elements in `tensors` &#39;</span>
-                                <span class="s1">&#39;should be both rank-(n+2) or rank-(n+3) tensors.&#39;</span>
-                                <span class="s1">&#39; If the first element is also the last one,&#39;</span>
-                                <span class="s1">&#39; it should be a rank-(n+1) tensor&#39;</span><span class="p">)</span>
-                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_batches</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-                        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_batches</span> <span class="o">+</span> <span class="mi">2</span><span class="p">:</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">=</span> <span class="s1">&#39;obc&#39;</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-                        <span class="k">else</span><span class="p">:</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">=</span> <span class="s1">&#39;pbc&#39;</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-                    <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
-                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">):</span>
-                            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                                <span class="s1">&#39;The first and last elements in `tensors` &#39;</span>
-                                <span class="s1">&#39;should have the same rank. Both should be &#39;</span>
-                                <span class="s1">&#39;rank-(n+2) or rank-(n+3) tensors. If the first&#39;</span>
-                                <span class="s1">&#39; element is also the last one, it should &#39;</span>
-                                <span class="s1">&#39;be a rank-(n+1) tensor&#39;</span><span class="p">)</span>
-                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_batches</span> <span class="o">+</span> <span class="mi">2</span><span class="p">:</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-                        <span class="k">else</span><span class="p">:</span>
-                            <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]:</span>
-                                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                                    <span class="s1">&#39;If the first and last elements in `tensors`&#39;</span>
-                                    <span class="s1">&#39; are rank-(n+3) tensors, the first dimension&#39;</span>
-                                    <span class="s1">&#39; of the first element should coincide with&#39;</span>
-                                    <span class="s1">&#39; the last dimension of the last element &#39;</span>
-                                    <span class="s1">&#39;(ignoring batch dimensions)&#39;</span><span class="p">)</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_batches</span> <span class="o">+</span> <span class="mi">3</span><span class="p">:</span>
-                            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                                <span class="s1">&#39;The elements of `tensors` should be rank-(n+3) &#39;</span>
-                                <span class="s1">&#39;tensors, except the first and lest elements&#39;</span>
-                                <span class="s1">&#39; if boundary is &quot;obc&quot;&#39;</span><span class="p">)</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-        
-        <span class="c1"># Properties</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span> <span class="o">=</span> <span class="p">[]</span>
-
-        <span class="c1"># Create Tensor Network</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_make_nodes</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">init_method</span><span class="o">=</span><span class="n">init_method</span><span class="p">,</span>
-                            <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
-                            <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        
-        <span class="k">if</span> <span class="n">tensors</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">add_data</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">tensors</span><span class="p">)</span>
-    
-    <span class="c1"># ----------</span>
-    <span class="c1"># Properties</span>
-    <span class="c1"># ----------</span>
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">n_features</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of nodes.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">phys_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns physical dimensions.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns bond dimensions.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span>
-    
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">boundary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boundary condition (&quot;obc&quot; or &quot;pbc&quot;).&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">n_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns number of batch edges of the MPS nodes.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span>
-    
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">left_node</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the ``left_node``.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span>
-    
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">right_node</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the ``right_node``.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span>
-    
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">mats_env</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the list of nodes in ``mats_env``.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span>
-    
-    <span class="c1"># -------</span>
-    <span class="c1"># Methods</span>
-    <span class="c1"># -------</span>
-    <span class="k">def</span> <span class="nf">_make_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates all the nodes of the MPS.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create MPS nodes if the MPS already has &#39;</span>
-                             <span class="s1">&#39;nodes&#39;</span><span class="p">)</span>
-        
-        <span class="n">aux_bond_dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span>
-        
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">aux_bond_dim</span><span class="p">:</span>
-                <span class="n">aux_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-                
-            <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">aux_bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">],),</span>
-                                        <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;right&#39;</span><span class="p">,),</span>
-                                        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;left_node&#39;</span><span class="p">,</span>
-                                        <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">aux_bond_dim</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],),</span>
-                                         <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,),</span>
-                                         <span class="n">name</span><span class="o">=</span><span class="s1">&#39;right_node&#39;</span><span class="p">,</span>
-                                         <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
-            
-            <span class="n">aux_bond_dim</span> <span class="o">=</span> <span class="n">aux_bond_dim</span> <span class="o">+</span> <span class="p">[</span><span class="n">aux_bond_dim</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="o">+</span> <span class="p">[</span><span class="n">aux_bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
-        
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">):</span>
-            <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="p">([</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span><span class="p">),</span>
-                               <span class="n">aux_bond_dim</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span>
-                               <span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
-                               <span class="n">aux_bond_dim</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span>
-                        <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="o">*</span><span class="p">([</span><span class="s1">&#39;batch&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_batches</span><span class="p">),</span>
-                                    <span class="s1">&#39;left&#39;</span><span class="p">,</span>
-                                    <span class="s1">&#39;feature&#39;</span><span class="p">,</span>
-                                    <span class="s1">&#39;right&#39;</span><span class="p">),</span>
-                        <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;mats_env_data_node_(</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">,</span>
-                        <span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-                        <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-
-            <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="n">periodic_edge</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-                <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">periodic_edge</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-                <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
-    
-<div class="viewcode-block" id="MPSData.initialize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPSData.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                   <span class="n">init_method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;randn&#39;</span><span class="p">,</span>
-                   <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                   <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initializes all the nodes of the :class:`MPSData`. It can be called when</span>
-<span class="sd">        instantiating the model, or to override the existing nodes&#39; tensors.</span>
-<span class="sd">        </span>
-<span class="sd">        There are different methods to initialize the nodes:</span>
-<span class="sd">        </span>
-<span class="sd">        * ``{&quot;zeros&quot;, &quot;ones&quot;, &quot;copy&quot;, &quot;rand&quot;, &quot;randn&quot;}``: Each node is</span>
-<span class="sd">          initialized calling :meth:`~tensorkrowch.AbstractNode.set_tensor` with</span>
-<span class="sd">          the given method, ``device`` and ``kwargs``.</span>
-<span class="sd">        </span>
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        init_method : {&quot;zeros&quot;, &quot;ones&quot;, &quot;copy&quot;, &quot;rand&quot;, &quot;randn&quot;}, optional</span>
-<span class="sd">            Initialization method. Check :meth:`add_data` to see how to</span>
-<span class="sd">            initialize MPS nodes with data tensors.</span>
-<span class="sd">        device : torch.device, optional</span>
-<span class="sd">            Device where to initialize the tensors if ``init_method`` is provided.</span>
-<span class="sd">        kwargs : float</span>
-<span class="sd">            Keyword arguments for the different initialization methods. See</span>
-<span class="sd">            :meth:`~tensorkrowch.AbstractNode.make_tensor`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span><span class="o">.</span><span class="n">set_tensor</span><span class="p">(</span><span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;copy&#39;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span><span class="o">.</span><span class="n">set_tensor</span><span class="p">(</span><span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;copy&#39;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
-                
-        <span class="k">if</span> <span class="n">init_method</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">):</span>
-                <span class="n">node</span><span class="o">.</span><span class="n">set_tensor</span><span class="p">(</span><span class="n">init_method</span><span class="o">=</span><span class="n">init_method</span><span class="p">,</span>
-                                <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
-                                <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-                
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-                    <span class="n">aux_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="o">*</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
-                    <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                        <span class="c1"># Left node</span>
-                        <span class="n">aux_tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
-                        <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">aux_tensor</span>
-                    <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
-                        <span class="c1"># Right node</span>
-                        <span class="n">aux_tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
-                        <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">aux_tensor</span></div>
-    
-<div class="viewcode-block" id="MPSData.add_data"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPSData.add_data">[docs]</a>    <span class="k">def</span> <span class="nf">add_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Adds data to MPS data nodes. Input is a list of mps tensors.</span>
-<span class="sd">        </span>
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        data : list[torch.Tensor] or tuple[torch.Tensor]</span>
-<span class="sd">            A sequence of tensors, one for each of the MPS nodes. If ``boundary``</span>
-<span class="sd">            is ``&quot;pbc&quot;``, all tensors should have the same rank, with shapes</span>
-<span class="sd">            ``(batch_0, ..., batch_n, bond_dim, phys_dim, bond_dim)``. If</span>
-<span class="sd">            ``boundary`` is ``&quot;obc&quot;``, the first and last tensorss should have</span>
-<span class="sd">            shapes ``(batch_0, ..., batch_n, phys_dim, bond_dim)`` and</span>
-<span class="sd">            ``(batch_0, ..., batch_n, bond_dim, phys_dim)``, respectively.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`data` should be a sequence of tensors of length&#39;</span>
-                             <span class="s1">&#39; equal to `n_features`&#39;</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">):</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-                <span class="n">aux_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="o">*</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
-                                         <span class="n">device</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
-                <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)):</span>
-                    <span class="n">aux_tensor</span> <span class="o">=</span> <span class="n">aux_tensor</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="o">*</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
-                                                   <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
-                    <span class="n">aux_tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-                    <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">aux_tensor</span>
-                <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="n">aux_tensor</span> <span class="o">=</span> <span class="n">aux_tensor</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="o">*</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">],</span>
-                                                   <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
-                    <span class="n">aux_tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-                    <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">aux_tensor</span>
-                <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
-                    <span class="n">aux_tensor</span> <span class="o">=</span> <span class="n">aux_tensor</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="o">*</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">],</span>
-                                                   <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
-                    <span class="n">aux_tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-                    <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">aux_tensor</span>
-                    
-            <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span></div></div>
 
 
 <span class="c1">###############################################################################</span>

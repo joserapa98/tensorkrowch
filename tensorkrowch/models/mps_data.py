@@ -433,7 +433,8 @@ class MPSData(TensorNetwork):  # MARK: MPSData
                         f'data tensor at position {i} does not coincide '
                         f'with the corresponding physical dimension '
                         f'{node.shape[-2]} of the MPS')
-            
+        
+        data = data[:]
         for i, node in enumerate(self._mats_env):
             if self._boundary == 'obc':
                 aux_tensor = torch.zeros(*node.shape,

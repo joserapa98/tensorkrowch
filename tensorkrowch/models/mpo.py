@@ -421,6 +421,7 @@ class MPO(TensorNetwork):  # MARK: MPO
                                  ' elements')
             
             if self._boundary == 'obc':
+                tensors = tensors[:]
                 if len(tensors) == 1:
                     tensors[0] = tensors[0].reshape(1,
                                                     tensors[0].shape[0],

@@ -650,6 +650,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                                  ' elements')
             
             if self._boundary == 'obc':
+                tensors = tensors[:]
                 if len(tensors) == 1:
                     tensors[0] = tensors[0].reshape(1, -1, 1)
                 else:
@@ -2004,6 +2005,7 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                                  ' elements')
             
             if self._boundary == 'obc':
+                tensors = tensors[:]
                 if len(tensors) == 1:
                     tensors[0] = tensors[0].reshape(1, -1, 1)
                 else:

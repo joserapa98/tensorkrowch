@@ -43,7 +43,9 @@ def vec_to_mps(vec: torch.Tensor,
     with ``boundary = "obc"``.
     
     To specify the bond dimension of each cut done via SVD, one can use the
-    arguments ``rank``, ``cum_percentage`` and ``cutoff``.
+    arguments ``rank``, ``cum_percentage`` and ``cutoff``. If more than
+    one is specified, the resulting rank will be the one that satisfies all
+    conditions.
 
     Parameters
     ----------
@@ -157,7 +159,9 @@ def mat_to_mpo(mat: torch.Tensor,
     `reshape <https://pytorch.org/docs/stable/generated/torch.reshape.html>`_.
     
     To specify the bond dimension of each cut done via SVD, one can use the
-    arguments ``rank``, ``cum_percentage`` and ``cutoff``.
+    arguments ``rank``, ``cum_percentage`` and ``cutoff``. If more than
+    one is specified, the resulting rank will be the one that satisfies all
+    conditions.
 
     Parameters
     ----------

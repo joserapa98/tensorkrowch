@@ -213,7 +213,7 @@ Other thing one should take into account are **reserved nodes' names**:
 
     # All ParamNodes use a slice of the tensor in stack_node
     for node in nodes:
-        assert node.tensor_address() == 'virtual_result'
+        assert node.tensor_address() == 'virtual_result_stack'
 
 * **"virtual_uniform"**: Name of the ``virtual`` ``Node`` or ``ParamNode`` that
   is used in uniform (translationally invariant) tensor networks to store the

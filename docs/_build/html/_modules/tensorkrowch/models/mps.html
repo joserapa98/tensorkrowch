@@ -939,6 +939,7 @@ title="Source repository"
                                  <span class="s1">&#39; elements&#39;</span><span class="p">)</span>
             
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+                <span class="n">tensors</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[:]</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
@@ -2293,6 +2294,7 @@ title="Source repository"
                                  <span class="s1">&#39; elements&#39;</span><span class="p">)</span>
             
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+                <span class="n">tensors</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[:]</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
@@ -2663,7 +2665,7 @@ title="Source repository"
                     <span class="n">eye_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                                            <span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
                                            <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
-                    <span class="k">if</span> <span class="n">node</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                         <span class="n">aux_tensor</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+=</span> <span class="n">eye_tensor</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="n">eye_tensor</span> <span class="o">=</span> <span class="n">eye_tensor</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>

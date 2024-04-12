@@ -407,7 +407,9 @@ In this case, the resultant tensors will all have the extra batch dimensions.
 These tensors can be used to instantiate a <a class="reference internal" href="models.html#tensorkrowch.models.MPSData" title="tensorkrowch.models.MPSData"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPSData</span></code></a>
 with <code class="docutils literal notranslate"><span class="pre">boundary</span> <span class="pre">=</span> <span class="pre">&quot;obc&quot;</span></code>.</p>
 <p>To specify the bond dimension of each cut done via SVD, one can use the
-arguments <code class="docutils literal notranslate"><span class="pre">rank</span></code>, <code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code> and <code class="docutils literal notranslate"><span class="pre">cutoff</span></code>.</p>
+arguments <code class="docutils literal notranslate"><span class="pre">rank</span></code>, <code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code> and <code class="docutils literal notranslate"><span class="pre">cutoff</span></code>. If more than
+one is specified, the resulting rank will be the one that satisfies all
+conditions.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -450,7 +452,9 @@ have an even number of dimensions. To accomplish this, it may happen that
 some input/output dimensions are 1. This can be done with
 <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.reshape.html">reshape</a>.</p>
 <p>To specify the bond dimension of each cut done via SVD, one can use the
-arguments <code class="docutils literal notranslate"><span class="pre">rank</span></code>, <code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code> and <code class="docutils literal notranslate"><span class="pre">cutoff</span></code>.</p>
+arguments <code class="docutils literal notranslate"><span class="pre">rank</span></code>, <code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code> and <code class="docutils literal notranslate"><span class="pre">cutoff</span></code>. If more than
+one is specified, the resulting rank will be the one that satisfies all
+conditions.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">

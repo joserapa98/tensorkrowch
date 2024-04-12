@@ -710,6 +710,7 @@ title="Source repository"
                                  <span class="s1">&#39; elements&#39;</span><span class="p">)</span>
             
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+                <span class="n">tensors</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[:]</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span>
                                                     <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>

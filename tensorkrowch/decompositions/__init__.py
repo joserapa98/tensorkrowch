@@ -1,1 +1,2 @@
 from tensorkrowch.decompositions.svd_decompositions import vec_to_mps, mat_to_mpo
+from tensorkrowch.decompositions.tt_rss import tt_rss

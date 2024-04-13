@@ -156,7 +156,7 @@ class MPS(TensorNetwork):  # MARK: MPS
     >>> mps.reset()
     >>> result = mps(data, marginalize_output=True)
     >>> result.shape
-    torch.Size([20])
+    torch.Size([20, 20])
     """
 
     def __init__(self,
@@ -920,6 +920,12 @@ class MPS(TensorNetwork):  # MARK: MPS
           the MPO nodes to the MPS, since the de-parameterized nodes are not
           the same nodes as the original ``ParamNodes`` of the MPO.
         
+        When ``marginalize_output = True``, the contracted input nodes are
+        duplicated using different batch dimensions. That is, if the MPS
+        is contracted with input data with ``batch_size = 100``, and some
+        other (output) nodes are marginalized, the result will be a tensor
+        with shape ``(100, 100)`` rather than just ``(100,)``.
+        
         Parameters
         ----------
         inline_input : bool
@@ -1043,13 +1049,19 @@ class MPS(TensorNetwork):  # MARK: MPS
                 # Copy output nodes sharing tensors
                 copied_nodes = []
                 for node in nodes_out_env:
-                    new_node = node.__class__(shape=node._shape,
+                    copied_node = node.__class__(shape=node._shape,
                                               axes_names=node.axes_names,
                                               name='virtual_result_copy',
                                               network=self,
                                               virtual=True)
-                    new_node.set_tensor_from(node)
-                    copied_nodes.append(new_node)
+                    copied_node.set_tensor_from(node)
+                    copied_nodes.append(copied_node)
+                    
+                    # Change batch names so that they not coincide with
+                    # original batches, which gives dupliicate output batches
+                    for ax in copied_node.axes:
+                        if ax._batch:
+                            ax.name = ax.name + '_copy'
                 
                 # Connect copied nodes with neighbours
                 for i in range(len(copied_nodes)):

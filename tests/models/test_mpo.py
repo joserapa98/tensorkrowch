@@ -372,8 +372,8 @@ class TestMPO:
                                     in_dim=2,
                                     out_dim=2,
                                     bond_dim=10,
-                                    boundary=boundary)
-                mpo = mpo.to(device)
+                                    boundary=boundary,
+                                    device=device)
 
                 for auto_stack in [True, False]:
                     for auto_unbind in [True, False]:

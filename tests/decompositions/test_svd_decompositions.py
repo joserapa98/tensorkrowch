@@ -41,6 +41,11 @@ class TestSVDDecompositions:
                                             n_batches=j)
                     assert mps.phys_dim == dims[j:].tolist()
                     assert mps.bond_dim == bond_dims
+                
+                if j == 0:
+                    mps = tk.models.MPS(tensors=tensors)
+                    assert mps.phys_dim == dims.tolist()
+                    assert mps.bond_dim == bond_dims
     
     def test_mat_to_mpo(self):
         for i in range(1, 6):

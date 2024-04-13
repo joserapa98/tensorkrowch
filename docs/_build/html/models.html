@@ -743,7 +743,7 @@ connected to the input nodes, leaving output nodes open:</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">mps</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">mps</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">marginalize_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">shape</span>
-<span class="go">torch.Size([20])</span>
+<span class="go">torch.Size([20, 20])</span>
 </pre></div>
 </div>
 <dl class="py property">
@@ -928,18 +928,34 @@ nodes with themselves, if the argument <code class="docutils literal notranslate
 to <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
 <p>In the latter case, one can add additional nodes in between the MPS-MPS
 contraction:</p>
-<ul class="simple">
+<ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">embedding_matrices</span></code>: A list of matrices with appropiate physical
 dimensions can be passed, one for each output node. These matrices
 will connect the two <code class="docutils literal notranslate"><span class="pre">&quot;input&quot;</span></code> edges of the corresponding nodes.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">mpo</span></code>: If an <a class="reference internal" href="#tensorkrowch.models.MPO" title="tensorkrowch.models.MPO"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPO</span></code></a> is passed, it is assumed that the output
-nodes of the MPS are already connected to the <code class="docutils literal notranslate"><span class="pre">&quot;output&quot;</span></code> edges of
-the MPO nodes, and that the MPO nodes have been moved to the MPS, so
-that all nodes belong to the MPS network. In this case, each MPO node
-will connect the two <code class="docutils literal notranslate"><span class="pre">&quot;input&quot;</span></code> edges of the corresponding MPS nodes.
-When calling <code class="docutils literal notranslate"><span class="pre">mps(marginalize_output=True,</span> <span class="pre">mpo=mpo)</span></code>, this will
-perform the MPS-MPO-MPS contraction at the output nodes of the MPS.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mpo</span></code>: If an <a class="reference internal" href="#tensorkrowch.models.MPO" title="tensorkrowch.models.MPO"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPO</span></code></a> is passed, when calling
+<code class="docutils literal notranslate"><span class="pre">mps(marginalize_output=True,</span> <span class="pre">mpo=mpo)</span></code>, this will perform the
+MPS-MPO-MPS contraction at the output nodes of the MPS. Therefore,
+the MPO should have as many nodes as output nodes are in the MPS.</p>
+<p>After contraction, the MPS will still be connected to the MPO nodes
+until these are manually disconnected.</p>
+<p>The provided MPO can also be already connected to the MPS before
+contraction. In this case, it is assumed that the output nodes of the
+MPS are connected to the <code class="docutils literal notranslate"><span class="pre">&quot;output&quot;</span></code> edges of the MPO nodes, and
+that the MPO nodes have been moved to the MPS, so that all nodes
+belong to the MPS network. In this case, each MPO node will connect
+the two <code class="docutils literal notranslate"><span class="pre">&quot;input&quot;</span></code> edges of the corresponding MPS nodes.</p>
+<p>If the MPO nodes are not trainable, they can be de-parameterized
+by doing <code class="docutils literal notranslate"><span class="pre">mpo</span> <span class="pre">=</span> <span class="pre">mpo.parameterize(set_param=False,</span> <span class="pre">override=True)</span></code>.
+This should be done before the contraction, or before connecting
+the MPO nodes to the MPS, since the de-parameterized nodes are not
+the same nodes as the original <code class="docutils literal notranslate"><span class="pre">ParamNodes</span></code> of the MPO.</p>
+</li>
 </ul>
+<p>When <code class="docutils literal notranslate"><span class="pre">marginalize_output</span> <span class="pre">=</span> <span class="pre">True</span></code>, the contracted input nodes are
+duplicated using different batch dimensions. That is, if the MPS
+is contracted with input data with <code class="docutils literal notranslate"><span class="pre">batch_size</span> <span class="pre">=</span> <span class="pre">100</span></code>, and some
+other (output) nodes are marginalized, the result will be a tensor
+with shape <code class="docutils literal notranslate"><span class="pre">(100,</span> <span class="pre">100)</span></code> rather than just <code class="docutils literal notranslate"><span class="pre">(100,)</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -961,11 +977,9 @@ edges. This can be useful when data vectors are not represented
 as qubits in the computational basis, but are transformed via
 some <a class="reference internal" href="embeddings.html#embeddings"><span class="std std-ref">Embeddings</span></a> function.</p></li>
 <li><p><strong>mpo</strong> (<a class="reference internal" href="#tensorkrowch.models.MPO" title="tensorkrowch.models.MPO"><em>MPO</em></a><em>, </em><em>optional</em>) – MPO that is to be contracted with the MPS at the output nodes, if
-<code class="docutils literal notranslate"><span class="pre">marginalize_output</span> <span class="pre">=</span> <span class="pre">True</span></code>. To do that, in contrast with how
-<code class="docutils literal notranslate"><span class="pre">embedding_matrices</span></code> works, the MPS has to be already connected
-to the MPO (at the output nodes). That is, the <code class="docutils literal notranslate"><span class="pre">&quot;output&quot;</span></code> edges
-of the MPO nodes should be connected to the <code class="docutils literal notranslate"><span class="pre">&quot;input&quot;</span></code> edges of
-the MPS output nodes. If there are no input nodes, the MPS-MPO-MPS
+<code class="docutils literal notranslate"><span class="pre">marginalize_output</span> <span class="pre">=</span> <span class="pre">True</span></code>. In this case, the <code class="docutils literal notranslate"><span class="pre">&quot;output&quot;</span></code> edges
+of the MPO nodes will be connected to the <code class="docutils literal notranslate"><span class="pre">&quot;input&quot;</span></code> edges of the
+MPS output nodes. If there are no input nodes, the MPS-MPO-MPS
 is performed by calling <code class="docutils literal notranslate"><span class="pre">mps(marginalize_output=True,</span> <span class="pre">mpo=mpo)</span></code>,
 without passing extra data tensors.</p></li>
 </ul>
@@ -979,12 +993,47 @@ without passing extra data tensors.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.models.MPS.norm">
 <span class="sig-name descname"><span class="pre">norm</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.norm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.norm" title="Permalink to this definition">#</a></dt>
-<dd><p>Computes the norm of the MPS. This method internally sets
-<code class="docutils literal notranslate"><span class="pre">in_features</span> <span class="pre">=</span> <span class="pre">[]</span></code>, and calls the
+<dd><p>Computes the norm of the MPS.</p>
+<p>This method internally sets <code class="docutils literal notranslate"><span class="pre">in_features</span> <span class="pre">=</span> <span class="pre">[]</span></code>, and calls the
 <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.forward" title="tensorkrowch.TensorNetwork.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> method with
 <code class="docutils literal notranslate"><span class="pre">marginalize_output</span> <span class="pre">=</span> <span class="pre">True</span></code>. Therefore, it may alter the behaviour
 of the MPS if it is not <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>
-afterwards.</p>
+afterwards. Also, if the MPS was contracted before with other arguments,
+it should be <code class="docutils literal notranslate"><span class="pre">reset</span></code> before calling <code class="docutils literal notranslate"><span class="pre">norm</span></code> to avoid undesired
+behaviour.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPS.partial_density">
+<span class="sig-name descname"><span class="pre">partial_density</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trace_sites</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.partial_density"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.partial_density" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns de partial density matrix, tracing out the sites specified
+by <code class="docutils literal notranslate"><span class="pre">trace_sites</span></code>.</p>
+<p>This method internally sets <code class="docutils literal notranslate"><span class="pre">out_features</span> <span class="pre">=</span> <span class="pre">trace_sites</span></code>, and calls
+the <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.forward" title="tensorkrowch.TensorNetwork.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> method with
+<code class="docutils literal notranslate"><span class="pre">marginalize_output</span> <span class="pre">=</span> <span class="pre">True</span></code>. Therefore, it may alter the behaviour
+of the MPS if it is not <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>
+afterwards. Also, if the MPS was contracted before with other arguments,
+it should be <code class="docutils literal notranslate"><span class="pre">reset</span></code> before calling <code class="docutils literal notranslate"><span class="pre">partial_density</span></code> to avoid
+undesired behaviour.</p>
+<p>This method may also alter the attribute <a class="reference internal" href="#tensorkrowch.models.MPS.n_batches" title="tensorkrowch.models.MPS.n_batches"><code class="xref py py-attr docutils literal notranslate"><span class="pre">n_batches</span></code></a> of the
+<a class="reference internal" href="#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>trace_sites</strong> (<em>list</em><em>[</em><em>int</em><em>] or </em><em>tuple</em><em>[</em><em>int</em><em>]</em>) – Sequence of nodes’ indices in the MPS. These indices specify the
+nodes that should be traced to compute the density matrix. If
+it is empty <code class="docutils literal notranslate"><span class="pre">[]</span></code>, the total density matrix will be returned,
+though this may be costly if <a class="reference internal" href="#tensorkrowch.models.MPS.n_features" title="tensorkrowch.models.MPS.n_features"><code class="xref py py-attr docutils literal notranslate"><span class="pre">n_features</span></code></a> is big.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">mps</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MPS</span><span class="p">(</span><span class="n">n_features</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+<span class="gp">... </span>                    <span class="n">phys_dim</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span>
+<span class="gp">... </span>                    <span class="n">bond_dim</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">density</span> <span class="o">=</span> <span class="n">mps</span><span class="o">.</span><span class="n">partial_density</span><span class="p">(</span><span class="n">trace_sites</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">density</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([3, 5, 3, 5])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
@@ -2456,18 +2505,23 @@ in-place (<code class="docutils literal notranslate"><span class="pre">True</spa
 <span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inline_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inline_mats</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mpo.html#MPO.contract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPO.contract" title="Permalink to this definition">#</a></dt>
 <dd><p>Contracts the whole MPO with input data nodes. The input can be in the
 form of an <a class="reference internal" href="#tensorkrowch.models.MPSData" title="tensorkrowch.models.MPSData"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPSData</span></code></a>, which may be convenient for tensorizing
-vector - matrix multiplication in the form of MPS-MPO contraction.</p>
-<p>If the <code class="docutils literal notranslate"><span class="pre">MPO</span></code> is contracted with a <code class="docutils literal notranslate"><span class="pre">MPSData</span></code>, it is recommended that
-the MPS nodes are moved to the MPO network before connecting the
-corresponding nodes.</p>
-<p>Also, in this case, if any of the contraction arguments, <code class="docutils literal notranslate"><span class="pre">inline_input</span></code>
-or <code class="docutils literal notranslate"><span class="pre">inline_mats</span></code>, is set to <code class="docutils literal notranslate"><span class="pre">False</span></code>, the MPO (already connected to
-the MPS) should be <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> before
-contraction if new data is set into the <code class="docutils literal notranslate"><span class="pre">MPSData</span></code> nodes. This is
-because <a class="reference internal" href="#tensorkrowch.models.MPSData" title="tensorkrowch.models.MPSData"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPSData</span></code></a> admits data tensors with different bond
-dimensions for each iteration, and this may cause undesired behaviour
-when reusing some information of previous calls to
-:func:~tensorkrowch.stack` with the previous data tensors.</p>
+vector-matrix multiplication in the form of MPS-MPO contraction.</p>
+<p>If the <code class="docutils literal notranslate"><span class="pre">MPO</span></code> is contracted with a <code class="docutils literal notranslate"><span class="pre">MPSData</span></code>, MPS nodes will become
+part of the MPO network, and they will be connected to the <code class="docutils literal notranslate"><span class="pre">&quot;input&quot;</span></code>
+edges of the MPO. Thus, the MPS and the MPO should have the same number
+of features (<code class="docutils literal notranslate"><span class="pre">n_features</span></code>).</p>
+<p>Even though it is not necessary to connect the <code class="docutils literal notranslate"><span class="pre">MPSData</span></code> nodes to the
+MPO nodes by hand before contraction, it can be done. However, one
+should first move the MPS nodes to the MPO network.</p>
+<p>Also, when contracting the MPO with and <code class="docutils literal notranslate"><span class="pre">MPSData</span></code>, if any of the
+contraction arguments, <code class="docutils literal notranslate"><span class="pre">inline_input</span></code> or <code class="docutils literal notranslate"><span class="pre">inline_mats</span></code>, is set to
+<code class="docutils literal notranslate"><span class="pre">False</span></code>, the MPO (already connected to the MPS) should be
+<a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> before contraction if new
+data is set into the <code class="docutils literal notranslate"><span class="pre">MPSData</span></code> nodes. This is because <a class="reference internal" href="#tensorkrowch.models.MPSData" title="tensorkrowch.models.MPSData"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPSData</span></code></a>
+admits data tensors with different bond dimensions for each iteration,
+and this may cause undesired behaviour when reusing some information of
+previous calls to :func:~tensorkrowch.stack` with the previous data
+tensors.</p>
 <p>To perform the MPS-MPO contraction, first input data tensors have to
 be put into the <a class="reference internal" href="#tensorkrowch.models.MPSData" title="tensorkrowch.models.MPSData"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPSData</span></code></a> via <a class="reference internal" href="#tensorkrowch.models.MPSData.add_data" title="tensorkrowch.models.MPSData.add_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">MPSData.add_data()</span></code></a>. Then,
 contraction is carried out by calling <code class="docutils literal notranslate"><span class="pre">mpo(mps=mps_data)</span></code>, without
@@ -2482,8 +2536,7 @@ single stacked contraction.</p></li>
 <li><p><strong>inline_mats</strong> (<em>bool</em>) – Boolean indicating whether the sequence of matrices (resultant
 after contracting the input <code class="docutils literal notranslate"><span class="pre">data</span></code> nodes) should be contracted
 inline or as a sequence of pairwise stacked contrations.</p></li>
-<li><p><strong>mps</strong> (<a class="reference internal" href="#tensorkrowch.models.MPSData" title="tensorkrowch.models.MPSData"><em>MPSData</em></a><em>, </em><em>optional</em>) – MPS that is to be contracted with the MPO. To do that, the MPS has
-to be already connected to the MPO. In this case, new data can be
+<li><p><strong>mps</strong> (<a class="reference internal" href="#tensorkrowch.models.MPSData" title="tensorkrowch.models.MPSData"><em>MPSData</em></a><em>, </em><em>optional</em>) – MPS that is to be contracted with the MPO. New data can be
 put into the MPS via <a class="reference internal" href="#tensorkrowch.models.MPSData.add_data" title="tensorkrowch.models.MPSData.add_data"><code class="xref py py-meth docutils literal notranslate"><span class="pre">MPSData.add_data()</span></code></a>, and the MPS-MPO
 contraction is performed by calling <code class="docutils literal notranslate"><span class="pre">mpo(mps=mps_data)</span></code>, without
 passing the input data again, as it is already stored in the MPS

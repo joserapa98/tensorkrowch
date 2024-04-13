@@ -926,20 +926,26 @@ title="Source repository"
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the whole MPO with input data nodes. The input can be in the</span>
 <span class="sd">        form of an :class:`MPSData`, which may be convenient for tensorizing</span>
-<span class="sd">        vector - matrix multiplication in the form of MPS-MPO contraction.</span>
+<span class="sd">        vector-matrix multiplication in the form of MPS-MPO contraction.</span>
 <span class="sd">        </span>
-<span class="sd">        If the ``MPO`` is contracted with a ``MPSData``, it is recommended that</span>
-<span class="sd">        the MPS nodes are moved to the MPO network before connecting the</span>
-<span class="sd">        corresponding nodes.</span>
+<span class="sd">        If the ``MPO`` is contracted with a ``MPSData``, MPS nodes will become</span>
+<span class="sd">        part of the MPO network, and they will be connected to the ``&quot;input&quot;``</span>
+<span class="sd">        edges of the MPO. Thus, the MPS and the MPO should have the same number</span>
+<span class="sd">        of features (``n_features``).</span>
 <span class="sd">        </span>
-<span class="sd">        Also, in this case, if any of the contraction arguments, ``inline_input``</span>
-<span class="sd">        or ``inline_mats``, is set to ``False``, the MPO (already connected to</span>
-<span class="sd">        the MPS) should be :meth:`~tensorkrowch.TensorNetwork.reset` before</span>
-<span class="sd">        contraction if new data is set into the ``MPSData`` nodes. This is</span>
-<span class="sd">        because :class:`MPSData` admits data tensors with different bond</span>
-<span class="sd">        dimensions for each iteration, and this may cause undesired behaviour</span>
-<span class="sd">        when reusing some information of previous calls to</span>
-<span class="sd">        :func:~tensorkrowch.stack` with the previous data tensors.</span>
+<span class="sd">        Even though it is not necessary to connect the ``MPSData`` nodes to the</span>
+<span class="sd">        MPO nodes by hand before contraction, it can be done. However, one</span>
+<span class="sd">        should first move the MPS nodes to the MPO network.</span>
+<span class="sd">        </span>
+<span class="sd">        Also, when contracting the MPO with and ``MPSData``, if any of the</span>
+<span class="sd">        contraction arguments, ``inline_input`` or ``inline_mats``, is set to</span>
+<span class="sd">        ``False``, the MPO (already connected to the MPS) should be</span>
+<span class="sd">        :meth:`~tensorkrowch.TensorNetwork.reset` before contraction if new</span>
+<span class="sd">        data is set into the ``MPSData`` nodes. This is because :class:`MPSData`</span>
+<span class="sd">        admits data tensors with different bond dimensions for each iteration,</span>
+<span class="sd">        and this may cause undesired behaviour when reusing some information of</span>
+<span class="sd">        previous calls to :func:~tensorkrowch.stack` with the previous data</span>
+<span class="sd">        tensors.</span>
 <span class="sd">        </span>
 <span class="sd">        To perform the MPS-MPO contraction, first input data tensors have to</span>
 <span class="sd">        be put into the :class:`MPSData` via :meth:`MPSData.add_data`. Then,</span>
@@ -958,8 +964,7 @@ title="Source repository"
 <span class="sd">            after contracting the input ``data`` nodes) should be contracted</span>
 <span class="sd">            inline or as a sequence of pairwise stacked contrations.</span>
 <span class="sd">        mps : MPSData, optional</span>
-<span class="sd">            MPS that is to be contracted with the MPO. To do that, the MPS has</span>
-<span class="sd">            to be already connected to the MPO. In this case, new data can be</span>
+<span class="sd">            MPS that is to be contracted with the MPO. New data can be</span>
 <span class="sd">            put into the MPS via :meth:`MPSData.add_data`, and the MPS-MPO</span>
 <span class="sd">            contraction is performed by calling ``mpo(mps=mps_data)``, without</span>
 <span class="sd">            passing the input data again, as it is already stored in the MPS</span>
@@ -975,6 +980,13 @@ title="Source repository"
             <span class="k">if</span> <span class="n">mps</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                     <span class="s1">&#39;`mps` should have as many features as the MPO&#39;</span><span class="p">)</span>
+            
+            <span class="c1"># Move MPSData ndoes to self</span>
+            <span class="n">mps</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">move_to_network</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            
+            <span class="c1"># Connect mps nodes to mpo nodes</span>
+            <span class="k">for</span> <span class="n">mps_node</span><span class="p">,</span> <span class="n">mpo_node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">):</span>
+                <span class="n">mps_node</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">mpo_node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
                 
         <span class="n">mats_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">,</span> <span class="n">inline_input</span><span class="p">)</span>
         

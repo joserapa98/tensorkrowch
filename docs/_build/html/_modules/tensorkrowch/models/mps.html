@@ -313,8 +313,8 @@ title="Source repository"
 <span class="kn">import</span> <span class="nn">tensorkrowch.operations</span> <span class="k">as</span> <span class="nn">op</span>
 <span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">Node</span><span class="p">,</span> <span class="n">ParamNode</span>
 <span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">TensorNetwork</span>
-<span class="kn">from</span> <span class="nn">tensorkrowch.models</span> <span class="kn">import</span> <span class="n">MPO</span>
-
+<span class="kn">from</span> <span class="nn">tensorkrowch.models</span> <span class="kn">import</span> <span class="n">MPO</span><span class="p">,</span> <span class="n">UMPO</span>
+<span class="kn">from</span> <span class="nn">tensorkrowch.embeddings</span> <span class="kn">import</span> <span class="n">basis</span>
 <span class="kn">from</span> <span class="nn">tensorkrowch.utils</span> <span class="kn">import</span> <span class="n">split_sequence_into_regions</span><span class="p">,</span> <span class="n">random_unitary</span>
 
 
@@ -445,7 +445,7 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; mps.reset()</span>
 <span class="sd">    &gt;&gt;&gt; result = mps(data, marginalize_output=True)</span>
 <span class="sd">    &gt;&gt;&gt; result.shape</span>
-<span class="sd">    torch.Size([20])</span>
+<span class="sd">    torch.Size([20, 20])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -1068,20 +1068,23 @@ title="Source repository"
         <span class="k">return</span> <span class="n">net</span></div>
 
     <span class="k">def</span> <span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                           <span class="n">nodes_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
+                           <span class="n">nodes_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
+                           <span class="n">input_nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
                            <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
                                                        <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]],</span>
                                                        <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts input data nodes with MPS input nodes.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">inline_input</span><span class="p">:</span>
-            <span class="n">mats_result</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">contract</span><span class="p">()</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes_env</span><span class="p">]</span>
+            <span class="n">mats_result</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">node</span> <span class="o">@</span> <span class="n">in_node</span>
+                <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">in_node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">nodes_env</span><span class="p">,</span> <span class="n">input_nodes</span><span class="p">)</span>
+                <span class="p">]</span>
             <span class="k">return</span> <span class="n">mats_result</span>
 
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">nodes_env</span><span class="p">:</span>
                 <span class="n">stack</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">nodes_env</span><span class="p">)</span>
-                <span class="n">stack_data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span>
-                    <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes_env</span><span class="p">])</span>
+                <span class="n">stack_data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">input_nodes</span><span class="p">)</span>
 
                 <span class="n">stack</span> <span class="o">^</span> <span class="n">stack_data</span>
 
@@ -1092,20 +1095,21 @@ title="Source repository"
                 <span class="k">return</span> <span class="p">[]</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_inline_contraction</span><span class="p">(</span><span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">from_left</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">_inline_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
+                            <span class="n">from_left</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts sequence of MPS nodes (matrices) inline.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">from_left</span><span class="p">:</span>
-            <span class="n">result_node</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">result_node</span> <span class="o">=</span> <span class="n">mats_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">mats_env</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
                 <span class="n">result_node</span> <span class="o">@=</span> <span class="n">node</span>
             <span class="k">return</span> <span class="n">result_node</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">result_node</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="n">result_node</span> <span class="o">=</span> <span class="n">mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
                 <span class="n">result_node</span> <span class="o">=</span> <span class="n">node</span> <span class="o">@</span> <span class="n">result_node</span>
             <span class="k">return</span> <span class="n">result_node</span>
 
-    <span class="k">def</span> <span class="nf">_contract_envs_inline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">_contract_envs_inline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts nodes environments inline.&quot;&quot;&quot;</span>
         <span class="n">from_left</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
@@ -1114,9 +1118,9 @@ title="Source repository"
             <span class="k">if</span> <span class="n">mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;right&#39;</span><span class="p">)</span> <span class="ow">is</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span><span class="p">:</span>
                 <span class="n">mats_env</span> <span class="o">=</span> <span class="n">mats_env</span> <span class="o">+</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span><span class="p">]</span>
                 <span class="n">from_left</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inline_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="p">,</span> <span class="n">from_left</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inline_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="o">=</span><span class="n">mats_env</span><span class="p">,</span> <span class="n">from_left</span><span class="o">=</span><span class="n">from_left</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_aux_pairwise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
+    <span class="k">def</span> <span class="nf">_aux_pairwise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
     <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts a sequence of MPS nodes (matrices) pairwise.&quot;&quot;&quot;</span>
         <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
@@ -1140,10 +1144,10 @@ title="Source repository"
             <span class="k">return</span> <span class="n">aux_nodes</span><span class="p">,</span> <span class="n">leftover</span>
         <span class="k">return</span> <span class="n">nodes</span><span class="p">,</span> <span class="p">[]</span>
 
-    <span class="k">def</span> <span class="nf">_pairwise_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mats_nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">_pairwise_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts nodes environments pairwise.&quot;&quot;&quot;</span>
-        <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mats_nodes</span><span class="p">)</span>
-        <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">mats_nodes</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mats_env</span><span class="p">)</span>
+        <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">mats_env</span>
         <span class="k">if</span> <span class="n">length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">leftovers</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">while</span> <span class="n">length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
@@ -1184,13 +1188,32 @@ title="Source repository"
 <span class="sd">          dimensions can be passed, one for each output node. These matrices</span>
 <span class="sd">          will connect the two ``&quot;input&quot;`` edges of the corresponding nodes.</span>
 <span class="sd">        </span>
-<span class="sd">        * ``mpo``: If an :class:`MPO` is passed, it is assumed that the output</span>
-<span class="sd">          nodes of the MPS are already connected to the ``&quot;output&quot;`` edges of</span>
-<span class="sd">          the MPO nodes, and that the MPO nodes have been moved to the MPS, so</span>
-<span class="sd">          that all nodes belong to the MPS network. In this case, each MPO node</span>
-<span class="sd">          will connect the two ``&quot;input&quot;`` edges of the corresponding MPS nodes.</span>
-<span class="sd">          When calling ``mps(marginalize_output=True, mpo=mpo)``, this will</span>
-<span class="sd">          perform the MPS-MPO-MPS contraction at the output nodes of the MPS.</span>
+<span class="sd">        * ``mpo``: If an :class:`MPO` is passed, when calling</span>
+<span class="sd">          ``mps(marginalize_output=True, mpo=mpo)``, this will perform the</span>
+<span class="sd">          MPS-MPO-MPS contraction at the output nodes of the MPS. Therefore,</span>
+<span class="sd">          the MPO should have as many nodes as output nodes are in the MPS.</span>
+<span class="sd">          </span>
+<span class="sd">          After contraction, the MPS will still be connected to the MPO nodes</span>
+<span class="sd">          until these are manually disconnected.</span>
+<span class="sd">          </span>
+<span class="sd">          The provided MPO can also be already connected to the MPS before</span>
+<span class="sd">          contraction. In this case, it is assumed that the output nodes of the</span>
+<span class="sd">          MPS are connected to the ``&quot;output&quot;`` edges of the MPO nodes, and</span>
+<span class="sd">          that the MPO nodes have been moved to the MPS, so that all nodes</span>
+<span class="sd">          belong to the MPS network. In this case, each MPO node will connect</span>
+<span class="sd">          the two ``&quot;input&quot;`` edges of the corresponding MPS nodes.</span>
+<span class="sd">          </span>
+<span class="sd">          If the MPO nodes are not trainable, they can be de-parameterized</span>
+<span class="sd">          by doing ``mpo = mpo.parameterize(set_param=False, override=True)``.</span>
+<span class="sd">          This should be done before the contraction, or before connecting</span>
+<span class="sd">          the MPO nodes to the MPS, since the de-parameterized nodes are not</span>
+<span class="sd">          the same nodes as the original ``ParamNodes`` of the MPO.</span>
+<span class="sd">        </span>
+<span class="sd">        When ``marginalize_output = True``, the contracted input nodes are</span>
+<span class="sd">        duplicated using different batch dimensions. That is, if the MPS</span>
+<span class="sd">        is contracted with input data with ``batch_size = 100``, and some</span>
+<span class="sd">        other (output) nodes are marginalized, the result will be a tensor</span>
+<span class="sd">        with shape ``(100, 100)`` rather than just ``(100,)``.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1217,11 +1240,9 @@ title="Source repository"
 <span class="sd">            some :ref:`Embeddings` function.</span>
 <span class="sd">        mpo : MPO, optional</span>
 <span class="sd">            MPO that is to be contracted with the MPS at the output nodes, if</span>
-<span class="sd">            ``marginalize_output = True``. To do that, in contrast with how</span>
-<span class="sd">            ``embedding_matrices`` works, the MPS has to be already connected</span>
-<span class="sd">            to the MPO (at the output nodes). That is, the ``&quot;output&quot;`` edges</span>
-<span class="sd">            of the MPO nodes should be connected to the ``&quot;input&quot;`` edges of</span>
-<span class="sd">            the MPS output nodes. If there are no input nodes, the MPS-MPO-MPS</span>
+<span class="sd">            ``marginalize_output = True``. In this case, the ``&quot;output&quot;`` edges</span>
+<span class="sd">            of the MPO nodes will be connected to the ``&quot;input&quot;`` edges of the</span>
+<span class="sd">            MPS output nodes. If there are no input nodes, the MPS-MPO-MPS</span>
 <span class="sd">            is performed by calling ``mps(marginalize_output=True, mpo=mpo)``,</span>
 <span class="sd">            without passing extra data tensors.</span>
 
@@ -1265,14 +1286,19 @@ title="Source repository"
         <span class="n">in_regions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_regions</span>
         <span class="n">out_regions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_regions</span>
         
-        <span class="n">mats_in_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_env</span><span class="p">,</span> <span class="n">inline_input</span><span class="p">)</span>
+        <span class="n">mats_in_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span>
+            <span class="n">nodes_env</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">in_env</span><span class="p">,</span>
+            <span class="n">input_nodes</span><span class="o">=</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_env</span><span class="p">],</span>
+            <span class="n">inline_input</span><span class="o">=</span><span class="n">inline_input</span><span class="p">)</span>
         
         <span class="n">in_results</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">region</span> <span class="ow">in</span> <span class="n">in_regions</span><span class="p">:</span>      
             <span class="k">if</span> <span class="n">inline_mats</span><span class="p">:</span>
-                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contract_envs_inline</span><span class="p">(</span><span class="n">mats_in_env</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">region</span><span class="p">)])</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contract_envs_inline</span><span class="p">(</span>
+                    <span class="n">mats_env</span><span class="o">=</span><span class="n">mats_in_env</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">region</span><span class="p">)])</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pairwise_contraction</span><span class="p">(</span><span class="n">mats_in_env</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">region</span><span class="p">)])</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pairwise_contraction</span><span class="p">(</span>
+                    <span class="n">mats_env</span><span class="o">=</span><span class="n">mats_in_env</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">region</span><span class="p">)])</span>
             
             <span class="n">mats_in_env</span> <span class="o">=</span> <span class="n">mats_in_env</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">region</span><span class="p">):]</span>
             <span class="n">in_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
@@ -1306,21 +1332,27 @@ title="Source repository"
             
             <span class="k">if</span> <span class="ow">not</span> <span class="n">marginalize_output</span><span class="p">:</span>
                 <span class="c1"># Contract all output nodes sequentially</span>
-                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inline_contraction</span><span class="p">(</span><span class="n">nodes_out_env</span><span class="p">)</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inline_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="o">=</span><span class="n">nodes_out_env</span><span class="p">)</span>
             
             <span class="k">else</span><span class="p">:</span>
                 <span class="c1"># Copy output nodes sharing tensors</span>
                 <span class="n">copied_nodes</span> <span class="o">=</span> <span class="p">[]</span>
                 <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes_out_env</span><span class="p">:</span>
-                    <span class="n">new_node</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_shape</span><span class="p">,</span>
+                    <span class="n">copied_node</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_shape</span><span class="p">,</span>
                                               <span class="n">axes_names</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">,</span>
                                               <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_result_copy&#39;</span><span class="p">,</span>
                                               <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
                                               <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-                    <span class="n">new_node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-                    <span class="n">copied_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_node</span><span class="p">)</span>
+                    <span class="n">copied_node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+                    <span class="n">copied_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">copied_node</span><span class="p">)</span>
+                    
+                    <span class="c1"># Change batch names so that they not coincide with</span>
+                    <span class="c1"># original batches, which gives dupliicate output batches</span>
+                    <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">copied_node</span><span class="o">.</span><span class="n">axes</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">ax</span><span class="o">.</span><span class="n">_batch</span><span class="p">:</span>
+                            <span class="n">ax</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;_copy&#39;</span>
                 
-                <span class="c1"># Connect with neighbours</span>
+                <span class="c1"># Connect copied nodes with neighbours</span>
                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">copied_nodes</span><span class="p">)):</span>
                     <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">):</span>
                         <span class="k">if</span> <span class="n">nodes_out_env</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">is_connected_to</span><span class="p">(</span><span class="n">nodes_out_env</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
@@ -1330,34 +1362,82 @@ title="Source repository"
                 
                 <span class="c1"># Contract with embedding matrices</span>
                 <span class="k">if</span> <span class="n">embedding_matrices</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">mats_nodes</span> <span class="o">=</span> <span class="p">[]</span>
                     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">nodes_out_env</span><span class="p">):</span>
+                        <span class="c1"># Reattach input edges</span>
                         <span class="n">node</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
+                        
+                        <span class="c1"># Create matrices</span>
                         <span class="n">mat_node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">tensor</span><span class="o">=</span><span class="n">embedding_matrices</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
                                         <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;output&#39;</span><span class="p">),</span>
                                         <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_result_mat&#39;</span><span class="p">,</span>
                                         <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
                                         <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                        
+                        <span class="c1"># Connect matrices to output nodes</span>
                         <span class="n">mat_node</span><span class="p">[</span><span class="s1">&#39;output&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
-                        <span class="n">nodes_out_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">mat_node</span> <span class="o">@</span> <span class="n">node</span>
+                        <span class="n">mats_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mat_node</span><span class="p">)</span>
+                    
+                    <span class="c1"># Connect matrices to copies</span>
+                    <span class="k">for</span> <span class="n">mat_node</span><span class="p">,</span> <span class="n">copied_node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">mats_nodes</span><span class="p">,</span> <span class="n">copied_nodes</span><span class="p">):</span>
+                        <span class="n">copied_node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">mat_node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
+                    
+                    <span class="c1"># Contract output nodes with matrices</span>
+                    <span class="n">nodes_out_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span>
+                        <span class="n">nodes_env</span><span class="o">=</span><span class="n">nodes_out_env</span><span class="p">,</span>
+                        <span class="n">input_nodes</span><span class="o">=</span><span class="n">mats_nodes</span><span class="p">,</span>
+                        <span class="n">inline_input</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
                 
                 <span class="c1"># Contract with mpo</span>
                 <span class="k">elif</span> <span class="n">mpo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">nodes_out_env</span><span class="p">)):</span>
-                        <span class="n">nodes_out_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes_out_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">@</span> <span class="n">mpo</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="c1"># Move all the connected component to the MPS network</span>
+                    <span class="n">mpo</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">move_to_network</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
                     
+                    <span class="c1"># Move uniform memory</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mpo</span><span class="p">,</span> <span class="n">UMPO</span><span class="p">):</span>
+                        <span class="n">mpo</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">move_to_network</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+                        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">mpo</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">:</span>
+                            <span class="n">node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="n">mpo</span><span class="o">.</span><span class="n">uniform_memory</span><span class="p">)</span>
+                    
+                    <span class="c1"># Connect MPO to MPS</span>
+                    <span class="k">for</span> <span class="n">mps_node</span><span class="p">,</span> <span class="n">mpo_node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">nodes_out_env</span><span class="p">,</span> <span class="n">mpo</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">):</span>
+                        <span class="c1"># Reattach input edges</span>
+                        <span class="n">mps_node</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
+                        <span class="n">mpo_node</span><span class="p">[</span><span class="s1">&#39;output&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">mps_node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
+                    
+                    <span class="c1"># Connect MPO to copies</span>
+                    <span class="k">for</span> <span class="n">copied_node</span><span class="p">,</span> <span class="n">mpo_node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">copied_nodes</span><span class="p">,</span> <span class="n">mpo</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">):</span>
+                        <span class="n">copied_node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">mpo_node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
+
+                    <span class="c1"># Contract MPO with MPS</span>
+                    <span class="n">nodes_out_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span>
+                        <span class="n">nodes_env</span><span class="o">=</span><span class="n">nodes_out_env</span><span class="p">,</span>
+                        <span class="n">input_nodes</span><span class="o">=</span><span class="n">mpo</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">,</span>
+                        <span class="n">inline_input</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                    
+                    <span class="c1"># Contract MPO left and right nodes</span>
                     <span class="k">if</span> <span class="n">mpo</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
                         <span class="n">nodes_out_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">mpo</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">@</span> <span class="n">nodes_out_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                         <span class="n">nodes_out_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes_out_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">@</span> <span class="n">mpo</span><span class="o">.</span><span class="n">_right_node</span>
                 
-                <span class="c1"># Reattach input edges of resultant output nodes and connect</span>
-                <span class="c1"># with copied nodes</span>
-                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">copied_nodes</span><span class="p">)):</span>
-                    <span class="n">nodes_out_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
-                    <span class="n">copied_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">nodes_out_env</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Reattach input edges of resultant output nodes and connect</span>
+                    <span class="c1"># with copied nodes</span>
+                    <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">copied_node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">nodes_out_env</span><span class="p">,</span> <span class="n">copied_nodes</span><span class="p">):</span>
+                        <span class="c1"># Reattach input edges</span>
+                        <span class="n">node</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
+                        
+                        <span class="c1"># Connect copies directly to output nodes</span>
+                        <span class="n">copied_node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
                 
-                <span class="c1"># Contract all output_nodes</span>
-                <span class="n">mats_out_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span><span class="n">nodes_out_env</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inline_contraction</span><span class="p">(</span><span class="n">mats_out_env</span><span class="p">)</span>
+                <span class="c1"># Contract output nodes with copies</span>
+                <span class="n">mats_out_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span>
+                    <span class="n">nodes_env</span><span class="o">=</span><span class="n">nodes_out_env</span><span class="p">,</span>
+                    <span class="n">input_nodes</span><span class="o">=</span><span class="n">copied_nodes</span><span class="p">,</span>
+                    <span class="n">inline_input</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                
+                <span class="c1"># Contract resultant matrices</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inline_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="o">=</span><span class="n">mats_out_env</span><span class="p">)</span>
             
         <span class="c1"># Contract periodic edge</span>
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">is_connected_to</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
@@ -1380,12 +1460,15 @@ title="Source repository"
     
 <div class="viewcode-block" id="MPS.norm"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.norm">[docs]</a>    <span class="k">def</span> <span class="nf">norm</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Computes the norm of the MPS. This method internally sets</span>
-<span class="sd">        ``in_features = []``, and calls the</span>
+<span class="sd">        Computes the norm of the MPS.</span>
+<span class="sd">        </span>
+<span class="sd">        This method internally sets ``in_features = []``, and calls the</span>
 <span class="sd">        :meth:`~tensorkrowch.TensorNetwork.forward` method with</span>
 <span class="sd">        ``marginalize_output = True``. Therefore, it may alter the behaviour</span>
 <span class="sd">        of the MPS if it is not :meth:`~tensorkrowch.TensorNetwork.reset`</span>
-<span class="sd">        afterwards.</span>
+<span class="sd">        afterwards. Also, if the MPS was contracted before with other arguments,</span>
+<span class="sd">        it should be ``reset`` before calling ``norm`` to avoid undesired</span>
+<span class="sd">        behaviour.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_nodes</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">unset_data_nodes</span><span class="p">()</span>
@@ -1393,6 +1476,87 @@ title="Source repository"
         
         <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">marginalize_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="MPS.partial_density"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.partial_density">[docs]</a>    <span class="k">def</span> <span class="nf">partial_density</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trace_sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns de partial density matrix, tracing out the sites specified</span>
+<span class="sd">        by ``trace_sites``.</span>
+<span class="sd">        </span>
+<span class="sd">        This method internally sets ``out_features = trace_sites``, and calls</span>
+<span class="sd">        the :meth:`~tensorkrowch.TensorNetwork.forward` method with</span>
+<span class="sd">        ``marginalize_output = True``. Therefore, it may alter the behaviour</span>
+<span class="sd">        of the MPS if it is not :meth:`~tensorkrowch.TensorNetwork.reset`</span>
+<span class="sd">        afterwards. Also, if the MPS was contracted before with other arguments,</span>
+<span class="sd">        it should be ``reset`` before calling ``partial_density`` to avoid</span>
+<span class="sd">        undesired behaviour.</span>
+<span class="sd">        </span>
+<span class="sd">        This method may also alter the attribute :attr:`n_batches` of the</span>
+<span class="sd">        :class:`MPS`.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        trace_sites : list[int] or tuple[int]</span>
+<span class="sd">            Sequence of nodes&#39; indices in the MPS. These indices specify the</span>
+<span class="sd">            nodes that should be traced to compute the density matrix. If</span>
+<span class="sd">            it is empty ``[]``, the total density matrix will be returned,</span>
+<span class="sd">            though this may be costly if :attr:`n_features` is big.</span>
+<span class="sd">        </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; mps = tk.models.MPS(n_features=4,</span>
+<span class="sd">        ...                     phys_dim=[2, 3, 4, 5],</span>
+<span class="sd">        ...                     bond_dim=5)</span>
+<span class="sd">        &gt;&gt;&gt; density = mps.partial_density(trace_sites=[0, 2])</span>
+<span class="sd">        &gt;&gt;&gt; density.shape</span>
+<span class="sd">        torch.Size([3, 5, 3, 5])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">trace_sites</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s1">&#39;`trace_sites` should be list[int] or tuple[int] type&#39;</span><span class="p">)</span>
+            
+        <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="n">trace_sites</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">site</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="s1">&#39;elements of `trace_sites` should be int type&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">site</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">site</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s1">&#39;Elements of `trace_sites` should be between 0 and &#39;</span>
+                    <span class="s1">&#39;(`n_features` - 1)&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_nodes</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">unset_data_nodes</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_features</span> <span class="o">=</span> <span class="n">trace_sites</span>
+        
+        <span class="c1"># Create dataset with all possible combinations for the input nodes</span>
+        <span class="c1"># so that they are kept sort of &quot;open&quot;</span>
+        <span class="n">dims</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_phys_dim</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_features</span><span class="p">])</span>
+        
+        <span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_in_features</span><span class="p">)):</span>
+            <span class="n">aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">dims</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">aux</span> <span class="o">=</span> <span class="n">aux</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dims</span><span class="p">[(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):]</span><span class="o">.</span><span class="n">prod</span><span class="p">())</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">aux</span> <span class="o">=</span> <span class="n">aux</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">dims</span><span class="p">[:</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">prod</span><span class="p">(),</span> <span class="mi">1</span><span class="p">)</span>
+            
+            <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">aux</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="n">dims</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        
+        <span class="n">n_dims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">dims</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">n_dims</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">n_dims</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">basis</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">dims</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">n_dims</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">basis</span><span class="p">(</span><span class="n">dat</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">dim</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">dat</span><span class="p">,</span> <span class="n">dim</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dims</span><span class="p">)</span>
+                    <span class="p">]</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">n_batches</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">marginalize_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">marginalize_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
         <span class="k">return</span> <span class="n">result</span></div>
 
 <div class="viewcode-block" id="MPS.canonicalize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.canonicalize">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>

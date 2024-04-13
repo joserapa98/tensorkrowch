@@ -24,7 +24,7 @@ import torch.nn as nn
 import tensorkrowch.operations as op
 from tensorkrowch.components import AbstractNode, Node, ParamNode
 from tensorkrowch.components import TensorNetwork
-from tensorkrowch.models import MPO
+from tensorkrowch.models import MPO, UMPO
 
 from tensorkrowch.utils import split_sequence_into_regions, random_unitary
 
@@ -779,20 +779,23 @@ class MPS(TensorNetwork):  # MARK: MPS
         return net
 
     def _input_contraction(self,
-                           nodes_env: List[Node],
+                           nodes_env: List[AbstractNode],
+                           input_nodes: List[AbstractNode],
                            inline_input: bool = False) -> Tuple[
                                                        Optional[List[Node]],
                                                        Optional[List[Node]]]:
         """Contracts input data nodes with MPS input nodes."""
         if inline_input:
-            mats_result = [node['input'].contract() for node in nodes_env]
+            mats_result = [
+                node @ in_node
+                for node, in_node in zip(nodes_env, input_nodes)
+                ]
             return mats_result
 
         else:
             if nodes_env:
                 stack = op.stack(nodes_env)
-                stack_data = op.stack(
-                    [node.neighbours('input') for node in nodes_env])
+                stack_data = op.stack(input_nodes)
 
                 stack ^ stack_data
 
@@ -803,20 +806,21 @@ class MPS(TensorNetwork):  # MARK: MPS
                 return []
 
     @staticmethod
-    def _inline_contraction(nodes: List[Node], from_left: bool = True) -> Node:
+    def _inline_contraction(mats_env: List[AbstractNode],
+                            from_left: bool = True) -> Node:
         """Contracts sequence of MPS nodes (matrices) inline."""
         if from_left:
-            result_node = nodes[0]
-            for node in nodes[1:]:
+            result_node = mats_env[0]
+            for node in mats_env[1:]:
                 result_node @= node
             return result_node
         else:
-            result_node = nodes[-1]
-            for node in nodes[-2::-1]:
+            result_node = mats_env[-1]
+            for node in mats_env[-2::-1]:
                 result_node = node @ result_node
             return result_node
 
-    def _contract_envs_inline(self, mats_env: List[Node]) -> Node:
+    def _contract_envs_inline(self, mats_env: List[AbstractNode]) -> Node:
         """Contracts nodes environments inline."""
         from_left = True
         if self._boundary == 'obc':
@@ -825,9 +829,9 @@ class MPS(TensorNetwork):  # MARK: MPS
             if mats_env[-1].neighbours('right') is self._right_node:
                 mats_env = mats_env + [self._right_node]
                 from_left = False
-        return self._inline_contraction(mats_env, from_left)
+        return self._inline_contraction(mats_env=mats_env, from_left=from_left)
 
-    def _aux_pairwise(self, nodes: List[Node]) -> Tuple[List[Node],
+    def _aux_pairwise(self, nodes: List[AbstractNode]) -> Tuple[List[Node],
     List[Node]]:
         """Contracts a sequence of MPS nodes (matrices) pairwise."""
         length = len(nodes)
@@ -851,10 +855,10 @@ class MPS(TensorNetwork):  # MARK: MPS
             return aux_nodes, leftover
         return nodes, []
 
-    def _pairwise_contraction(self, mats_nodes: List[Node]) -> Node:
+    def _pairwise_contraction(self, mats_env: List[AbstractNode]) -> Node:
         """Contracts nodes environments pairwise."""
-        length = len(mats_nodes)
-        aux_nodes = mats_nodes
+        length = len(mats_env)
+        aux_nodes = mats_env
         if length > 1:
             leftovers = []
             while length > 1:
@@ -895,13 +899,26 @@ class MPS(TensorNetwork):  # MARK: MPS
           dimensions can be passed, one for each output node. These matrices
           will connect the two ``"input"`` edges of the corresponding nodes.
         
-        * ``mpo``: If an :class:`MPO` is passed, it is assumed that the output
-          nodes of the MPS are already connected to the ``"output"`` edges of
-          the MPO nodes, and that the MPO nodes have been moved to the MPS, so
-          that all nodes belong to the MPS network. In this case, each MPO node
-          will connect the two ``"input"`` edges of the corresponding MPS nodes.
-          When calling ``mps(marginalize_output=True, mpo=mpo)``, this will
-          perform the MPS-MPO-MPS contraction at the output nodes of the MPS.
+        * ``mpo``: If an :class:`MPO` is passed, when calling
+          ``mps(marginalize_output=True, mpo=mpo)``, this will perform the
+          MPS-MPO-MPS contraction at the output nodes of the MPS. Therefore,
+          the MPO should have as many nodes as output nodes are in the MPS.
+          
+          After contraction, the MPS will still be connected to the MPO nodes
+          until these are manually disconnected.
+          
+          The provided MPO can also be already connected to the MPS before
+          contraction. In this case, it is assumed that the output nodes of the
+          MPS are connected to the ``"output"`` edges of the MPO nodes, and
+          that the MPO nodes have been moved to the MPS, so that all nodes
+          belong to the MPS network. In this case, each MPO node will connect
+          the two ``"input"`` edges of the corresponding MPS nodes.
+          
+          If the MPO nodes are not trainable, they can be de-parameterized
+          by doing ``mpo = mpo.parameterize(set_param=False, override=True)``.
+          This should be done before the contraction, or before connecting
+          the MPO nodes to the MPS, since the de-parameterized nodes are not
+          the same nodes as the original ``ParamNodes`` of the MPO.
         
         Parameters
         ----------
@@ -928,11 +945,9 @@ class MPS(TensorNetwork):  # MARK: MPS
             some :ref:`Embeddings` function.
         mpo : MPO, optional
             MPO that is to be contracted with the MPS at the output nodes, if
-            ``marginalize_output = True``. To do that, in contrast with how
-            ``embedding_matrices`` works, the MPS has to be already connected
-            to the MPO (at the output nodes). That is, the ``"output"`` edges
-            of the MPO nodes should be connected to the ``"input"`` edges of
-            the MPS output nodes. If there are no input nodes, the MPS-MPO-MPS
+            ``marginalize_output = True``. In this case, the ``"output"`` edges
+            of the MPO nodes will be connected to the ``"input"`` edges of the
+            MPS output nodes. If there are no input nodes, the MPS-MPO-MPS
             is performed by calling ``mps(marginalize_output=True, mpo=mpo)``,
             without passing extra data tensors.
 
@@ -976,14 +991,19 @@ class MPS(TensorNetwork):  # MARK: MPS
         in_regions = self.in_regions
         out_regions = self.out_regions
         
-        mats_in_env = self._input_contraction(self.in_env, inline_input)
+        mats_in_env = self._input_contraction(
+            nodes_env=self.in_env,
+            input_nodes=[node.neighbours('input') for node in self.in_env],
+            inline_input=inline_input)
         
         in_results = []
         for region in in_regions:      
             if inline_mats:
-                result = self._contract_envs_inline(mats_in_env[:len(region)])
+                result = self._contract_envs_inline(
+                    mats_env=mats_in_env[:len(region)])
             else:
-                result = self._pairwise_contraction(mats_in_env[:len(region)])
+                result = self._pairwise_contraction(
+                    mats_env=mats_in_env[:len(region)])
             
             mats_in_env = mats_in_env[len(region):]
             in_results.append(result)
@@ -1017,7 +1037,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             
             if not marginalize_output:
                 # Contract all output nodes sequentially
-                result = self._inline_contraction(nodes_out_env)
+                result = self._inline_contraction(mats_env=nodes_out_env)
             
             else:
                 # Copy output nodes sharing tensors
@@ -1031,7 +1051,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                     new_node.set_tensor_from(node)
                     copied_nodes.append(new_node)
                 
-                # Connect with neighbours
+                # Connect copied nodes with neighbours
                 for i in range(len(copied_nodes)):
                     if (i == 0) and (self._boundary == 'pbc'):
                         if nodes_out_env[i - 1].is_connected_to(nodes_out_env[i]):
@@ -1041,34 +1061,82 @@ class MPS(TensorNetwork):  # MARK: MPS
                 
                 # Contract with embedding matrices
                 if embedding_matrices is not None:
+                    mats_nodes = []
                     for i, node in enumerate(nodes_out_env):
+                        # Reattach input edges
                         node.reattach_edges(axes=['input'])
+                        
+                        # Create matrices
                         mat_node = Node(tensor=embedding_matrices[i],
                                         axes_names=('input', 'output'),
                                         name='virtual_result_mat',
                                         network=self,
                                         virtual=True)
+                        
+                        # Connect matrices to output nodes
                         mat_node['output'] ^ node['input']
-                        nodes_out_env[i] = mat_node @ node
+                        mats_nodes.append(mat_node)
+                    
+                    # Connect matrices to copies
+                    for mat_node, copied_node in zip(mats_nodes, copied_nodes):
+                        copied_node['input'] ^ mat_node['input']
+                    
+                    # Contract output nodes with matrices
+                    nodes_out_env = self._input_contraction(
+                        nodes_env=nodes_out_env,
+                        input_nodes=mats_nodes,
+                        inline_input=True)
                 
                 # Contract with mpo
                 elif mpo is not None:
-                    for i in range(len(nodes_out_env)):
-                        nodes_out_env[i] = nodes_out_env[i] @ mpo._mats_env[i]
+                    # Move all the connected component to the MPS network
+                    mpo._mats_env[0].move_to_network(self)
                     
+                    # Move uniform memory
+                    if isinstance(mpo, UMPO):
+                        mpo.uniform_memory.move_to_network(self)
+                        for node in mpo._mats_env:
+                            node.set_tensor_from(mpo.uniform_memory)
+                    
+                    # Connect MPO to MPS
+                    for mps_node, mpo_node in zip(nodes_out_env, mpo._mats_env):
+                        # Reattach input edges
+                        mps_node.reattach_edges(axes=['input'])
+                        mpo_node['output'] ^ mps_node['input']
+                    
+                    # Connect MPO to copies
+                    for copied_node, mpo_node in zip(copied_nodes, mpo._mats_env):
+                        copied_node['input'] ^ mpo_node['input']
+
+                    # Contract MPO with MPS
+                    nodes_out_env = self._input_contraction(
+                        nodes_env=nodes_out_env,
+                        input_nodes=mpo._mats_env,
+                        inline_input=True)
+                    
+                    # Contract MPO left and right nodes
                     if mpo._boundary == 'obc':
                         nodes_out_env[0] = mpo._left_node @ nodes_out_env[0]
                         nodes_out_env[-1] = nodes_out_env[-1] @ mpo._right_node
                 
-                # Reattach input edges of resultant output nodes and connect
-                # with copied nodes
-                for i in range(len(copied_nodes)):
-                    nodes_out_env[i].reattach_edges(axes=['input'])
-                    copied_nodes[i]['input'] ^ nodes_out_env[i]['input']
+                else:
+                    # Reattach input edges of resultant output nodes and connect
+                    # with copied nodes
+                    for node, copied_node in zip(nodes_out_env, copied_nodes):
+                        # Reattach input edges
+                        node.reattach_edges(axes=['input'])
+                        
+                        # Connect copies directly to output nodes
+                        copied_node['input'] ^ node['input']
                 
-                # Contract all output_nodes
-                mats_out_env = self._input_contraction(nodes_out_env, True)
-                result = self._inline_contraction(mats_out_env)
+                # Contract output nodes with copies
+                mats_out_env = self._input_contraction(
+                    nodes_env=nodes_out_env,
+                    input_nodes=copied_nodes,
+                    inline_input=True)
+                
+                # Contract resultant matrices
+                result = self._inline_contraction(mats_env=mats_out_env)
             
         # Contract periodic edge
         if result.is_connected_to(result):

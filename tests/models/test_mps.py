@@ -925,13 +925,6 @@ class TestMPS:  # MARK: TestMPS
                     
                     # De-parameterize MPO nodes to only train MPS nodes
                     mpo = mpo.parameterize(set_param=False, override=True)
-                    
-                    # This moves all the connected component
-                    mpo.mats_env[0].move_to_network(mps)
-                    
-                    # Connect MPO to MPS
-                    for mpo_node, mps_node in zip(mpo.mats_env, mps.out_env):
-                        mpo_node['output'] ^ mps_node['input']
 
                     for auto_stack in [True, False]:
                         for auto_unbind in [True, False]:
@@ -1018,13 +1011,6 @@ class TestMPS:  # MARK: TestMPS
                     
                     # De-parameterize MPO nodes to only train MPS nodes
                     mpo = mpo.parameterize(set_param=False, override=True)
-                    
-                    # This moves all the connected component
-                    mpo.mats_env[0].move_to_network(mps)
-                    
-                    # Connect MPO to MPS
-                    for mpo_node, mps_node in zip(mpo.mats_env, mps.out_env):
-                        mpo_node['output'] ^ mps_node['input']
 
                     for auto_stack in [True, False]:
                         for auto_unbind in [True, False]:

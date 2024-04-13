@@ -25,7 +25,7 @@ import tensorkrowch.operations as op
 from tensorkrowch.components import AbstractNode, Node, ParamNode
 from tensorkrowch.components import TensorNetwork
 from tensorkrowch.models import MPO, UMPO
-
+from tensorkrowch.embeddings import basis
 from tensorkrowch.utils import split_sequence_into_regions, random_unitary
 
 
@@ -1171,12 +1171,15 @@ class MPS(TensorNetwork):  # MARK: MPS
     
     def norm(self) -> torch.Tensor:
         """
-        Computes the norm of the MPS. This method internally sets
-        ``in_features = []``, and calls the
+        Computes the norm of the MPS.
+        
+        This method internally sets ``in_features = []``, and calls the
         :meth:`~tensorkrowch.TensorNetwork.forward` method with
         ``marginalize_output = True``. Therefore, it may alter the behaviour
         of the MPS if it is not :meth:`~tensorkrowch.TensorNetwork.reset`
-        afterwards.
+        afterwards. Also, if the MPS was contracted before with other arguments,
+        it should be ``reset`` before calling ``norm`` to avoid undesired
+        behaviour.
         """
         if self._data_nodes:
             self.unset_data_nodes()
@@ -1184,6 +1187,87 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         result = self.forward(marginalize_output=True)
         result = result.sqrt()
+        return result
+
+    def partial_density(self, trace_sites: Sequence[int] = []) -> torch.Tensor:
+        """
+        Returns de partial density matrix, tracing out the sites specified
+        by ``trace_sites``.
+        
+        This method internally sets ``out_features = trace_sites``, and calls
+        the :meth:`~tensorkrowch.TensorNetwork.forward` method with
+        ``marginalize_output = True``. Therefore, it may alter the behaviour
+        of the MPS if it is not :meth:`~tensorkrowch.TensorNetwork.reset`
+        afterwards. Also, if the MPS was contracted before with other arguments,
+        it should be ``reset`` before calling ``partial_density`` to avoid
+        undesired behaviour.
+        
+        This method may also alter the attribute :attr:`n_batches` of the
+        :class:`MPS`.
+        
+        Parameters
+        ----------
+        trace_sites : list[int] or tuple[int]
+            Sequence of nodes' indices in the MPS. These indices specify the
+            nodes that should be traced to compute the density matrix. If
+            it is empty ``[]``, the total density matrix will be returned,
+            though this may be costly if :attr:`n_features` is big.
+        
+        Examples
+        --------
+        >>> mps = tk.models.MPS(n_features=4,
+        ...                     phys_dim=[2, 3, 4, 5],
+        ...                     bond_dim=5)
+        >>> density = mps.partial_density(trace_sites=[0, 2])
+        >>> density.shape
+        torch.Size([3, 5, 3, 5])
+        """
+        if not isinstance(trace_sites, Sequence):
+            raise TypeError(
+                '`trace_sites` should be list[int] or tuple[int] type')
+            
+        for site in trace_sites:
+            if not isinstance(site, int):
+                raise TypeError(
+                    'elements of `trace_sites` should be int type')
+            if (site < 0) or (site >= self._n_features):
+                raise ValueError(
+                    'Elements of `trace_sites` should be between 0 and '
+                    '(`n_features` - 1)')
+        
+        if self._data_nodes:
+            self.unset_data_nodes()
+        self.out_features = trace_sites
+        
+        # Create dataset with all possible combinations for the input nodes
+        # so that they are kept sort of "open"
+        dims = torch.tensor([self._phys_dim[i] for i in self._in_features])
+        
+        data = []
+        for i in range(len(self._in_features)):
+            aux = torch.arange(dims[i]).view(-1, 1)
+            aux = aux.repeat(1, dims[(i + 1):].prod()).flatten().view(-1, 1)
+            aux = aux.repeat(dims[:i].prod(), 1)
+            
+            data.append(aux.reshape(*dims, 1))
+        
+        n_dims = len(set(dims))
+        if n_dims >= 1:
+            if n_dims == 1:
+                data = torch.cat(data, dim=-1)
+                data = basis(data, dim=dims[0]).float().to(self.in_env[0].device)
+            elif n_dims > 1:
+                data = [
+                    basis(dat, dim=dim).squeeze(-2).float().to(self.in_env[0].device)
+                    for dat, dim in zip(data, dims)
+                    ]
+            
+            self.n_batches = len(dims)
+            result = self.forward(data, marginalize_output=True)
+            
+        else:
+            result = self.forward(marginalize_output=True)
+        
         return result
 
     @torch.no_grad()

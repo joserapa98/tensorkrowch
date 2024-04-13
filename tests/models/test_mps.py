@@ -667,7 +667,7 @@ class TestMPS:  # MARK: TestMPS
                                              marginalize_output=True)
 
                                 if in_features:
-                                    assert result.shape == (100,)
+                                    assert result.shape == (100, 100)
                                     
                                     if not inline_input and auto_stack:
                                         assert len(mps.virtual_nodes) == \
@@ -735,7 +735,7 @@ class TestMPS:  # MARK: TestMPS
                                              embedding_matrices=embedding_matrices)
 
                                 if in_features:
-                                    assert result.shape == (100,)
+                                    assert result.shape == (100, 100)
                                     
                                     if not inline_input and auto_stack:
                                         assert len(mps.virtual_nodes) == \
@@ -801,7 +801,7 @@ class TestMPS:  # MARK: TestMPS
                                              embedding_matrices=embedding_matrix)
 
                                 if in_features:
-                                    assert result.shape == (100,)
+                                    assert result.shape == (100, 100)
                                     
                                     if not inline_input and auto_stack:
                                         assert len(mps.virtual_nodes) == \
@@ -870,7 +870,7 @@ class TestMPS:  # MARK: TestMPS
                                              embedding_matrices=embedding_matrix)
 
                                 if in_features:
-                                    assert result.shape == (100,)
+                                    assert result.shape == (100, 100)
                                     
                                     if not inline_input and auto_stack:
                                         assert len(mps.virtual_nodes) == \
@@ -945,7 +945,7 @@ class TestMPS:  # MARK: TestMPS
                                                  mpo=mpo)
                                     
                                     if in_features:
-                                        assert result.shape == (100,)
+                                        assert result.shape == (100, 100)
                                     else:
                                         assert result.shape == tuple()
                                     
@@ -1031,7 +1031,7 @@ class TestMPS:  # MARK: TestMPS
                                                  mpo=mpo)
                                     
                                     if in_features:
-                                        assert result.shape == (100,)
+                                        assert result.shape == (100, 100)
                                     else:
                                         assert result.shape == tuple()
                                     
@@ -1147,7 +1147,7 @@ class TestMPS:  # MARK: TestMPS
                     assert mps.data_nodes
                 assert mps.in_features == in_features
                 
-                # MPS has to be rese, otherwise norm automatically calls
+                # MPS has to be reset, otherwise norm automatically calls
                 # the forward method that was traced when contracting the MPS
                 # with example
                 mps.reset()
@@ -1158,6 +1158,56 @@ class TestMPS:  # MARK: TestMPS
                 assert mps.out_features == list(range(n_features))
                 
                 norm.sum().backward()
+                for node in mps.mats_env:
+                    assert node.grad is not None
+     
+    def test_partial_density(self):
+        for n_features in [3, 4, 5]:
+            for boundary in ['obc', 'pbc']:
+                print(n_features, boundary)
+                phys_dim = torch.randint(low=2, high=12,
+                                         size=(n_features,)).tolist()
+                bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
+                bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
+                
+                trace_sites = torch.randint(low=0,
+                                            high=n_features,
+                                            size=(n_features // 2,)).tolist()
+                
+                mps = tk.models.MPS(n_features=n_features,
+                                    phys_dim=phys_dim,
+                                    bond_dim=bond_dim,
+                                    boundary=boundary,
+                                    in_features=trace_sites)
+                
+                in_dims = [phys_dim[i] for i in mps.in_features]
+                example = [torch.randn(1, d) for d in in_dims]
+                if example == []:
+                    example = None
+                
+                mps.trace(example)
+                
+                assert mps.resultant_nodes
+                if trace_sites:
+                    assert mps.data_nodes
+                assert set(mps.in_features) == set(trace_sites)
+                
+                # MPS has to be reset, otherwise partial_density automatically
+                # calls the forward method that was traced when contracting the
+                # MPS with example
+                mps.reset()
+                
+                # Here, trace_sites are now the out_features,
+                # not the in_features
+                density = mps.partial_density(trace_sites)
+                assert mps.resultant_nodes
+                assert mps.data_nodes
+                assert set(mps.out_features) == set(trace_sites)
+                
+                assert density.shape == \
+                    tuple([phys_dim[i] for i in mps.in_features] * 2)
+                
+                density.sum().backward()
                 for node in mps.mats_env:
                     assert node.grad is not None
     
@@ -1571,7 +1621,7 @@ class TestUMPS:  # MARK: TestUMPS
                                          marginalize_output=True)
 
                             if in_features:
-                                assert result.shape == (100,)
+                                assert result.shape == (100, 100)
                                 assert len(mps.virtual_nodes) == \
                                     (2 + len(mps.out_features))  
                             else:
@@ -1640,7 +1690,8 @@ class TestUMPS:  # MARK: TestUMPS
     
     def test_norm(self):
         for n_features in [1, 2, 3, 4, 10]:
-            example = torch.randn(1, n_features // 2, 5) # batch x n_features x feature_dim
+            # batch x n_features x feature_dim
+            example = torch.randn(1, n_features // 2, 5)
             if example.numel() == 0:
                 example = None
             
@@ -1675,6 +1726,50 @@ class TestUMPS:  # MARK: TestUMPS
             for node in mps.mats_env:
                 assert node.grad is not None
             assert mps.uniform_memory.grad is not None
+    
+    def test_partial_density(self):
+        for n_features in [3, 4, 5]:
+            phys_dim = torch.randint(low=2, high=12, size=(1,)).item()
+            bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
+            
+            trace_sites = torch.randint(low=0,
+                                        high=n_features,
+                                        size=(n_features // 2,)).tolist()
+            
+            mps = tk.models.UMPS(n_features=n_features,
+                                 phys_dim=phys_dim,
+                                 bond_dim=bond_dim,
+                                 in_features=trace_sites)
+            
+            # batch x n_features x feature_dim
+            example = torch.randn(1, n_features // 2, phys_dim)
+            if example.numel() == 0:
+                example = None
+            
+            mps.trace(example)
+            
+            assert mps.resultant_nodes
+            if trace_sites:
+                assert mps.data_nodes
+            assert set(mps.in_features) == set(trace_sites)
+            
+            # MPS has to be reset, otherwise partial_density automatically
+            # calls the forward method that was traced when contracting the
+            # MPS with example
+            mps.reset()
+            
+            # Here, trace_sites are now the out_features,
+            # not the in_features
+            density = mps.partial_density(trace_sites)
+            assert mps.resultant_nodes
+            assert mps.data_nodes
+            assert set(mps.out_features) == set(trace_sites)
+            
+            assert density.shape == (phys_dim,) * 2 * len(mps.in_features)
+            
+            density.sum().backward()
+            for node in mps.mats_env:
+                assert node.grad is not None
     
     def test_canonicalize_error(self):
         mps = tk.models.UMPS(n_features=10,

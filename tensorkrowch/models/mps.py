@@ -1281,11 +1281,20 @@ class MPS(TensorNetwork):  # MARK: MPS
         r"""
         Turns MPS into canonical form via local SVD/QR decompositions.
         
+        To specify the new bond dimensions, the arguments ``rank``,
+        ``cum_percentage`` or ``cutoff`` can be specified. These will be used
+        equally for all SVD computations.
+        
+        If none of them are specified, the bond dimensions won't be modified
+        if possible. Only when the bond dimension is bigger than the physical
+        dimension multiplied by the other bond dimension of the node, it will
+        be cropped to that size.
+        
         Parameters
         ----------
         oc : int
             Position of the orthogonality center. It should be between 0 and 
-            ``n_features -1``.
+            ``n_features - 1``.
         mode : {"svd", "svdr", "qr"}
             Indicates which decomposition should be used to split a node after
             contracting it. See more at :func:`~tensorkrowch.svd_`,
@@ -1330,9 +1339,9 @@ class MPS(TensorNetwork):  # MARK: MPS
 
         if oc is None:
             oc = self._n_features - 1
-        elif oc >= self._n_features:
-            raise ValueError(f'Orthogonality center position `oc` should be '
-                             f'between 0 and {self._n_features - 1}')
+        elif (oc < 0) or (oc >= self._n_features):
+            raise ValueError('Orthogonality center position `oc` should be '
+                             'between 0 and `n_features` - 1')
         
         log_norm = 0
         
@@ -1343,17 +1352,23 @@ class MPS(TensorNetwork):  # MARK: MPS
             nodes[-1].tensor[..., 1:] = torch.zeros_like(
                 nodes[-1].tensor[..., 1:])
         
+        # If mode is svd or svr and none of the args is provided, the ranks are
+        # kept as they were originally
+        keep_rank = False
+        if (rank is None) and (cum_percentage is None) and (cutoff is None):
+            keep_rank = True
+        
         for i in range(oc):
             if mode == 'svd':
                 result1, result2 = nodes[i]['right'].svd_(
                     side='right',
-                    rank=rank,
+                    rank=nodes[i]['right'].size() if keep_rank else rank,
                     cum_percentage=cum_percentage,
                     cutoff=cutoff)
             elif mode == 'svdr':
                 result1, result2 = nodes[i]['right'].svdr_(
                     side='right',
-                    rank=rank,
+                    rank=nodes[i]['right'].size() if keep_rank else rank,
                     cum_percentage=cum_percentage,
                     cutoff=cutoff)
             elif mode == 'qr':
@@ -1375,13 +1390,13 @@ class MPS(TensorNetwork):  # MARK: MPS
             if mode == 'svd':
                 result1, result2 = nodes[i]['left'].svd_(
                     side='left',
-                    rank=rank,
+                    rank=nodes[i]['left'].size() if keep_rank else rank,
                     cum_percentage=cum_percentage,
                     cutoff=cutoff)
             elif mode == 'svdr':
                 result1, result2 = nodes[i]['left'].svdr_(
                     side='left',
-                    rank=rank,
+                    rank=nodes[i]['left'].size() if keep_rank else rank,
                     cum_percentage=cum_percentage,
                     cutoff=cutoff)
             elif mode == 'qr':

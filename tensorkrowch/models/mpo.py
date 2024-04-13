@@ -637,20 +637,26 @@ class MPO(TensorNetwork):  # MARK: MPO
         """
         Contracts the whole MPO with input data nodes. The input can be in the
         form of an :class:`MPSData`, which may be convenient for tensorizing
-        vector - matrix multiplication in the form of MPS-MPO contraction.
+        vector-matrix multiplication in the form of MPS-MPO contraction.
         
-        If the ``MPO`` is contracted with a ``MPSData``, it is recommended that
-        the MPS nodes are moved to the MPO network before connecting the
-        corresponding nodes.
+        If the ``MPO`` is contracted with a ``MPSData``, MPS nodes will become
+        part of the MPO network, and they will be connected to the ``"input"``
+        edges of the MPO. Thus, the MPs and the MPO should have the same number
+        of features (``n_features``).
         
-        Also, in this case, if any of the contraction arguments, ``inline_input``
-        or ``inline_mats``, is set to ``False``, the MPO (already connected to
-        the MPS) should be :meth:`~tensorkrowch.TensorNetwork.reset` before
-        contraction if new data is set into the ``MPSData`` nodes. This is
-        because :class:`MPSData` admits data tensors with different bond
-        dimensions for each iteration, and this may cause undesired behaviour
-        when reusing some information of previous calls to
-        :func:~tensorkrowch.stack` with the previous data tensors.
+        Even though it is not necessary to connect the ``MPSData`` nodes to the
+        MPo nodes by hand before contraction, it can be done. However, one
+        should first move the MPS nodes to the MPO network.
+        
+        Also, when contraction the MPO with and ``MPSData``, if any of th
+        arguments, ``inline_input`` or ``inline_mats``, is set to ``False``,
+        the MPO (already connected to the MPS) should be
+        :meth:`~tensorkrowch.TensorNetwork.reset` before contraction if new
+        data is set into the ``MPSData`` nodes. This is because :class:`MPSData`
+        admits data tensors with different bond dimensions for each iteration,
+        and this may cause undesired behaviour when reusing some information of
+        previous calls to :func:~tensorkrowch.stack` with the previous data
+        tensors.
         
         To perform the MPS-MPO contraction, first input data tensors have to
         be put into the :class:`MPSData` via :meth:`MPSData.add_data`. Then,
@@ -669,8 +675,7 @@ class MPO(TensorNetwork):  # MARK: MPO
             after contracting the input ``data`` nodes) should be contracted
             inline or as a sequence of pairwise stacked contrations.
         mps : MPSData, optional
-            MPS that is to be contracted with the MPO. To do that, the MPS has
-            to be already connected to the MPO. In this case, new data can be
+            MPS that is to be contracted with the MPO. New data can be
             put into the MPS via :meth:`MPSData.add_data`, and the MPS-MPO
             contraction is performed by calling ``mpo(mps=mps_data)``, without
             passing the input data again, as it is already stored in the MPS
@@ -686,6 +691,13 @@ class MPO(TensorNetwork):  # MARK: MPO
             if mps._n_features != self._n_features:
                 raise ValueError(
                     '`mps` should have as many features as the MPO')
+            
+            # Move MPSData ndoes to self
+            mps._mats_env[0].move_to_network(self)
+            
+            # Connect mps nodes to mpo nodes
+            for mps_node, mpo_node in zip(mps._mats_env, self._mats_env):
+                mps_node['feature'] ^ mpo_node['input']
                 
         mats_env = self._input_contraction(self._mats_env, inline_input)
         

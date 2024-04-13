@@ -1211,6 +1211,55 @@ class TestMPS:  # MARK: TestMPS
                 for node in mps.mats_env:
                     assert node.grad is not None
     
+    def test_mutual_information(self):
+        for n_features in [1, 2, 3, 4, 10]:
+            for boundary in ['obc', 'pbc']:
+                for middle_site in range(n_features - 1):
+                    bond_dim = torch.randint(low=2, high=10,
+                                             size=(n_features,)).tolist()
+                    bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
+                                
+                    mps = tk.models.MPS(n_features=n_features,
+                                        phys_dim=2,
+                                        bond_dim=bond_dim,
+                                        boundary=boundary,
+                                        in_features=[])
+                    
+                    mps_tensor = mps()
+                    assert mps_tensor.shape == (2,) * n_features
+                    
+                    mps.out_features = []
+                    example = torch.randn(1, n_features, 2)
+                    mps.trace(example)
+                    
+                    if mps.boundary == 'obc':
+                        assert len(mps.leaf_nodes) == n_features + 2
+                    else:
+                        assert len(mps.leaf_nodes) == n_features
+                    assert len(mps.data_nodes) == n_features
+                    
+                    # Mutual Information
+                    scaled_mi, log_norm = mps.mi(middle_site=middle_site,
+                                                 renormalize=True)
+                    mi = mps.mi(middle_site=middle_site,
+                                renormalize=False)
+                    
+                    assert all([mps.bond_dim[i] <= bond_dim[i]
+                                for i in range(len(bond_dim))])
+                    
+                    assert torch.isclose(mi, log_norm.exp() * scaled_mi)
+                    
+                    if mps.boundary == 'obc':
+                        assert len(mps.leaf_nodes) == n_features + 2
+                    else:
+                        assert len(mps.leaf_nodes) == n_features
+                    assert len(mps.data_nodes) == n_features
+                    
+                    mps.unset_data_nodes()
+                    mps.in_features = []
+                    approx_mps_tensor = mps()
+                    assert approx_mps_tensor.shape == (2,) * n_features
+    
     def test_canonicalize(self):
         for n_features in [1, 2, 3, 4, 10]:
             for boundary in ['obc', 'pbc']:

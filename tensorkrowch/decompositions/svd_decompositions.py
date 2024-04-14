@@ -94,8 +94,8 @@ def vec_to_mps(vec: torch.Tensor,
         lst_ranks = []
         
         if rank is None:
-            rank = s.shape[-1]
-            lst_ranks.append(rank)
+            aux_rank = s.shape[-1]
+            lst_ranks.append(aux_rank)
         else:
             lst_ranks.append(min(max(1, int(rank)), s.shape[-1]))
             
@@ -118,18 +118,18 @@ def vec_to_mps(vec: torch.Tensor,
             lst_ranks.append(max(1, co_rank.item()))
         
         # Select rank from specified restrictions
-        rank = min(lst_ranks)
+        aux_rank = min(lst_ranks)
         
-        u = u[..., :rank]
+        u = u[..., :aux_rank]
         if i > 0:
-            u = u.reshape(*batches_shape, prev_bond, phys_dims[i], rank)
+            u = u.reshape(*batches_shape, prev_bond, phys_dims[i], aux_rank)
             
-        s = s[..., :rank]
-        vh = vh[..., :rank, :]
+        s = s[..., :aux_rank]
+        vh = vh[..., :aux_rank, :]
         vh = torch.diag_embed(s) @ vh
         
         tensors.append(u)
-        prev_bond = rank
+        prev_bond = aux_rank
         vec = torch.diag_embed(s) @ vh
         
     tensors.append(vec)
@@ -204,8 +204,8 @@ def mat_to_mpo(mat: torch.Tensor,
         lst_ranks = []
         
         if rank is None:
-            rank = s.shape[-1]
-            lst_ranks.append(rank)
+            aux_rank = s.shape[-1]
+            lst_ranks.append(aux_rank)
         else:
             lst_ranks.append(min(max(1, int(rank)), s.shape[-1]))
             
@@ -228,24 +228,24 @@ def mat_to_mpo(mat: torch.Tensor,
             lst_ranks.append(max(1, co_rank.item()))
         
         # Select rank from specified restrictions
-        rank = min(lst_ranks)
+        aux_rank = min(lst_ranks)
         
-        u = u[..., :rank]
+        u = u[..., :aux_rank]
         if i == 0:
-            u = u.reshape(in_out_dims[i], in_out_dims[i + 1], rank)
+            u = u.reshape(in_out_dims[i], in_out_dims[i + 1], aux_rank)
             u = u.permute(0, 2, 1) # left x input x right
         else:
-            u = u.reshape(prev_bond, in_out_dims[i], in_out_dims[i + 1], rank)
+            u = u.reshape(prev_bond, in_out_dims[i], in_out_dims[i + 1], aux_rank)
             u = u.permute(0, 1, 3, 2) # left x input x right x output
             
-        s = s[..., :rank]
-        vh = vh[..., :rank, :]
+        s = s[..., :aux_rank]
+        vh = vh[..., :aux_rank, :]
         vh = torch.diag_embed(s) @ vh
         
         tensors.append(u)
-        prev_bond = rank
+        prev_bond = aux_rank
         mat = torch.diag_embed(s) @ vh
     
-    mat = mat.reshape(rank, in_out_dims[-2], in_out_dims[-1])
+    mat = mat.reshape(aux_rank, in_out_dims[-2], in_out_dims[-1])
     tensors.append(mat)
     return tensors

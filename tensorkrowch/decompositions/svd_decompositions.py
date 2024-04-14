@@ -106,7 +106,7 @@ def vec_to_mps(vec: torch.Tensor,
             cp_rank = torch.lt(
                 s_percentages,
                 cum_percentage_tensor
-                ).view(-1, s.shape[-1]).all(dim=0).sum()
+                ).view(-1, s.shape[-1]).any(dim=0).sum()
             lst_ranks.append(max(1, cp_rank.item() + 1))
             
         if cutoff is not None:
@@ -114,7 +114,7 @@ def vec_to_mps(vec: torch.Tensor,
             co_rank = torch.ge(
                 s,
                 cutoff_tensor
-                ).view(-1, s.shape[-1]).all(dim=0).sum()
+                ).view(-1, s.shape[-1]).any(dim=0).sum()
             lst_ranks.append(max(1, co_rank.item()))
         
         # Select rank from specified restrictions
@@ -216,7 +216,7 @@ def mat_to_mpo(mat: torch.Tensor,
             cp_rank = torch.lt(
                 s_percentages,
                 cum_percentage_tensor
-                ).view(-1, s.shape[-1]).all(dim=0).sum()
+                ).view(-1, s.shape[-1]).any(dim=0).sum()
             lst_ranks.append(max(1, cp_rank.item() + 1))
             
         if cutoff is not None:
@@ -224,7 +224,7 @@ def mat_to_mpo(mat: torch.Tensor,
             co_rank = torch.ge(
                 s,
                 cutoff_tensor
-                ).view(-1, s.shape[-1]).all(dim=0).sum()
+                ).view(-1, s.shape[-1]).any(dim=0).sum()
             lst_ranks.append(max(1, co_rank.item()))
         
         # Select rank from specified restrictions

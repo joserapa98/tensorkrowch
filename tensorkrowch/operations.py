@@ -1003,7 +1003,7 @@ def _split_first(node: AbstractNode,
             cp_rank = torch.lt(
                 s_percentages,
                 cum_percentage_tensor
-                ).view(-1, s.shape[-1]).all(dim=0).sum()
+                ).view(-1, s.shape[-1]).any(dim=0).sum()
             lst_ranks.append(max(1, cp_rank.item() + 1))
             
         if cutoff is not None:
@@ -1011,7 +1011,7 @@ def _split_first(node: AbstractNode,
             co_rank = torch.ge(
                 s,
                 cutoff_tensor
-                ).view(-1, s.shape[-1]).all(dim=0).sum()
+                ).view(-1, s.shape[-1]).any(dim=0).sum()
             lst_ranks.append(max(1, co_rank.item()))
         
         # Select rank from specified restrictions
@@ -1202,7 +1202,7 @@ def _split_next(successor: Successor,
             cp_rank = torch.lt(
                 s_percentages,
                 cum_percentage_tensor
-                ).view(-1, s.shape[-1]).all(dim=0).sum()
+                ).view(-1, s.shape[-1]).any(dim=0).sum()
             lst_ranks.append(max(1, cp_rank.item() + 1))
             
         if cutoff is not None:
@@ -1210,7 +1210,7 @@ def _split_next(successor: Successor,
             co_rank = torch.ge(
                 s,
                 cutoff_tensor
-                ).view(-1, s.shape[-1]).all(dim=0).sum()
+                ).view(-1, s.shape[-1]).any(dim=0).sum()
             lst_ranks.append(max(1, co_rank.item()))
         
         # Select rank from specified restrictions

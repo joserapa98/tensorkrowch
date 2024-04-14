@@ -14,7 +14,8 @@ def vec_to_mps(vec: torch.Tensor,
                n_batches: int = 0,
                rank: Optional[int] = None,
                cum_percentage: Optional[float] = None,
-               cutoff: Optional[float] = None) -> List[torch.Tensor]:
+               cutoff: Optional[float] = None,
+               renormalize: bool = False) -> List[torch.Tensor]:
     r"""
     Splits a vector into a sequence of MPS tensors via consecutive SVD
     decompositions. The resultant tensors can be used to instantiate a
@@ -67,6 +68,14 @@ def vec_to_mps(vec: torch.Tensor,
             cum\_percentage
     cutoff : float, optional
         Quantity that lower bounds singular values in order to be kept.
+    renormalize : bool
+            Indicates whether nodes should be renormalized after SVD/QR
+            decompositions. If not, it may happen that the norm explodes as it
+            is being accumulated from all nodes. Renormalization aims to avoid
+            this undesired behavior by extracting the norm of each node on a
+            logarithmic scale after SVD/QR decompositions are computed. Finally,
+            the normalization factor is evenly distributed among all nodes of
+            the MPS.
 
     Returns
     -------
@@ -82,6 +91,7 @@ def vec_to_mps(vec: torch.Tensor,
     batches_shape = vec.shape[:n_batches]
     phys_dims = torch.tensor(vec.shape[n_batches:])
     
+    log_norm = 0
     prev_bond = 1
     tensors = []
     for i in range(len(phys_dims) - 1):
@@ -126,6 +136,13 @@ def vec_to_mps(vec: torch.Tensor,
             
         s = s[..., :aux_rank]
         vh = vh[..., :aux_rank, :]
+        
+        if renormalize:
+            aux_norm = s.norm(dim=-1, keepdim=True)
+            if not aux_norm.isinf().any() and (aux_norm > 0).any():
+                s = s / aux_norm
+                log_norm += aux_norm.log()
+        
         vh = torch.diag_embed(s) @ vh
         
         tensors.append(u)
@@ -133,13 +150,21 @@ def vec_to_mps(vec: torch.Tensor,
         vec = torch.diag_embed(s) @ vh
         
     tensors.append(vec)
+    
+    if renormalize:
+        rescale = (log_norm / len(tensors)).exp()
+        for vec in tensors:
+            vec *= rescale.view(*vec.shape[:n_batches],
+                                *([1] * len(vec.shape[n_batches:])))
+    
     return tensors
 
 
 def mat_to_mpo(mat: torch.Tensor,
                rank: Optional[int] = None,
                cum_percentage: Optional[float] = None,
-               cutoff: Optional[float] = None) -> List[torch.Tensor]:
+               cutoff: Optional[float] = None,
+               renormalize: bool = False) -> List[torch.Tensor]:
     r"""
     Splits a matrix into a sequence of MPO tensors via consecutive SVD
     decompositions. The resultant tensors can be used to instantiate a
@@ -179,6 +204,14 @@ def mat_to_mpo(mat: torch.Tensor,
             cum\_percentage
     cutoff : float, optional
         Quantity that lower bounds singular values in order to be kept.
+    renormalize : bool
+            Indicates whether nodes should be renormalized after SVD/QR
+            decompositions. If not, it may happen that the norm explodes as it
+            is being accumulated from all nodes. Renormalization aims to avoid
+            this undesired behavior by extracting the norm of each node on a
+            logarithmic scale after SVD/QR decompositions are computed. Finally,
+            the normalization factor is evenly distributed among all nodes of
+            the MPS.
 
     Returns
     -------
@@ -193,6 +226,7 @@ def mat_to_mpo(mat: torch.Tensor,
     if len(in_out_dims) == 2:
         return [mat]
     
+    log_norm = 0
     prev_bond = 1
     tensors = []
     for i in range(0, len(in_out_dims) - 2, 2):
@@ -240,6 +274,13 @@ def mat_to_mpo(mat: torch.Tensor,
             
         s = s[..., :aux_rank]
         vh = vh[..., :aux_rank, :]
+        
+        if renormalize:
+            aux_norm = s.norm(dim=-1)
+            if not aux_norm.isinf() and (aux_norm > 0):
+                s = s / aux_norm
+                log_norm += aux_norm.log()
+        
         vh = torch.diag_embed(s) @ vh
         
         tensors.append(u)
@@ -248,4 +289,10 @@ def mat_to_mpo(mat: torch.Tensor,
     
     mat = mat.reshape(aux_rank, in_out_dims[-2], in_out_dims[-1])
     tensors.append(mat)
+    
+    if renormalize:
+        rescale = (log_norm / len(tensors)).exp()
+        for mat in tensors:
+            mat *= rescale
+    
     return tensors

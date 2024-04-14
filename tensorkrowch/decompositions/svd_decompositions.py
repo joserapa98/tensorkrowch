@@ -143,8 +143,6 @@ def vec_to_mps(vec: torch.Tensor,
                 s = s / aux_norm
                 log_norm += aux_norm.log()
         
-        vh = torch.diag_embed(s) @ vh
-        
         tensors.append(u)
         prev_bond = aux_rank
         vec = torch.diag_embed(s) @ vh
@@ -280,8 +278,6 @@ def mat_to_mpo(mat: torch.Tensor,
             if not aux_norm.isinf() and (aux_norm > 0):
                 s = s / aux_norm
                 log_norm += aux_norm.log()
-        
-        vh = torch.diag_embed(s) @ vh
         
         tensors.append(u)
         prev_bond = aux_rank

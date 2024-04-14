@@ -122,7 +122,7 @@ creating hybrid neural-tensor network models is straightforward:
 import torch.nn as nn
 
 my_model = nn.Sequential(
-    tk.models.MPSLayer(n_features=100,
+    tk.models.MPSLayer(n_features=101,
                        in_dim=3,
                        out_dim=10,
                        bond_dim=5),

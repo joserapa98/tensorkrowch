@@ -85,9 +85,9 @@ def vec_to_mps(vec: torch.Tensor,
     prev_bond = 1
     tensors = []
     for i in range(len(phys_dims) - 1):
-        vec = vec.view(*batches_shape,
-                       prev_bond * phys_dims[i],
-                       phys_dims[(i + 1):].prod())
+        vec = vec.reshape(*batches_shape,
+                          prev_bond * phys_dims[i],
+                          phys_dims[(i + 1):].prod())
         
         u, s, vh = torch.linalg.svd(vec, full_matrices=False)
         
@@ -196,8 +196,8 @@ def mat_to_mpo(mat: torch.Tensor,
     prev_bond = 1
     tensors = []
     for i in range(0, len(in_out_dims) - 2, 2):
-        mat = mat.view(prev_bond * in_out_dims[i] * in_out_dims[i + 1],
-                       in_out_dims[(i + 2):].prod())
+        mat = mat.reshape(prev_bond * in_out_dims[i] * in_out_dims[i + 1],
+                          in_out_dims[(i + 2):].prod())
         
         u, s, vh = torch.linalg.svd(mat, full_matrices=False)
         

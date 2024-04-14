@@ -460,8 +460,15 @@ class MPSData(TensorNetwork):  # MARK: MPSData
                     
             node._direct_set_tensor(data[i])
         
+        # Send left and right nodes to correct device
         if self._boundary == 'obc':
             if self._left_node.device != device:
                 self._left_node.tensor = self._left_node.tensor.to(device)
             if self._right_node.device != device:
                 self._right_node.tensor = self._right_node.tensor.to(device)
+        
+        # Update bond dim
+        if self._boundary == 'obc':
+            self._bond_dim = [node['right'].size() for node in self._mats_env[:-1]]
+        else:
+            self._bond_dim = [node['right'].size() for node in self._mats_env]

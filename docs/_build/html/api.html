@@ -181,6 +181,11 @@
      Embeddings
     </a>
    </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="decompositions.html">
+     Decompositions
+    </a>
+   </li>
   </ul>
  </li>
 </ul>
@@ -358,17 +363,22 @@ title="Print to PDF"
 <li class="toctree-l3"><a class="reference internal" href="operations.html#connect">connect</a></li>
 <li class="toctree-l3"><a class="reference internal" href="operations.html#connect-stack">connect_stack</a></li>
 <li class="toctree-l3"><a class="reference internal" href="operations.html#disconnect">disconnect</a></li>
-<li class="toctree-l3"><a class="reference internal" href="operations.html#svd">svd_</a></li>
-<li class="toctree-l3"><a class="reference internal" href="operations.html#svdr">svdr_</a></li>
-<li class="toctree-l3"><a class="reference internal" href="operations.html#qr">qr_</a></li>
-<li class="toctree-l3"><a class="reference internal" href="operations.html#rq">rq_</a></li>
-<li class="toctree-l3"><a class="reference internal" href="operations.html#contract">contract_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="operations.html#svd">svd</a></li>
+<li class="toctree-l3"><a class="reference internal" href="operations.html#id1">svd_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="operations.html#svdr">svdr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="operations.html#id2">svdr_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="operations.html#qr">qr</a></li>
+<li class="toctree-l3"><a class="reference internal" href="operations.html#id3">qr_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="operations.html#rq">rq</a></li>
+<li class="toctree-l3"><a class="reference internal" href="operations.html#id4">rq_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="operations.html#contract">contract</a></li>
+<li class="toctree-l3"><a class="reference internal" href="operations.html#id5">contract_</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="operations.html#operation-class">Operation Class</a></li>
 <li class="toctree-l2"><a class="reference internal" href="operations.html#tensor-like-operations">Tensor-like Operations</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="operations.html#permute">permute</a></li>
-<li class="toctree-l3"><a class="reference internal" href="operations.html#id2">permute_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="operations.html#id7">permute_</a></li>
 <li class="toctree-l3"><a class="reference internal" href="operations.html#tprod">tprod</a></li>
 <li class="toctree-l3"><a class="reference internal" href="operations.html#mul">mul</a></li>
 <li class="toctree-l3"><a class="reference internal" href="operations.html#add">add</a></li>
@@ -377,10 +387,10 @@ title="Print to PDF"
 </li>
 <li class="toctree-l2"><a class="reference internal" href="operations.html#node-like-operations">Node-like Operations</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="operations.html#split">split</a></li>
-<li class="toctree-l3"><a class="reference internal" href="operations.html#id4">split_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="operations.html#id9">split_</a></li>
 <li class="toctree-l3"><a class="reference internal" href="operations.html#contract-edges">contract_edges</a></li>
 <li class="toctree-l3"><a class="reference internal" href="operations.html#contract-between">contract_between</a></li>
-<li class="toctree-l3"><a class="reference internal" href="operations.html#id5">contract_between_</a></li>
+<li class="toctree-l3"><a class="reference internal" href="operations.html#id10">contract_between_</a></li>
 <li class="toctree-l3"><a class="reference internal" href="operations.html#stack">stack</a></li>
 <li class="toctree-l3"><a class="reference internal" href="operations.html#unbind">unbind</a></li>
 <li class="toctree-l3"><a class="reference internal" href="operations.html#einsum">einsum</a></li>
@@ -390,29 +400,35 @@ title="Print to PDF"
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="models.html">Models</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="models.html#mpslayer">MPSLayer</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="models.html#id1">MPSLayer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#mps">MPS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models.html#id1">MPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#umps">UMPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#mpslayer">MPSLayer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="models.html#umpslayer">UMPSLayer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#convmps">ConvMPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#convumps">ConvUMPS</a></li>
 <li class="toctree-l3"><a class="reference internal" href="models.html#convmpslayer">ConvMPSLayer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="models.html#convumpslayer">ConvUMPSLayer</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="models.html#mps">MPS</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="models.html#id18">MPS</a></li>
-<li class="toctree-l3"><a class="reference internal" href="models.html#umps">UMPS</a></li>
-<li class="toctree-l3"><a class="reference internal" href="models.html#convmps">ConvMPS</a></li>
-<li class="toctree-l3"><a class="reference internal" href="models.html#convumps">ConvUMPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#mpsdata">MPSData</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models.html#id35">MPSData</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#mpo">MPO</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models.html#id36">MPO</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#umpo">UMPO</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="models.html#tree">Tree</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="models.html#id38">Tree</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#id37">Tree</a></li>
 <li class="toctree-l3"><a class="reference internal" href="models.html#utree">UTree</a></li>
 <li class="toctree-l3"><a class="reference internal" href="models.html#convtree">ConvTree</a></li>
 <li class="toctree-l3"><a class="reference internal" href="models.html#convutree">ConvUTree</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="models.html#peps">PEPS</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="models.html#id55">PEPS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#id54">PEPS</a></li>
 <li class="toctree-l3"><a class="reference internal" href="models.html#upeps">UPEPS</a></li>
 <li class="toctree-l3"><a class="reference internal" href="models.html#convpeps">ConvPEPS</a></li>
 <li class="toctree-l3"><a class="reference internal" href="models.html#convupeps">ConvUPEPS</a></li>
@@ -433,6 +449,13 @@ title="Print to PDF"
 <li class="toctree-l2"><a class="reference internal" href="embeddings.html#unit">unit</a></li>
 <li class="toctree-l2"><a class="reference internal" href="embeddings.html#add-ones">add_ones</a></li>
 <li class="toctree-l2"><a class="reference internal" href="embeddings.html#poly">poly</a></li>
+<li class="toctree-l2"><a class="reference internal" href="embeddings.html#discretize">discretize</a></li>
+<li class="toctree-l2"><a class="reference internal" href="embeddings.html#basis">basis</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="decompositions.html">Decompositions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="decompositions.html#vec-to-mps">vec_to_mps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="decompositions.html#mat-to-mpo">mat_to_mpo</a></li>
 </ul>
 </li>
 </ul>

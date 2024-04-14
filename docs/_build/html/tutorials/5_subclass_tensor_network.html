@@ -181,6 +181,11 @@
      Embeddings
     </a>
    </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../decompositions.html">
+     Decompositions
+    </a>
+   </li>
   </ul>
  </li>
 </ul>
@@ -605,7 +610,7 @@ images:</p>
         <span class="n">stack_input</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_nodes</span><span class="p">)</span>
         <span class="n">stack_data</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
 
-        <span class="n">stack_input</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack_data</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>
+        <span class="n">stack_input</span> <span class="o">^</span> <span class="n">stack_data</span>
         <span class="n">stack_result</span> <span class="o">=</span> <span class="n">stack_input</span> <span class="o">@</span> <span class="n">stack_data</span>
 
         <span class="n">stack_result</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">stack_result</span><span class="p">)</span>
@@ -628,7 +633,7 @@ images:</p>
 </div>
 <p>Since our model is a subclass of <code class="docutils literal notranslate"><span class="pre">torch.nn.Module</span></code>, we can take advantage of
 its methods. For instance, we can easily send the model to the GPU:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda:0&#39;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
 <span class="n">mps</span> <span class="o">=</span> <span class="n">mps</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -706,6 +711,7 @@ already comes with a handful of widely-known models that you can use:</p>
 <ul class="simple">
 <li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></p></li>
 <li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">MPSLayer</span></code></p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">MPO</span></code></p></li>
 <li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">PEPS</span></code></p></li>
 <li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Tree</span></code></p></li>
 </ul>

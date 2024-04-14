@@ -181,6 +181,11 @@
      Embeddings
     </a>
    </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../decompositions.html">
+     Decompositions
+    </a>
+   </li>
   </ul>
  </li>
 </ul>
@@ -380,10 +385,10 @@ starting from each side of the images (top, bottom, left, right).</p>
                 <span class="n">in_channels</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span>
                 <span class="n">bond_dim</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">,</span>
                 <span class="n">out_channels</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
-                <span class="n">kernel_size</span><span class="o">=</span><span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+                <span class="n">kernel_size</span><span class="o">=</span><span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span>
+                <span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;randn_eye&#39;</span><span class="p">,</span>
+                <span class="n">std</span><span class="o">=</span><span class="mf">1e-9</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mps</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">softmax</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Softmax</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">embedding</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
@@ -422,7 +427,7 @@ starting from each side of the images (top, bottom, left, right).</p>
 </pre></div>
 </div>
 <p>Initialize our model and send it to the appropiate device:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda:0&#39;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
 
 <span class="n">cnn_snake</span> <span class="o">=</span> <span class="n">CNN_SnakeSBS</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="n">bond_dim</span><span class="p">,</span> <span class="n">image_size</span><span class="p">)</span>
 <span class="n">cnn_snake</span> <span class="o">=</span> <span class="n">cnn_snake</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
@@ -531,14 +536,14 @@ transformations:</p>
               <span class="sa">f</span><span class="s1">&#39;Train. Acc.: </span><span class="si">{</span><span class="n">running_train_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">, &#39;</span>
               <span class="sa">f</span><span class="s1">&#39;Test Acc.: </span><span class="si">{</span><span class="n">running_test_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 
-<span class="c1"># * Epoch 10: Train. Loss: 0.3824, Train. Acc.: 0.8599, Test Acc.: 0.8570</span>
-<span class="c1"># * Epoch 20: Train. Loss: 0.3245, Train. Acc.: 0.8814, Test Acc.: 0.8758</span>
-<span class="c1"># * Epoch 30: Train. Loss: 0.2924, Train. Acc.: 0.8915, Test Acc.: 0.8829</span>
-<span class="c1"># * Epoch 40: Train. Loss: 0.2694, Train. Acc.: 0.8993, Test Acc.: 0.8884</span>
-<span class="c1"># * Epoch 50: Train. Loss: 0.2463, Train. Acc.: 0.9078, Test Acc.: 0.8860</span>
-<span class="c1"># * Epoch 60: Train. Loss: 0.2257, Train. Acc.: 0.9163, Test Acc.: 0.8958</span>
-<span class="c1"># * Epoch 70: Train. Loss: 0.2083, Train. Acc.: 0.9219, Test Acc.: 0.8969</span>
-<span class="c1"># * Epoch 80: Train. Loss: 0.2013, Train. Acc.: 0.9226, Test Acc.: 0.8979</span>
+<span class="c1"># * Epoch 10: Train. Loss: 0.3714, Train. Acc.: 0.8627, Test Acc.: 0.8502</span>
+<span class="c1"># * Epoch 20: Train. Loss: 0.3149, Train. Acc.: 0.8851, Test Acc.: 0.8795</span>
+<span class="c1"># * Epoch 30: Train. Loss: 0.2840, Train. Acc.: 0.8948, Test Acc.: 0.8848</span>
+<span class="c1"># * Epoch 40: Train. Loss: 0.2618, Train. Acc.: 0.9026, Test Acc.: 0.8915</span>
+<span class="c1"># * Epoch 50: Train. Loss: 0.2357, Train. Acc.: 0.9125, Test Acc.: 0.8901</span>
+<span class="c1"># * Epoch 60: Train. Loss: 0.2203, Train. Acc.: 0.9174, Test Acc.: 0.9009</span>
+<span class="c1"># * Epoch 70: Train. Loss: 0.2052, Train. Acc.: 0.9231, Test Acc.: 0.8984</span>
+<span class="c1"># * Epoch 80: Train. Loss: 0.1878, Train. Acc.: 0.9284, Test Acc.: 0.9011</span>
 </pre></div>
 </div>
 <p>Wow! That’s almost 90% accuracy with just the first model we try!</p>
@@ -546,13 +551,13 @@ transformations:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Original number of parametrs</span>
 <span class="n">n_params</span> <span class="o">=</span> <span class="mi">0</span>
 <span class="n">memory</span> <span class="o">=</span> <span class="mi">0</span>
-<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">mps</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
+<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">cnn_snake</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
     <span class="n">n_params</span> <span class="o">+=</span> <span class="n">p</span><span class="o">.</span><span class="n">nelement</span><span class="p">()</span>
     <span class="n">memory</span> <span class="o">+=</span> <span class="n">p</span><span class="o">.</span><span class="n">nelement</span><span class="p">()</span> <span class="o">*</span> <span class="n">p</span><span class="o">.</span><span class="n">element_size</span><span class="p">()</span>  <span class="c1"># Bytes</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Nº params:     </span><span class="si">{</span><span class="n">n_params</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Memory module: </span><span class="si">{</span><span class="n">memory</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="o">**</span><span class="mi">2</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1"> MB&#39;</span><span class="p">)</span>  <span class="c1"># MegaBytes</span>
 
-<span class="c1"># Nº params:     136940</span>
+<span class="c1"># Nº params:     553186</span>
 <span class="c1"># Memory module: 0.5224 MB</span>
 </pre></div>
 </div>
@@ -569,7 +574,21 @@ singular values, reducing the sizes of the edges in our network:</p>
 </pre></div>
 </div>
 <p>Let’s see how much our model has changed after pruning with <strong>canonical forms</strong>:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># New test accuracy</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Number of parametrs</span>
+<span class="n">n_params</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">memory</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">mps</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
+    <span class="n">n_params</span> <span class="o">+=</span> <span class="n">p</span><span class="o">.</span><span class="n">nelement</span><span class="p">()</span>
+    <span class="n">memory</span> <span class="o">+=</span> <span class="n">p</span><span class="o">.</span><span class="n">nelement</span><span class="p">()</span> <span class="o">*</span> <span class="n">p</span><span class="o">.</span><span class="n">element_size</span><span class="p">()</span>  <span class="c1"># Bytes</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Nº params:     </span><span class="si">{</span><span class="n">n_params</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Memory module: </span><span class="si">{</span><span class="n">memory</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="o">**</span><span class="mi">2</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1"> MB</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>  <span class="c1"># MegaBytes</span>
+
+<span class="c1"># New test accuracy</span>
+<span class="k">for</span> <span class="n">mps</span> <span class="ow">in</span> <span class="n">cnn_snake</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+    <span class="c1"># Since the nodes are different now, we have to re-trace</span>
+    <span class="n">mps</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+        <span class="mi">1</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">image_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">//</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+
 <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
     <span class="n">running_test_acc</span> <span class="o">=</span> <span class="mf">0.0</span>
 
@@ -586,23 +605,12 @@ singular values, reducing the sizes of the edges in our network:</p>
 
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Test Acc.: </span><span class="si">{</span><span class="n">running_test_acc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_batches</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">]</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
-<span class="c1"># Test Acc.: 0.8908</span>
+<span class="c1"># Nº params:     499320</span>
+<span class="c1"># Memory module: 1.9048 MB</span>
 
-<span class="c1"># Number of parametrs</span>
-<span class="n">n_params</span> <span class="o">=</span> <span class="mi">0</span>
-<span class="n">memory</span> <span class="o">=</span> <span class="mi">0</span>
-<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">mps</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
-    <span class="n">n_params</span> <span class="o">+=</span> <span class="n">p</span><span class="o">.</span><span class="n">nelement</span><span class="p">()</span>
-    <span class="n">memory</span> <span class="o">+=</span> <span class="n">p</span><span class="o">.</span><span class="n">nelement</span><span class="p">()</span> <span class="o">*</span> <span class="n">p</span><span class="o">.</span><span class="n">element_size</span><span class="p">()</span>  <span class="c1"># Bytes</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Nº params:     </span><span class="si">{</span><span class="n">n_params</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Memory module: </span><span class="si">{</span><span class="n">memory</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="o">**</span><span class="mi">2</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1"> MB</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>  <span class="c1"># MegaBytes</span>
-
-<span class="c1"># Nº params:     110753</span>
-<span class="c1"># Memory module: 0.4225 MB</span>
+<span class="c1"># Test Acc.: 0.8968</span>
 </pre></div>
 </div>
-<p>We have reduced around 20% of the total amount of parameters losing less than
-1% in accuracy.</p>
 </section>
 
 

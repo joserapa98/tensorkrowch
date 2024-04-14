@@ -42,7 +42,7 @@ from tensorkrowch.utils import (check_name_style, enum_repeated_names, erase_enu
 ###############################################################################
 #                                     AXIS                                    #
 ###############################################################################
-class Axis:
+class Axis:  # MARK: Axis
     """
     Axes are the objects that stick edges to nodes. Each instance of the
     :class:`AbstractNode` class has a list of :math:`N` axes, each corresponding
@@ -286,7 +286,7 @@ Ax = Union[int, Text, Axis]
 Shape = Union[Sequence[int], Size]
 
 
-class AbstractNode(ABC):
+class AbstractNode(ABC):  # MARK: AbstractNode
     """
     Abstract class for all types of nodes. Defines what a node is and most of its
     properties and methods. Since it is an abstract class, cannot be instantiated.
@@ -384,18 +384,22 @@ class AbstractNode(ABC):
       To learn more about this, see :meth:`~TensorNetwork.set_data_nodes` and
       :meth:`~TensorNetwork.add_data`.
     
-    * **"virtual_stack"**: Name of the ``virtual`` :class:`ParamStackNode` that
+    * **"virtual_result"**: Name of ``virtual`` nodes that are not explicitly
+      part of the network, but are required for some situations during
+      contraction. For instance, the :class:`ParamStackNode` that
       results from stacking :class:`ParamNodes <ParamNode>` as the first
       operation in the network contraction, if ``auto_stack`` mode is set to
-      ``True``. There might be as much ``"virtual_stack"`` nodes as stacks are
-      created from ``ParamNodes``. To learn more about this, see
-      :class:`ParamStackNode`.
+      ``True``. To learn more about this, see :class:`ParamStackNode`.
     
     * **"virtual_uniform"**: Name of the ``virtual`` :class:`Node` or
       :class:`ParamNode` that is used in uniform (translationally invariant)
       tensor networks to store the tensor that will be shared by all ``leaf``
       nodes. There might be as much ``"virtual_uniform"`` nodes as shared
       memories are used for the ``leaf`` nodes in the network (usually just one).
+    
+    For ``"virtual_result"`` and ``"virtual_uniform"``, these special
+    behaviours are not restricted to nodes having those names, but also nodes
+    whose names contain those strings.
       
     Although these names can in principle be used for other nodes, this can lead
     to undesired behaviour.
@@ -465,10 +469,9 @@ class AbstractNode(ABC):
             if not isinstance(shape, (tuple, list, Size)):
                 raise TypeError(
                     '`shape` should be tuple[int], list[int] or torch.Size type')
-            if isinstance(shape, (tuple, list)):
-                for i in shape:
-                    if not isinstance(i, int):
-                        raise TypeError('`shape` elements should be int type')
+            if isinstance(shape, Sequence):
+                if any([not isinstance(i, int) for i in shape]):
+                    raise TypeError('`shape` elements should be int type')
             aux_shape = Size(shape)
         else:
             aux_shape = tensor.shape
@@ -483,7 +486,7 @@ class AbstractNode(ABC):
             axes = [Axis(num=i, name=f'axis_{i}', node=self)
                     for i, _ in enumerate(aux_shape)]
         else:
-            if not isinstance(axes_names, (tuple, list)):
+            if not isinstance(axes_names, Sequence):
                 raise TypeError(
                     '`axes_names` should be tuple[str] or list[str] type')
             if len(axes_names) != len(aux_shape):
@@ -713,6 +716,13 @@ class AbstractNode(ABC):
     @abstractmethod
     def copy(self, share_tensor: bool = False) -> 'AbstractNode':
         pass
+    
+    @abstractmethod
+    def change_type(self,
+                    leaf: bool = False,
+                    data: bool = False,
+                    virtual: bool = False,) -> None:
+        pass
 
     # -------
     # Methods
@@ -845,6 +855,17 @@ class AbstractNode(ABC):
                 node2 = edge._nodes[node1_list[i]]
                 neighbours.add(node2)
         return list(neighbours)
+    
+    def is_connected_to(self, other: 'AbstractNode') -> List[Tuple[Axis]]:
+        """Returns list of tuples of axes where the node is connected to ``other``"""
+        connected_axes = []
+        for i1, edge1 in enumerate(self._edges):
+            for i2, edge2 in enumerate(other._edges):
+                if (edge1 == edge2) and not edge1.is_dangling():
+                    if self.is_node1(i1) != other.is_node1(i2):
+                        connected_axes.append((self._axes[i1],
+                                               other._axes[i2]))
+        return connected_axes
 
     def _change_axis_name(self, axis: Axis, name: Text) -> None:
         """
@@ -951,17 +972,17 @@ class AbstractNode(ABC):
             for ax in self._axes:
                 if axis == ax._num:
                     return ax._num
-            raise IndexError(f'Node {self!s} has no axis with index {axis}')
+            raise IndexError(f'Node "{self!s}" has no axis with index {axis}')
         elif isinstance(axis, str):
             for ax in self._axes:
                 if axis == ax._name:
                     return ax._num
-            raise IndexError(f'Node {self!s} has no axis with name {axis}')
+            raise IndexError(f'Node "{self!s}" has no axis with name "{axis}"')
         elif isinstance(axis, Axis):
             for ax in self._axes:
                 if axis == ax:
                     return ax._num
-            raise IndexError(f'Node {self!s} has no axis {axis!r}')
+            raise IndexError(f'Node "{self!s}" has no axis "{axis!r}"')
         else:
             raise TypeError('`axis` should be int, str or Axis type')
 
@@ -994,7 +1015,7 @@ class AbstractNode(ABC):
         axis_num = self.get_axis_num(axis)
         return self._edges[axis_num]
 
-    def in_which_axis(self, edge: 'Edge') -> Union[Axis, List[Axis]]:
+    def in_which_axis(self, edge: 'Edge') -> Union[Axis, Tuple[Axis]]:
         """
         Returns :class:`Axis` given the :class:`Edge` that is attached
         to the node through it.
@@ -1010,9 +1031,11 @@ class AbstractNode(ABC):
             return lst[0]
         else:
             # Case of trace edges (attached to the node in two axes)
-            return lst
+            return tuple(lst)
 
-    def reattach_edges(self, override: bool = False) -> None:
+    def reattach_edges(self,
+                       axes: Optional[Sequence[Ax]] = None,
+                       override: bool = False) -> None:
         """
         Substitutes current edges by copies of them that are attached to the node.
         It can happen that an edge is not attached to the node if it is the result
@@ -1026,7 +1049,10 @@ class AbstractNode(ABC):
 
         Parameters
         ----------
-        override: bool
+        axis : list[int, str or Axis] or tuple[int, str or Axis], optional
+            The edge attached to these axes will be reattached. If ``None``,
+            all edges will be reattached.
+        override : bool
             Boolean indicating if the new, reattached edges should also replace
             the corresponding edges in the node's neighbours (``True``). Otherwise,
             the neighbours' edges will be pointing to the original nodes from which
@@ -1062,7 +1088,20 @@ class AbstractNode(ABC):
         If ``override`` is ``True``, ``nodeB['right']`` would be replaced by the
         new ``result['right']``.
         """
-        for i, (edge, node1) in enumerate(zip(self._edges, self.is_node1())):
+        if axes is None:
+            edges = list(enumerate(self._edges))
+        else:
+            edges = []
+            for axis in axes:
+                axis_num = self.get_axis_num(axis)
+                edges.append((axis_num, self._edges[axis_num]))
+        
+        skip_edges = []
+        for i, edge in edges:
+            if i in skip_edges:
+                continue
+            
+            node1 = self._axes[i]._node1
             node = edge._nodes[1 - node1]
             if node != self:
                 # New edges are always a copy, so that the original
@@ -1075,17 +1114,20 @@ class AbstractNode(ABC):
 
                 # Case of trace edges (attached to the node in two axes)
                 neighbour = new_edge._nodes[node1]
-                if neighbour == node:
-                    for j, other_edge in enumerate(self._edges):
-                        if (other_edge == edge) and (i != j):
-                            self._edges[j] = new_edge
-                            new_edge._nodes[node1] = self
-                            new_edge._axes[node1] = self._axes[j]
+                if not new_edge.is_dangling():
+                    if neighbour != self:
+                        for j, other_edge in edges[(i + 1):]:
+                            if other_edge == edge:
+                                new_edge._nodes[node1] = self
+                                new_edge._axes[node1] = self._axes[j]
+                                self._edges[j] = new_edge
+                                skip_edges.append(j)
 
                 if override:
-                    if not new_edge.is_dangling() and (neighbour != node):
-                        neighbour._add_edge(
-                            new_edge, new_edge._axes[node1], not node1)
+                    if not new_edge.is_dangling():
+                        if new_edge._nodes[0] != new_edge._nodes[1]:
+                            new_edge._nodes[node1]._add_edge(
+                                new_edge, new_edge._axes[node1], not node1)
 
     def disconnect(self, axis: Optional[Ax] = None) -> None:
         """
@@ -1127,7 +1169,10 @@ class AbstractNode(ABC):
         """Returns copy tensor (ones in the "diagonal", zeros elsewhere)."""
         copy_tensor = torch.zeros(shape, device=device)
         rank = len(shape)
-        i = torch.arange(min(shape), device=device)
+        if rank <= 1:
+            i = 0
+        else:
+            i = torch.arange(min(shape), device=device)
         copy_tensor[(i,) * rank] = 1.
         return copy_tensor
 
@@ -1397,6 +1442,9 @@ class AbstractNode(ABC):
         """
         # If node stores its own tensor
         if not self.is_resultant() and (self._tensor_info['address'] is not None):
+            if (tensor is not None) and not self._compatible_shape(tensor):
+                warnings.warn(f'`tensor` is being cropped to fit the shape of '
+                              f'node "{self!s}" at non-batch edges')
             self._unrestricted_set_tensor(tensor=tensor,
                                           init_method=init_method,
                                           device=device,
@@ -1849,6 +1897,24 @@ class AbstractNode(ABC):
                 axis_num.append(self.get_axis_num(axis))
         return self.tensor.norm(p=p, dim=axis_num)
 
+    def numel(self) -> Tensor:
+        """
+        Returns the total number of elements in the node's tensor.
+
+        See also `torch.numel() <https://pytorch.org/docs/stable/generated/torch.numel.html>`_.
+
+        Returns
+        -------
+        int
+        
+        Examples
+        --------
+        >>> node = tk.randn(shape=(2, 3), axes_names=('left', 'right'))
+        >>> node.numel()
+        6
+        """
+        return self.tensor.numel()
+
     def __str__(self) -> Text:
         return self._name
 
@@ -1860,7 +1926,7 @@ class AbstractNode(ABC):
                f'\tedges:\n{tab_string(print_list(self._edges), 2)})'
 
 
-class Node(AbstractNode):
+class Node(AbstractNode):  # MARK: Node
     """
     Base class for non-trainable nodes. Should be subclassed by any class of nodes
     that are not intended to be trained (e.g. :class:`StackNode`).
@@ -2128,9 +2194,57 @@ class Node(AbstractNode):
                             edges=self._edges,
                             node1_list=self.is_node1())
         return new_node
+    
+    def change_type(self,
+                    leaf: bool = False,
+                    data: bool = False,
+                    virtual: bool = False,) -> None:
+        """
+        Changes node type, only if node is not a resultant node.
+        
+        Parameters
+        ----------
+        leaf : bool
+            Boolean indicating if the new node type is ``leaf``.
+        data : bool
+            Boolean indicating if the new node type is ``data``.
+        virtual : bool
+            Boolean indicating if the new node type is ``virtual``.
+        """
+        if self.is_resultant():
+            raise ValueError('Only non-resultant nodes\' types can be changed')
+        
+        if (leaf + data + virtual) != 1:
+            raise ValueError('One, and only one, of `leaf`, `data` and `virtual`'
+                             ' can be set to True')
+        
+        # Unset current type
+        if self._leaf and not leaf:
+            node_dict = self._network._leaf_nodes
+            self._leaf = False
+            del node_dict[self._name]
+        elif self._data and not data:
+            node_dict = self._network._data_nodes
+            self._data = False
+            del node_dict[self._name]
+        elif self._virtual and not virtual:
+            node_dict = self._network._virtual_nodes
+            self._virtual = False
+            del node_dict[self._name]
+        
+        # Set new type
+        if leaf:
+            self._leaf = True
+            self._network._leaf_nodes[self._name] = self
+        elif data:
+            self._data = True
+            self._network._data_nodes[self._name] = self
+        elif virtual:
+            self._virtual = True
+            self._network._virtual_nodes[self._name] = self
 
 
-class ParamNode(AbstractNode):
+class ParamNode(AbstractNode):  # MARK: ParamNode
     """
     Class for trainable nodes. Should be subclassed by any class of nodes that
     are intended to be trained (e.g. :class:`ParamStackNode`).
@@ -2492,12 +2606,47 @@ class ParamNode(AbstractNode):
                                  edges=self._edges,
                                  node1_list=self.is_node1())
         return new_node
+    
+    def change_type(self,
+                    leaf: bool = False,
+                    virtual: bool = False,) -> None:
+        """
+        Changes node type, only if node is not a resultant node.
+        
+        Parameters
+        ----------
+        leaf : bool
+            Boolean indicating if the new node type is ``leaf``.
+        virtual : bool
+            Boolean indicating if the new node type is ``virtual``.
+        """
+        if (leaf + virtual) != 1:
+            raise ValueError('One, and only one, of `leaf`, and `virtual`'
+                             ' can be set to True')
+        
+        # Unset current type
+        if self._leaf and not leaf:
+            node_dict = self._network._leaf_nodes
+            self._leaf = False
+            del node_dict[self._name]
+        elif self._virtual and not virtual:
+            node_dict = self._network._virtual_nodes
+            self._virtual = False
+            del node_dict[self._name]
+        
+        # Set new type
+        if leaf:
+            self._leaf = True
+            self._network._leaf_nodes[self._name] = self
+        elif virtual:
+            self._virtual = True
+            self._network._virtual_nodes[self._name] = self
 
 
 ###############################################################################
 #                                 STACK NODES                                 #
 ###############################################################################
-class StackNode(Node):
+class StackNode(Node):  # MARK: StackNode
     """
     Class for stacked nodes. ``StackNodes`` are nodes that store the information
     of a list of nodes that are stacked via :func:`stack`, although they can also
@@ -2607,12 +2756,10 @@ class StackNode(Node):
                  node1_list: Optional[List[bool]] = None) -> None:
 
         if nodes is not None:
-            if not isinstance(nodes, (list, tuple)):
+            if not isinstance(nodes, Sequence):
                 raise TypeError('`nodes` should be a list or tuple of nodes')
-            for node in nodes:
-                if isinstance(node, (StackNode, ParamStackNode)):
-                    raise TypeError(
-                        'Cannot create a stack using (Param)StackNode\'s')
+            if any([isinstance(node, (StackNode, ParamStackNode)) for node in nodes]):
+                raise TypeError('Cannot create a stack using (Param)StackNode\'s')
             if tensor is not None:
                 raise ValueError(
                     'If `nodes` are provided, `tensor` must not be given')
@@ -2727,9 +2874,22 @@ class StackNode(Node):
             return StackEdge(edges=self._edges_dict[axis._name],
                              node1_list=self._node1_lists_dict[axis._name],
                              node1=self, axis1=axis)
+    
+    def reconnect(self, other: Union['StackNode', 'ParamStackNode']) -> None:
+        """
+        Re-connects the ``StackNode`` to another ``(Param)StackNode``, in the
+        axes where the original stacked nodes were already connected.
+        """
+        for axis1 in self._edges_dict:
+            for axis2 in other._edges_dict:
+                if self._edges_dict[axis1][0] == other._edges_dict[axis2][0]:
+                    connect_stack(self.get_edge(axis1), other.get_edge(axis2))
+    
+    def __xor__(self, other: Union['StackNode', 'ParamStackNode']) -> None:
+        self.reconnect(other)
 
 
-class ParamStackNode(ParamNode):
+class ParamStackNode(ParamNode):  # MARK: ParamStackNode
     """
     Class for parametric stacked nodes. They are essentially the same as
     :class:`StackNodes <StackNode>` but they are :class:`ParamNodes <ParamNode>`.
@@ -2742,8 +2902,9 @@ class ParamStackNode(ParamNode):
     attribute of the :class:`TensorNetwork` is set to ``True``). Hence, that
     first :func:`stack` is never actually computed.
     
-    The ``ParamStackNode`` that results from this process uses the reserved name
-    ``"virtual_stack"``, as explained :class:`here <AbstractNode>`. This node
+    The ``ParamStackNode`` that results from this process has the name
+    ``"virtual_result_stack"``, which contains the reserved name
+    ``"virtual_result"``, as explained :class:`here <AbstractNode>`. This node
     stores the tensor from which all the stacked :class:`ParamNodes <ParamNode>`
     just take one `slice`.
     
@@ -2823,13 +2984,10 @@ class ParamStackNode(ParamNode):
                  virtual: bool = False,
                  override_node: bool = False) -> None:
 
-        if not isinstance(nodes, (list, tuple)):
+        if not isinstance(nodes, Sequence):
             raise TypeError('`nodes` should be a list or tuple of nodes')
-
-        for node in nodes:
-            if isinstance(node, (StackNode, ParamStackNode)):
-                raise TypeError(
-                    'Cannot create a stack using (Param)StackNode\'s')
+        if any([isinstance(node, (StackNode, ParamStackNode)) for node in nodes]):
+                raise TypeError('Cannot create a stack using (Param)StackNode\'s')
 
         for i in range(len(nodes[:-1])):
             if not isinstance(nodes[i], type(nodes[i + 1])):
@@ -2906,12 +3064,25 @@ class ParamStackNode(ParamNode):
             return StackEdge(edges=self._edges_dict[axis._name],
                              node1_list=self._node1_lists_dict[axis._name],
                              node1=self, axis1=axis)
+    
+    def reconnect(self, other: Union['StackNode', 'ParamStackNode']) -> None:
+        """
+        Re-connects the ``StackNode`` to another ``(Param)StackNode``, in the
+        axes where the original stacked nodes were already connected.
+        """
+        for axis1 in self._edges_dict:
+            for axis2 in other._edges_dict:
+                if self._edges_dict[axis1][0] == other._edges_dict[axis2][0]:
+                    connect_stack(self.get_edge(axis1), other.get_edge(axis2))
+    
+    def __xor__(self, other: Union['StackNode', 'ParamStackNode']) -> None:
+        self.reconnect(other)
 
 
 ###############################################################################
 #                                    EDGES                                    #
 ###############################################################################
-class Edge:
+class Edge:  # MARK: Edge
     """
     Base class for edges. Should be subclassed by any new class of edges.
 
@@ -2926,9 +3097,10 @@ class Edge:
     
     |
 
-    Furthermore, edges have specific operations like :meth:`contract_` or
-    :meth:`svd_` (and its variations) that allow in-place modification of the
-    :class:`TensorNetwork`.
+    Furthermore, edges have specific operations like :meth:`contract` or
+    :meth:`svd` (and its variations), as well as in-place versions of them 
+    (:meth:`contract_`, :meth:`svd_`, etc.) that allow in-place modification
+    of the :class:`TensorNetwork`.
     
     |
 
@@ -3170,7 +3342,7 @@ class Edge:
         Note that this connectes edges from ``leaf`` (or ``data``, ``virtual``)
         nodes, but never from ``resultant`` nodes. If one tries to connect
         one of the inherited edges of a ``resultant`` node, the new connected
-        edge will be attached to the original ``leaf` nodes from which the
+        edge will be attached to the original ``leaf`` nodes from which the
         ``resultant`` node inherited its edges. Hence, the ``resultant`` node
         will not "see" the connection until the :class:`TensorNetwork` is
         :meth:`~TensorNetwork.reset`.
@@ -3261,7 +3433,7 @@ class Edge:
 AbstractStackNode = Union[StackNode, ParamStackNode]
 
 
-class StackEdge(Edge):
+class StackEdge(Edge):  # MARK: StackEdge
     """
     Class for stacked edges. They are just like :class:`Edges <Edge>` but used
     when stacking a collection of nodes into a :class:`StackNode`. When doing
@@ -3374,7 +3546,7 @@ def connect(edge1: Edge, edge2: Edge) -> Edge:
     Note that this connectes edges from ``leaf`` (or ``data``, ``virtual``)
     nodes, but never from ``resultant`` nodes. If one tries to connect one of
     the inherited edges of a ``resultant`` node, the new connected edge will be
-    attached to the original ``leaf` nodes from which the ``resultant`` node
+    attached to the original ``leaf`` nodes from which the ``resultant`` node
     inherited its edges. Hence, the ``resultant`` node will not "see" the
     connection until the :class:`TensorNetwork` is :meth:`~TensorNetwork.reset`.
     
@@ -3421,17 +3593,17 @@ def connect(edge1: Edge, edge2: Edge) -> Edge:
 
     for edge in [edge1, edge2]:
         if not edge.is_dangling():
-            raise ValueError(f'Edge {edge!s} is not a dangling edge. '
-                             f'This edge points to nodes: {edge.node1!s} and '
-                             f'{edge.node2!s}')
+            raise ValueError(f'Edge "{edge!s}" is not a dangling edge. '
+                             f'This edge points to nodes: "{edge.node1!s}" and '
+                             f'"{edge.node2!s}"')
         if edge.is_batch():
-            raise ValueError(f'Edge {edge!s} is a batch edge. Batch edges '
+            raise ValueError(f'Edge "{edge!s}" is a batch edge. Batch edges '
                              'cannot be connected')
 
     if edge1.size() != edge2.size():
         raise ValueError(f'Cannot connect edges of unequal size. '
-                         f'Size of edge {edge1!s}: {edge1.size()}. '
-                         f'Size of edge {edge2!s}: {edge2.size()}')
+                         f'Size of edge "{edge1!s}": {edge1.size()}. '
+                         f'Size of edge "{edge2!s}": {edge2.size()}')
 
     node1, axis1 = edge1.node1, edge1.axis1
     node2, axis2 = edge2.node1, edge2.axis1
@@ -3484,9 +3656,9 @@ def connect_stack(edge1: StackEdge, edge2: StackEdge) -> StackEdge:
 
     for edge in [edge1, edge2]:
         if not edge.is_dangling():
-            raise ValueError(f'Edge {edge!s} is not a dangling edge. '
-                             f'This edge points to nodes: {edge.node1!s} and '
-                             f'{edge.node2!s}')
+            raise ValueError(f'Edge "{edge!s}" is not a dangling edge. '
+                             f'This edge points to nodes: "{edge.node1!s}" and '
+                             f'"{edge.node2!s}"')
 
     node1, axis1 = edge1.node1, edge1.axis1
     node2, axis2 = edge2.node1, edge2.axis1
@@ -3561,7 +3733,7 @@ def disconnect(edge: Union[Edge, StackEdge]) -> Union[Tuple[Edge, Edge],
 ###############################################################################
 #                                   SUCCESSOR                                 #
 ###############################################################################
-class Successor:
+class Successor:  # MARK: Successor
     """
     Class for successors. This is a sort of cache memory for :class:`Operations
     <Operation>` that have been already computed.
@@ -3640,7 +3812,7 @@ class Successor:
 ###############################################################################
 #                                TENSOR NETWORK                               #
 ###############################################################################
-class TensorNetwork(nn.Module):
+class TensorNetwork(nn.Module):  # MARK: TensorNetwork
     """
     Class for arbitrary Tensor Networks. Subclass of **PyTorch**
     ``torch.nn.Module``.
@@ -3812,7 +3984,7 @@ class TensorNetwork(nn.Module):
 
         # TN modes
         # Auto-management of memory mode
-        self._auto_stack = False   # train -> True / eval -> True
+        self._auto_stack = True   # train -> True / eval -> True
         self._auto_unbind = False  # train -> False / eval -> True
         self._tracing = False      # Tracing mode (True while calling .trace())
         self._traced = False       # True if .trace() is called, False if reset()
@@ -3881,7 +4053,7 @@ class TensorNetwork(nn.Module):
     def auto_stack(self) -> bool:
         """
         Returns boolean indicating whether ``auto_stack`` mode is active. By
-        default, it is ``False``.
+        default, it is ``True``.
         
         This mode indicates whether the operation :func:`stack` can take control
         of the memory management of the network to skip some steps in future
@@ -4093,7 +4265,11 @@ class TensorNetwork(nn.Module):
         """
         node.disconnect()
         self._remove_node(node, move_names)
-        del node
+        node._temp_tensor = None
+    
+    def delete(self) -> None:
+        for node in self.nodes.values():
+            self.delete_node(node)
 
     def _update_node_info(self, node: AbstractNode, new_name: Text) -> None:
         """
@@ -4134,7 +4310,8 @@ class TensorNetwork(nn.Module):
         """Updates a single node's name, without taking care of the other names."""
         # Node is ParamNode and tensor is not None
         if isinstance(node.tensor, Parameter):
-            delattr(self, '_'.join(['param', node._name]))
+            if hasattr(self, 'param_' + node._name):
+                delattr(self, 'param_' + node._name)
         for edge in node._edges:
             if edge.is_attached_to(node):
                 self._remove_edge(edge)
@@ -4143,15 +4320,15 @@ class TensorNetwork(nn.Module):
         node._name = new_name
 
         if isinstance(node.tensor, Parameter):
-            if not hasattr(self, '_'.join(['param', node._name])):
-                self.register_parameter(
-                    '_'.join(['param', node._name]),
-                    self._memory_nodes[node._name])
-            else:
-                # Nodes names are never repeated, so it is likely that
-                # this case will never occur
-                raise ValueError(
-                    f'Network already has attribute named {node._name}')
+            if node._tensor_info['address'] is not None:
+                if not hasattr(self, 'param_' + node._name):
+                    self.register_parameter('param_' + node._name,
+                                            self._memory_nodes[node._name])
+                else:
+                    # Nodes names are never repeated, so it is likely that
+                    # this case will never occur
+                    raise ValueError(
+                        f'Network already has attribute named {node._name}')
 
         for edge in node._edges:
             self._add_edge(edge)
@@ -4245,10 +4422,9 @@ class TensorNetwork(nn.Module):
 
         # Node is ParamNode and tensor is not None
         if isinstance(node.tensor, Parameter):
-            if not hasattr(self, '_'.join(['param', node._name])):
-                self.register_parameter(
-                    '_'.join(['param', node._name]),
-                    self._memory_nodes[node._name])
+            if not hasattr(self, 'param_' + node._name,):
+                self.register_parameter( 'param_' + node._name,
+                                        self._memory_nodes[node._name])
             else:
                 # Nodes names are never repeated, so it is likely that
                 # this case will never occur
@@ -4288,7 +4464,8 @@ class TensorNetwork(nn.Module):
         """
         # Node is ParamNode and tensor is not None
         if isinstance(node.tensor, Parameter):
-            delattr(self, '_'.join(['param', node._name]))
+            if hasattr(self, 'param_' + node._name):
+                delattr(self, 'param_' + node._name)
         for edge in node._edges:
             if edge.is_attached_to(node):
                 self._remove_edge(edge)
@@ -4351,8 +4528,8 @@ class TensorNetwork(nn.Module):
             in-place (``True``) or copied and then parameterized (``False``).
         """
         if self._resultant_nodes:
-            warnings.warn('Resultant nodes will be removed before parameterizing'
-                          ' the TN')
+            warnings.warn(
+                'Resultant nodes will be removed before parameterizing the TN')
             self.reset()
 
         if override:
@@ -4500,7 +4677,7 @@ class TensorNetwork(nn.Module):
             elif isinstance(edge, Edge):
                 if edge not in self._edges:
                     raise ValueError(
-                        f'Edge {edge!r} should be a dangling edge of the '
+                        f'Edge "{edge!r}" should be a dangling edge of the '
                         'Tensor Network')
             else:
                 raise TypeError(
@@ -4593,7 +4770,10 @@ class TensorNetwork(nn.Module):
         stack_node = self._virtual_nodes.get('stack_data_memory')
 
         if stack_node is not None:
-            data = data.movedim(-2, 0)
+            if isinstance(data, Tensor):
+                data = data.movedim(-2, 0)
+            else:
+                data = torch.stack(data, dim=0)
             stack_node.tensor = data
             for i, data_node in enumerate(list(self._data_nodes.values())):
                 data_node._shape = data[i].shape
@@ -4618,7 +4798,7 @@ class TensorNetwork(nn.Module):
           
         * ``virtual``: Only virtual nodes created in :class:`operations
           <Operation>` are :meth:`deleted <delete_node>`. This only includes
-          nodes using the reserved name ``"virtual_stack"``.
+          nodes using the reserved name ``"virtual_result"``.
           
         * ``resultant``: These nodes are :meth:`deleted <delete_node>` from the
           network.
@@ -4645,9 +4825,10 @@ class TensorNetwork(nn.Module):
             aux_dict.update(self._resultant_nodes)
             aux_dict.update(self._virtual_nodes)
             for node in aux_dict.values():
-                if node._virtual and ('virtual_stack' not in node._name):
-                    # Virtual nodes named "virtual_stack" are ParamStackNodes
-                    # that result from stacking a collection of ParamNodes
+                if node._virtual and ('virtual_result' not in node._name):
+                    # Virtual nodes named "virtual_result" are nodes that are
+                    # required in some situations during contraction, like
+                    # ParamStackNodes
                     # This condition is satisfied by the rest of virtual nodes
                     continue
 
@@ -4686,12 +4867,12 @@ class TensorNetwork(nn.Module):
             aux_dict.update(self._resultant_nodes)
             aux_dict.update(self._virtual_nodes)
             for node in list(aux_dict.values()):
-                if node._virtual and ('virtual_stack' not in node._name):
+                if node._virtual and ('virtual_result' not in node._name):
                     # This condition is satisfied by the rest of virtual nodes
-                    # (e.g. "virtual_feature", "virtual_n_features")
                     continue
                 self.delete_node(node, False)
 
+    @torch.no_grad()
     def trace(self, example: Optional[Tensor] = None, *args, **kwargs) -> None:
         """
         Traces the tensor network contraction algorithm with two purposes:
@@ -4726,13 +4907,12 @@ class TensorNetwork(nn.Module):
             Keyword arguments that might be used in :meth:`contract`.
         """
         self.reset()
-
-        with torch.no_grad():
-            self._tracing = True
-            self(example, *args, **kwargs)
-            self._tracing = False
-            self(example, *args, **kwargs)
-            self._traced = True
+        
+        self._tracing = True
+        self(example, *args, **kwargs)
+        self._tracing = False
+        self(example, *args, **kwargs)
+        self._traced = True
 
     def contract(self) -> Node:
         """
@@ -4829,7 +5009,7 @@ class TensorNetwork(nn.Module):
                 return self.nodes[key]
             except Exception:
                 raise KeyError(
-                    f'Tensor network {self!s} does not have any node with '
+                    f'Tensor network "{self!s}" does not have any node with '
                     f'name {key}')
         else:
             raise TypeError('`key` should be int or str type')

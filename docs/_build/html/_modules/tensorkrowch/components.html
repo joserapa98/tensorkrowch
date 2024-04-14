@@ -1,11 +1,11 @@
 
 <!DOCTYPE html>
 
-<html lang="en">
+<html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.components &#8212; TensorKrowch 1.0.0 documentation</title>
+    <title>tensorkrowch.components &#8212; TensorKrowch 1.0.1 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -29,17 +29,15 @@
     <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
     <script src="../../_static/jquery.js"></script>
     <script src="../../_static/underscore.js"></script>
-    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/clipboard.min.js"></script>
     <script src="../../_static/copybutton.js"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
-    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <link rel="shortcut icon" href="../../_static/tensorkrowch_favicon_light.svg"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="docsearch:language" content="en">
+    <meta name="docsearch:language" content="None">
     
 
     <!-- Google Analytics -->
@@ -178,6 +176,11 @@
    <li class="toctree-l2">
     <a class="reference internal" href="../../embeddings.html">
      Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../decompositions.html">
+     Decompositions
     </a>
    </li>
   </ul>
@@ -328,7 +331,7 @@ title="Source repository"
 <span class="c1">###############################################################################</span>
 <span class="c1">#                                     AXIS                                    #</span>
 <span class="c1">###############################################################################</span>
-<div class="viewcode-block" id="Axis"><a class="viewcode-back" href="../../components.html#tensorkrowch.Axis">[docs]</a><span class="k">class</span> <span class="nc">Axis</span><span class="p">:</span>
+<div class="viewcode-block" id="Axis"><a class="viewcode-back" href="../../components.html#tensorkrowch.Axis">[docs]</a><span class="k">class</span> <span class="nc">Axis</span><span class="p">:</span>  <span class="c1"># MARK: Axis</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Axes are the objects that stick edges to nodes. Each instance of the</span>
 <span class="sd">    :class:`AbstractNode` class has a list of :math:`N` axes, each corresponding</span>
@@ -572,7 +575,7 @@ title="Source repository"
 <span class="n">Shape</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">Size</span><span class="p">]</span>
 
 
-<div class="viewcode-block" id="AbstractNode"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode">[docs]</a><span class="k">class</span> <span class="nc">AbstractNode</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+<div class="viewcode-block" id="AbstractNode"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode">[docs]</a><span class="k">class</span> <span class="nc">AbstractNode</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>  <span class="c1"># MARK: AbstractNode</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Abstract class for all types of nodes. Defines what a node is and most of its</span>
 <span class="sd">    properties and methods. Since it is an abstract class, cannot be instantiated.</span>
@@ -670,18 +673,22 @@ title="Source repository"
 <span class="sd">      To learn more about this, see :meth:`~TensorNetwork.set_data_nodes` and</span>
 <span class="sd">      :meth:`~TensorNetwork.add_data`.</span>
 <span class="sd">    </span>
-<span class="sd">    * **&quot;virtual_stack&quot;**: Name of the ``virtual`` :class:`ParamStackNode` that</span>
+<span class="sd">    * **&quot;virtual_result&quot;**: Name of ``virtual`` nodes that are not explicitly</span>
+<span class="sd">      part of the network, but are required for some situations during</span>
+<span class="sd">      contraction. For instance, the :class:`ParamStackNode` that</span>
 <span class="sd">      results from stacking :class:`ParamNodes &lt;ParamNode&gt;` as the first</span>
 <span class="sd">      operation in the network contraction, if ``auto_stack`` mode is set to</span>
-<span class="sd">      ``True``. There might be as much ``&quot;virtual_stack&quot;`` nodes as stacks are</span>
-<span class="sd">      created from ``ParamNodes``. To learn more about this, see</span>
-<span class="sd">      :class:`ParamStackNode`.</span>
+<span class="sd">      ``True``. To learn more about this, see :class:`ParamStackNode`.</span>
 <span class="sd">    </span>
 <span class="sd">    * **&quot;virtual_uniform&quot;**: Name of the ``virtual`` :class:`Node` or</span>
 <span class="sd">      :class:`ParamNode` that is used in uniform (translationally invariant)</span>
 <span class="sd">      tensor networks to store the tensor that will be shared by all ``leaf``</span>
 <span class="sd">      nodes. There might be as much ``&quot;virtual_uniform&quot;`` nodes as shared</span>
 <span class="sd">      memories are used for the ``leaf`` nodes in the network (usually just one).</span>
+<span class="sd">    </span>
+<span class="sd">    For ``&quot;virtual_result&quot;`` and ``&quot;virtual_uniform&quot;``, these special</span>
+<span class="sd">    behaviours are not restricted to nodes having those names, but also nodes</span>
+<span class="sd">    whose names contain those strings.</span>
 <span class="sd">      </span>
 <span class="sd">    Although these names can in principle be used for other nodes, this can lead</span>
 <span class="sd">    to undesired behaviour.</span>
@@ -751,10 +758,9 @@ title="Source repository"
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">,</span> <span class="n">Size</span><span class="p">)):</span>
                 <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
                     <span class="s1">&#39;`shape` should be tuple[int], list[int] or torch.Size type&#39;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
-                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">shape</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-                        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`shape` elements should be int type&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">shape</span><span class="p">]):</span>
+                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`shape` elements should be int type&#39;</span><span class="p">)</span>
             <span class="n">aux_shape</span> <span class="o">=</span> <span class="n">Size</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">aux_shape</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span>
@@ -769,7 +775,7 @@ title="Source repository"
             <span class="n">axes</span> <span class="o">=</span> <span class="p">[</span><span class="n">Axis</span><span class="p">(</span><span class="n">num</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;axis_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
                     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">aux_shape</span><span class="p">)]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axes_names</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axes_names</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
                     <span class="s1">&#39;`axes_names` should be tuple[str] or list[str] type&#39;</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">axes_names</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">aux_shape</span><span class="p">):</span>
@@ -999,6 +1005,13 @@ title="Source repository"
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">share_tensor</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;AbstractNode&#39;</span><span class="p">:</span>
         <span class="k">pass</span>
+    
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">change_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">leaf</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                    <span class="n">data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                    <span class="n">virtual</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">pass</span>
 
     <span class="c1"># -------</span>
     <span class="c1"># Methods</span>
@@ -1131,6 +1144,17 @@ title="Source repository"
                 <span class="n">node2</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="n">node1_list</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
                 <span class="n">neighbours</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">node2</span><span class="p">)</span>
         <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">neighbours</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="AbstractNode.is_connected_to"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.is_connected_to">[docs]</a>    <span class="k">def</span> <span class="nf">is_connected_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s1">&#39;AbstractNode&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">Axis</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns list of tuples of axes where the node is connected to ``other``&quot;&quot;&quot;</span>
+        <span class="n">connected_axes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i1</span><span class="p">,</span> <span class="n">edge1</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">i2</span><span class="p">,</span> <span class="n">edge2</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">_edges</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">edge1</span> <span class="o">==</span> <span class="n">edge2</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">edge1</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_node1</span><span class="p">(</span><span class="n">i1</span><span class="p">)</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">is_node1</span><span class="p">(</span><span class="n">i2</span><span class="p">):</span>
+                        <span class="n">connected_axes</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">i1</span><span class="p">],</span>
+                                               <span class="n">other</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">i2</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">connected_axes</span></div>
 
     <span class="k">def</span> <span class="nf">_change_axis_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Axis</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="n">Text</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1237,17 +1261,17 @@ title="Source repository"
             <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">axis</span> <span class="o">==</span> <span class="n">ax</span><span class="o">.</span><span class="n">_num</span><span class="p">:</span>
                     <span class="k">return</span> <span class="n">ax</span><span class="o">.</span><span class="n">_num</span>
-            <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Node </span><span class="si">{</span><span class="bp">self</span><span class="si">!s}</span><span class="s1"> has no axis with index </span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Node &quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">!s}</span><span class="s1">&quot; has no axis with index </span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">axis</span> <span class="o">==</span> <span class="n">ax</span><span class="o">.</span><span class="n">_name</span><span class="p">:</span>
                     <span class="k">return</span> <span class="n">ax</span><span class="o">.</span><span class="n">_num</span>
-            <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Node </span><span class="si">{</span><span class="bp">self</span><span class="si">!s}</span><span class="s1"> has no axis with name </span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Node &quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">!s}</span><span class="s1">&quot; has no axis with name &quot;</span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">Axis</span><span class="p">):</span>
             <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">axis</span> <span class="o">==</span> <span class="n">ax</span><span class="p">:</span>
                     <span class="k">return</span> <span class="n">ax</span><span class="o">.</span><span class="n">_num</span>
-            <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Node </span><span class="si">{</span><span class="bp">self</span><span class="si">!s}</span><span class="s1"> has no axis </span><span class="si">{</span><span class="n">axis</span><span class="si">!r}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Node &quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">!s}</span><span class="s1">&quot; has no axis &quot;</span><span class="si">{</span><span class="n">axis</span><span class="si">!r}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`axis` should be int, str or Axis type&#39;</span><span class="p">)</span></div>
 
@@ -1280,7 +1304,7 @@ title="Source repository"
         <span class="n">axis_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]</span></div>
 
-<div class="viewcode-block" id="AbstractNode.in_which_axis"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.in_which_axis">[docs]</a>    <span class="k">def</span> <span class="nf">in_which_axis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge</span><span class="p">:</span> <span class="s1">&#39;Edge&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Axis</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Axis</span><span class="p">]]:</span>
+<div class="viewcode-block" id="AbstractNode.in_which_axis"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.in_which_axis">[docs]</a>    <span class="k">def</span> <span class="nf">in_which_axis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge</span><span class="p">:</span> <span class="s1">&#39;Edge&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Axis</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Axis</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns :class:`Axis` given the :class:`Edge` that is attached</span>
 <span class="sd">        to the node through it.</span>
@@ -1296,9 +1320,11 @@ title="Source repository"
             <span class="k">return</span> <span class="n">lst</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Case of trace edges (attached to the node in two axes)</span>
-            <span class="k">return</span> <span class="n">lst</span></div>
+            <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">lst</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="AbstractNode.reattach_edges"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.reattach_edges">[docs]</a>    <span class="k">def</span> <span class="nf">reattach_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">override</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="AbstractNode.reattach_edges"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.reattach_edges">[docs]</a>    <span class="k">def</span> <span class="nf">reattach_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                       <span class="n">axes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                       <span class="n">override</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Substitutes current edges by copies of them that are attached to the node.</span>
 <span class="sd">        It can happen that an edge is not attached to the node if it is the result</span>
@@ -1312,7 +1338,10 @@ title="Source repository"
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        override: bool</span>
+<span class="sd">        axis : list[int, str or Axis] or tuple[int, str or Axis], optional</span>
+<span class="sd">            The edge attached to these axes will be reattached. If ``None``,</span>
+<span class="sd">            all edges will be reattached.</span>
+<span class="sd">        override : bool</span>
 <span class="sd">            Boolean indicating if the new, reattached edges should also replace</span>
 <span class="sd">            the corresponding edges in the node&#39;s neighbours (``True``). Otherwise,</span>
 <span class="sd">            the neighbours&#39; edges will be pointing to the original nodes from which</span>
@@ -1348,7 +1377,20 @@ title="Source repository"
 <span class="sd">        If ``override`` is ``True``, ``nodeB[&#39;right&#39;]`` would be replaced by the</span>
 <span class="sd">        new ``result[&#39;right&#39;]``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">node1</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_node1</span><span class="p">())):</span>
+        <span class="k">if</span> <span class="n">axes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">edges</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">edges</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">axis</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">:</span>
+                <span class="n">axis_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
+                <span class="n">edges</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">axis_num</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]))</span>
+        
+        <span class="n">skip_edges</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">edges</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">skip_edges</span><span class="p">:</span>
+                <span class="k">continue</span>
+            
+            <span class="n">node1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">_node1</span>
             <span class="n">node</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="mi">1</span> <span class="o">-</span> <span class="n">node1</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">node</span> <span class="o">!=</span> <span class="bp">self</span><span class="p">:</span>
                 <span class="c1"># New edges are always a copy, so that the original</span>
@@ -1361,17 +1403,20 @@ title="Source repository"
 
                 <span class="c1"># Case of trace edges (attached to the node in two axes)</span>
                 <span class="n">neighbour</span> <span class="o">=</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="n">node1</span><span class="p">]</span>
-                <span class="k">if</span> <span class="n">neighbour</span> <span class="o">==</span> <span class="n">node</span><span class="p">:</span>
-                    <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">other_edge</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">):</span>
-                        <span class="k">if</span> <span class="p">(</span><span class="n">other_edge</span> <span class="o">==</span> <span class="n">edge</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">j</span><span class="p">):</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_edge</span>
-                            <span class="n">new_edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="n">node1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
-                            <span class="n">new_edge</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">node1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">neighbour</span> <span class="o">!=</span> <span class="bp">self</span><span class="p">:</span>
+                        <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">other_edge</span> <span class="ow">in</span> <span class="n">edges</span><span class="p">[(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):]:</span>
+                            <span class="k">if</span> <span class="n">other_edge</span> <span class="o">==</span> <span class="n">edge</span><span class="p">:</span>
+                                <span class="n">new_edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="n">node1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
+                                <span class="n">new_edge</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">node1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_edge</span>
+                                <span class="n">skip_edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
 
                 <span class="k">if</span> <span class="n">override</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">neighbour</span> <span class="o">!=</span> <span class="n">node</span><span class="p">):</span>
-                        <span class="n">neighbour</span><span class="o">.</span><span class="n">_add_edge</span><span class="p">(</span>
-                            <span class="n">new_edge</span><span class="p">,</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">node1</span><span class="p">],</span> <span class="ow">not</span> <span class="n">node1</span><span class="p">)</span></div>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+                            <span class="n">new_edge</span><span class="o">.</span><span class="n">_nodes</span><span class="p">[</span><span class="n">node1</span><span class="p">]</span><span class="o">.</span><span class="n">_add_edge</span><span class="p">(</span>
+                                <span class="n">new_edge</span><span class="p">,</span> <span class="n">new_edge</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="n">node1</span><span class="p">],</span> <span class="ow">not</span> <span class="n">node1</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="AbstractNode.disconnect"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.disconnect">[docs]</a>    <span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Ax</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1413,7 +1458,10 @@ title="Source repository"
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns copy tensor (ones in the &quot;diagonal&quot;, zeros elsewhere).&quot;&quot;&quot;</span>
         <span class="n">copy_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
         <span class="n">rank</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
-        <span class="n">i</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">shape</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">rank</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">shape</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
         <span class="n">copy_tensor</span><span class="p">[(</span><span class="n">i</span><span class="p">,)</span> <span class="o">*</span> <span class="n">rank</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
         <span class="k">return</span> <span class="n">copy_tensor</span>
 
@@ -1683,6 +1731,9 @@ title="Source repository"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># If node stores its own tensor</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_resultant</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">tensor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compatible_shape</span><span class="p">(</span><span class="n">tensor</span><span class="p">):</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;`tensor` is being cropped to fit the shape of &#39;</span>
+                              <span class="sa">f</span><span class="s1">&#39;node &quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">!s}</span><span class="s1">&quot; at non-batch edges&#39;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_unrestricted_set_tensor</span><span class="p">(</span><span class="n">tensor</span><span class="o">=</span><span class="n">tensor</span><span class="p">,</span>
                                           <span class="n">init_method</span><span class="o">=</span><span class="n">init_method</span><span class="p">,</span>
                                           <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
@@ -2135,6 +2186,24 @@ title="Source repository"
                 <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis_num</span><span class="p">)</span></div>
 
+<div class="viewcode-block" id="AbstractNode.numel"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.numel">[docs]</a>    <span class="k">def</span> <span class="nf">numel</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the total number of elements in the node&#39;s tensor.</span>
+
+<span class="sd">        See also `torch.numel() &lt;https://pytorch.org/docs/stable/generated/torch.numel.html&gt;`_.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        int</span>
+<span class="sd">        </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; node = tk.randn(shape=(2, 3), axes_names=(&#39;left&#39;, &#39;right&#39;))</span>
+<span class="sd">        &gt;&gt;&gt; node.numel()</span>
+<span class="sd">        6</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span></div>
+
     <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span>
 
@@ -2146,7 +2215,7 @@ title="Source repository"
                <span class="sa">f</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">edges:</span><span class="se">\n</span><span class="si">{</span><span class="n">tab_string</span><span class="p">(</span><span class="n">print_list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">),</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s1">)&#39;</span></div>
 
 
-<div class="viewcode-block" id="Node"><a class="viewcode-back" href="../../components.html#tensorkrowch.Node">[docs]</a><span class="k">class</span> <span class="nc">Node</span><span class="p">(</span><span class="n">AbstractNode</span><span class="p">):</span>
+<div class="viewcode-block" id="Node"><a class="viewcode-back" href="../../components.html#tensorkrowch.Node">[docs]</a><span class="k">class</span> <span class="nc">Node</span><span class="p">(</span><span class="n">AbstractNode</span><span class="p">):</span>  <span class="c1"># MARK: Node</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Base class for non-trainable nodes. Should be subclassed by any class of nodes</span>
 <span class="sd">    that are not intended to be trained (e.g. :class:`StackNode`).</span>
@@ -2413,10 +2482,58 @@ title="Source repository"
                             <span class="n">tensor</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span>
                             <span class="n">edges</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span>
                             <span class="n">node1_list</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">is_node1</span><span class="p">())</span>
-        <span class="k">return</span> <span class="n">new_node</span></div></div>
+        <span class="k">return</span> <span class="n">new_node</span></div>
+    
+<div class="viewcode-block" id="Node.change_type"><a class="viewcode-back" href="../../components.html#tensorkrowch.Node.change_type">[docs]</a>    <span class="k">def</span> <span class="nf">change_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">leaf</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                    <span class="n">data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                    <span class="n">virtual</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Changes node type, only if node is not a resultant node.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        leaf : bool</span>
+<span class="sd">            Boolean indicating if the new node type is ``leaf``.</span>
+<span class="sd">        data : bool</span>
+<span class="sd">            Boolean indicating if the new node type is ``data``.</span>
+<span class="sd">        virtual : bool</span>
+<span class="sd">            Boolean indicating if the new node type is ``virtual``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_resultant</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only non-resultant nodes</span><span class="se">\&#39;</span><span class="s1"> types can be changed&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="p">(</span><span class="n">leaf</span> <span class="o">+</span> <span class="n">data</span> <span class="o">+</span> <span class="n">virtual</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;One, and only one, of `leaf`, `data` and `virtual`&#39;</span>
+                             <span class="s1">&#39; can be set to True&#39;</span><span class="p">)</span>
+        
+        <span class="c1"># Unset current type</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">leaf</span><span class="p">:</span>
+            <span class="n">node_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_leaf_nodes</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_leaf</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">del</span> <span class="n">node_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">data</span><span class="p">:</span>
+            <span class="n">node_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_data_nodes</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">del</span> <span class="n">node_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_virtual</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">virtual</span><span class="p">:</span>
+            <span class="n">node_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_virtual_nodes</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_virtual</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">del</span> <span class="n">node_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span>
+        
+        <span class="c1"># Set new type</span>
+        <span class="k">if</span> <span class="n">leaf</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_leaf</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="k">elif</span> <span class="n">data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_data_nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="k">elif</span> <span class="n">virtual</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_virtual</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_virtual_nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span></div></div>
 
 
-<div class="viewcode-block" id="ParamNode"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamNode">[docs]</a><span class="k">class</span> <span class="nc">ParamNode</span><span class="p">(</span><span class="n">AbstractNode</span><span class="p">):</span>
+<div class="viewcode-block" id="ParamNode"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamNode">[docs]</a><span class="k">class</span> <span class="nc">ParamNode</span><span class="p">(</span><span class="n">AbstractNode</span><span class="p">):</span>  <span class="c1"># MARK: ParamNode</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for trainable nodes. Should be subclassed by any class of nodes that</span>
 <span class="sd">    are intended to be trained (e.g. :class:`ParamStackNode`).</span>
@@ -2633,7 +2750,7 @@ title="Source repository"
         <span class="k">if</span> <span class="n">aux_grad</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">aux_grad</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="c1">#self._tensor_info[&#39;full&#39;]:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">aux_grad</span>
             <span class="k">return</span> <span class="n">aux_grad</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]]</span>
 
@@ -2777,13 +2894,48 @@ title="Source repository"
                                  <span class="n">tensor</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span>
                                  <span class="n">edges</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span>
                                  <span class="n">node1_list</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">is_node1</span><span class="p">())</span>
-        <span class="k">return</span> <span class="n">new_node</span></div></div>
+        <span class="k">return</span> <span class="n">new_node</span></div>
+    
+<div class="viewcode-block" id="ParamNode.change_type"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamNode.change_type">[docs]</a>    <span class="k">def</span> <span class="nf">change_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">leaf</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                    <span class="n">virtual</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Changes node type, only if node is not a resultant node.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        leaf : bool</span>
+<span class="sd">            Boolean indicating if the new node type is ``leaf``.</span>
+<span class="sd">        virtual : bool</span>
+<span class="sd">            Boolean indicating if the new node type is ``virtual``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">leaf</span> <span class="o">+</span> <span class="n">virtual</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;One, and only one, of `leaf`, and `virtual`&#39;</span>
+                             <span class="s1">&#39; can be set to True&#39;</span><span class="p">)</span>
+        
+        <span class="c1"># Unset current type</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_leaf</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">leaf</span><span class="p">:</span>
+            <span class="n">node_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_leaf_nodes</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_leaf</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">del</span> <span class="n">node_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_virtual</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">virtual</span><span class="p">:</span>
+            <span class="n">node_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_virtual_nodes</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_virtual</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">del</span> <span class="n">node_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span>
+        
+        <span class="c1"># Set new type</span>
+        <span class="k">if</span> <span class="n">leaf</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_leaf</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_leaf_nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="k">elif</span> <span class="n">virtual</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_virtual</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_virtual_nodes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span></div></div>
 
 
 <span class="c1">###############################################################################</span>
 <span class="c1">#                                 STACK NODES                                 #</span>
 <span class="c1">###############################################################################</span>
-<div class="viewcode-block" id="StackNode"><a class="viewcode-back" href="../../components.html#tensorkrowch.StackNode">[docs]</a><span class="k">class</span> <span class="nc">StackNode</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+<div class="viewcode-block" id="StackNode"><a class="viewcode-back" href="../../components.html#tensorkrowch.StackNode">[docs]</a><span class="k">class</span> <span class="nc">StackNode</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>  <span class="c1"># MARK: StackNode</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for stacked nodes. ``StackNodes`` are nodes that store the information</span>
 <span class="sd">    of a list of nodes that are stacked via :func:`stack`, although they can also</span>
@@ -2893,12 +3045,10 @@ title="Source repository"
                  <span class="n">node1_list</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">bool</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
         <span class="k">if</span> <span class="n">nodes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`nodes` should be a list or tuple of nodes&#39;</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
-                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="p">(</span><span class="n">StackNode</span><span class="p">,</span> <span class="n">ParamStackNode</span><span class="p">)):</span>
-                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                        <span class="s1">&#39;Cannot create a stack using (Param)StackNode</span><span class="se">\&#39;</span><span class="s1">s&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="p">(</span><span class="n">StackNode</span><span class="p">,</span> <span class="n">ParamStackNode</span><span class="p">))</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">]):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Cannot create a stack using (Param)StackNode</span><span class="se">\&#39;</span><span class="s1">s&#39;</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">tensor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                     <span class="s1">&#39;If `nodes` are provided, `tensor` must not be given&#39;</span><span class="p">)</span>
@@ -3012,10 +3162,23 @@ title="Source repository"
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">StackEdge</span><span class="p">(</span><span class="n">edges</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_edges_dict</span><span class="p">[</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span><span class="p">],</span>
                              <span class="n">node1_list</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_node1_lists_dict</span><span class="p">[</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span><span class="p">],</span>
-                             <span class="n">node1</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span></div>
+                             <span class="n">node1</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="StackNode.reconnect"><a class="viewcode-back" href="../../components.html#tensorkrowch.StackNode.reconnect">[docs]</a>    <span class="k">def</span> <span class="nf">reconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;StackNode&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamStackNode&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Re-connects the ``StackNode`` to another ``(Param)StackNode``, in the</span>
+<span class="sd">        axes where the original stacked nodes were already connected.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">axis1</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edges_dict</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">axis2</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">_edges_dict</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edges_dict</span><span class="p">[</span><span class="n">axis1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_edges_dict</span><span class="p">[</span><span class="n">axis2</span><span class="p">][</span><span class="mi">0</span><span class="p">]:</span>
+                    <span class="n">connect_stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">axis1</span><span class="p">),</span> <span class="n">other</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">axis2</span><span class="p">))</span></div>
+    
+    <span class="k">def</span> <span class="fm">__xor__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;StackNode&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamStackNode&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reconnect</span><span class="p">(</span><span class="n">other</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="ParamStackNode"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamStackNode">[docs]</a><span class="k">class</span> <span class="nc">ParamStackNode</span><span class="p">(</span><span class="n">ParamNode</span><span class="p">):</span>
+<div class="viewcode-block" id="ParamStackNode"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamStackNode">[docs]</a><span class="k">class</span> <span class="nc">ParamStackNode</span><span class="p">(</span><span class="n">ParamNode</span><span class="p">):</span>  <span class="c1"># MARK: ParamStackNode</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for parametric stacked nodes. They are essentially the same as</span>
 <span class="sd">    :class:`StackNodes &lt;StackNode&gt;` but they are :class:`ParamNodes &lt;ParamNode&gt;`.</span>
@@ -3028,8 +3191,9 @@ title="Source repository"
 <span class="sd">    attribute of the :class:`TensorNetwork` is set to ``True``). Hence, that</span>
 <span class="sd">    first :func:`stack` is never actually computed.</span>
 <span class="sd">    </span>
-<span class="sd">    The ``ParamStackNode`` that results from this process uses the reserved name</span>
-<span class="sd">    ``&quot;virtual_stack&quot;``, as explained :class:`here &lt;AbstractNode&gt;`. This node</span>
+<span class="sd">    The ``ParamStackNode`` that results from this process has the name</span>
+<span class="sd">    ``&quot;virtual_result_stack&quot;``, which contains the reserved name</span>
+<span class="sd">    ``&quot;virtual_result&quot;``, as explained :class:`here &lt;AbstractNode&gt;`. This node</span>
 <span class="sd">    stores the tensor from which all the stacked :class:`ParamNodes &lt;ParamNode&gt;`</span>
 <span class="sd">    just take one `slice`.</span>
 <span class="sd">    </span>
@@ -3109,13 +3273,10 @@ title="Source repository"
                  <span class="n">virtual</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">override_node</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`nodes` should be a list or tuple of nodes&#39;</span><span class="p">)</span>
-
-        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="p">(</span><span class="n">StackNode</span><span class="p">,</span> <span class="n">ParamStackNode</span><span class="p">)):</span>
-                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                    <span class="s1">&#39;Cannot create a stack using (Param)StackNode</span><span class="se">\&#39;</span><span class="s1">s&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="p">(</span><span class="n">StackNode</span><span class="p">,</span> <span class="n">ParamStackNode</span><span class="p">))</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">]):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Cannot create a stack using (Param)StackNode</span><span class="se">\&#39;</span><span class="s1">s&#39;</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])):</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="nb">type</span><span class="p">(</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])):</span>
@@ -3191,13 +3352,26 @@ title="Source repository"
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">StackEdge</span><span class="p">(</span><span class="n">edges</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_edges_dict</span><span class="p">[</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span><span class="p">],</span>
                              <span class="n">node1_list</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_node1_lists_dict</span><span class="p">[</span><span class="n">axis</span><span class="o">.</span><span class="n">_name</span><span class="p">],</span>
-                             <span class="n">node1</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span></div>
+                             <span class="n">node1</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="ParamStackNode.reconnect"><a class="viewcode-back" href="../../components.html#tensorkrowch.ParamStackNode.reconnect">[docs]</a>    <span class="k">def</span> <span class="nf">reconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;StackNode&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamStackNode&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Re-connects the ``StackNode`` to another ``(Param)StackNode``, in the</span>
+<span class="sd">        axes where the original stacked nodes were already connected.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">axis1</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edges_dict</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">axis2</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">_edges_dict</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edges_dict</span><span class="p">[</span><span class="n">axis1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_edges_dict</span><span class="p">[</span><span class="n">axis2</span><span class="p">][</span><span class="mi">0</span><span class="p">]:</span>
+                    <span class="n">connect_stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">axis1</span><span class="p">),</span> <span class="n">other</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">axis2</span><span class="p">))</span></div>
+    
+    <span class="k">def</span> <span class="fm">__xor__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;StackNode&#39;</span><span class="p">,</span> <span class="s1">&#39;ParamStackNode&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reconnect</span><span class="p">(</span><span class="n">other</span><span class="p">)</span></div>
 
 
 <span class="c1">###############################################################################</span>
 <span class="c1">#                                    EDGES                                    #</span>
 <span class="c1">###############################################################################</span>
-<div class="viewcode-block" id="Edge"><a class="viewcode-back" href="../../components.html#tensorkrowch.Edge">[docs]</a><span class="k">class</span> <span class="nc">Edge</span><span class="p">:</span>
+<div class="viewcode-block" id="Edge"><a class="viewcode-back" href="../../components.html#tensorkrowch.Edge">[docs]</a><span class="k">class</span> <span class="nc">Edge</span><span class="p">:</span>  <span class="c1"># MARK: Edge</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Base class for edges. Should be subclassed by any new class of edges.</span>
 
@@ -3212,9 +3386,10 @@ title="Source repository"
 <span class="sd">    </span>
 <span class="sd">    |</span>
 
-<span class="sd">    Furthermore, edges have specific operations like :meth:`contract_` or</span>
-<span class="sd">    :meth:`svd_` (and its variations) that allow in-place modification of the</span>
-<span class="sd">    :class:`TensorNetwork`.</span>
+<span class="sd">    Furthermore, edges have specific operations like :meth:`contract` or</span>
+<span class="sd">    :meth:`svd` (and its variations), as well as in-place versions of them </span>
+<span class="sd">    (:meth:`contract_`, :meth:`svd_`, etc.) that allow in-place modification</span>
+<span class="sd">    of the :class:`TensorNetwork`.</span>
 <span class="sd">    </span>
 <span class="sd">    |</span>
 
@@ -3360,7 +3535,7 @@ title="Source repository"
 
 <div class="viewcode-block" id="Edge.is_batch"><a class="viewcode-back" href="../../components.html#tensorkrowch.Edge.is_batch">[docs]</a>    <span class="k">def</span> <span class="nf">is_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boolean indicating whether the edge is a batch edge.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis1</span><span class="o">.</span><span class="n">_batch</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">_batch</span></div>
 
 <div class="viewcode-block" id="Edge.is_attached_to"><a class="viewcode-back" href="../../components.html#tensorkrowch.Edge.is_attached_to">[docs]</a>    <span class="k">def</span> <span class="nf">is_attached_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns boolean indicating whether the edge is attached to ``node``.&quot;&quot;&quot;</span>
@@ -3456,7 +3631,7 @@ title="Source repository"
 <span class="sd">        Note that this connectes edges from ``leaf`` (or ``data``, ``virtual``)</span>
 <span class="sd">        nodes, but never from ``resultant`` nodes. If one tries to connect</span>
 <span class="sd">        one of the inherited edges of a ``resultant`` node, the new connected</span>
-<span class="sd">        edge will be attached to the original ``leaf` nodes from which the</span>
+<span class="sd">        edge will be attached to the original ``leaf`` nodes from which the</span>
 <span class="sd">        ``resultant`` node inherited its edges. Hence, the ``resultant`` node</span>
 <span class="sd">        will not &quot;see&quot; the connection until the :class:`TensorNetwork` is</span>
 <span class="sd">        :meth:`~TensorNetwork.reset`.</span>
@@ -3547,7 +3722,7 @@ title="Source repository"
 <span class="n">AbstractStackNode</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">StackNode</span><span class="p">,</span> <span class="n">ParamStackNode</span><span class="p">]</span>
 
 
-<div class="viewcode-block" id="StackEdge"><a class="viewcode-back" href="../../components.html#tensorkrowch.StackEdge">[docs]</a><span class="k">class</span> <span class="nc">StackEdge</span><span class="p">(</span><span class="n">Edge</span><span class="p">):</span>
+<div class="viewcode-block" id="StackEdge"><a class="viewcode-back" href="../../components.html#tensorkrowch.StackEdge">[docs]</a><span class="k">class</span> <span class="nc">StackEdge</span><span class="p">(</span><span class="n">Edge</span><span class="p">):</span>  <span class="c1"># MARK: StackEdge</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for stacked edges. They are just like :class:`Edges &lt;Edge&gt;` but used</span>
 <span class="sd">    when stacking a collection of nodes into a :class:`StackNode`. When doing</span>
@@ -3660,7 +3835,7 @@ title="Source repository"
 <span class="sd">    Note that this connectes edges from ``leaf`` (or ``data``, ``virtual``)</span>
 <span class="sd">    nodes, but never from ``resultant`` nodes. If one tries to connect one of</span>
 <span class="sd">    the inherited edges of a ``resultant`` node, the new connected edge will be</span>
-<span class="sd">    attached to the original ``leaf` nodes from which the ``resultant`` node</span>
+<span class="sd">    attached to the original ``leaf`` nodes from which the ``resultant`` node</span>
 <span class="sd">    inherited its edges. Hence, the ``resultant`` node will not &quot;see&quot; the</span>
 <span class="sd">    connection until the :class:`TensorNetwork` is :meth:`~TensorNetwork.reset`.</span>
 <span class="sd">    </span>
@@ -3707,17 +3882,17 @@ title="Source repository"
 
     <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="p">[</span><span class="n">edge1</span><span class="p">,</span> <span class="n">edge2</span><span class="p">]:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Edge </span><span class="si">{</span><span class="n">edge</span><span class="si">!s}</span><span class="s1"> is not a dangling edge. &#39;</span>
-                             <span class="sa">f</span><span class="s1">&#39;This edge points to nodes: </span><span class="si">{</span><span class="n">edge</span><span class="o">.</span><span class="n">node1</span><span class="si">!s}</span><span class="s1"> and &#39;</span>
-                             <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">edge</span><span class="o">.</span><span class="n">node2</span><span class="si">!s}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Edge &quot;</span><span class="si">{</span><span class="n">edge</span><span class="si">!s}</span><span class="s1">&quot; is not a dangling edge. &#39;</span>
+                             <span class="sa">f</span><span class="s1">&#39;This edge points to nodes: &quot;</span><span class="si">{</span><span class="n">edge</span><span class="o">.</span><span class="n">node1</span><span class="si">!s}</span><span class="s1">&quot; and &#39;</span>
+                             <span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{</span><span class="n">edge</span><span class="o">.</span><span class="n">node2</span><span class="si">!s}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_batch</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Edge </span><span class="si">{</span><span class="n">edge</span><span class="si">!s}</span><span class="s1"> is a batch edge. Batch edges &#39;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Edge &quot;</span><span class="si">{</span><span class="n">edge</span><span class="si">!s}</span><span class="s1">&quot; is a batch edge. Batch edges &#39;</span>
                              <span class="s1">&#39;cannot be connected&#39;</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">edge1</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">!=</span> <span class="n">edge2</span><span class="o">.</span><span class="n">size</span><span class="p">():</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Cannot connect edges of unequal size. &#39;</span>
-                         <span class="sa">f</span><span class="s1">&#39;Size of edge </span><span class="si">{</span><span class="n">edge1</span><span class="si">!s}</span><span class="s1">: </span><span class="si">{</span><span class="n">edge1</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="si">}</span><span class="s1">. &#39;</span>
-                         <span class="sa">f</span><span class="s1">&#39;Size of edge </span><span class="si">{</span><span class="n">edge2</span><span class="si">!s}</span><span class="s1">: </span><span class="si">{</span><span class="n">edge2</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                         <span class="sa">f</span><span class="s1">&#39;Size of edge &quot;</span><span class="si">{</span><span class="n">edge1</span><span class="si">!s}</span><span class="s1">&quot;: </span><span class="si">{</span><span class="n">edge1</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="si">}</span><span class="s1">. &#39;</span>
+                         <span class="sa">f</span><span class="s1">&#39;Size of edge &quot;</span><span class="si">{</span><span class="n">edge2</span><span class="si">!s}</span><span class="s1">&quot;: </span><span class="si">{</span><span class="n">edge2</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 
     <span class="n">node1</span><span class="p">,</span> <span class="n">axis1</span> <span class="o">=</span> <span class="n">edge1</span><span class="o">.</span><span class="n">node1</span><span class="p">,</span> <span class="n">edge1</span><span class="o">.</span><span class="n">axis1</span>
     <span class="n">node2</span><span class="p">,</span> <span class="n">axis2</span> <span class="o">=</span> <span class="n">edge2</span><span class="o">.</span><span class="n">node1</span><span class="p">,</span> <span class="n">edge2</span><span class="o">.</span><span class="n">axis1</span>
@@ -3770,9 +3945,9 @@ title="Source repository"
 
     <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="p">[</span><span class="n">edge1</span><span class="p">,</span> <span class="n">edge2</span><span class="p">]:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Edge </span><span class="si">{</span><span class="n">edge</span><span class="si">!s}</span><span class="s1"> is not a dangling edge. &#39;</span>
-                             <span class="sa">f</span><span class="s1">&#39;This edge points to nodes: </span><span class="si">{</span><span class="n">edge</span><span class="o">.</span><span class="n">node1</span><span class="si">!s}</span><span class="s1"> and &#39;</span>
-                             <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">edge</span><span class="o">.</span><span class="n">node2</span><span class="si">!s}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Edge &quot;</span><span class="si">{</span><span class="n">edge</span><span class="si">!s}</span><span class="s1">&quot; is not a dangling edge. &#39;</span>
+                             <span class="sa">f</span><span class="s1">&#39;This edge points to nodes: &quot;</span><span class="si">{</span><span class="n">edge</span><span class="o">.</span><span class="n">node1</span><span class="si">!s}</span><span class="s1">&quot; and &#39;</span>
+                             <span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{</span><span class="n">edge</span><span class="o">.</span><span class="n">node2</span><span class="si">!s}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
 
     <span class="n">node1</span><span class="p">,</span> <span class="n">axis1</span> <span class="o">=</span> <span class="n">edge1</span><span class="o">.</span><span class="n">node1</span><span class="p">,</span> <span class="n">edge1</span><span class="o">.</span><span class="n">axis1</span>
     <span class="n">node2</span><span class="p">,</span> <span class="n">axis2</span> <span class="o">=</span> <span class="n">edge2</span><span class="o">.</span><span class="n">node1</span><span class="p">,</span> <span class="n">edge2</span><span class="o">.</span><span class="n">axis1</span>
@@ -3847,7 +4022,7 @@ title="Source repository"
 <span class="c1">###############################################################################</span>
 <span class="c1">#                                   SUCCESSOR                                 #</span>
 <span class="c1">###############################################################################</span>
-<div class="viewcode-block" id="Successor"><a class="viewcode-back" href="../../components.html#tensorkrowch.Successor">[docs]</a><span class="k">class</span> <span class="nc">Successor</span><span class="p">:</span>
+<div class="viewcode-block" id="Successor"><a class="viewcode-back" href="../../components.html#tensorkrowch.Successor">[docs]</a><span class="k">class</span> <span class="nc">Successor</span><span class="p">:</span>  <span class="c1"># MARK: Successor</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for successors. This is a sort of cache memory for :class:`Operations</span>
 <span class="sd">    &lt;Operation&gt;` that have been already computed.</span>
@@ -3926,7 +4101,7 @@ title="Source repository"
 <span class="c1">###############################################################################</span>
 <span class="c1">#                                TENSOR NETWORK                               #</span>
 <span class="c1">###############################################################################</span>
-<div class="viewcode-block" id="TensorNetwork"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork">[docs]</a><span class="k">class</span> <span class="nc">TensorNetwork</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<div class="viewcode-block" id="TensorNetwork"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork">[docs]</a><span class="k">class</span> <span class="nc">TensorNetwork</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>  <span class="c1"># MARK: TensorNetwork</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for arbitrary Tensor Networks. Subclass of **PyTorch**</span>
 <span class="sd">    ``torch.nn.Module``.</span>
@@ -4098,7 +4273,7 @@ title="Source repository"
 
         <span class="c1"># TN modes</span>
         <span class="c1"># Auto-management of memory mode</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span> <span class="o">=</span> <span class="kc">False</span>   <span class="c1"># train -&gt; True / eval -&gt; True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span> <span class="o">=</span> <span class="kc">True</span>   <span class="c1"># train -&gt; True / eval -&gt; True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_auto_unbind</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># train -&gt; False / eval -&gt; True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_tracing</span> <span class="o">=</span> <span class="kc">False</span>      <span class="c1"># Tracing mode (True while calling .trace())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_traced</span> <span class="o">=</span> <span class="kc">False</span>       <span class="c1"># True if .trace() is called, False if reset()</span>
@@ -4167,7 +4342,7 @@ title="Source repository"
     <span class="k">def</span> <span class="nf">auto_stack</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns boolean indicating whether ``auto_stack`` mode is active. By</span>
-<span class="sd">        default, it is ``False``.</span>
+<span class="sd">        default, it is ``True``.</span>
 <span class="sd">        </span>
 <span class="sd">        This mode indicates whether the operation :func:`stack` can take control</span>
 <span class="sd">        of the memory management of the network to skip some steps in future</span>
@@ -4379,7 +4554,11 @@ title="Source repository"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">node</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_remove_node</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">move_names</span><span class="p">)</span>
-        <span class="k">del</span> <span class="n">node</span></div>
+        <span class="n">node</span><span class="o">.</span><span class="n">_temp_tensor</span> <span class="o">=</span> <span class="kc">None</span></div>
+    
+    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">delete_node</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_update_node_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span> <span class="n">new_name</span><span class="p">:</span> <span class="n">Text</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -4420,7 +4599,8 @@ title="Source repository"
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Updates a single node&#39;s name, without taking care of the other names.&quot;&quot;&quot;</span>
         <span class="c1"># Node is ParamNode and tensor is not None</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
-            <span class="nb">delattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;param&#39;</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">]))</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">):</span>
+                <span class="nb">delattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_attached_to</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_remove_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
@@ -4429,15 +4609,15 @@ title="Source repository"
         <span class="n">node</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">new_name</span>
 
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;param&#39;</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">])):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">register_parameter</span><span class="p">(</span>
-                    <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;param&#39;</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">]),</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">])</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="c1"># Nodes names are never repeated, so it is likely that</span>
-                <span class="c1"># this case will never occur</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s1">&#39;Network already has attribute named </span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">register_parameter</span><span class="p">(</span><span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">,</span>
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Nodes names are never repeated, so it is likely that</span>
+                    <span class="c1"># this case will never occur</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s1">&#39;Network already has attribute named </span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_add_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
@@ -4531,10 +4711,9 @@ title="Source repository"
 
         <span class="c1"># Node is ParamNode and tensor is not None</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;param&#39;</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">])):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">register_parameter</span><span class="p">(</span>
-                    <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;param&#39;</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">]),</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">])</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">,):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">register_parameter</span><span class="p">(</span> <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">,</span>
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">_memory_nodes</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">])</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="c1"># Nodes names are never repeated, so it is likely that</span>
                 <span class="c1"># this case will never occur</span>
@@ -4574,7 +4753,8 @@ title="Source repository"
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Node is ParamNode and tensor is not None</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span> <span class="n">Parameter</span><span class="p">):</span>
-            <span class="nb">delattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;param&#39;</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">]))</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">):</span>
+                <span class="nb">delattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;param_&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">is_attached_to</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_remove_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
@@ -4637,8 +4817,8 @@ title="Source repository"
 <span class="sd">            in-place (``True``) or copied and then parameterized (``False``).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span><span class="p">:</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Resultant nodes will be removed before parameterizing&#39;</span>
-                          <span class="s1">&#39; the TN&#39;</span><span class="p">)</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s1">&#39;Resultant nodes will be removed before parameterizing the TN&#39;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="n">override</span><span class="p">:</span>
@@ -4786,7 +4966,7 @@ title="Source repository"
             <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">Edge</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">edge</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_edges</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s1">&#39;Edge </span><span class="si">{</span><span class="n">edge</span><span class="si">!r}</span><span class="s1"> should be a dangling edge of the &#39;</span>
+                        <span class="sa">f</span><span class="s1">&#39;Edge &quot;</span><span class="si">{</span><span class="n">edge</span><span class="si">!r}</span><span class="s1">&quot; should be a dangling edge of the &#39;</span>
                         <span class="s1">&#39;Tensor Network&#39;</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
@@ -4879,7 +5059,10 @@ title="Source repository"
         <span class="n">stack_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_virtual_nodes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;stack_data_memory&#39;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">stack_node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">Tensor</span><span class="p">):</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
             <span class="n">stack_node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">data</span>
             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">data_node</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">())):</span>
                 <span class="n">data_node</span><span class="o">.</span><span class="n">_shape</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
@@ -4904,7 +5087,7 @@ title="Source repository"
 <span class="sd">          </span>
 <span class="sd">        * ``virtual``: Only virtual nodes created in :class:`operations</span>
 <span class="sd">          &lt;Operation&gt;` are :meth:`deleted &lt;delete_node&gt;`. This only includes</span>
-<span class="sd">          nodes using the reserved name ``&quot;virtual_stack&quot;``.</span>
+<span class="sd">          nodes using the reserved name ``&quot;virtual_result&quot;``.</span>
 <span class="sd">          </span>
 <span class="sd">        * ``resultant``: These nodes are :meth:`deleted &lt;delete_node&gt;` from the</span>
 <span class="sd">          network.</span>
@@ -4931,9 +5114,10 @@ title="Source repository"
             <span class="n">aux_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span><span class="p">)</span>
             <span class="n">aux_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_virtual_nodes</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">aux_dict</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-                <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">_virtual</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;virtual_stack&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">):</span>
-                    <span class="c1"># Virtual nodes named &quot;virtual_stack&quot; are ParamStackNodes</span>
-                    <span class="c1"># that result from stacking a collection of ParamNodes</span>
+                <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">_virtual</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;virtual_result&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">):</span>
+                    <span class="c1"># Virtual nodes named &quot;virtual_result&quot; are nodes that are</span>
+                    <span class="c1"># required in some situations during contraction, like</span>
+                    <span class="c1"># ParamStackNodes</span>
                     <span class="c1"># This condition is satisfied by the rest of virtual nodes</span>
                     <span class="k">continue</span>
 
@@ -4972,13 +5156,13 @@ title="Source repository"
             <span class="n">aux_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_resultant_nodes</span><span class="p">)</span>
             <span class="n">aux_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_virtual_nodes</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">aux_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
-                <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">_virtual</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;virtual_stack&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">_virtual</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;virtual_result&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">_name</span><span class="p">):</span>
                     <span class="c1"># This condition is satisfied by the rest of virtual nodes</span>
-                    <span class="c1"># (e.g. &quot;virtual_feature&quot;, &quot;virtual_n_features&quot;)</span>
                     <span class="k">continue</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">delete_node</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="TensorNetwork.trace"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork.trace">[docs]</a>    <span class="k">def</span> <span class="nf">trace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">example</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="TensorNetwork.trace"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork.trace">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">trace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">example</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Traces the tensor network contraction algorithm with two purposes:</span>
 
@@ -5012,13 +5196,12 @@ title="Source repository"
 <span class="sd">            Keyword arguments that might be used in :meth:`contract`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
-
-        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_tracing</span> <span class="o">=</span> <span class="kc">True</span>
-            <span class="bp">self</span><span class="p">(</span><span class="n">example</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_tracing</span> <span class="o">=</span> <span class="kc">False</span>
-            <span class="bp">self</span><span class="p">(</span><span class="n">example</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_traced</span> <span class="o">=</span> <span class="kc">True</span></div>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tracing</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="p">(</span><span class="n">example</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tracing</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="p">(</span><span class="n">example</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_traced</span> <span class="o">=</span> <span class="kc">True</span></div>
 
 <div class="viewcode-block" id="TensorNetwork.contract"><a class="viewcode-back" href="../../components.html#tensorkrowch.TensorNetwork.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -5115,7 +5298,7 @@ title="Source repository"
                 <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
             <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s1">&#39;Tensor network </span><span class="si">{</span><span class="bp">self</span><span class="si">!s}</span><span class="s1"> does not have any node with &#39;</span>
+                    <span class="sa">f</span><span class="s1">&#39;Tensor network &quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">!s}</span><span class="s1">&quot; does not have any node with &#39;</span>
                     <span class="sa">f</span><span class="s1">&#39;name </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`key` should be int or str type&#39;</span><span class="p">)</span>

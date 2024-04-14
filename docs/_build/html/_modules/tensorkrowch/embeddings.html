@@ -1,11 +1,11 @@
 
 <!DOCTYPE html>
 
-<html lang="en">
+<html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.embeddings &#8212; TensorKrowch 1.0.0 documentation</title>
+    <title>tensorkrowch.embeddings &#8212; TensorKrowch 1.0.1 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -29,17 +29,15 @@
     <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
     <script src="../../_static/jquery.js"></script>
     <script src="../../_static/underscore.js"></script>
-    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/clipboard.min.js"></script>
     <script src="../../_static/copybutton.js"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
-    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <link rel="shortcut icon" href="../../_static/tensorkrowch_favicon_light.svg"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="docsearch:language" content="en">
+    <meta name="docsearch:language" content="None">
     
 
     <!-- Google Analytics -->
@@ -180,6 +178,11 @@
      Embeddings
     </a>
    </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../decompositions.html">
+     Decompositions
+    </a>
+   </li>
   </ul>
  </li>
 </ul>
@@ -295,7 +298,7 @@ title="Source repository"
 <span class="kn">from</span> <span class="nn">tensorkrowch.utils</span> <span class="kn">import</span> <span class="n">binomial_coeffs</span>
 
 
-<div class="viewcode-block" id="unit"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.unit">[docs]</a><span class="k">def</span> <span class="nf">unit</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="unit"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.unit">[docs]</a><span class="k">def</span> <span class="nf">unit</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Embedds the data tensor using the local feature map defined in the original</span>
 <span class="sd">    `paper &lt;https://arxiv.org/abs/1605.05775&gt;`_ by E. Miles Stoudenmire and David</span>
@@ -325,21 +328,25 @@ title="Source repository"
 <span class="sd">        </span>
 <span class="sd">        .. math::</span>
 <span class="sd">        </span>
-<span class="sd">            batch\_size \times n_{features}</span>
+<span class="sd">            (batch_0 \times \cdots \times batch_n \times) n_{features}</span>
 <span class="sd">        </span>
 <span class="sd">        That is, ``data`` is a (batch) vector with :math:`n_{features}`</span>
-<span class="sd">        components. The :math:`batch\_size` is optional.</span>
+<span class="sd">        components. The :math:`batch` sizes are optional.</span>
 <span class="sd">    dim : int</span>
 <span class="sd">        New feature dimension.</span>
+<span class="sd">    axis : int</span>
+<span class="sd">        Axis where the ``data`` tensor is &#39;expanded&#39;. Should be between 0 and</span>
+<span class="sd">        the rank of ``data``. By default, it is -1, which returns a tensor with</span>
+<span class="sd">        shape  </span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">        </span>
+<span class="sd">            (batch_0 \times \cdots \times batch_n \times) n_{features}</span>
+<span class="sd">            \times dim</span>
 <span class="sd">            </span>
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    torch.Tensor</span>
-<span class="sd">        New data tensor with shape</span>
-<span class="sd">        </span>
-<span class="sd">        .. math::</span>
-<span class="sd">        </span>
-<span class="sd">            batch\_size \times n_{features} \times dim</span>
 <span class="sd">            </span>
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
@@ -356,17 +363,20 @@ title="Source repository"
 <span class="sd">            [-4.3711e-08,  1.0000e+00]])</span>
 <span class="sd">    </span>
 <span class="sd">    &gt;&gt;&gt; b = torch.randn(100, 5)</span>
-<span class="sd">    &gt;&gt;&gt; emb_b = tk.embeddings.unit(b)</span>
+<span class="sd">    &gt;&gt;&gt; emb_b = tk.embeddings.unit(b, dim=6)</span>
 <span class="sd">    &gt;&gt;&gt; emb_b.shape</span>
-<span class="sd">    torch.Size([100, 5, 2])</span>
+<span class="sd">    torch.Size([100, 5, 6])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`data` should be torch.Tensor type&#39;</span><span class="p">)</span>
+    
     <span class="n">lst_tensors</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
         <span class="n">aux</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">binomial_coeffs</span><span class="p">(</span><span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span> <span class="o">*</span> \
               <span class="p">(</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">cos</span><span class="p">()</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">dim</span> <span class="o">-</span> <span class="n">i</span><span class="p">)</span> <span class="o">*</span> \
               <span class="p">(</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">sin</span><span class="p">()</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
         <span class="n">lst_tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">aux</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">lst_tensors</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">lst_tensors</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="add_ones"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.add_ones">[docs]</a><span class="k">def</span> <span class="nf">add_ones</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
@@ -395,22 +405,23 @@ title="Source repository"
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    data : torch.Tensor</span>
-<span class="sd">        Data tensor with shape  </span>
+<span class="sd">        Data tensor with shape </span>
 <span class="sd">        </span>
 <span class="sd">        .. math::</span>
 <span class="sd">        </span>
-<span class="sd">            batch\_size \times n_{features}</span>
-<span class="sd">            </span>
+<span class="sd">            (batch_0 \times \cdots \times batch_n \times) n_{features}</span>
+<span class="sd">        </span>
 <span class="sd">        That is, ``data`` is a (batch) vector with :math:`n_{features}`</span>
-<span class="sd">        components. The :math:`batch\_size` is optional.</span>
+<span class="sd">        components. The :math:`batch` sizes are optional.</span>
 <span class="sd">    axis : int</span>
-<span class="sd">        Axis where the ``data`` tensor is &#39;expanded&#39; with the 1&#39;s. Should be</span>
-<span class="sd">        between 0 and the rank of ``data``. By default, it is -1, which returns</span>
-<span class="sd">        a tensor with shape  </span>
+<span class="sd">        Axis where the ``data`` tensor is &#39;expanded&#39;. Should be between 0 and</span>
+<span class="sd">        the rank of ``data``. By default, it is -1, which returns a tensor with</span>
+<span class="sd">        shape  </span>
 <span class="sd">        </span>
 <span class="sd">        .. math::</span>
 <span class="sd">        </span>
-<span class="sd">            batch\_size \times n_{features} \times 2</span>
+<span class="sd">            (batch_0 \times \cdots \times batch_n \times) n_{features}</span>
+<span class="sd">            \times 2</span>
 <span class="sd">            </span>
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -435,6 +446,8 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; emb_b.shape</span>
 <span class="sd">    torch.Size([100, 5, 2])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`data` should be torch.Tensor type&#39;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">data</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span></div>
 
 
@@ -471,20 +484,22 @@ title="Source repository"
 <span class="sd">        </span>
 <span class="sd">        .. math::</span>
 <span class="sd">        </span>
-<span class="sd">            batch\_size \times n_{features}</span>
-<span class="sd">            </span>
+<span class="sd">            (batch_0 \times \cdots \times batch_n \times) n_{features}</span>
+<span class="sd">        </span>
 <span class="sd">        That is, ``data`` is a (batch) vector with :math:`n_{features}`</span>
-<span class="sd">        components. The :math:`batch\_size` is optional.</span>
+<span class="sd">        components. The :math:`batch` sizes are optional.</span>
 <span class="sd">    degree : int</span>
-<span class="sd">        Maximum degree of the monomials.</span>
+<span class="sd">        Maximum degree of the monomials. The feature dimension will be</span>
+<span class="sd">        ``degree + 1``.</span>
 <span class="sd">    axis : int</span>
-<span class="sd">        Axis where the ``data`` tensor is &#39;expanded&#39; with monomials. Should be</span>
-<span class="sd">        between 0 and the rank of ``data``. By default, it is -1, which returns</span>
-<span class="sd">        a tensor with shape </span>
+<span class="sd">        Axis where the ``data`` tensor is &#39;expanded&#39;. Should be between 0 and</span>
+<span class="sd">        the rank of ``data``. By default, it is -1, which returns a tensor with</span>
+<span class="sd">        shape  </span>
 <span class="sd">        </span>
 <span class="sd">        .. math::</span>
 <span class="sd">        </span>
-<span class="sd">            batch\_size \times n_{features} \times (degree + 1)</span>
+<span class="sd">            (batch_0 \times \cdots \times batch_n \times) n_{features}</span>
+<span class="sd">            \times (degree + 1)</span>
 <span class="sd">            </span>
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -505,14 +520,201 @@ title="Source repository"
 <span class="sd">            [1., 2., 4.]])</span>
 <span class="sd">    </span>
 <span class="sd">    &gt;&gt;&gt; b = torch.randn(100, 5)</span>
-<span class="sd">    &gt;&gt;&gt; emb_b = tk.embeddings.poly(b)</span>
+<span class="sd">    &gt;&gt;&gt; emb_b = tk.embeddings.poly(b, degree=3)</span>
 <span class="sd">    &gt;&gt;&gt; emb_b.shape</span>
-<span class="sd">    torch.Size([100, 5, 3])</span>
+<span class="sd">    torch.Size([100, 5, 4])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`data` should be torch.Tensor type&#39;</span><span class="p">)</span>
+    
     <span class="n">lst_powers</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">degree</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
         <span class="n">lst_powers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">lst_powers</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="discretize"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.discretize">[docs]</a><span class="k">def</span> <span class="nf">discretize</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+               <span class="n">level</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+               <span class="n">base</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+               <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Embedds the data tensor discretizing each variable in a certain ``basis``</span>
+<span class="sd">    and with a certain ``level`` of precision, assuming the values to discretize</span>
+<span class="sd">    are all between 0 and 1. That is, given a vector</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+
+<span class="sd">        x = \begin{bmatrix}</span>
+<span class="sd">                x_1\\</span>
+<span class="sd">                \vdots\\</span>
+<span class="sd">                x_N</span>
+<span class="sd">            \end{bmatrix}</span>
+<span class="sd">            </span>
+<span class="sd">    returns a matrix</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \hat{x} = \begin{bmatrix}</span>
+<span class="sd">                        \lfloor x_1 b^1 \rfloor \mod b &amp; \cdots &amp;</span>
+<span class="sd">                            \lfloor x_1 b^{l} \rfloor \mod b\\</span>
+<span class="sd">                        \vdots &amp; \ddots &amp; \vdots\\</span>
+<span class="sd">                        \lfloor x_N b^1 \rfloor \mod b &amp; \cdots &amp;</span>
+<span class="sd">                            \lfloor x_N b^{l} \rfloor \mod b</span>
+<span class="sd">                  \end{bmatrix}</span>
+<span class="sd">    </span>
+<span class="sd">    where :math:`b` stands for ``base``, and :math:`l` for ``level``.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : torch.Tensor</span>
+<span class="sd">        Data tensor with shape </span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">        </span>
+<span class="sd">            (batch_0 \times \cdots \times batch_n \times) n_{features}</span>
+<span class="sd">        </span>
+<span class="sd">        That is, ``data`` is a (batch) vector with :math:`n_{features}`</span>
+<span class="sd">        components. The :math:`batch` sizes are optional. The ``data`` tensor</span>
+<span class="sd">        is assumed to have elements between 0 and 1.</span>
+<span class="sd">    level : int</span>
+<span class="sd">        Level of precision of the discretization. This will be the new feature</span>
+<span class="sd">        dimension.</span>
+<span class="sd">    base : int</span>
+<span class="sd">        The base of the discretization.</span>
+<span class="sd">    axis : int</span>
+<span class="sd">        Axis where the ``data`` tensor is &#39;expanded&#39;. Should be between 0 and</span>
+<span class="sd">        the rank of ``data``. By default, it is -1, which returns a tensor with</span>
+<span class="sd">        shape  </span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">        </span>
+<span class="sd">            (batch_0 \times \cdots \times batch_n \times) n_{features}</span>
+<span class="sd">            \times level</span>
+<span class="sd">            </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    torch.Tensor</span>
+<span class="sd">            </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; a = torch.tensor([0, 0.5, 0.75, 1])</span>
+<span class="sd">    &gt;&gt;&gt; a</span>
+<span class="sd">    tensor([0.0000, 0.5000, 0.7500, 1.0000])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; emb_a = tk.embeddings.discretize(a, level=3)</span>
+<span class="sd">    &gt;&gt;&gt; emb_a</span>
+<span class="sd">    tensor([[0., 0., 0.],</span>
+<span class="sd">            [1., 0., 0.],</span>
+<span class="sd">            [1., 1., 0.],</span>
+<span class="sd">            [1., 1., 1.]])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; b = torch.rand(100, 5)</span>
+<span class="sd">    &gt;&gt;&gt; emb_b = tk.embeddings.discretize(b, level=3)</span>
+<span class="sd">    &gt;&gt;&gt; emb_b.shape</span>
+<span class="sd">    torch.Size([100, 5, 3])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`data` should be torch.Tensor type&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">ge</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">data</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Elements of `data` should be between 0 and 1&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">le</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">data</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Elements of `data` should be between 0 and 1&#39;</span><span class="p">)</span>
+
+    <span class="n">max_discr_value</span> <span class="o">=</span> <span class="p">(</span><span class="n">base</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="nb">sum</span><span class="p">([</span><span class="n">base</span> <span class="o">**</span> <span class="o">-</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">level</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">data</span> <span class="o">&gt;</span> <span class="n">max_discr_value</span><span class="p">,</span> <span class="n">max_discr_value</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    
+    <span class="n">base</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">remainder</span><span class="p">((</span><span class="n">data</span> <span class="o">*</span> <span class="n">base</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">i</span><span class="p">))</span><span class="o">.</span><span class="n">floor</span><span class="p">(),</span> <span class="n">base</span><span class="p">)</span>
+           <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">level</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+    <span class="n">ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">ids</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ids</span></div>
+
+
+<div class="viewcode-block" id="basis"><a class="viewcode-back" href="../../embeddings.html#tensorkrowch.embeddings.basis">[docs]</a><span class="k">def</span> <span class="nf">basis</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Embedds the data tensor transforming each value, assumed to be an integer</span>
+<span class="sd">    between 0 and ``dim - 1``, into the corresponding vector of the</span>
+<span class="sd">    computational basis. That is, given a vector</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+
+<span class="sd">        x = \begin{bmatrix}</span>
+<span class="sd">                x_1\\</span>
+<span class="sd">                \vdots\\</span>
+<span class="sd">                x_N</span>
+<span class="sd">            \end{bmatrix}</span>
+<span class="sd">            </span>
+<span class="sd">    returns a matrix</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \hat{x} = \begin{bmatrix}</span>
+<span class="sd">                      \lvert x_1 \rangle\\</span>
+<span class="sd">                      \vdots\\</span>
+<span class="sd">                      \lvert x_N \rangle</span>
+<span class="sd">                  \end{bmatrix}</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : torch.Tensor</span>
+<span class="sd">        Data tensor with shape </span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">        </span>
+<span class="sd">            (batch_0 \times \cdots \times batch_n \times) n_{features}</span>
+<span class="sd">        </span>
+<span class="sd">        That is, ``data`` is a (batch) vector with :math:`n_{features}`</span>
+<span class="sd">        components. The :math:`batch` sizes are optional. The ``data`` tensor</span>
+<span class="sd">        is assumed to have integer elements between 0 and ``dim - 1``.</span>
+<span class="sd">    dim : int</span>
+<span class="sd">        The dimension of the computational basis. This will be the new feature</span>
+<span class="sd">        dimension.</span>
+<span class="sd">    axis : int</span>
+<span class="sd">        Axis where the ``data`` tensor is &#39;expanded&#39;. Should be between 0 and</span>
+<span class="sd">        the rank of ``data``. By default, it is -1, which returns a tensor with</span>
+<span class="sd">        shape  </span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">        </span>
+<span class="sd">            (batch_0 \times \cdots \times batch_n \times) n_{features}</span>
+<span class="sd">            \times dim</span>
+<span class="sd">            </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    torch.Tensor</span>
+<span class="sd">            </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; a = torch.arange(5)</span>
+<span class="sd">    &gt;&gt;&gt; a</span>
+<span class="sd">    tensor([0, 1, 2, 3, 4])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; emb_a = tk.embeddings.basis(a, dim=5)</span>
+<span class="sd">    &gt;&gt;&gt; emb_a</span>
+<span class="sd">    tensor([[1, 0, 0, 0, 0],</span>
+<span class="sd">            [0, 1, 0, 0, 0],</span>
+<span class="sd">            [0, 0, 1, 0, 0],</span>
+<span class="sd">            [0, 0, 0, 1, 0],</span>
+<span class="sd">            [0, 0, 0, 0, 1]])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; b = torch.randint(low=0, high=10, size=(100, 5))</span>
+<span class="sd">    &gt;&gt;&gt; emb_b = tk.embeddings.basis(b, dim=10)</span>
+<span class="sd">    &gt;&gt;&gt; emb_b.shape</span>
+<span class="sd">    torch.Size([100, 5, 10])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`data` should be torch.Tensor type&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">is_floating_point</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`data` should be a tensor of integers&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">ge</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">data</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Elements of `data` should be between 0 and (dim - 1)&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">le</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Elements of `data` should be between 0 and (dim - 1)&#39;</span><span class="p">)</span>
+    
+    <span class="n">ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="o">*</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">ids</span> <span class="o">==</span> <span class="n">data</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">ids</span> <span class="o">=</span> <span class="n">ids</span><span class="o">.</span><span class="n">movedim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ids</span></div>
 </pre></div>
 
               </div>

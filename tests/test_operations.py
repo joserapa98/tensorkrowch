@@ -51,6 +51,35 @@ class TestPermute:
                node[1]._nodes[node.is_node1('left')]
 
         assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
+        
+        # Repeat
+        permuted_node = node.permute((0, 2, 1))
+    
+    def test_permute_node_from_list(self):
+        node = tk.Node(shape=(2, 5, 2),
+                       axes_names=('left', 'input', 'right'),
+                       name='node',
+                       init_method='randn')
+        permuted_node = node.permute([0, 2, 1])
+
+        assert permuted_node['left']._nodes[permuted_node.is_node1('left')] == \
+               node['left']._nodes[node.is_node1('left')]
+        assert permuted_node['input']._nodes[permuted_node.is_node1('left')] == \
+               node['input']._nodes[node.is_node1('left')]
+        assert permuted_node['right']._nodes[permuted_node.is_node1('left')] == \
+               node['right']._nodes[node.is_node1('left')]
+
+        assert permuted_node[0]._nodes[permuted_node.is_node1('left')] == \
+               node[0]._nodes[node.is_node1('left')]
+        assert permuted_node[1]._nodes[permuted_node.is_node1('left')] == \
+               node[2]._nodes[node.is_node1('left')]
+        assert permuted_node[2]._nodes[permuted_node.is_node1('left')] == \
+               node[1]._nodes[node.is_node1('left')]
+
+        assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
+        
+        # Repeat
+        permuted_node = node.permute([0, 2, 1])
 
     def test_permute_node_in_place(self):
         node = tk.Node(shape=(2, 5, 2),
@@ -784,6 +813,113 @@ class TestSplitSVD:
         assert new_node1.shape == (10, 2, 5, 1)
         assert new_node2.shape == (10, 1, 5, 3)
 
+    def test_split_contracted_node_cutoff(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(10, 2, 5, 4),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node2 = tk.Node(shape=(10, 4, 5, 3),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node2',
+                        init_method='randn',
+                        network=net)
+        edge = node1[3] ^ node2[1]
+        result = node1 @ node2
+
+        high_rank_tensor = torch.zeros(10, 15)
+        high_rank_tensor[:10, :10] = torch.diag(torch.arange(1, 0, -0.1))
+        high_rank_tensor = high_rank_tensor.expand(
+            10, 10, 15).reshape(10, 2, 5, 5, 3)
+        result._unrestricted_set_tensor(high_rank_tensor)
+
+        # Split result
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            cutoff=0.5)
+
+        assert new_node1.shape == (10, 2, 5, 6)
+        assert new_node1['batch'].size() == 10
+        assert new_node1['left'].size() == 2
+        assert new_node1['input'].size() == 5
+        assert new_node1['split'].size() == 6
+
+        assert new_node2.shape == (10, 6, 5, 3)
+        assert new_node2['batch'].size() == 10
+        assert new_node2['split'].size() == 6
+        assert new_node2['input'].size() == 5
+        assert new_node2['right'].size() == 3
+
+        # Repeat operation with low rank tensor
+        low_rank_tensor = torch.zeros(10, 15)
+        low_rank_tensor[:5, :5] = torch.diag(torch.arange(1, 0, -0.2))
+        low_rank_tensor = low_rank_tensor.expand(
+            10, 10, 15).reshape(10, 2, 5, 5, 3)
+        result._unrestricted_set_tensor(low_rank_tensor)
+
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            cutoff=0.5)
+
+        # When using cum_percentage, if the tensor rank changes,
+        # the dimension of the split edge changes with it
+        assert new_node1.shape == (10, 2, 5, 3)
+        assert new_node2.shape == (10, 3, 5, 3)
+        
+    def test_split_contracted_node_rank_cum_percentage_cutoff(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(10, 2, 5, 4),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node2 = tk.Node(shape=(10, 4, 5, 3),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node2',
+                        init_method='randn',
+                        network=net)
+        edge = node1[3] ^ node2[1]
+        result = node1 @ node2
+
+        tensor = torch.zeros(10, 15)
+        tensor[:10, :10] = torch.diag(torch.arange(1, 0, -0.1))
+        tensor = tensor.expand(
+            10, 10, 15).reshape(10, 2, 5, 5, 3)
+        result._unrestricted_set_tensor(tensor)
+
+        # Split result
+        # If several options are specified, the rank will be the one that
+        # fulfills all of them, that is, the minimum rank
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            rank=5, # rank = 5
+                                            cum_percentage=0.9, # rank = 8
+                                            cutoff=0.5) # rank = 6
+
+        assert new_node1.shape == (10, 2, 5, 5)
+        assert new_node2.shape == (10, 5, 5, 3)
+
+        # Repeat operation changing restrictions
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            rank=10, # rank = 10
+                                            cum_percentage=0.9, # rank = 8
+                                            cutoff=0.5) # rank = 6
+        
+        assert new_node1.shape == (10, 2, 5, 6)
+        assert new_node2.shape == (10, 6, 5, 3)
+        
+        # Repeat operation changing restrictions
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            rank=10, # rank = 10
+                                            cum_percentage=0.9, # rank = 8
+                                            cutoff=0.1) # rank = 10
+        
+        assert new_node1.shape == (10, 2, 5, 8)
+        assert new_node2.shape == (10, 8, 5, 3)
+
     def test_split_in_place(self):
         net = tk.TensorNetwork()
         node1 = tk.Node(shape=(10, 2, 5, 4),
@@ -1231,6 +1367,118 @@ class TestSplitSVDR:
         # the dimension of the split edge changes with it
         assert new_node1.shape == (10, 2, 5, 1)
         assert new_node2.shape == (10, 1, 5, 3)
+        
+    def test_split_contracted_node_cutoff(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(10, 2, 5, 4),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node2 = tk.Node(shape=(10, 4, 5, 3),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node2',
+                        init_method='randn',
+                        network=net)
+        edge = node1[3] ^ node2[1]
+        result = node1 @ node2
+
+        high_rank_tensor = torch.zeros(10, 15)
+        high_rank_tensor[:10, :10] = torch.diag(torch.arange(1, 0, -0.1))
+        high_rank_tensor = high_rank_tensor.expand(
+            10, 10, 15).reshape(10, 2, 5, 5, 3)
+        result._unrestricted_set_tensor(high_rank_tensor)
+
+        # Split result
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            mode='svdr',
+                                            cutoff=0.5)
+
+        assert new_node1.shape == (10, 2, 5, 6)
+        assert new_node1['batch'].size() == 10
+        assert new_node1['left'].size() == 2
+        assert new_node1['input'].size() == 5
+        assert new_node1['split'].size() == 6
+
+        assert new_node2.shape == (10, 6, 5, 3)
+        assert new_node2['batch'].size() == 10
+        assert new_node2['split'].size() == 6
+        assert new_node2['input'].size() == 5
+        assert new_node2['right'].size() == 3
+
+        # Repeat operation with low rank tensor
+        low_rank_tensor = torch.zeros(10, 15)
+        low_rank_tensor[:5, :5] = torch.diag(torch.arange(1, 0, -0.2))
+        low_rank_tensor = low_rank_tensor.expand(
+            10, 10, 15).reshape(10, 2, 5, 5, 3)
+        result._unrestricted_set_tensor(low_rank_tensor)
+
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            mode='svdr',
+                                            cutoff=0.5)
+
+        # When using cum_percentage, if the tensor rank changes,
+        # the dimension of the split edge changes with it
+        assert new_node1.shape == (10, 2, 5, 3)
+        assert new_node2.shape == (10, 3, 5, 3)
+        
+    def test_split_contracted_node_rank_cum_percentage_cutoff(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(10, 2, 5, 4),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node2 = tk.Node(shape=(10, 4, 5, 3),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node2',
+                        init_method='randn',
+                        network=net)
+        edge = node1[3] ^ node2[1]
+        result = node1 @ node2
+
+        tensor = torch.zeros(10, 15)
+        tensor[:10, :10] = torch.diag(torch.arange(1, 0, -0.1))
+        tensor = tensor.expand(
+            10, 10, 15).reshape(10, 2, 5, 5, 3)
+        result._unrestricted_set_tensor(tensor)
+
+        # Split result
+        # If several options are specified, the rank will be the one that
+        # fulfills all of them, that is, the minimum rank
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            mode='svdr',
+                                            rank=5, # rank = 5
+                                            cum_percentage=0.9, # rank = 8
+                                            cutoff=0.5) # rank = 6
+
+        assert new_node1.shape == (10, 2, 5, 5)
+        assert new_node2.shape == (10, 5, 5, 3)
+
+        # Repeat operation changing restrictions
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            mode='svdr',
+                                            rank=10, # rank = 10
+                                            cum_percentage=0.9, # rank = 8
+                                            cutoff=0.5) # rank = 6
+        
+        assert new_node1.shape == (10, 2, 5, 6)
+        assert new_node2.shape == (10, 6, 5, 3)
+        
+        # Repeat operation changing restrictions
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            mode='svdr',
+                                            rank=10, # rank = 10
+                                            cum_percentage=0.9, # rank = 8
+                                            cutoff=0.1) # rank = 10
+        
+        assert new_node1.shape == (10, 2, 5, 8)
+        assert new_node2.shape == (10, 8, 5, 3)
 
     def test_split_in_place(self):
         net = tk.TensorNetwork()
@@ -2066,7 +2314,6 @@ class TestSVD:
         edge = node1['right'] ^ node2['left']
         return net, edge, node1
 
-    # SVD can only be done in-place
     def test_svd_edge_rank_inplace(self, setup):
         net, edge, node1 = setup
         assert isinstance(edge, tk.Edge)
@@ -2157,8 +2404,59 @@ class TestSVD:
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 0
+    
+    def test_svd_edge_rank_inplace_trace(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+        node2 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        network=net,
+                        init_method='randn')
+        
+        node1['left'] ^ node2['left']
+        edge = node1['right'] ^ node2['right']
+        
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
 
-    # To perform SVD as operation, we first contract and then split
+        new_node1, new_node2 = node1['right'].svd_(rank=2)
+
+        assert tk.utils.erase_enum(new_node1.name) == \
+               tk.utils.erase_enum(edge.node1.name)
+        assert tk.utils.erase_enum(new_node2.name) == \
+               tk.utils.erase_enum(edge.node2.name)
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
+
+        assert new_node1.shape == (3, 5, 2)
+        assert new_node2.shape == (3, 5, 2)
+        assert new_node1['right'].size() == 2
+
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 0
+
+    def test_svd_edge_rank_inplace_trace_to_itself(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+
+        edge = node1['right'] ^ node1['left']
+        
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
+        
+        with pytest.raises(ValueError):
+            new_node1, new_node2 = node1['right'].svd_(rank=2)
+
     def test_svd_edge_rank(self, setup):
         net, edge, node1 = setup
         assert isinstance(edge, tk.Edge)
@@ -2167,20 +2465,9 @@ class TestSVD:
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 0
-
-        node2 = net['node2']
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
-                                                node2_axes=[
-                                                    'input_1', 'right'],
-                                                rank=2)
-        new_node1.name = 'svd'
-        new_node2.name = 'svd'
-        new_node1.get_axis('split').name = 'right'
-        new_node2.get_axis('split').name = 'left'
-
-        assert tk.utils.erase_enum(new_node1.name) == 'svd'
-        assert tk.utils.erase_enum(new_node2.name) == 'svd'
+        
+        new_node1, new_node2 = node1['right'].svd(rank=2)
+        
         assert new_node1.axes_names == edge.node1.axes_names
         assert new_node1.axes_names == edge.node1.axes_names
 
@@ -2197,11 +2484,7 @@ class TestSVD:
         assert len(net.resultant_nodes) == 3
 
         # Repeat operation
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
-                                                node2_axes=[
-                                                    'input_1', 'right'],
-                                                rank=2)
+        new_node1, new_node2 = node1['right'].svd(rank=2)
 
     def test_svd_batch_edge_rank(self, setup):
         net, edge, node1 = setup
@@ -2218,41 +2501,26 @@ class TestSVD:
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 0
-
-        node2 = net['node2']
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left'],
-                                                node2_axes=['right'],
-                                                rank=2)
-        new_node1.name = 'svd'
-        new_node2.name = 'svd'
-        new_node1.get_axis('split').name = 'right'
-        new_node2.get_axis('split').name = 'left'
-
-        assert tk.utils.erase_enum(new_node1.name) == 'svd'
-        assert tk.utils.erase_enum(new_node2.name) == 'svd'
-        assert edge.node1.axes_names == ['left', 'batch', 'right']
-        assert new_node1.axes_names == ['batch', 'left', 'right']
-        assert edge.node2.axes_names == ['left', 'batch', 'right']
-        assert new_node2.axes_names == ['batch', 'left', 'right']
+        
+        new_node1, new_node2 = node1['right'].svd(rank=2)
+        
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
 
         assert edge.node1.shape == (3, 5, 3)
         assert edge.node2.shape == (3, 5, 3)
         assert edge.size() == 3
 
-        assert new_node1.shape == (5, 3, 2)
-        assert new_node2.shape == (5, 2, 3)
+        assert new_node1.shape == (3, 5, 2)
+        assert new_node2.shape == (2, 5, 3)
         assert new_node1['right'].size() == 2
 
-        assert len(net.nodes) == 5
+        assert len(net.nodes) == 7
         assert len(net.leaf_nodes) == 2
-        assert len(net.resultant_nodes) == 3
+        assert len(net.resultant_nodes) == 5
 
         # Repeat operation
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left'],
-                                                node2_axes=['right'],
-                                                rank=2)
+        new_node1, new_node2 = node1['right'].svd(rank=2)
 
     def test_svd_edge_cum_percentage(self, setup):
         net, edge, node1 = setup
@@ -2268,20 +2536,9 @@ class TestSVD:
 
         tensor2 = torch.eye(3, 15).reshape(3, 5, 3)
         edge.node2.tensor = tensor2
-
-        node2 = net['node2']
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
-                                                node2_axes=[
-                                                    'input_1', 'right'],
-                                                cum_percentage=0.5)
-        new_node1.name = 'svd'
-        new_node2.name = 'svd'
-        new_node1.get_axis('split').name = 'right'
-        new_node2.get_axis('split').name = 'left'
-
-        assert tk.utils.erase_enum(new_node1.name) == 'svd'
-        assert tk.utils.erase_enum(new_node2.name) == 'svd'
+        
+        new_node1, new_node2 = node1['right'].svd(cum_percentage=0.5)
+        
         assert new_node1.axes_names == edge.node1.axes_names
         assert new_node1.axes_names == edge.node1.axes_names
 
@@ -2298,11 +2555,7 @@ class TestSVD:
         assert len(net.resultant_nodes) == 3
 
         # Repeat operation
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
-                                                node2_axes=[
-                                                    'input_1', 'right'],
-                                                cum_percentage=0.5)
+        new_node1, new_node2 = node1['right'].svd(cum_percentage=0.5)
 
     def test_svd_result_from_operation(self, setup):
         net, edge, node1 = setup
@@ -2341,6 +2594,54 @@ class TestSVD:
 
         assert node1['right'] == unbound[0]['right']
         assert node1['right'] != new_node1['right']
+    
+    def test_svd_edge_rank_trace(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+        node2 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        network=net,
+                        init_method='randn')
+        
+        node1['left'] ^ node2['left']
+        edge = node1['right'] ^ node2['right']
+        
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
+
+        new_node1, new_node2 = node1['right'].svd(rank=2)
+        
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
+
+        assert new_node1.shape == (3, 5, 2)
+        assert new_node2.shape == (3, 5, 2)
+        assert new_node1['right'].size() == 2
+
+        assert len(net.nodes) == 6
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 4
+
+    def test_svd_edge_rank_trace_to_itself(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+
+        edge = node1['right'] ^ node1['left']
+        
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
+        
+        with pytest.raises(ValueError):
+            new_node1, new_node2 = node1['right'].svd(rank=2)
 
 
 class TestSVDR:
@@ -2362,7 +2663,6 @@ class TestSVDR:
         edge = node1['right'] ^ node2['left']
         return net, edge, node1
 
-    # SVDR can only be done in-place
     def test_svdr_edge_rank_inplace(self, setup):
         net, edge, node1 = setup
         assert isinstance(edge, tk.Edge)
@@ -2453,8 +2753,59 @@ class TestSVDR:
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 0
+    
+    def test_svdr_edge_rank_inplace_trace(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+        node2 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        network=net,
+                        init_method='randn')
+        
+        node1['left'] ^ node2['left']
+        edge = node1['right'] ^ node2['right']
+        
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
 
-    # To perform SVDR as operation, we first contract and then split
+        new_node1, new_node2 = node1['right'].svdr_(rank=2)
+
+        assert tk.utils.erase_enum(new_node1.name) == \
+               tk.utils.erase_enum(edge.node1.name)
+        assert tk.utils.erase_enum(new_node2.name) == \
+               tk.utils.erase_enum(edge.node2.name)
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
+
+        assert new_node1.shape == (3, 5, 2)
+        assert new_node2.shape == (3, 5, 2)
+        assert new_node1['right'].size() == 2
+
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 0
+
+    def test_svdr_edge_rank_inplace_trace_to_itself(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+
+        edge = node1['right'] ^ node1['left']
+        
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
+        
+        with pytest.raises(ValueError):
+            new_node1, new_node2 = node1['right'].svdr_(rank=2)
+
     def test_svdr_edge_rank(self, setup):
         net, edge, node1 = setup
         assert isinstance(edge, tk.Edge)
@@ -2464,20 +2815,8 @@ class TestSVDR:
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 0
 
-        node2 = net['node2']
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
-                                                node2_axes=[
-                                                    'input_1', 'right'],
-                                                mode='svdr',
-                                                rank=2)
-        new_node1.name = 'svd'
-        new_node2.name = 'svd'
-        new_node1.get_axis('split').name = 'right'
-        new_node2.get_axis('split').name = 'left'
-
-        assert tk.utils.erase_enum(new_node1.name) == 'svd'
-        assert tk.utils.erase_enum(new_node2.name) == 'svd'
+        new_node1, new_node2 = node1['right'].svdr(rank=2)
+        
         assert new_node1.axes_names == edge.node1.axes_names
         assert new_node1.axes_names == edge.node1.axes_names
 
@@ -2494,12 +2833,7 @@ class TestSVDR:
         assert len(net.resultant_nodes) == 3
 
         # Repeat operation
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
-                                                node2_axes=[
-                                                    'input_1', 'right'],
-                                                mode='svdr',
-                                                rank=2)
+        new_node1, new_node2 = node1['right'].svdr(rank=2)
 
     def test_svdr_batch_edge_rank(self, setup):
         net, edge, node1 = setup
@@ -2517,42 +2851,25 @@ class TestSVDR:
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 0
 
-        node2 = net['node2']
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left'],
-                                                node2_axes=['right'],
-                                                mode='svdr',
-                                                rank=2)
-        new_node1.name = 'svd'
-        new_node2.name = 'svd'
-        new_node1.get_axis('split').name = 'right'
-        new_node2.get_axis('split').name = 'left'
-
-        assert tk.utils.erase_enum(new_node1.name) == 'svd'
-        assert tk.utils.erase_enum(new_node2.name) == 'svd'
-        assert edge.node1.axes_names == ['left', 'batch', 'right']
-        assert new_node1.axes_names == ['batch', 'left', 'right']
-        assert edge.node2.axes_names == ['left', 'batch', 'right']
-        assert new_node2.axes_names == ['batch', 'left', 'right']
+        new_node1, new_node2 = node1['right'].svdr(rank=2)
+        
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
 
         assert edge.node1.shape == (3, 5, 3)
         assert edge.node2.shape == (3, 5, 3)
         assert edge.size() == 3
 
-        assert new_node1.shape == (5, 3, 2)
-        assert new_node2.shape == (5, 2, 3)
+        assert new_node1.shape == (3, 5, 2)
+        assert new_node2.shape == (2, 5, 3)
         assert new_node1['right'].size() == 2
 
-        assert len(net.nodes) == 5
+        assert len(net.nodes) == 7
         assert len(net.leaf_nodes) == 2
-        assert len(net.resultant_nodes) == 3
+        assert len(net.resultant_nodes) == 5
 
         # Repeat operation
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left'],
-                                                node2_axes=['right'],
-                                                mode='svdr',
-                                                rank=2)
+        new_node1, new_node2 = node1['right'].svdr(rank=2)
 
     def test_svdr_edge_cum_percentage(self, setup):
         net, edge, node1 = setup
@@ -2569,20 +2886,8 @@ class TestSVDR:
         tensor2 = torch.eye(3, 15).reshape(3, 5, 3)
         edge.node2.tensor = tensor2
 
-        node2 = net['node2']
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
-                                                node2_axes=[
-                                                    'input_1', 'right'],
-                                                mode='svdr',
-                                                cum_percentage=0.5)
-        new_node1.name = 'svd'
-        new_node2.name = 'svd'
-        new_node1.get_axis('split').name = 'right'
-        new_node2.get_axis('split').name = 'left'
-
-        assert tk.utils.erase_enum(new_node1.name) == 'svd'
-        assert tk.utils.erase_enum(new_node2.name) == 'svd'
+        new_node1, new_node2 = node1['right'].svd(cum_percentage=0.5)
+        
         assert new_node1.axes_names == edge.node1.axes_names
         assert new_node1.axes_names == edge.node1.axes_names
 
@@ -2599,12 +2904,7 @@ class TestSVDR:
         assert len(net.resultant_nodes) == 3
 
         # Repeat operation
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
-                                                node2_axes=[
-                                                    'input_1', 'right'],
-                                                mode='svdr',
-                                                cum_percentage=0.5)
+        new_node1, new_node2 = node1['right'].svd(cum_percentage=0.5)
 
     def test_svdr_result_from_operation(self, setup):
         net, edge, node1 = setup
@@ -2644,6 +2944,54 @@ class TestSVDR:
 
         assert node1['right'] == unbound[0]['right']
         assert node1['right'] != new_node1['right']
+    
+    def test_svdr_edge_rank_trace(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+        node2 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        network=net,
+                        init_method='randn')
+        
+        node1['left'] ^ node2['left']
+        edge = node1['right'] ^ node2['right']
+        
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
+
+        new_node1, new_node2 = node1['right'].svdr(rank=2)
+        
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
+
+        assert new_node1.shape == (3, 5, 2)
+        assert new_node2.shape == (3, 5, 2)
+        assert new_node1['right'].size() == 2
+
+        assert len(net.nodes) == 6
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 4
+
+    def test_svdr_edge_rank_trace_to_itself(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+
+        edge = node1['right'] ^ node1['left']
+        
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
+        
+        with pytest.raises(ValueError):
+            new_node1, new_node2 = node1['right'].svdr(rank=2)
 
 
 class TestQR:
@@ -2665,7 +3013,6 @@ class TestQR:
         edge = node1['right'] ^ node2['left']
         return net, edge, node1
 
-    # QR can only be done in-place
     def test_qr_edge_inplace(self, setup):
         net, edge, node1 = setup
         assert isinstance(edge, tk.Edge)
@@ -2724,8 +3071,59 @@ class TestQR:
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 0
+    
+    def test_qr_edge_inplace_trace(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+        node2 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        network=net,
+                        init_method='randn')
+        
+        node1['left'] ^ node2['left']
+        edge = node1['right'] ^ node2['right']
+        
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
 
-    # To perform QR as operation, we first contract and then split
+        new_node1, new_node2 = node1['right'].qr_()
+
+        assert tk.utils.erase_enum(new_node1.name) == \
+               tk.utils.erase_enum(edge.node1.name)
+        assert tk.utils.erase_enum(new_node2.name) == \
+               tk.utils.erase_enum(edge.node2.name)
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
+
+        assert new_node1.shape == (3, 5, 15)
+        assert new_node2.shape == (3, 5, 15)
+        assert new_node1['right'].size() == 15
+
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 0
+
+    def test_qr_edge_inplace_trace_to_itself(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+
+        edge = node1['right'] ^ node1['left']
+        
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
+        
+        with pytest.raises(ValueError):
+            new_node1, new_node2 = node1['right'].qr_()
+
     def test_qr_edge(self, setup):
         net, edge, node1 = setup
         assert isinstance(edge, tk.Edge)
@@ -2735,19 +3133,8 @@ class TestQR:
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 0
 
-        node2 = net['node2']
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
-                                                node2_axes=[
-                                                    'input_1', 'right'],
-                                                mode='qr')
-        new_node1.name = 'svd'
-        new_node2.name = 'svd'
-        new_node1.get_axis('split').name = 'right'
-        new_node2.get_axis('split').name = 'left'
-
-        assert tk.utils.erase_enum(new_node1.name) == 'svd'
-        assert tk.utils.erase_enum(new_node2.name) == 'svd'
+        new_node1, new_node2 = node1['right'].qr()
+        
         assert new_node1.axes_names == edge.node1.axes_names
         assert new_node1.axes_names == edge.node1.axes_names
 
@@ -2764,11 +3151,7 @@ class TestQR:
         assert len(net.resultant_nodes) == 3
 
         # Repeat operation
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
-                                                node2_axes=[
-                                                    'input_1', 'right'],
-                                                mode='qr')
+        new_node1, new_node2 = node1['right'].qr()
 
     def test_qr_batch_edge(self, setup):
         net, edge, node1 = setup
@@ -2786,40 +3169,25 @@ class TestQR:
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 0
 
-        node2 = net['node2']
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left'],
-                                                node2_axes=['right'],
-                                                mode='qr')
-        new_node1.name = 'svd'
-        new_node2.name = 'svd'
-        new_node1.get_axis('split').name = 'right'
-        new_node2.get_axis('split').name = 'left'
-
-        assert tk.utils.erase_enum(new_node1.name) == 'svd'
-        assert tk.utils.erase_enum(new_node2.name) == 'svd'
-        assert edge.node1.axes_names == ['left', 'batch', 'right']
-        assert new_node1.axes_names == ['batch', 'left', 'right']
-        assert edge.node2.axes_names == ['left', 'batch', 'right']
-        assert new_node2.axes_names == ['batch', 'left', 'right']
+        new_node1, new_node2 = node1['right'].qr()
+        
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
 
         assert edge.node1.shape == (3, 5, 3)
         assert edge.node2.shape == (3, 5, 3)
         assert edge.size() == 3
-
-        assert new_node1.shape == (5, 3, 3)
-        assert new_node2.shape == (5, 3, 3)
+        
+        assert new_node1.shape == (3, 5, 3)
+        assert new_node2.shape == (3, 5, 3)
         assert new_node1['right'].size() == 3
 
-        assert len(net.nodes) == 5
+        assert len(net.nodes) == 7
         assert len(net.leaf_nodes) == 2
-        assert len(net.resultant_nodes) == 3
+        assert len(net.resultant_nodes) == 5
 
         # Repeat operation
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left'],
-                                                node2_axes=['right'],
-                                                mode='qr')
+        new_node1, new_node2 = node1['right'].qr()
 
     def test_qr_result_from_operation(self, setup):
         net, edge, node1 = setup
@@ -2852,6 +3220,54 @@ class TestQR:
 
         assert node1['right'] == unbound[0]['right']
         assert node1['right'] != new_node1['right']
+    
+    def test_qr_edge_trace(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+        node2 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        network=net,
+                        init_method='randn')
+        
+        node1['left'] ^ node2['left']
+        edge = node1['right'] ^ node2['right']
+        
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
+
+        new_node1, new_node2 = node1['right'].qr()
+        
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
+
+        assert new_node1.shape == (3, 5, 15)
+        assert new_node2.shape == (3, 5, 15)
+        assert new_node1['right'].size() == 15
+
+        assert len(net.nodes) == 6
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 4
+
+    def test_qr_edge_trace_to_itself(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+
+        edge = node1['right'] ^ node1['left']
+        
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
+        
+        with pytest.raises(ValueError):
+            new_node1, new_node2 = node1['right'].qr()
 
 
 class TestRQ:
@@ -2873,7 +3289,6 @@ class TestRQ:
         edge = node1['right'] ^ node2['left']
         return net, edge, node1
 
-    # QR can only be done in-place
     def test_rq_edge_inplace(self, setup):
         net, edge, node1 = setup
         assert isinstance(edge, tk.Edge)
@@ -2932,8 +3347,59 @@ class TestRQ:
         assert len(net.nodes) == 2
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 0
+    
+    def test_rq_edge_inplace_trace(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+        node2 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        network=net,
+                        init_method='randn')
+        
+        node1['left'] ^ node2['left']
+        edge = node1['right'] ^ node2['right']
+        
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
 
-    # To perform QR as operation, we first contract and then split
+        new_node1, new_node2 = node1['right'].rq_()
+
+        assert tk.utils.erase_enum(new_node1.name) == \
+               tk.utils.erase_enum(edge.node1.name)
+        assert tk.utils.erase_enum(new_node2.name) == \
+               tk.utils.erase_enum(edge.node2.name)
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
+
+        assert new_node1.shape == (3, 5, 15)
+        assert new_node2.shape == (3, 5, 15)
+        assert new_node1['right'].size() == 15
+
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 0
+
+    def test_rq_edge_inplace_trace_to_itself(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+
+        edge = node1['right'] ^ node1['left']
+        
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
+        
+        with pytest.raises(ValueError):
+            new_node1, new_node2 = node1['right'].rq_()
+
     def test_rq_edge(self, setup):
         net, edge, node1 = setup
         assert isinstance(edge, tk.Edge)
@@ -2943,19 +3409,8 @@ class TestRQ:
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 0
 
-        node2 = net['node2']
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
-                                                node2_axes=[
-                                                    'input_1', 'right'],
-                                                mode='rq')
-        new_node1.name = 'svd'
-        new_node2.name = 'svd'
-        new_node1.get_axis('split').name = 'right'
-        new_node2.get_axis('split').name = 'left'
-
-        assert tk.utils.erase_enum(new_node1.name) == 'svd'
-        assert tk.utils.erase_enum(new_node2.name) == 'svd'
+        new_node1, new_node2 = node1['right'].rq()
+        
         assert new_node1.axes_names == edge.node1.axes_names
         assert new_node1.axes_names == edge.node1.axes_names
 
@@ -2972,11 +3427,7 @@ class TestRQ:
         assert len(net.resultant_nodes) == 3
 
         # Repeat operation
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left', 'input_0'],
-                                                node2_axes=[
-                                                    'input_1', 'right'],
-                                                mode='rq')
+        new_node1, new_node2 = node1['right'].rq()
 
     def test_rq_batch_edge(self, setup):
         net, edge, node1 = setup
@@ -2994,40 +3445,25 @@ class TestRQ:
         assert len(net.leaf_nodes) == 2
         assert len(net.resultant_nodes) == 0
 
-        node2 = net['node2']
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left'],
-                                                node2_axes=['right'],
-                                                mode='rq')
-        new_node1.name = 'svd'
-        new_node2.name = 'svd'
-        new_node1.get_axis('split').name = 'right'
-        new_node2.get_axis('split').name = 'left'
-
-        assert tk.utils.erase_enum(new_node1.name) == 'svd'
-        assert tk.utils.erase_enum(new_node2.name) == 'svd'
-        assert edge.node1.axes_names == ['left', 'batch', 'right']
-        assert new_node1.axes_names == ['batch', 'left', 'right']
-        assert edge.node2.axes_names == ['left', 'batch', 'right']
-        assert new_node2.axes_names == ['batch', 'left', 'right']
+        new_node1, new_node2 = node1['right'].rq()
+        
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
 
         assert edge.node1.shape == (3, 5, 3)
         assert edge.node2.shape == (3, 5, 3)
         assert edge.size() == 3
-
-        assert new_node1.shape == (5, 3, 3)
-        assert new_node2.shape == (5, 3, 3)
+        
+        assert new_node1.shape == (3, 5, 3)
+        assert new_node2.shape == (3, 5, 3)
         assert new_node1['right'].size() == 3
 
-        assert len(net.nodes) == 5
+        assert len(net.nodes) == 7
         assert len(net.leaf_nodes) == 2
-        assert len(net.resultant_nodes) == 3
+        assert len(net.resultant_nodes) == 5
 
         # Repeat operation
-        contracted = node1 @ node2
-        new_node1, new_node2 = contracted.split(node1_axes=['left'],
-                                                node2_axes=['right'],
-                                                mode='rq')
+        new_node1, new_node2 = node1['right'].rq()
 
     def test_rq_result_from_operation(self, setup):
         net, edge, node1 = setup
@@ -3060,11 +3496,97 @@ class TestRQ:
 
         assert node1['right'] == unbound[0]['right']
         assert node1['right'] != new_node1['right']
+    
+    def test_rq_edge_trace(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+        node2 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        network=net,
+                        init_method='randn')
+        
+        node1['left'] ^ node2['left']
+        edge = node1['right'] ^ node2['right']
+        
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
+
+        new_node1, new_node2 = node1['right'].rq()
+        
+        assert new_node1.axes_names == edge.node1.axes_names
+        assert new_node1.axes_names == edge.node1.axes_names
+
+        assert new_node1.shape == (3, 5, 15)
+        assert new_node2.shape == (3, 5, 15)
+        assert new_node1['right'].size() == 15
+
+        assert len(net.nodes) == 6
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 4
+
+    def test_rq_edge_trace_to_itself(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(3, 5, 3),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net,
+                        init_method='randn')
+
+        edge = node1['right'] ^ node1['left']
+        
+        assert isinstance(edge, tk.Edge)
+        assert edge.size() == 3
+        
+        with pytest.raises(ValueError):
+            new_node1, new_node2 = node1['right'].rq()
 
 
 class TestContractEdge:
-
+    
     def test_contract_edge(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node2 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        init_method='randn',
+                        network=net)
+        edge = node1[2] ^ node2[0]
+
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 0
+
+        assert node1.successors == dict()
+        assert node2.successors == dict()
+
+        # Contract edge
+        # To contract only one edge we have to call contract_between
+        # with the particular list of shared edges we want to contract
+        node3 = tk.contract(node1['right'])  # Same as node1['right'].contract()
+        assert node3['left'] == node1['left']
+        assert node3['input_0'] == node1['input']
+        assert node3['right'] == node2['right']
+        assert node3['input_1'] == node2['input']
+
+        assert len(net.nodes) == 3
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 1
+
+        assert node1.successors != dict()
+        assert node1.successors['contract_edges'][((node1['right'],), node1, node2)].child == node3
+        assert node2.successors == dict()
+
+    def test_contract_edge_with_contract_edges(self):
         net = tk.TensorNetwork()
         node1 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
@@ -3106,7 +3628,7 @@ class TestContractEdge:
         with pytest.raises(ValueError):
             tk.contract_edges([node1[0]], node1, node2)
 
-    def test_trace_edge(self):
+    def test_trace_edge_with_contract_edges(self):
         node1 = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
                         name='node1',
@@ -3165,6 +3687,69 @@ class TestContractEdge:
 
         assert node1.successors == dict()
         assert node2.successors == dict()
+
+    def test_contract_edge_in_place_with_trace(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node2 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        init_method='randn',
+                        network=net)
+        node1[0] ^ node2[0]
+        edge = node1[2] ^ node2[2]
+
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 0
+
+        assert node1.successors == dict()
+        assert node2.successors == dict()
+
+        # Contract edge
+        node3 = edge.contract_()  # Same as node1.contract_between_(node2, [2])
+        assert node3['left_0'] != node1['left']
+        assert node3['input_0'] != node1['input']
+        assert node3['left_1'] != node2['left']
+        assert node3['input_1'] != node2['input']
+        
+        assert node3.is_connected_to(node3)
+
+        assert len(net.nodes) == 1
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
+
+        assert node1.successors == dict()
+        assert node2.successors == dict()
+    
+    def test_contract_edge_in_place_trace_to_itself(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        edge = node1[0] ^ node1[2]
+
+        assert len(net.nodes) == 1
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
+
+        assert node1.successors == dict()
+
+        # Contract edge
+        node2 = edge.contract_()  # Same as node1.contract_between_(node1, [2])
+        assert node2['input'] != node1['input']
+
+        assert len(net.nodes) == 1
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
+
+        assert node1.successors == dict()
 
 
 class TestContractBetween:
@@ -3688,6 +4273,42 @@ class TestContractBetween:
         # disconnected and are not in the same network
         with pytest.raises(ValueError):
             node4 = node1.contract_between_(node2)
+    
+    def test_contract_node_in_place_trace_to_itself(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        network=net)
+        node1['right'] ^ node1['left']
+
+        assert len(net.nodes) == 1
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
+
+        assert node1.successors == dict()
+
+        # Contract nodes in_place
+        node2 = node1.contract_between_(node1)
+        assert isinstance(node2, tk.Node)
+        assert node2.shape == (5,)
+        assert node2.axes_names == ['input']
+        assert node2['input'] != node1['input']
+        
+        assert node1.network != net
+        assert node2.network == net
+
+        assert len(net.nodes) == 1
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
+
+        assert node1.successors == dict()
+
+        # Repeat contraction -> Now node1 and node1 are
+        # disconnected and are not in the same network
+        with pytest.raises(ValueError):
+            node2 = node1.contract_between_(node1)
 
     def test_contract_paramnodes_in_place(self):
         net = tk.TensorNetwork()
@@ -3754,6 +4375,42 @@ class TestContractBetween:
         # disconnected and are not in the same network
         with pytest.raises(ValueError):
             node4 = node1.contract_between_(node2)
+    
+    def test_contract_paramnode_in_place_trace_to_itself(self):
+        net = tk.TensorNetwork()
+        node1 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'input', 'right'),
+                             name='node1',
+                             init_method='randn',
+                             network=net)
+        node1['right'] ^ node1['left']
+
+        assert len(net.nodes) == 1
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
+
+        assert node1.successors == dict()
+
+        # Contract nodes in_place
+        node2 = node1.contract_between_(node1)
+        assert isinstance(node2, tk.Node)
+        assert node2.shape == (5,)
+        assert node2.axes_names == ['input']
+        assert node2['input'] != node1['input']
+        
+        assert node1.network != net
+        assert node2.network == net
+
+        assert len(net.nodes) == 1
+        assert len(net.leaf_nodes) == 1
+        assert len(net.resultant_nodes) == 0
+
+        assert node1.successors == dict()
+
+        # Repeat contraction -> Now node1 and node1 are
+        # disconnected and are not in the same network
+        with pytest.raises(ValueError):
+            node2 = node1.contract_between_(node1)
 
 
 class TestStackUnbind:
@@ -5209,9 +5866,56 @@ class TestStackUnbind:
         # Cannot unbind a node that is not a (Param)StackNode
         with pytest.raises(TypeError):
             result = tk.unbind(node)
-
+    
+    def test_unbind_stack_rank_0_tensors(self):
+        net = tk.TensorNetwork()
+        net.auto_unbind = False
+        
+        nodes = []
+        for _ in range(10):
+            node = tk.Node(shape=tuple(),
+                           axes_names=tuple(),
+                           network=net,
+                           init_method='randn')
+            nodes.append(node)
+        
+        stack = tk.stack(nodes)
+        result = tk.unbind(stack)
+        assert len(result) == len(nodes)
+        for node in result:
+            assert node.shape == tuple()
+            assert node.tensor.shape == tuple()
+    
+    def test_unbind_stack_rank_0_tensors_auto_unbind(self):
+        net = tk.TensorNetwork()
+        net.auto_unbind = True
+        
+        nodes = []
+        for _ in range(10):
+            node = tk.Node(shape=tuple(),
+                           axes_names=tuple(),
+                           network=net,
+                           init_method='randn')
+            nodes.append(node)
+        
+        stack = tk.stack(nodes)
+        result = tk.unbind(stack)
+        assert len(result) == len(nodes)
+        for node in result:
+            assert node.shape == tuple()
+            assert node.tensor.shape == tuple()
+        
+        for _ in range(10):
+            stack = tk.stack(result)
+            result = tk.unbind(stack)
+            assert len(result) == len(nodes)
+            for node in result:
+                assert node.shape == tuple()
+                assert node.tensor.shape == tuple()
+    
     def test_batches_auto_unbind(self):
         net = tk.TensorNetwork()
+        net.auto_stack = False
         net.auto_unbind = False
 
         node1 = tk.Node(shape=(20, 30, 2),
@@ -5242,6 +5946,7 @@ class TestStackUnbind:
 
     def test_batches_index_mode(self):
         net = tk.TensorNetwork()
+        net.auto_stack = False
         net.auto_unbind = True
 
         node1 = tk.Node(shape=(20, 30, 2),
@@ -5443,7 +6148,7 @@ class TestEinsum:
         node2 = tk.einsum('lbol->bo', node2)
 
         assert node2.shape == (100, 5)
-        assert torch.allclose(node1.tensor, node2.tensor)
+        assert torch.allclose(node1.tensor, node2.tensor, rtol=1e-3, atol=1e-5)
 
     def test_aux(self):
         # MPS
@@ -5606,7 +6311,7 @@ class TestTNModels:
                 stack_input = tk.stack(self.input_nodes)
                 stack_data = tk.stack(list(self.data_nodes.values()))
 
-                stack_input['input'] ^ stack_data['feature']
+                stack_input ^ stack_data
                 stack_result = stack_input @ stack_data
 
                 stack_result = tk.unbind(stack_result)

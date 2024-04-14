@@ -13,9 +13,11 @@ This script contains:
     * binomial_coeffs
     * stack_unequal_tensors
     * list2slice
+    * split_sequence_into_regions
+    * random_unitary
 """
 
-from typing import List, Sequence, Text, Union
+from typing import Optional, List, Sequence, Text, Union
 
 import torch
 import torch.nn as nn
@@ -252,3 +254,69 @@ def list2slice(lst: List) -> Union[List, slice]:
         aux_slice[1] += 1
         return slice(*aux_slice)
     return lst
+
+def split_sequence_into_regions(lst: Sequence[int]) -> List[List[int]]:
+    """
+    Splits a sequence of integers into regions where each region contains
+    consecutive integers.
+
+    Parameters
+    ----------
+    lst : list[int] or tuple[int]
+        List of integers in ascending order.
+
+    Returns
+    -------
+    list[list[int]]
+
+    Raises
+    ------
+    TypeError
+        If the input is not a sequence of integers.
+    ValueError
+        If the input sequence is not ordered.
+
+    Example
+    -------
+    >>> sequence = [1, 2, 3, 5, 6, 7, 10, 11, 13]
+    >>> split_sequence_into_regions(sequence)
+    [[1, 2, 3], [5, 6, 7], [10, 11], [13]]
+    """
+    if not isinstance(lst, Sequence) or not all(isinstance(x, int) for x in lst):   #TODO: use this in my code
+        raise TypeError('Input must be a sequence of integers')
+    
+    if len(lst) != len(set(lst)):
+        raise ValueError('Input sequence cannot contain repeated elements')
+
+    if any(lst[i + 1] < lst[i] for i in range(len(lst) - 1)):
+        raise ValueError('Input sequence must be in ascending order')
+
+    if not lst:
+        return []
+
+    regions = []
+    current_region = [lst[0]]
+
+    for i in range(1, len(lst)):
+        if lst[i] == lst[i - 1] + 1:
+            current_region.append(lst[i])
+        else:
+            regions.append(current_region)
+            current_region = [lst[i]]
+
+    regions.append(current_region)
+    return regions
+
+def random_unitary(n, device: Optional[torch.device] = None):
+    """
+    Returns random unitary matrix from the Haar measure of size n x n.
+    
+    Unitary matrix is created as described in this `paper
+    <https://arxiv.org/abs/math-ph/0609050v2>`_.
+    """
+    mat = torch.randn(n, n, device=device)
+    q, r = torch.linalg.qr(mat)
+    d = torch.diagonal(r)
+    ph = d / d.abs()
+    q = q @ torch.diag(ph)
+    return q

@@ -3,8 +3,6 @@
 
 [![DOI](https://zenodo.org/badge/453954432.svg)](https://zenodo.org/badge/latestdoi/453954432)
 
-[![DOI](https://zenodo.org/badge/453954432.svg)](https://zenodo.org/badge/latestdoi/453954432)
-
 # Tensor Networks with PyTorch
 
 **TensorKrowch** is a Python library built on top of **PyTorch** that simplifies

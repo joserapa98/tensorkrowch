@@ -123,7 +123,7 @@ different roles in the ``TensorNetwork``:
     for node in nodes:
         assert node.tensor_address() == 'virtual_uniform'
 
-  giving the ``uniform_node`` the role of ``virtual`` makes more sense,
+  Giving the ``uniform_node`` the role of ``virtual`` makes more sense,
   since it is a node that one wouldn't desire to see as a ``leaf`` node
   of the network. Instead it is `hidden`.
   
@@ -139,8 +139,7 @@ different roles in the ``TensorNetwork``:
   They are intermediate nodes that (almost always) inherit edges from ``leaf``
   and ``data`` nodes, the ones that really form the network. These nodes can
   store their own tensors or use other node's tensor. The names of the
-  ``resultant`` nodes are the name of the ``Operation`` that originated
-  it::
+  ``resultant`` nodes are the name of the ``Operation`` that originated it::
 
     node1 = tk.randn(shape=(2, 3))
     node2 = tk.randn(shape=(3, 4))
@@ -191,11 +190,12 @@ Other thing one should take into account are **reserved nodes' names**:
     # Batch edge has size 1 when created
     assert net['stack_data_memory'].shape == (100, 1, 5)
     
-* **"virtual_stack"**: Name of the ``virtual`` :class:`ParamStackNode` that
-  results from stacking ``ParamNodes`` as the first operation in the network
-  contraction, if ``auto_stack`` mode is set to ``True``. There might be as
-  much ``"virtual_stack"`` nodes as stacks are created from ``ParamNodes``. To
-  learn more about this, see :class:`ParamStackNode`.
+* **"virtual_result"**: Name of ``virtual`` nodes that are not explicitly
+  part of the network, but are required for some situations during contraction.
+  For instance, the :class:`ParamStackNode` that results from stacking
+  :class:`ParamNodes <ParamNode>` as the first operation in the network
+  contraction, if ``auto_stack`` mode is set to ``True``. To learn more about
+  this, see :class:`ParamStackNode`.
 
   ::
 
@@ -213,7 +213,7 @@ Other thing one should take into account are **reserved nodes' names**:
 
     # All ParamNodes use a slice of the tensor in stack_node
     for node in nodes:
-        assert node.tensor_address() == 'virtual_stack'
+        assert node.tensor_address() == 'virtual_result_stack'
 
 * **"virtual_uniform"**: Name of the ``virtual`` ``Node`` or ``ParamNode`` that
   is used in uniform (translationally invariant) tensor networks to store the
@@ -221,6 +221,10 @@ Other thing one should take into account are **reserved nodes' names**:
   ``"virtual_uniform"`` nodes as shared memories are used for the ``leaf``
   nodes in the network (usually just one). An example of this can be seen in
   the previous section, when ``virtual`` nodes were defined.
+
+For ``"virtual_result"`` and ``"virtual_uniform"``, these special behaviours
+are not restricted to nodes having those names, but also nodes whose names
+contain those strings.
     
 Although these names can in principle be used for other nodes, this can lead
 to undesired behaviour.

@@ -129,8 +129,8 @@ Product State::
         assert node.tensor_address() == 'uniform'
 
 
-2. How TensorKrowch skipps Operations to run faster
----------------------------------------------------
+2. How TensorKrowch skips Operations to run faster
+--------------------------------------------------
 
 The main purpose of ``TensorKrowch`` is enabling you to experiment
 creating and training different tensor networks, only having to worry about

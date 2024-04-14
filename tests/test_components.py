@@ -8,6 +8,7 @@ This script contains tests for components:
     * TestSetTensorNode
     * TestSettensorParamNode
     * TestMoveToNetwork
+    * TestChangeType
     * TestMeasures
     * TestConnect
     * TestChangeSizeEdge
@@ -138,6 +139,19 @@ class TestInitNode:
         assert node.is_leaf()
         assert not node.is_data()
         assert node.successors == dict()
+
+    def test_init_node_rank_0(self):
+        node = tk.Node(shape=tuple(),
+                       axes_names=tuple(),
+                       name='my_node',
+                       init_method='randn')
+
+        assert node.name == 'my_node'
+        assert node.shape == tuple()
+        assert node.tensor.shape == tuple()
+        assert node.axes_names == []
+        assert node.rank == 0
+        assert node.numel() == 1
 
     def test_init_node_data(self):
         node = tk.Node(shape=(2, 5, 2),
@@ -278,6 +292,19 @@ class TestInitParamNode:
         assert node.is_leaf()
         assert not node.is_data()
         assert node.successors == dict()
+
+    def test_init_paramnode_rank_0(self):
+        node = tk.ParamNode(shape=tuple(),
+                            axes_names=tuple(),
+                            name='my_node',
+                            init_method='randn')
+
+        assert node.name == 'my_node'
+        assert node.shape == tuple()
+        assert node.tensor.shape == tuple()
+        assert node.axes_names == []
+        assert node.rank == 0
+        assert node.numel() == 1
 
     def test_init_paramnode_virtual(self):
         # ParamNodes can be virtual, to store memory of ParamNodes
@@ -628,6 +655,63 @@ class TestSetTensorNode:
         with pytest.raises(TypeError):
             # Node and ParamNode cannot share tensor
             node1.set_tensor_from(node2)
+    
+    def test_set_tensor_then_parameterize(self, setup):
+        node1, node2, tensor = setup
+        node1.set_tensor_from(node2)
+        assert node1.tensor_address() == node2.name
+        
+        # NOTE: If tensor is set beforehand, nodes can be (de)parameterize
+        # without restrictions. In this situation, one would want to
+        # parameterize both nodes, so this might not cause many problems
+        
+        # When creating the ParamNode node1, we give to it the tensor from node2
+        # but now node1 stores its own tensor
+        node1 = node1.parameterize()
+        assert isinstance(node1, tk.ParamNode)
+        assert isinstance(node2, tk.Node)
+        
+        # When creating the ParamNode node2, as it stored its own tensor, we are
+        # just putting it again into the new node2
+        node2 = node2.parameterize()
+        assert isinstance(node1, tk.ParamNode)
+        assert isinstance(node2, tk.ParamNode)
+        
+        # But now node1 makes no reference to node2
+        assert not node1.tensor_address() == node2.name
+        
+        # We have to set the tensor addres from node2 again
+        node1.set_tensor_from(node2)
+        assert node1.tensor_address() == node2.name
+    
+    def test_set_tensor_then_parameterize_other_order(self, setup):
+        node1, node2, tensor = setup
+        node1.set_tensor_from(node2)
+        
+        node2 = node2.parameterize()
+        assert isinstance(node1, tk.Node)
+        assert isinstance(node2, tk.ParamNode)
+        
+        # NOTE: If we do this in the opposite order it fails, since node1 still
+        # references the original node2, which is not a part of the network
+        # any more and thus it doesn't have a tensor address in the memory.
+        # It fails when trying to get node1's tensor
+        with pytest.raises(TypeError):
+            tensor = node1.tensor
+        
+        # node1 = node1.parameterize()
+        # assert isinstance(node1, tk.ParamNode)
+        # assert isinstance(node2, tk.ParamNode)
+    
+    def test_set_tensor_then_parameterize_network(self, setup):
+        node1, node2, tensor = setup
+        node1.set_tensor_from(node2)
+        
+        net = node1.network
+        net.parameterize(set_param=True, override=True)
+        
+        for node in net.leaf_nodes.values():
+            assert isinstance(node, tk.ParamNode)
 
     def test_set_tensor_from_other_network(self, setup):
         node1, node2, tensor = setup
@@ -952,6 +1036,68 @@ class TestSetTensorParamNode:
         node1.tensor = torch.zeros(node1.shape)
         assert not torch.equal(node1.tensor, node2.tensor)
 
+    def test_set_tensor_from_paramnode_same_name(self):
+        net = tk.TensorNetwork()
+        
+        # First ParamNode with its own tensor
+        node1 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'batch', 'right'),
+                             name='node1',
+                             network=net,
+                             init_method='zeros')
+        
+        # Second ParamNode uses tensor from node1
+        node2 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'batch', 'right'),
+                             name='node2',
+                             network=net)
+        node2.set_tensor_from(node1)
+        
+        # Third ParamNode has the same name as node2
+        node3 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'batch', 'right'),
+                             name='node2',
+                             network=net,
+                             init_method='ones')
+        
+        # node1 is a parameter of the network
+        assert torch.equal(net.param_node1, torch.zeros(node1.shape))
+        
+        # node2 is not a parameter because it doesn't hold its own tensor
+        assert not hasattr(net, 'param_node2_0')
+        
+        # node3 is also a parameter of the network
+        assert torch.equal(net.param_node2_1, torch.ones(node2.shape))
+
+    def test_set_tensor_from_paramnode_then_stack(self):
+        net = tk.TensorNetwork()
+        
+        # First ParamNode with its own tensor
+        node1 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'batch', 'right'),
+                             name='node1',
+                             network=net,
+                             init_method='randn')
+        
+        # Second ParamNode uses tensor from node1
+        node2 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'batch', 'right'),
+                             name='node2',
+                             network=net)
+        node2.set_tensor_from(node1)
+        
+        # Stack with auto_stack moves memory of node1 to the stack,
+        # but node2 still makes reference to node1
+        stack = tk.stack([node1])
+        
+        assert node1._tensor_info['node_ref'] == stack
+        assert node2._tensor_info['node_ref'] == node1
+        
+        assert node1.tensor_address() == stack.name
+        
+        # NOTE: Be aware of this "undesired" behaviour
+        assert node2.tensor_address() == None  #node1's address
+
 
 class TestMoveToNetwork:
 
@@ -1085,6 +1231,108 @@ class TestMoveToNetwork:
         assert torch.equal(node1.tensor, node2.tensor)
 
 
+class TestChangeType:
+    
+    def test_change_type_node(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 3),
+                        axes_names=('left', 'right'),
+                        name='node1',
+                        data=True,
+                        network=net,
+                        init_method='randn')
+        node2 = tk.Node(shape=(3, 4),
+                        axes_names=('left', 'right'),
+                        name='node2',
+                        network=net,
+                        init_method='randn')
+        
+        node1['right'] ^ node2['left']
+        node3 = node1 @ node2
+        
+        assert node1.is_data()
+        assert node1.name in net.data_nodes
+        assert node2.is_leaf()
+        assert node2.name in net.leaf_nodes
+        assert node3.is_resultant()
+        
+        # Change types
+        node1.change_type(virtual=True)
+        node2.change_type(data=True)
+        
+        assert node1.is_virtual()
+        assert node1.name in net.virtual_nodes
+        assert node1.name not in net.data_nodes
+        assert node2.is_data()
+        assert node2.name in net.data_nodes
+        assert node2.name not in net.leaf_nodes
+        assert node3.is_resultant()
+    
+    def test_change_type_paramnode(self):
+        net = tk.TensorNetwork()
+        node1 = tk.ParamNode(shape=(2, 3),
+                             axes_names=('left', 'right'),
+                             name='node1',
+                             virtual=True,
+                             network=net,
+                             init_method='randn')
+        node2 = tk.ParamNode(shape=(3, 4),
+                             axes_names=('left', 'right'),
+                             name='node2',
+                             network=net,
+                             init_method='randn')
+        
+        node1['right'] ^ node2['left']
+        node3 = node1 @ node2
+        
+        assert node1.is_virtual()
+        assert node1.name in net.virtual_nodes
+        assert node2.is_leaf()
+        assert node2.name in net.leaf_nodes
+        assert node3.is_resultant()
+        
+        # Change types
+        node1.change_type(leaf=True)
+        node2.change_type(virtual=True)
+        
+        assert node1.is_leaf()
+        assert node1.name in net.leaf_nodes
+        assert node1.name not in net.virtual_nodes
+        assert node2.is_virtual()
+        assert node2.name in net.virtual_nodes
+        assert node2.name not in net.leaf_nodes
+        assert node3.is_resultant()
+    
+    def test_change_type_errors(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 3),
+                        axes_names=('left', 'right'),
+                        name='node1',
+                        data=True,
+                        network=net,
+                        init_method='randn')
+        node2 = tk.ParamNode(shape=(3, 4),
+                             axes_names=('left', 'right'),
+                             name='node2',
+                             network=net,
+                             init_method='randn')
+        
+        node1['right'] ^ node2['left']
+        node3 = node1 @ node2
+        
+        # ParamNodes cannot be changed to data type
+        with pytest.raises(TypeError):
+            node2.change_type(data=True)
+        
+        # Non-resultant nodes cannot be set as resultant
+        with pytest.raises(ValueError):
+            node1.change_type(leaf=False, virtual=False, data=False)
+        
+        # Resultant nodes cannot be set as non-resultant
+        with pytest.raises(ValueError):
+            node3.change_type(leaf=True)
+
+
 class TestMeasures:
 
     def test_sum(self):
@@ -1134,6 +1382,13 @@ class TestMeasures:
         assert torch.equal(node.norm(2, 'left'), tensor.norm(2, 0))
         assert torch.equal(node.norm(2, 'right'), tensor.norm(2, 1))
         assert torch.equal(node.norm(2, ['left', 'right']), tensor.norm(2, [0, 1]))
+
+    def test_numel(self):
+        tensor = torch.randn(2, 3)
+        node = tk.Node(axes_names=('left', 'right'),
+                       tensor=tensor)
+
+        assert node.numel() == tensor.numel()
 
 
 class TestConnect:
@@ -1247,6 +1502,32 @@ class TestConnect:
         node3[3] ^ node4[0]
         assert node3[3] != edge
         assert node3[3] == node4[0]
+    
+    def test_is_connected_to(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node1',
+                        network=net)
+        node2 = tk.Node(shape=(2, 5, 2),
+                        axes_names=('left', 'input', 'right'),
+                        name='node2',
+                        network=net)
+        node1['left'] ^ node2['right']
+        node1['right'] ^ node2['left']
+        
+        assert node1.is_connected_to(node2) == [(node1.get_axis('left'),
+                                                 node2.get_axis('right')),
+                                                (node1.get_axis('right'),
+                                                 node2.get_axis('left'))]
+        
+        node1.disconnect()
+        node1['left'] ^ node1['right']
+        assert node1.is_connected_to(node1) == [(node1.get_axis('left'),
+                                                 node1.get_axis('right')),
+                                                (node1.get_axis('right'),
+                                                 node1.get_axis('left'))]
+        assert node1.is_connected_to(node2) == []
 
     def test_disconnect(self):
         node1 = tk.Node(shape=(2, 5, 2),
@@ -1405,12 +1686,12 @@ class TestConnect:
         assert node4['right'].is_attached_to(node3)
 
         # Reattach a copy of the edges
-        node4.reattach_edges(True)
+        node4.reattach_edges(override=True)
 
         assert node4['right'].is_attached_to(node4)
         assert node4['right'].is_attached_to(node3)
 
-        # All edges connected to node4 are alse changed in its neighbours
+        # All edges connected to node4 are also changed in its neighbours
         assert node4['right'] == node3['left']
         assert node3['left'].is_attached_to(node4)
         assert node3['left'].is_attached_to(node3)
@@ -1423,6 +1704,110 @@ class TestConnect:
 
         assert node3['left'].is_dangling()
         assert node3['left'].is_attached_to(node3)
+    
+    def test_reattach_original_disconnect_two_resultants(self):
+        net = tk.TensorNetwork()
+        node1 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'input', 'right'),
+                             name='node1',
+                             init_method='randn',
+                             network=net)
+        node2 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'input', 'right'),
+                             name='node2',
+                             init_method='randn',
+                             network=net)
+        node3 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'input', 'right'),
+                             name='node3',
+                             init_method='randn',
+                             network=net)
+        node4 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'input', 'right'),
+                             name='node4',
+                             init_method='randn',
+                             network=net)
+        node1['right'] ^ node2['left']
+        node2['right'] ^ node3['left']
+        node3['right'] ^ node4['left']
+
+        node5 = node1 @ node2
+        node6 = node3 @ node4
+
+        assert node5['right'].is_attached_to(node2)
+        assert node5['right'].is_attached_to(node3)
+        
+        assert node6['left'].is_attached_to(node2)
+        assert node6['left'].is_attached_to(node3)
+        
+        assert node5['right'] == node6['left']
+
+        # Reattach a copy of the edges
+        node5.reattach_edges(override=True)
+
+        assert node5['right'].is_attached_to(node5)
+        assert node5['right'].is_attached_to(node3)
+
+        # All edges connected to node5 are also changed in its neighbours
+        assert node5['right'] == node3['left']
+        assert node3['left'].is_attached_to(node5)
+        assert node3['left'].is_attached_to(node3)
+        
+        # However, node6 is not seen as a neighbour, and still has the old edge
+        assert node5['right'] != node6['left']
+        assert node6['left'].is_attached_to(node2)
+        assert node6['left'].is_attached_to(node3)
+
+        # If we disconnect node4 from node3, now both nodes get new
+        # dangling edges
+        node5['right'].disconnect()
+        assert node5['right'].is_dangling()
+        assert node5['right'].is_attached_to(node5)
+
+        assert node3['left'].is_dangling()
+        assert node3['left'].is_attached_to(node3)
+        
+        # Again, node6 still doesn't see the disconnection
+        assert node6['left'].is_attached_to(node2)
+        assert node6['left'].is_attached_to(node3)
+    
+    def test_reattach_one_edge(self):
+        net = tk.TensorNetwork()
+        node1 = tk.ParamNode(shape=(2, 5, 2),
+                             axes_names=('left', 'input', 'right'),
+                             name='node1',
+                             init_method='randn',
+                             network=net)
+        node2 = tk.ParamNode(shape=(2, 2),
+                             axes_names=('left', 'right'),
+                             name='node2',
+                             init_method='randn',
+                             network=net)
+        node3 = tk.ParamNode(shape=(5,),
+                             axes_names=('input',),
+                             name='node3',
+                             init_method='randn',
+                             network=net)
+        node1['right'] ^ node2['left']
+
+        node4 = node1 @ node2
+
+        assert node4['right'] == node2['right']
+
+        # Reattach a copy of the edges
+        node4.reattach_edges(axes=['input'], override=False)
+
+        assert node4['right'] == node2['right']
+        
+        assert node4['input'].is_attached_to(node4)
+        assert node4['input'].is_dangling()
+        
+        # Now we can connect resultant node to node3 at axis "input"
+        node4['input'] ^ node3['input']
+        
+        assert node4['input'].is_attached_to(node4)
+        assert node4['input'].is_attached_to(node3)
+        assert node4['input'] == node3['input']
 
 
 class TestChangeSizeEdge:
@@ -1844,6 +2229,64 @@ class TestStack:
         # via operation `stack`
         for node in nodes:
             assert node.tensor_address() == node.name
+            
+    def test_reconnect_stacknodes(self):
+        net = tk.TensorNetwork()
+        nodes1 = []
+        nodes2 = []
+        for _ in range(5):
+            node1 = tk.Node(shape=(3, 2),
+                            axes_names=('input', 'output'),
+                            name='node1',
+                            network=net,
+                            init_method='randn')
+            nodes1.append(node1)
+            
+            node2 = tk.Node(shape=(2, 3),
+                            axes_names=('input', 'output'),
+                            name='node2',
+                            network=net,
+                            init_method='randn')
+            nodes2.append(node2)
+            
+            node1['output'] ^ node2['input']
+            node1['input'] ^ node2['output']
+
+        stack1 = tk.StackNode(nodes1)
+        stack2 = tk.StackNode(nodes2)
+        
+        stack1 ^ stack2
+        assert stack1.neighbours('output') == stack2
+        assert stack1.neighbours('input') == stack2
+    
+    def test_reconnect_paramstacknodes(self):
+        net = tk.TensorNetwork()
+        nodes1 = []
+        nodes2 = []
+        for _ in range(5):
+            node1 = tk.ParamNode(shape=(3, 2),
+                                 axes_names=('input', 'output'),
+                                 name='node1',
+                                 network=net,
+                                 init_method='randn')
+            nodes1.append(node1)
+            
+            node2 = tk.ParamNode(shape=(2, 3),
+                                 axes_names=('input', 'output'),
+                                 name='node2',
+                                 network=net,
+                                 init_method='randn')
+            nodes2.append(node2)
+            
+            node1['output'] ^ node2['input']
+            node1['input'] ^ node2['output']
+
+        stack1 = tk.StackNode(nodes1)
+        stack2 = tk.StackNode(nodes2)
+        
+        stack1 ^ stack2
+        assert stack1.neighbours('output') == stack2
+        assert stack1.neighbours('input') == stack2
 
     def test_error_stack_node(self):
         node = tk.Node(shape=(3, 2),
@@ -2396,6 +2839,100 @@ class TestTensorNetwork:
         assert len(net.resultant_nodes) == 1
         assert len(net.edges) == 5
 
+    def test_delete_network(self):
+        net = tk.TensorNetwork(name='net')
+        nodes = []
+        for i in range(4):
+            node = tk.Node(shape=(2, 5, 2),
+                           axes_names=('left', 'input', 'right'),
+                           name='node',
+                           network=net,
+                           init_method='randn')
+            nodes.append(node)
+
+        for i in range(3):
+            nodes[i]['right'] ^ nodes[i + 1]['left']
+        
+        net.set_data_nodes([nodes[i]['input'] for i in range(4)],
+                           num_batch_edges=1)
+        net.add_data(torch.randn(10, 4, 5))
+        
+        # Contract network
+        stack = tk.stack(nodes)
+        stack_data = tk.stack([nodes[i].neighbours('input') for i in range(4)])
+        stack ^ stack_data
+        
+        result = stack_data @ stack
+        result = tk.unbind(result)
+        
+        assert len(net.leaf_nodes) == 4
+        assert len(net.data_nodes) == 4
+        assert len(net.virtual_nodes) == 1
+        assert len(net.resultant_nodes) == 7
+        
+        # Delete network
+        net.delete()
+        del net  # We still have to delete reference to network
+        
+        # If we still hold references to the nodes of the network, they will
+        # still be accessible until we call del on each reference
+        assert node._network is None
+        assert node.neighbours() == []
+        assert node.tensor is None
+
+    def test_delete_network_with_virtual(self):
+        net = tk.TensorNetwork(name='net')
+        nodes = []
+        for i in range(4):
+            node = tk.Node(shape=(2, 5, 2),
+                           axes_names=('left', 'input', 'right'),
+                           name='node',
+                           network=net)
+            nodes.append(node)
+        
+        v_node = tk.Node(shape=(2, 5, 2),
+                         axes_names=('left', 'input', 'right'),
+                         name='uniform_memory',
+                         network=net,
+                         init_method='randn',
+                         virtual=True)
+        for node in nodes:
+            node.set_tensor_from(v_node)
+
+        for i in range(3):
+            nodes[i]['right'] ^ nodes[i + 1]['left']
+        
+        net.set_data_nodes([nodes[i]['input'] for i in range(4)],
+                           num_batch_edges=1)
+        net.add_data(torch.randn(10, 4, 5))
+        
+        # Contract network
+        stack = tk.stack(nodes)
+        stack_data = tk.stack([nodes[i].neighbours('input') for i in range(4)])
+        stack ^ stack_data
+        
+        result = stack_data @ stack
+        result = tk.unbind(result)
+        
+        assert len(net.leaf_nodes) == 4
+        assert len(net.data_nodes) == 4
+        assert len(net.virtual_nodes) == 2
+        assert len(net.resultant_nodes) == 7
+        
+        # Delete network
+        net.delete()
+        del net  # We still have to delete reference to network
+        
+        # If we still hold references to the nodes of the network, they will
+        # still be accessible until we call del on each reference
+        assert node._network is None
+        assert node.neighbours() == []
+        assert node.tensor is None
+        
+        assert v_node._network is None
+        assert v_node.neighbours() == []
+        assert v_node.tensor is None
+
     def test_inverse_memory(self):
         net = tk.TensorNetwork()
         nodes = []
@@ -2619,6 +3156,8 @@ class TestTensorNetwork:
 
     def test_auto_stack(self):
         net = tk.TensorNetwork(name='net')
+        net.auto_stack = False
+        net.auto_unbind = False
         for i in range(4):
             _ = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),
@@ -2656,6 +3195,8 @@ class TestTensorNetwork:
 
     def test_auto_unbind(self):
         net = tk.TensorNetwork(name='net')
+        net.auto_stack = False
+        net.auto_unbind = False
         for i in range(4):
             _ = tk.Node(shape=(2, 5, 2),
                         axes_names=('left', 'input', 'right'),

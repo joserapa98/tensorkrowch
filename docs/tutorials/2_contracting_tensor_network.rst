@@ -192,7 +192,8 @@ Regarding the **node-like** operations, these are:
     stack_node = tk.stack(nodes)
     stack_data_node = tk.stack(data_nodes)
 
-    stack_node['input'] ^ stack_data_node['feature']
+    # reconnect stacks
+    stack_node ^ stack_data_node
 
 4) :func:`unbind`: Unbinds a :class:`StackNode` and returns a list of nodes that
    are already connected to the corresponding neighbours::
@@ -281,7 +282,7 @@ contractions, which will save us some time::
     stack_node = tk.stack(nodes)
     stack_data_node = tk.stack(data_nodes)
 
-    stack_node['input'] ^ stack_data_node['feature']
+    stack_node ^ stack_data_node
     
     stack_result = stack_node @ stack_data_node
     unbind_result = tk.unbind(stack_result)

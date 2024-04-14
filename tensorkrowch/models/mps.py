@@ -637,10 +637,6 @@ class MPS(TensorNetwork):  # MARK: MPS
             Keyword arguments for the different initialization methods. See
             :meth:`~tensorkrowch.AbstractNode.make_tensor`.
         """
-        if self._boundary == 'obc':
-            self._left_node.set_tensor(init_method='copy', device=device)
-            self._right_node.set_tensor(init_method='copy', device=device)
-        
         if init_method == 'unit':
             tensors = self._make_unitaries(device=device)
 
@@ -651,18 +647,22 @@ class MPS(TensorNetwork):  # MARK: MPS
             
             if self._boundary == 'obc':
                 tensors = tensors[:]
+                
+                if device is None:
+                    device = tensors[0].device
+                
                 if len(tensors) == 1:
                     tensors[0] = tensors[0].reshape(1, -1, 1)
                 else:
                     # Left node
                     aux_tensor = torch.zeros(*self._mats_env[0].shape,
-                                             device=tensors[0].device)
+                                             device=device)
                     aux_tensor[0] = tensors[0]
                     tensors[0] = aux_tensor
                     
                     # Right node
                     aux_tensor = torch.zeros(*self._mats_env[-1].shape,
-                                             device=tensors[-1].device)
+                                             device=device)
                     aux_tensor[..., 0] = tensors[-1]
                     tensors[-1] = aux_tensor
                 
@@ -696,6 +696,10 @@ class MPS(TensorNetwork):  # MARK: MPS
                         # Right node
                         aux_tensor[..., 0] = node.tensor[..., 0]
                         node.tensor = aux_tensor
+        
+        if self._boundary == 'obc':
+            self._left_node.set_tensor(init_method='copy', device=device)
+            self._right_node.set_tensor(init_method='copy', device=device)
 
     def set_data_nodes(self) -> None:
         """
@@ -2300,10 +2304,6 @@ class MPSLayer(MPS):  # MARK: MPSLayer
             Keyword arguments for the different initialization methods. See
             :meth:`~tensorkrowch.AbstractNode.make_tensor`.
         """
-        if self._boundary == 'obc':
-            self._left_node.set_tensor(init_method='copy', device=device)
-            self._right_node.set_tensor(init_method='copy', device=device)
-        
         if init_method == 'unit':
             tensors = self._make_unitaries(device=device)
 
@@ -2314,18 +2314,22 @@ class MPSLayer(MPS):  # MARK: MPSLayer
             
             if self._boundary == 'obc':
                 tensors = tensors[:]
+                
+                if device is None:
+                    device = tensors[0].device
+                
                 if len(tensors) == 1:
                     tensors[0] = tensors[0].reshape(1, -1, 1)
                 else:
                     # Left node
                     aux_tensor = torch.zeros(*self._mats_env[0].shape,
-                                             device=tensors[0].device)
+                                             device=device)
                     aux_tensor[0] = tensors[0]
                     tensors[0] = aux_tensor
                     
                     # Right node
                     aux_tensor = torch.zeros(*self._mats_env[-1].shape,
-                                             device=tensors[-1].device)
+                                             device=device)
                     aux_tensor[..., 0] = tensors[-1]
                     tensors[-1] = aux_tensor
                 
@@ -2365,6 +2369,10 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                         # Right node
                         aux_tensor[..., 0] = node.tensor[..., 0]
                         node.tensor = aux_tensor
+        
+        if self._boundary == 'obc':
+            self._left_node.set_tensor(init_method='copy', device=device)
+            self._right_node.set_tensor(init_method='copy', device=device)
 
     def copy(self, share_tensors: bool = False) -> 'MPSLayer':
         """

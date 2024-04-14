@@ -411,10 +411,6 @@ class MPO(TensorNetwork):  # MARK: MPO
             Keyword arguments for the different initialization methods. See
             :meth:`~tensorkrowch.AbstractNode.make_tensor`.
         """
-        if self._boundary == 'obc':
-            self._left_node.set_tensor(init_method='copy', device=device)
-            self._right_node.set_tensor(init_method='copy', device=device)
-
         if tensors is not None:
             if len(tensors) != self._n_features:
                 raise ValueError('`tensors` should be a sequence of `n_features`'
@@ -422,6 +418,10 @@ class MPO(TensorNetwork):  # MARK: MPO
             
             if self._boundary == 'obc':
                 tensors = tensors[:]
+                
+                if device is None:
+                    device = tensors[0].device
+                
                 if len(tensors) == 1:
                     tensors[0] = tensors[0].reshape(1,
                                                     tensors[0].shape[0],
@@ -431,13 +431,13 @@ class MPO(TensorNetwork):  # MARK: MPO
                 else:
                     # Left node
                     aux_tensor = torch.zeros(*self._mats_env[0].shape,
-                                             device=tensors[0].device)
+                                             device=device)
                     aux_tensor[0] = tensors[0]
                     tensors[0] = aux_tensor
                     
                     # Right node
                     aux_tensor = torch.zeros(*self._mats_env[-1].shape,
-                                             device=tensors[-1].device)
+                                             device=device)
                     aux_tensor[..., 0, :] = tensors[-1]
                     tensors[-1] = aux_tensor
                 
@@ -460,6 +460,10 @@ class MPO(TensorNetwork):  # MARK: MPO
                         # Right node
                         aux_tensor[..., 0, :] = node.tensor[..., 0, :]
                     node.tensor = aux_tensor
+        
+        if self._boundary == 'obc':
+            self._left_node.set_tensor(init_method='copy', device=device)
+            self._right_node.set_tensor(init_method='copy', device=device)
     
     def set_data_nodes(self) -> None:
         """
@@ -885,8 +889,6 @@ class UMPO(MPO):  # MARK: UMPO
             Keyword arguments for the different initialization methods. See
             :meth:`~tensorkrowch.AbstractNode.make_tensor`.
         """
-        node = self.uniform_memory
-        
         if tensors is not None:
             self.uniform_memory.tensor = tensors[0]
         

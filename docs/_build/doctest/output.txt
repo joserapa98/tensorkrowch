@@ -1,12 +1,12 @@
-Results of doctest builder run on 2024-04-14 00:34:19
+Results of doctest builder run on 2024-04-14 01:59:36
 =====================================================
 
-Document: operations
+Document: embeddings
 --------------------
 1 items passed all tests:
- 186 tests in default
-186 tests in 1 items.
-186 passed and 0 failed.
+  35 tests in default
+35 tests in 1 items.
+35 passed and 0 failed.
 Test passed.
 
 Document: models
@@ -17,58 +17,16 @@ Document: models
 115 passed and 0 failed.
 Test passed.
 
-Document: embeddings
+Document: operations
 --------------------
 1 items passed all tests:
-  35 tests in default
-35 tests in 1 items.
-35 passed and 0 failed.
+ 186 tests in default
+186 tests in 1 items.
+186 passed and 0 failed.
 Test passed.
 
 Document: components
 --------------------
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node.set_tensor(init_method='randn', mean=1., std=2., device='cuda')
-Exception raised:
-    Traceback (most recent call last):
-      File "/home/jose/anaconda3/envs/test_tk/lib/python3.10/doctest.py", line 1350, in __run
-        exec(compile(example.source, filename, "single",
-      File "<doctest default[0]>", line 1, in <module>
-        node.set_tensor(init_method='randn', mean=1., std=2., device='cuda')
-      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 1448, in set_tensor
-        self._unrestricted_set_tensor(tensor=tensor,
-      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 1364, in _unrestricted_set_tensor
-        tensor = self.make_tensor(
-      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 1253, in make_tensor
-        return self._make_randn_tensor(shape, device=device, **kwargs)
-      File "/home/jose/VSCodeProjects/tensorkrowch/tensorkrowch/components.py", line 1205, in _make_randn_tensor
-        return torch.randn(shape, device=device) * std + mean
-      File "/home/jose/anaconda3/envs/test_tk/lib/python3.10/site-packages/torch/cuda/__init__.py", line 302, in _lazy_init
-        torch._C._cuda_init()
-    RuntimeError: Unexpected error from cudaGetDeviceCount(). Did you run some cuda functions before calling NumCudaDevices() that might have already set an error? Error 804: forward compatibility was attempted on non supported HW
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    torch.equal(node.tensor, torch.zeros(node.shape, device='cuda'))
-Exception raised:
-    Traceback (most recent call last):
-      File "/home/jose/anaconda3/envs/test_tk/lib/python3.10/doctest.py", line 1350, in __run
-        exec(compile(example.source, filename, "single",
-      File "<doctest default[1]>", line 1, in <module>
-        torch.equal(node.tensor, torch.zeros(node.shape, device='cuda'))
-      File "/home/jose/anaconda3/envs/test_tk/lib/python3.10/site-packages/torch/cuda/__init__.py", line 302, in _lazy_init
-        torch._C._cuda_init()
-    RuntimeError: Unexpected error from cudaGetDeviceCount(). Did you run some cuda functions before calling NumCudaDevices() that might have already set an error? Error 804: forward compatibility was attempted on non supported HW
-**********************************************************************
-File "../tensorkrowch/components.py", line ?, in default
-Failed example:
-    node.device
-Expected:
-    device(type='cuda', index=0)
-Got:
-    device(type='cpu')
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -77,8 +35,8 @@ Expected:
     tensor([[-0.2799, -0.4383, -0.8387],
             [ 1.6225, -0.3370, -1.2316]])
 Got:
-    tensor([[-0.2140,  0.8589,  1.3626],
-            [ 2.0270, -0.3952, -0.2620]])
+    tensor([[ 0.2628, -0.6672, -0.9051],
+            [-0.6796, -0.4245, -0.5780]])
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -86,7 +44,7 @@ Failed example:
 Expected:
     tensor(-1.5029)
 Got:
-    tensor(3.3773)
+    tensor(-2.9916)
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -94,7 +52,7 @@ Failed example:
 Expected:
     tensor([ 1.3427, -0.7752, -2.0704])
 Got:
-    tensor([1.8130, 0.4637, 1.1006])
+    tensor([-0.4168, -1.0916, -1.4831])
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -103,8 +61,8 @@ Expected:
     tensor([[ 1.4005, -0.0521, -1.2091],
             [ 1.9844,  0.3513, -0.5920]])
 Got:
-    tensor([[ 0.7954, -0.5302,  0.4238],
-            [-0.9560,  1.1048, -0.6040]])
+    tensor([[-0.5314, -0.7805, -0.6475],
+            [-0.1279,  0.7409,  0.5816]])
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -112,7 +70,7 @@ Failed example:
 Expected:
     tensor(0.3139)
 Got:
-    tensor(0.0390)
+    tensor(-0.1275)
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -120,7 +78,7 @@ Failed example:
 Expected:
     tensor([ 1.6925,  0.1496, -0.9006])
 Got:
-    tensor([-0.0803,  0.2873, -0.0901])
+    tensor([-0.3296, -0.0198, -0.0330])
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -129,8 +87,8 @@ Expected:
     tensor([[ 0.2111, -0.9551, -0.7812],
             [ 0.2254,  0.3381, -0.2461]])
 Got:
-    tensor([[-0.8081,  0.7974,  0.5201],
-            [-0.8739, -1.2455, -1.2520]])
+    tensor([[-1.8500, -0.4944,  0.5940],
+            [-0.9353, -0.6008, -0.4320]])
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -138,7 +96,7 @@ Failed example:
 Expected:
     tensor(0.5567)
 Got:
-    tensor(0.9029)
+    tensor(0.7922)
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -146,7 +104,7 @@ Failed example:
 Expected:
     tensor([0.0101, 0.9145, 0.3784])
 Got:
-    tensor([0.0465, 1.4445, 1.2530])
+    tensor([0.6468, 0.0752, 0.7255])
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -155,8 +113,8 @@ Expected:
     tensor([[ 1.5570,  1.8441, -0.0743],
             [ 0.4572,  0.7592,  0.6356]])
 Got:
-    tensor([[-1.1420, -0.4181, -0.9147],
-            [-1.0355,  0.3765, -1.0369]])
+    tensor([[ 1.5611, -0.1317, -1.2049],
+            [-0.8746,  0.7130, -1.7564]])
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -164,7 +122,7 @@ Failed example:
 Expected:
     tensor(2.6495)
 Got:
-    tensor(2.1458)
+    tensor(2.8748)
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -172,7 +130,7 @@ Failed example:
 Expected:
     tensor([1.6227, 1.9942, 0.6399])
 Got:
-    tensor([1.5416, 0.5626, 1.3826])
+    tensor([1.7894, 0.7251, 2.1299])
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -203,17 +161,17 @@ Got:
     Node(
      	name: my_node
     	tensor:
-    		tensor([[[-0.3790, -0.2875],
-    		         [-0.2694, -2.6073],
-    		         [ 0.9747,  0.2449],
-    		         [-0.2402, -0.0971],
-    		         [-0.6163, -0.0845]],
+    		tensor([[[-0.2232, -0.0576],
+    		         [-2.0650, -1.6126],
+    		         [ 0.3369, -0.6012],
+    		         [-1.5875, -0.0953],
+    		         [-0.3129,  0.5625]],
     		
-    		        [[ 1.3292, -0.5639],
-    		         [ 0.6551, -0.5135],
-    		         [ 1.4094, -0.5872],
-    		         [ 1.3754, -1.3123],
-    		         [ 0.6744, -1.2268]]])
+    		        [[ 2.0660, -0.9154],
+    		         [ 0.0753,  0.9608],
+    		         [ 0.7278, -0.2497],
+    		         [ 0.9090, -0.5242],
+    		         [ 1.4432,  2.6149]]])
     	axes:
     		[left
     		 input
@@ -252,17 +210,17 @@ Got:
     Node(
      	name: node
     	tensor:
-    		tensor([[[ 0.5618, -0.7985],
-    		         [-1.9137, -1.0750],
-    		         [ 0.2035,  0.2413],
-    		         [ 1.2439, -0.0756],
-    		         [ 0.9225, -0.0071]],
+    		tensor([[[-0.0399,  0.5602],
+    		         [-1.3402,  1.1127],
+    		         [ 0.0795, -1.6100],
+    		         [ 2.3359,  1.8294],
+    		         [-0.2258, -0.2929]],
     		
-    		        [[ 0.1849, -0.2401],
-    		         [-0.0954, -0.2486],
-    		         [-0.3592, -1.3031],
-    		         [ 0.0455,  0.5307],
-    		         [-1.3908, -0.9176]]])
+    		        [[ 0.2125, -1.1086],
+    		         [-0.6906, -0.8028],
+    		         [-1.4547,  0.0981],
+    		         [-1.5869,  0.2020],
+    		         [-0.5355, -0.1357]]])
     	axes:
     		[axis_0
     		 axis_1
@@ -314,17 +272,17 @@ Got:
      	name: my_paramnode
     	tensor:
     		Parameter containing:
-    		tensor([[[-0.8812,  0.5985],
-    		         [-1.0907,  0.4343],
-    		         [ 2.1201,  0.7496],
-    		         [ 0.1640, -0.2248],
-    		         [-1.3572,  0.7016]],
+    		tensor([[[ 1.0837,  1.7036],
+    		         [-0.8799, -0.1600],
+    		         [-0.5867, -1.7778],
+    		         [ 0.1615,  1.0249],
+    		         [ 0.1880,  1.1234]],
     		
-    		        [[ 1.0295,  0.0301],
-    		         [ 1.1299,  1.0379],
-    		         [-0.2408,  1.4896],
-    		         [ 0.1914, -0.7828],
-    		         [ 0.5660,  1.7213]]], requires_grad=True)
+    		        [[ 0.7499, -0.7739],
+    		         [-0.5278,  1.1947],
+    		         [-0.7586, -1.4460],
+    		         [-0.1016, -0.1954],
+    		         [ 0.1579,  0.0572]]], requires_grad=True)
     	axes:
     		[left
     		 input
@@ -365,17 +323,17 @@ Got:
      	name: paramnode
     	tensor:
     		Parameter containing:
-    		tensor([[[ 0.0967,  0.1681],
-    		         [-0.2095, -0.0135],
-    		         [ 0.4699, -0.3885],
-    		         [-1.2067, -0.5064],
-    		         [-0.7848,  0.2031]],
+    		tensor([[[-0.7419,  0.3802],
+    		         [ 0.4183,  0.2084],
+    		         [-0.4384, -0.6852],
+    		         [-0.2616, -0.4692],
+    		         [ 0.4573,  2.0465]],
     		
-    		        [[-0.4146, -0.5403],
-    		         [-0.1077, -0.4261],
-    		         [ 1.2183,  0.4285],
-    		         [-0.1007, -0.8319],
-    		         [-0.1851,  0.1278]]], requires_grad=True)
+    		        [[ 0.5333,  0.6722],
+    		         [-0.9125,  0.1184],
+    		         [ 0.1689, -0.0498],
+    		         [-1.2576,  0.5516],
+    		         [-0.0805, -0.2896]]], requires_grad=True)
     	axes:
     		[axis_0
     		 axis_1
@@ -394,8 +352,8 @@ Expected:
             [ 1.3371,  1.4761,  0.6551]], requires_grad=True)
 Got:
     Parameter containing:
-    tensor([[-1.4677, -0.2316,  0.4469],
-            [-0.9964, -0.5450, -0.8290]], requires_grad=True)
+    tensor([[-1.4491,  0.7555, -1.2827],
+            [ 1.3534, -1.0071,  0.1320]], requires_grad=True)
 **********************************************************************
 File "../tensorkrowch/components.py", line ?, in default
 Failed example:
@@ -446,14 +404,14 @@ Got:
     		 data_0[feature] <-> nodeA[input]])
 **********************************************************************
 1 items had failures:
-  24 of 395 in default
+  21 of 395 in default
 395 tests in 1 items.
-371 passed and 24 failed.
-***Test Failed*** 24 failures.
+374 passed and 21 failed.
+***Test Failed*** 21 failures.
 
 Doctest summary
 ===============
   731 tests
-   24 failures in tests
+   21 failures in tests
     0 failures in setup code
     0 failures in cleanup code

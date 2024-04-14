@@ -1015,6 +1015,9 @@ of the MPS if it is not <a class="reference internal" href="components.html#tens
 afterwards. Also, if the MPS was contracted before with other arguments,
 it should be <code class="docutils literal notranslate"><span class="pre">reset</span></code> before calling <code class="docutils literal notranslate"><span class="pre">partial_density</span></code> to avoid
 undesired behaviour.</p>
+<p>Since the density matrix is computed by contracting the MPS, it means
+one can take gradients of it with respect to the MPS tensors, if it
+is needed.</p>
 <p>This method may also alter the attribute <a class="reference internal" href="#tensorkrowch.models.MPS.n_batches" title="tensorkrowch.models.MPS.n_batches"><code class="xref py py-attr docutils literal notranslate"><span class="pre">n_batches</span></code></a> of the
 <a class="reference internal" href="#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a>.</p>
 <dl class="field-list simple">
@@ -1037,14 +1040,61 @@ though this may be costly if <a class="reference internal" href="#tensorkrowch.m
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPS.mi">
+<span class="sig-name descname"><span class="pre">mi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">middle_site</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">renormalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.mi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.mi" title="Permalink to this definition">#</a></dt>
+<dd><p>Computes the Mutual Information between subsystems <span class="math notranslate nohighlight">\(A\)</span> and
+<span class="math notranslate nohighlight">\(B\)</span>, <span class="math notranslate nohighlight">\(\textrm{MI}(A:B)\)</span>, where <span class="math notranslate nohighlight">\(A\)</span> goes from site
+0 to <code class="docutils literal notranslate"><span class="pre">middle_site</span></code>, and <span class="math notranslate nohighlight">\(B\)</span> goes from <code class="docutils literal notranslate"><span class="pre">middle_site</span> <span class="pre">+</span> <span class="pre">1</span></code> to
+<code class="docutils literal notranslate"><span class="pre">n_features</span> <span class="pre">-</span> <span class="pre">1</span></code>.</p>
+<p>To compute the mutual information, the MPS is put into canonical form
+with orthogonality center at <code class="docutils literal notranslate"><span class="pre">middle_site</span></code>. Bond dimensions are not
+changed if possible. Only when the bond dimension is bigger than the
+physical dimension multiplied by the other bond dimension of the node,
+it will be cropped to that size.</p>
+<p>If the MPS is not normalized, it may happen that the computation of the
+mutual information fails due to errors in the Singular Value
+Decompositions. To avoid this, it is recommended to set
+<code class="docutils literal notranslate"><span class="pre">renormalize</span> <span class="pre">=</span> <span class="pre">True</span></code>. In this case, the norm of each node after the
+SVD is extracted in logarithmic form, and accumulated. As a result,
+the function will return the tuple <code class="docutils literal notranslate"><span class="pre">(mi,</span> <span class="pre">log_norm)</span></code>, which is a sort
+of <cite>scaled</cite> mutual information. The actual mutual information could be
+obtained as <code class="docutils literal notranslate"><span class="pre">exp(log_norm)</span> <span class="pre">*</span> <span class="pre">mi</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>middle_site</strong> (<em>int</em>) – Position that separates regios <span class="math notranslate nohighlight">\(A\)</span> and <span class="math notranslate nohighlight">\(B\)</span>. It should
+be between 0 and <code class="docutils literal notranslate"><span class="pre">n_features</span> <span class="pre">-</span> <span class="pre">2</span></code>.</p></li>
+<li><p><strong>renormalize</strong> (<em>bool</em>) – Indicates whether nodes should be renormalized after SVD/QR
+decompositions. If not, it may happen that the norm explodes as it
+is being accumulated from all nodes. Renormalization aims to avoid
+this undesired behavior by extracting the norm of each node on a
+logarithmic scale after SVD/QR decompositions are computed. Finally,
+the normalization factor is evenly distributed among all nodes of
+the MPS.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>float or tuple[float, float]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.models.MPS.canonicalize">
 <span class="sig-name descname"><span class="pre">canonicalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">oc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'svd'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cum_percentage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">renormalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.canonicalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.canonicalize" title="Permalink to this definition">#</a></dt>
 <dd><p>Turns MPS into canonical form via local SVD/QR decompositions.</p>
+<p>To specify the new bond dimensions, the arguments <code class="docutils literal notranslate"><span class="pre">rank</span></code>,
+<code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code> or <code class="docutils literal notranslate"><span class="pre">cutoff</span></code> can be specified. These will be used
+equally for all SVD computations.</p>
+<p>If none of them are specified, the bond dimensions won’t be modified
+if possible. Only when the bond dimension is bigger than the physical
+dimension multiplied by the other bond dimension of the node, it will
+be cropped to that size.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>oc</strong> (<em>int</em>) – Position of the orthogonality center. It should be between 0 and
-<code class="docutils literal notranslate"><span class="pre">n_features</span> <span class="pre">-1</span></code>.</p></li>
+<code class="docutils literal notranslate"><span class="pre">n_features</span> <span class="pre">-</span> <span class="pre">1</span></code>.</p></li>
 <li><p><strong>mode</strong> (<em>{&quot;svd&quot;</em><em>, </em><em>&quot;svdr&quot;</em><em>, </em><em>&quot;qr&quot;}</em>) – Indicates which decomposition should be used to split a node after
 contracting it. See more at <a class="reference internal" href="operations.html#tensorkrowch.svd_" title="tensorkrowch.svd_"><code class="xref py py-func docutils literal notranslate"><span class="pre">svd_()</span></code></a>,
 <a class="reference internal" href="operations.html#tensorkrowch.svdr_" title="tensorkrowch.svdr_"><code class="xref py py-func docutils literal notranslate"><span class="pre">svdr_()</span></code></a>, <a class="reference internal" href="operations.html#tensorkrowch.qr_" title="tensorkrowch.qr_"><code class="xref py py-func docutils literal notranslate"><span class="pre">qr_()</span></code></a>.

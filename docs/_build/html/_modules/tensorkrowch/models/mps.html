@@ -1491,6 +1491,10 @@ title="Source repository"
 <span class="sd">        it should be ``reset`` before calling ``partial_density`` to avoid</span>
 <span class="sd">        undesired behaviour.</span>
 <span class="sd">        </span>
+<span class="sd">        Since the density matrix is computed by contracting the MPS, it means</span>
+<span class="sd">        one can take gradients of it with respect to the MPS tensors, if it</span>
+<span class="sd">        is needed.</span>
+<span class="sd">        </span>
 <span class="sd">        This method may also alter the attribute :attr:`n_batches` of the</span>
 <span class="sd">        :class:`MPS`.</span>
 <span class="sd">        </span>
@@ -1558,6 +1562,131 @@ title="Source repository"
             <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">marginalize_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         
         <span class="k">return</span> <span class="n">result</span></div>
+    
+<div class="viewcode-block" id="MPS.mi"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.mi">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">mi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+           <span class="n">middle_site</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+           <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes the Mutual Information between subsystems :math:`A` and</span>
+<span class="sd">        :math:`B`, :math:`\textrm{MI}(A:B)`, where :math:`A` goes from site</span>
+<span class="sd">        0 to ``middle_site``, and :math:`B` goes from ``middle_site + 1`` to</span>
+<span class="sd">        ``n_features - 1``.</span>
+<span class="sd">        </span>
+<span class="sd">        To compute the mutual information, the MPS is put into canonical form</span>
+<span class="sd">        with orthogonality center at ``middle_site``. Bond dimensions are not</span>
+<span class="sd">        changed if possible. Only when the bond dimension is bigger than the</span>
+<span class="sd">        physical dimension multiplied by the other bond dimension of the node,</span>
+<span class="sd">        it will be cropped to that size.</span>
+<span class="sd">        </span>
+<span class="sd">        If the MPS is not normalized, it may happen that the computation of the</span>
+<span class="sd">        mutual information fails due to errors in the Singular Value</span>
+<span class="sd">        Decompositions. To avoid this, it is recommended to set</span>
+<span class="sd">        ``renormalize = True``. In this case, the norm of each node after the</span>
+<span class="sd">        SVD is extracted in logarithmic form, and accumulated. As a result,</span>
+<span class="sd">        the function will return the tuple ``(mi, log_norm)``, which is a sort</span>
+<span class="sd">        of `scaled` mutual information. The actual mutual information could be</span>
+<span class="sd">        obtained as ``exp(log_norm) * mi``.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        middle_site : int</span>
+<span class="sd">            Position that separates regios :math:`A` and :math:`B`. It should</span>
+<span class="sd">            be between 0 and ``n_features - 2``.</span>
+<span class="sd">        renormalize : bool</span>
+<span class="sd">            Indicates whether nodes should be renormalized after SVD/QR</span>
+<span class="sd">            decompositions. If not, it may happen that the norm explodes as it</span>
+<span class="sd">            is being accumulated from all nodes. Renormalization aims to avoid</span>
+<span class="sd">            this undesired behavior by extracting the norm of each node on a</span>
+<span class="sd">            logarithmic scale after SVD/QR decompositions are computed. Finally,</span>
+<span class="sd">            the normalization factor is evenly distributed among all nodes of</span>
+<span class="sd">            the MPS.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float or tuple[float, float]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+
+        <span class="n">prev_auto_stack</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="kc">False</span>
+        
+        <span class="k">if</span> <span class="p">(</span><span class="n">middle_site</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">middle_site</span> <span class="o">&gt;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`middle_site` should be between 0 and `n_features` - 2&#39;</span><span class="p">)</span>
+        
+        <span class="n">log_norm</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="n">nodes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[:]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+            <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span>
+                <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+            <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span>
+                <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">:])</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">middle_site</span><span class="p">):</span>
+            <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svd_</span><span class="p">(</span>
+                <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
+                <span class="n">rank</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+            
+            <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
+                <span class="n">aux_norm</span> <span class="o">=</span> <span class="n">result2</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span> <span class="o">/</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">result2</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">isinf</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">aux_norm</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+                    <span class="n">result2</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">result2</span><span class="o">.</span><span class="n">tensor</span> <span class="o">/</span> <span class="n">aux_norm</span>
+                    <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
+
+            <span class="n">result1</span> <span class="o">=</span> <span class="n">result1</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
+            <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">result1</span>
+            <span class="n">nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">result2</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">middle_site</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svd_</span><span class="p">(</span>
+                <span class="n">side</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
+                <span class="n">rank</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+            
+            <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
+                <span class="n">aux_norm</span> <span class="o">=</span> <span class="n">result1</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span> <span class="o">/</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">result1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">isinf</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">aux_norm</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+                    <span class="n">result1</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">result1</span><span class="o">.</span><span class="n">tensor</span> <span class="o">/</span> <span class="n">aux_norm</span>
+                    <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
+
+            <span class="n">result2</span> <span class="o">=</span> <span class="n">result2</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
+            <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">result2</span>
+            <span class="n">nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">result1</span>
+
+        <span class="n">nodes</span><span class="p">[</span><span class="n">middle_site</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">middle_site</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
+        
+        <span class="c1"># Compute mutual information</span>
+        <span class="n">middle_tensor</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">middle_site</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span>
+            <span class="n">middle_tensor</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">middle_tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">numel</span><span class="p">(),</span> <span class="c1"># left x input</span>
+                                  <span class="n">middle_tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span>         <span class="c1"># right</span>
+            <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        
+        <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="n">s</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">mutual_info</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">s</span> <span class="o">*</span> <span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">log</span><span class="p">()</span> <span class="o">+</span> <span class="n">log_norm</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        
+        <span class="c1"># Rescale</span>
+        <span class="k">if</span> <span class="n">log_norm</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">rescale</span> <span class="o">=</span> <span class="p">(</span><span class="n">log_norm</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">))</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="n">renormalize</span> <span class="ow">and</span> <span class="p">(</span><span class="n">log_norm</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">*</span> <span class="n">rescale</span>
+        
+        <span class="c1"># Update variables</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span> <span class="o">=</span> <span class="n">nodes</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="n">prev_auto_stack</span>
+        
+        <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">mutual_info</span><span class="p">,</span> <span class="n">log_norm</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">mutual_info</span></div>
 
 <div class="viewcode-block" id="MPS.canonicalize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.canonicalize">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
     <span class="k">def</span> <span class="nf">canonicalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -1570,11 +1699,20 @@ title="Source repository"
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Turns MPS into canonical form via local SVD/QR decompositions.</span>
 <span class="sd">        </span>
+<span class="sd">        To specify the new bond dimensions, the arguments ``rank``,</span>
+<span class="sd">        ``cum_percentage`` or ``cutoff`` can be specified. These will be used</span>
+<span class="sd">        equally for all SVD computations.</span>
+<span class="sd">        </span>
+<span class="sd">        If none of them are specified, the bond dimensions won&#39;t be modified</span>
+<span class="sd">        if possible. Only when the bond dimension is bigger than the physical</span>
+<span class="sd">        dimension multiplied by the other bond dimension of the node, it will</span>
+<span class="sd">        be cropped to that size.</span>
+<span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        oc : int</span>
 <span class="sd">            Position of the orthogonality center. It should be between 0 and </span>
-<span class="sd">            ``n_features -1``.</span>
+<span class="sd">            ``n_features - 1``.</span>
 <span class="sd">        mode : {&quot;svd&quot;, &quot;svdr&quot;, &quot;qr&quot;}</span>
 <span class="sd">            Indicates which decomposition should be used to split a node after</span>
 <span class="sd">            contracting it. See more at :func:`~tensorkrowch.svd_`,</span>
@@ -1619,9 +1757,9 @@ title="Source repository"
 
         <span class="k">if</span> <span class="n">oc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">oc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">-</span> <span class="mi">1</span>
-        <span class="k">elif</span> <span class="n">oc</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Orthogonality center position `oc` should be &#39;</span>
-                             <span class="sa">f</span><span class="s1">&#39;between 0 and </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">oc</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">oc</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Orthogonality center position `oc` should be &#39;</span>
+                             <span class="s1">&#39;between 0 and `n_features` - 1&#39;</span><span class="p">)</span>
         
         <span class="n">log_norm</span> <span class="o">=</span> <span class="mi">0</span>
         
@@ -1632,17 +1770,23 @@ title="Source repository"
             <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span>
                 <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">:])</span>
         
+        <span class="c1"># If mode is svd or svr and none of the args is provided, the ranks are</span>
+        <span class="c1"># kept as they were originally</span>
+        <span class="n">keep_rank</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">cum_percentage</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">cutoff</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">keep_rank</span> <span class="o">=</span> <span class="kc">True</span>
+        
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">oc</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svd&#39;</span><span class="p">:</span>
                 <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svd_</span><span class="p">(</span>
                     <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
-                    <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+                    <span class="n">rank</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">if</span> <span class="n">keep_rank</span> <span class="k">else</span> <span class="n">rank</span><span class="p">,</span>
                     <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
                     <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svdr&#39;</span><span class="p">:</span>
                 <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svdr_</span><span class="p">(</span>
                     <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
-                    <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+                    <span class="n">rank</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">if</span> <span class="n">keep_rank</span> <span class="k">else</span> <span class="n">rank</span><span class="p">,</span>
                     <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
                     <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;qr&#39;</span><span class="p">:</span>
@@ -1664,13 +1808,13 @@ title="Source repository"
             <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svd&#39;</span><span class="p">:</span>
                 <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svd_</span><span class="p">(</span>
                     <span class="n">side</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
-                    <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+                    <span class="n">rank</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">if</span> <span class="n">keep_rank</span> <span class="k">else</span> <span class="n">rank</span><span class="p">,</span>
                     <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
                     <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svdr&#39;</span><span class="p">:</span>
                 <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svdr_</span><span class="p">(</span>
                     <span class="n">side</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
-                    <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+                    <span class="n">rank</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">if</span> <span class="n">keep_rank</span> <span class="k">else</span> <span class="n">rank</span><span class="p">,</span>
                     <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
                     <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;qr&#39;</span><span class="p">:</span>

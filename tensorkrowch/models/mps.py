@@ -2264,6 +2264,66 @@ class MPSLayer(MPS):  # MARK: MPSLayer
         """Returns the output node."""
         return self._mats_env[self._out_position]
     
+    def _make_unitaries(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
+        """
+        Creates random unitaries to initialize the MPS in canonical form with
+        orthogonality center at the output node."""
+        # Left nodes
+        left_tensors = []
+        for i, node in enumerate(self._mats_env[:self._out_position]):
+            if self._boundary == 'obc':
+                if i == 0:
+                    node_shape = node.shape[1:]
+                    aux_shape = node_shape
+                else:
+                    node_shape = node.shape
+                    aux_shape = (node.shape[:2].numel(), node.shape[2])
+            else:
+                node_shape = node.shape
+                aux_shape = (node.shape[:2].numel(), node.shape[2])
+            size = max(aux_shape[0], aux_shape[1])
+            
+            tensor = random_unitary(size, device=device)
+            tensor = tensor[:min(aux_shape[0], size), :min(aux_shape[1], size)]
+            tensor = tensor.reshape(*node_shape)
+            
+            left_tensors.append(tensor)
+        
+        # Right nodes
+        right_tensors = []
+        for i, node in enumerate(self._mats_env[-1:self._out_position:-1]):
+            if self._boundary == 'obc':
+                if i == (self._n_features - 1):
+                    node_shape = node.shape[:2]
+                    aux_shape = node_shape
+                else:
+                    node_shape = node.shape
+                    aux_shape = (node.shape[0], node.shape[1:].numel())
+            else:
+                node_shape = node.shape
+                aux_shape = (node.shape[0], node.shape[1:].numel())
+            size = max(aux_shape[0], aux_shape[1])
+            
+            tensor = random_unitary(size, device=device)
+            tensor = tensor[:min(aux_shape[0], size), :min(aux_shape[1], size)]
+            tensor = tensor.reshape(*node_shape)
+            
+            right_tensors.append(tensor)
+        
+        # Output node
+        node_shape = self.out_node.shape
+        aux_shape = (node_shape[0] * node_shape[2], node_shape[1])
+        size = max(aux_shape[0], aux_shape[1])
+            
+        out_tensor = random_unitary(size, device=device)
+        out_tensor = out_tensor[:min(aux_shape[0], size), :min(aux_shape[1], size)]
+        out_tensor = out_tensor.reshape(node_shape[0], node_shape[2], node_shape[1])
+        out_tensor = out_tensor.permute(0, 2, 1)
+        
+        # All tensors
+        tensors = left_tensors + [out_tensor] + right_tensors
+        return tensors
+    
     def initialize(self,
                    tensors: Optional[Sequence[torch.Tensor]] = None,
                    init_method: Optional[Text] = 'randn',

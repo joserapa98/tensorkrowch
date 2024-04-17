@@ -401,7 +401,7 @@ def _tprod_next(successor: Successor,
                 node2: AbstractNode) -> Node:
     tensor1 = node1._direct_get_tensor(successor.node_ref[0],
                                        successor.index[0])
-    tensor2 = node1._direct_get_tensor(successor.node_ref[1],
+    tensor2 = node2._direct_get_tensor(successor.node_ref[1],
                                        successor.index[1])
     new_tensor = torch.outer(tensor1.flatten(),
                              tensor2.flatten()).view(*(list(node1._shape) + 
@@ -570,7 +570,7 @@ def _mul_next(successor: Successor,
     tensor1 = node1._direct_get_tensor(successor.node_ref[0],
                                        successor.index[0])
     if is_node2:
-        tensor2 = node1._direct_get_tensor(successor.node_ref[1],
+        tensor2 = node2._direct_get_tensor(successor.node_ref[1],
                                            successor.index[1])
     else:
         tensor2 = node2
@@ -672,12 +672,206 @@ mul_node.__doc__ = \
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
-    >>> result = nodeA * tensorB
+    >>> result = nodeA.mul(tensorB)
     >>> result.shape
     torch.Size([2, 3])
     """
 
 AbstractNode.__mul__ = mul_node
+
+
+###################################   DIV    ##################################
+# MARK: div
+def _check_first_div(node1: AbstractNode,
+                     node2: Union[AbstractNode,
+                                  torch.Tensor,
+                                  Number]) -> Optional[Successor]:
+    if isinstance(node2, AbstractNode):
+        args = (node1, node2)
+    else:
+        args = (node1,)
+    successors = node1._successors.get('div')
+    if not successors:
+        return None
+    return successors.get(args)
+
+
+def _div_first(node1: AbstractNode,
+               node2: Union[AbstractNode,
+                            torch.Tensor,
+                            Number]) -> Node:
+    is_node2 = False
+    if isinstance(node2, AbstractNode):
+        is_node2 = True
+        if node1._network != node2._network:
+            raise ValueError('Nodes must be in the same network')
+
+    if is_node2:
+        new_tensor = node1.tensor / node2.tensor
+    else:
+        new_tensor = node1.tensor / node2
+    
+    new_node = Node._create_resultant(axes_names=node1.axes_names,
+                                      name='div',
+                                      network=node1._network,
+                                      tensor=new_tensor,
+                                      edges=node1._edges,
+                                      node1_list=node1.is_node1())
+
+    # Create successor
+    net = node1._network
+    
+    if is_node2:
+        args = (node1, node2)
+        successor = Successor(node_ref=(node1.node_ref(),
+                                        node2.node_ref()),
+                              index=(node1._tensor_info['index'],
+                                     node2._tensor_info['index']),
+                              child=new_node,
+                              hints=is_node2)
+    else:
+        args = (node1,)
+        successor = Successor(node_ref=(node1.node_ref(),),
+                              index=(node1._tensor_info['index'],),
+                              child=new_node,
+                              hints=is_node2)
+
+    # Add successor to parent
+    if 'mul' in node1._successors:
+        node1._successors['div'].update({args: successor})
+    else:
+        node1._successors['div'] = {args: successor}
+
+    # Add operation to list of performed operations of TN
+    net._seq_ops.append(('div', args))
+
+    # Record in inverse_memory while tracing
+    if net._tracing:
+        node1._record_in_inverse_memory()
+        
+        if is_node2:
+            node2._record_in_inverse_memory()
+
+    return new_node
+
+
+def _div_next(successor: Successor,
+              node1: AbstractNode,
+              node2: Union[AbstractNode,
+                           torch.Tensor,
+                           Number]) -> Node:
+    is_node2 = successor.hints
+    tensor1 = node1._direct_get_tensor(successor.node_ref[0],
+                                       successor.index[0])
+    if is_node2:
+        tensor2 = node2._direct_get_tensor(successor.node_ref[1],
+                                           successor.index[1])
+    else:
+        tensor2 = node2
+    
+    new_tensor = tensor1 / tensor2
+    child = successor.child
+    child._direct_set_tensor(new_tensor)
+
+    # Record in inverse_memory while contracting, if network is traced
+    # (to delete memory if possible)
+    if node1._network._traced:
+        node1._check_inverse_memory(successor.node_ref)
+        
+        if is_node2:
+            node2._check_inverse_memory(successor.node_ref)
+    
+    return child
+
+
+div_op = Operation('div', _check_first_div, _div_first, _div_next)
+
+
+def div(node1: AbstractNode,
+        node2: Union[AbstractNode,
+                     torch.Tensor,
+                     Number]) -> Node:
+    """
+    Element-wise division between two nodes. It can also be performed using the
+    operator ``/``.
+    
+    It also admits to take as ``node2`` a number or tensor, that will
+    divide the ``node1`` tensor as ``node1.tensor / node2``.
+    
+    Nodes ``resultant`` from this operation are called ``"div"``. The node
+    that keeps information about the :class:`Successor` is ``node1``.
+
+    Parameters
+    ----------
+    node1 : Node or ParamNode
+        First node to be divided. Its edges will appear in the resultant node.
+    node2 : Node, ParamNode, torch.Tensor or number
+        Second node, the divisor. It can also be a number or tensor with
+        appropiate shape.
+
+    Returns
+    -------
+    Node
+    
+    Examples
+    --------
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = nodeA / nodeB
+    >>> result.shape
+    torch.Size([2, 3])
+    
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> tensorB = torch.randn(2, 3)
+    >>> result = nodeA / tensorB
+    >>> result.shape
+    torch.Size([2, 3])
+    """
+    return div_op(node1, node2)
+
+
+div_node = copy_func(div)
+div_node.__doc__ = \
+    """
+    Element-wise division between two nodes. It can also be performed using the
+    operator ``*``.
+    
+    It also admits to take as ``node2`` a number or tensor, that will
+    divide the ``self`` tensor as ``self.tensor * node2``.
+    
+    Nodes ``resultant`` from this operation are called ``"div"``. The node
+    that keeps information about the :class:`Successor` is ``self``.
+
+    Parameters
+    ----------
+    node2 : Node, ParamNode, torch.Tensor or number
+        Second node, the divisor. It can also be a number or tensor with
+        appropiate shape.
+
+    Returns
+    -------
+    Node
+    
+    Examples
+    --------
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = nodeA.div(nodeB)
+    >>> result.shape
+    torch.Size([2, 3])
+    
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> tensorB = torch.randn(2, 3)
+    >>> result = nodeA.div(tensorB)
+    >>> result.shape
+    torch.Size([2, 3])
+    """
+
+AbstractNode.__truediv__ = div_node
 
 
 ###################################   ADD    ##################################
@@ -764,7 +958,7 @@ def _add_next(successor: Successor,
     tensor1 = node1._direct_get_tensor(successor.node_ref[0],
                                        successor.index[0])
     if is_node2:
-        tensor2 = node1._direct_get_tensor(successor.node_ref[1],
+        tensor2 = node2._direct_get_tensor(successor.node_ref[1],
                                            successor.index[1])
     else:
         tensor2 = node2
@@ -866,7 +1060,7 @@ add_node.__doc__ = \
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
-    >>> result = nodeA + tensorB
+    >>> result = nodeA.add(tensorB)
     >>> result.shape
     torch.Size([2, 3])
     """
@@ -958,7 +1152,7 @@ def _sub_next(successor: Successor,
     tensor1 = node1._direct_get_tensor(successor.node_ref[0],
                                        successor.index[0])
     if is_node2:
-        tensor2 = node1._direct_get_tensor(successor.node_ref[1],
+        tensor2 = node2._direct_get_tensor(successor.node_ref[1],
                                            successor.index[1])
     else:
         tensor2 = node2
@@ -1060,7 +1254,7 @@ sub_node.__doc__ = \
     >>> net = tk.TensorNetwork()
     >>> nodeA = tk.randn((2, 3), network=net)
     >>> tensorB = torch.randn(2, 3)
-    >>> result = nodeA - tensorB
+    >>> result = nodeA.sub(tensorB)
     >>> result.shape
     torch.Size([2, 3])
     """

@@ -582,10 +582,10 @@ def _mul_next(successor: Successor,
     # Record in inverse_memory while contracting, if network is traced
     # (to delete memory if possible)
     if node1._network._traced:
-        node1._check_inverse_memory(successor.node_ref)
+        node1._check_inverse_memory(successor.node_ref[0])
         
         if is_node2:
-            node2._check_inverse_memory(successor.node_ref)
+            node2._check_inverse_memory(successor.node_ref[1])
     
     return child
 
@@ -784,10 +784,10 @@ def _div_next(successor: Successor,
     # Record in inverse_memory while contracting, if network is traced
     # (to delete memory if possible)
     if node1._network._traced:
-        node1._check_inverse_memory(successor.node_ref)
+        node1._check_inverse_memory(successor.node_ref[0])
         
         if is_node2:
-            node2._check_inverse_memory(successor.node_ref)
+            node2._check_inverse_memory(successor.node_ref[1])
     
     return child
 
@@ -986,10 +986,10 @@ def _add_next(successor: Successor,
     # Record in inverse_memory while contracting, if network is traced
     # (to delete memory if possible)
     if node1._network._traced:
-        node1._check_inverse_memory(successor.node_ref)
+        node1._check_inverse_memory(successor.node_ref[0])
         
         if is_node2:
-            node2._check_inverse_memory(successor.node_ref)
+            node2._check_inverse_memory(successor.node_ref[1])
 
     return child
 
@@ -1188,10 +1188,10 @@ def _sub_next(successor: Successor,
     # Record in inverse_memory while contracting, if network is traced
     # (to delete memory if possible)
     if node1._network._traced:
-        node1._check_inverse_memory(successor.node_ref)
+        node1._check_inverse_memory(successor.node_ref[0])
         
         if is_node2:
-            node2._check_inverse_memory(successor.node_ref)
+            node2._check_inverse_memory(successor.node_ref[1])
 
     return child
 
@@ -1292,6 +1292,167 @@ sub_node.__doc__ = \
     """
 
 AbstractNode.__sub__ = sub_node
+
+
+###############################   renormalize    ##############################
+# MARK: renormalize
+def _check_first_renormalize(
+    node: AbstractNode,
+    p: Union[int, float] = 2,
+    axis: Optional[Union[Ax, Sequence[Ax]]] = None) -> Optional[Successor]:
+    
+    if isinstance(axis, (tuple, list)):
+        axis = tuple(axis)
+    args = (node, p, axis)
+    successors = node._successors.get('renormalize')
+    if not successors:
+        return None
+    return successors.get(args)
+
+
+def _renormalize_first(
+    node: AbstractNode,
+    p: Union[int, float] = 2,
+    axis: Optional[Union[Ax, Sequence[Ax]]] = None) -> Node:
+    
+    axis_num = []
+    if axis is not None:
+        if isinstance(axis, (tuple, list)):
+            for ax in axis:
+                axis_num.append(node.get_axis_num(ax))
+            axis = tuple(axis)
+        else:
+            axis_num.append(node.get_axis_num(axis))
+    
+    norm = node.tensor.norm(p=p, dim=axis_num, keepdim=True)
+    new_tensor = node.tensor / norm
+    new_node = Node._create_resultant(axes_names=node.axes_names,
+                                      name='renormalize',
+                                      network=node._network,
+                                      tensor=new_tensor,
+                                      edges=node._edges,
+                                      node1_list=node.is_node1())
+
+    # Create successor
+    net = node._network
+    args = (node, p, axis)
+    successor = Successor(node_ref=node.node_ref(),
+                          index=node._tensor_info['index'],
+                          child=new_node,
+                          hints=axis_num)
+
+    # Add successor to parent
+    if 'renormalize' in node._successors:
+        node._successors['renormalize'].update({args: successor})
+    else:
+        node._successors['renormalize'] = {args: successor}
+
+    # Add operation to list of performed operations of TN
+    net._seq_ops.append(('renormalize', args))
+
+    # Record in inverse_memory while tracing
+    if net._tracing:
+        node._record_in_inverse_memory()
+
+    return new_node
+
+
+def _renormalize_next(
+    successor: Successor,
+    node: AbstractNode,
+    p: Union[int, float] = 2,
+    axis: Optional[Union[Ax, Sequence[Ax]]] = None) -> Node:
+    
+    axis_num = successor.hints
+    tensor = node._direct_get_tensor(successor.node_ref,
+                                     successor.index)
+    norm = tensor.norm(p=p, dim=axis_num, keepdim=True)
+    new_tensor = tensor / norm
+    
+    child = successor.child
+    child._direct_set_tensor(new_tensor)
+
+    # Record in inverse_memory while contracting, if network is traced
+    # (to delete memory if possible)
+    if node._network._traced:
+        node._check_inverse_memory(successor.node_ref)
+    
+    return child
+
+
+renormalize_op = Operation('renormalize',
+                           _check_first_renormalize,
+                           _renormalize_first,
+                           _renormalize_next)
+
+
+def renormalize(
+    node: AbstractNode,
+    p: Union[int, float] = 2,
+    axis: Optional[Union[Ax, Sequence[Ax]]] = None) -> Node:
+    """
+    Normalizes the node with the specified norm. That is, the tensor of ``node``
+    is divided by its norm.
+    
+    Different norms can be taken, specifying the argument ``p``, and accross
+    different dimensions, or node axes, specifying the argument ``axis``.
+    
+    See also `torch.norm() <https://pytorch.org/docs/stable/generated/torch.norm.html>`_.
+
+    Parameters
+    ----------
+    node : Node or ParamNode
+        Node that is to be renormalized.
+    p : int, float
+        The order of the norm.
+    axis : int, str, Axis or list[int, str or Axis], optional
+        Axis or sequence of axes over which to reduce.
+
+    Returns
+    -------
+    Node
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn((3, 3))
+    >>> renormA = tk.renormalize(nodeA)
+    >>> renormA.norm()
+    tensor(1.)
+    """
+    return renormalize_op(node, p, axis)
+
+
+renormalize_node = copy_func(renormalize)
+renormalize_node.__doc__ = \
+    """
+    Normalizes the node with the specified norm. That is, the tensor of ``node``
+    is divided by its norm.
+    
+    Different norms can be taken, specifying the argument ``p``, and accross
+    different dimensions, or node axes, specifying the argument ``axis``.
+    
+    See also `torch.norm() <https://pytorch.org/docs/stable/generated/torch.norm.html>`_.
+
+    Parameters
+    ----------
+    p : int, float
+        The order of the norm.
+    axis : int, str, Axis or list[int, str or Axis], optional
+        Axis or sequence of axes over which to reduce.
+
+    Returns
+    -------
+    Node
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn((3, 3))
+    >>> renormA = nodeA.renormalize()
+    >>> renormA.norm()
+    tensor(1.)
+    """
+
+AbstractNode.renormalize = renormalize_node
 
 
 ###############################################################################

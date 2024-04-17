@@ -1302,7 +1302,9 @@ class TestMPS:  # MARK: TestMPS
                     assert all([mps.bond_dim[i] <= bond_dim[i]
                                 for i in range(len(bond_dim))])
                     
-                    assert torch.isclose(mi, log_norm.exp() * scaled_mi)
+                    sq_norm = log_norm.exp().pow(2)
+                    approx_mi = sq_norm * scaled_mi - sq_norm * 2 * log_norm
+                    assert torch.isclose(mi, approx_mi)
                     
                     if mps.boundary == 'obc':
                         assert len(mps.leaf_nodes) == n_features + 2

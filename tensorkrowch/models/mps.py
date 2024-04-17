@@ -1362,8 +1362,16 @@ class MPS(TensorNetwork):  # MARK: MPS
         ``renormalize = True``. In this case, the norm of each node after the
         SVD is extracted in logarithmic form, and accumulated. As a result,
         the function will return the tuple ``(mi, log_norm)``, which is a sort
-        of `scaled` mutual information. The actual mutual information could be
-        obtained as ``exp(log_norm) * mi``.
+        of `scaled` mutual information. This is, indeed, the mutual information
+        of a distribution, since the schmidt values are normalized to sum up
+        to 1.
+        
+        The actual mutual information, without rescaling, could be obtained as:
+        
+        .. math::
+        
+            \exp(\texttt{log_norm})^2 \cdot \textrm{MI}(A:B) - 
+            \exp(\texttt{log_norm})^2 \cdot 2 \cdot \texttt{log_norm}
         
         Parameters
         ----------
@@ -1430,7 +1438,13 @@ class MPS(TensorNetwork):  # MARK: MPS
             result2 = result2.parameterize()
             nodes[i] = result2
             nodes[i - 1] = result1
-
+        
+        if renormalize:
+            aux_norm = nodes[middle_site].norm()
+            if not aux_norm.isinf() and (aux_norm > 0):
+                nodes[middle_site].tensor = nodes[middle_site].tensor / aux_norm
+                log_norm += aux_norm.log()
+        
         nodes[middle_site] = nodes[middle_site].parameterize()
         
         # Compute mutual information
@@ -1441,7 +1455,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             full_matrices=False)
         
         s = s[s > 0]
-        mutual_info = -(s * (s.log() + log_norm)).sum()
+        mutual_info = -(s.pow(2) * s.pow(2).log()).sum()
         
         # Rescale
         if log_norm != 0:

@@ -486,6 +486,41 @@ class TestBasicOps:
         # Operating in the opposite order raises an error
         with pytest.raises(TypeError):
             _ = 3. * node1
+    
+    def test_renormalize(self):
+        node1 = tk.randn(shape=(3, 3, 3),
+                         axes_names=('left', 'input', 'right'))
+        assert node1.successors == dict()
+        
+        node2 = tk.renormalize(node1)
+        assert node2 is not node1
+        assert node2.shape == (3, 3, 3)
+        assert node2.tensor.norm().isclose(torch.tensor(1.))
+        assert node1.successors != dict()
+        
+        # Repeat
+        node2 = tk.renormalize(node1)
+        
+        node3 = node1.renormalize(p=1, axis='left')
+        assert node3 is not node1
+        assert node3 is not node2
+        assert node3.shape == (3, 3, 3)
+        assert node3.tensor.norm(p=1, dim=0).allclose(torch.ones(3, 3))
+        assert node1.successors != dict()
+        
+        # Repeat
+        node3 = node1.renormalize(p=1, axis='left')
+        
+        node4 = node1.renormalize(axis=['left', 'right'])
+        assert node4 is not node1
+        assert node4 is not node2
+        assert node4 is not node3
+        assert node4.shape == (3, 3, 3)
+        assert node4.tensor.norm(dim=[0, 2]).allclose(torch.ones(3))
+        assert node1.successors != dict()
+        
+        # Repeat
+        node4 = node1.renormalize(axis=['left', 'right'])
 
     @pytest.fixture
     def setup_param(self):
@@ -601,6 +636,97 @@ class TestBasicOps:
         # Tensor product cannot be performed between connected nodes
         with pytest.raises(ValueError):
             node3 = node1 % node2
+    
+    def test_mul_with_tensor_param(self, setup_param):
+        node1, _ = setup_param
+        
+        assert node1.successors == dict()
+        
+        node2 = node1 * torch.randn(node1.shape)
+        assert node2.shape == (2, 3)
+        assert node2.edges == node1.edges
+        assert node1.successors != dict()
+        assert node1.successors['mul'][(node1,)].child == node2
+
+        # Second time (with maybe different tensor)
+        node3 = node1 * torch.randn(node1.shape)
+        assert node2 is node3
+        
+        # Third time (with maybe another type of operand)
+        node4 = node1 * 5.
+        assert node2 is node4
+        
+        # Operating in the opposite order raises an error
+        with pytest.raises(TypeError):
+            _ = 3. * node1
+    
+    def test_div_param(self, setup_param):
+        node1, node2 = setup_param
+        node1[0].change_size(2)
+        node1[1].change_size(2)
+        node2[0].change_size(2)
+        node2[1].change_size(2)
+
+        # Tensor product cannot be performed between nodes in different networks
+        with pytest.raises(ValueError):
+            node3 = node1 / node2
+
+        net = tk.TensorNetwork()
+        node1.network = net
+        node2.network = net
+
+        assert node1.successors == dict()
+        assert node2.successors == dict()
+
+        node3 = node1 / node2
+        assert node3.shape == (2, 2)
+        assert node3.edges == node1.edges
+        assert node1.successors != dict()
+        assert node1.successors['div'][(node1, node2)].child == node3
+        assert node2.successors == dict()
+
+        result_tensor = node3.tensor
+
+        # Second time
+        node3 = node1 / node2
+        assert torch.equal(result_tensor, node3.tensor)
+
+        assert len(net.nodes) == 3
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 1
+
+        net.reset()
+        assert len(net.nodes) == 2
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 0
+
+        node1[1] ^ node2[0]
+        # Tensor product cannot be performed between connected nodes
+        with pytest.raises(ValueError):
+            node3 = node1 % node2
+    
+    def test_div_with_tensor_param(self, setup_param):
+        node1, _ = setup_param
+        
+        assert node1.successors == dict()
+        
+        node2 = node1 / torch.randn(node1.shape)
+        assert node2.shape == (2, 3)
+        assert node2.edges == node1.edges
+        assert node1.successors != dict()
+        assert node1.successors['div'][(node1,)].child == node2
+
+        # Second time (with maybe different tensor)
+        node3 = node1 / torch.randn(node1.shape)
+        assert node2 is node3
+        
+        # Third time (with maybe another type of operand)
+        node4 = node1 / 5.
+        assert node2 is node4
+        
+        # Operating in the opposite order raises an error
+        with pytest.raises(TypeError):
+            _ = 3. * node1
 
     def test_add_param(self, setup_param):
         node1, node2 = setup_param
@@ -654,6 +780,29 @@ class TestBasicOps:
         # Tensor product cannot be performed between connected nodes
         with pytest.raises(ValueError):
             node3 = node1 % node2
+    
+    def test_add_with_tensor_param(self, setup_param):
+        node1, _ = setup_param
+        
+        assert node1.successors == dict()
+        
+        node2 = node1 + torch.randn(node1.shape)
+        assert node2.shape == (2, 3)
+        assert node2.edges == node1.edges
+        assert node1.successors != dict()
+        assert node1.successors['add'][(node1,)].child == node2
+
+        # Second time (with maybe different tensor)
+        node3 = node1 + torch.randn(node1.shape)
+        assert node2 is node3
+        
+        # Third time (with maybe another type of operand)
+        node4 = node1 + 5.
+        assert node2 is node4
+        
+        # Operating in the opposite order raises an error
+        with pytest.raises(TypeError):
+            _ = 3. * node1
 
     def test_sub_param(self, setup_param):
         node1, node2 = setup_param
@@ -707,6 +856,65 @@ class TestBasicOps:
         # Tensor product cannot be performed between connected nodes
         with pytest.raises(ValueError):
             node3 = node1 % node2
+    
+    def test_sub_with_tensor_param(self, setup_param):
+        node1, _ = setup_param
+        
+        assert node1.successors == dict()
+        
+        node2 = node1 - torch.randn(node1.shape)
+        assert node2.shape == (2, 3)
+        assert node2.edges == node1.edges
+        assert node1.successors != dict()
+        assert node1.successors['sub'][(node1,)].child == node2
+
+        # Second time (with maybe different tensor)
+        node3 = node1 - torch.randn(node1.shape)
+        assert node2 is node3
+        
+        # Third time (with maybe another type of operand)
+        node4 = node1 - 5.
+        assert node2 is node4
+        
+        # Operating in the opposite order raises an error
+        with pytest.raises(TypeError):
+            _ = 3. * node1
+    
+    def test_renormalize_param(self):
+        node1 = tk.randn(shape=(3, 3, 3),
+                         axes_names=('left', 'input', 'right'),
+                         param_node=True)
+        assert node1.successors == dict()
+        
+        node2 = tk.renormalize(node1)
+        assert node2 is not node1
+        assert node2.shape == (3, 3, 3)
+        assert node2.tensor.norm().isclose(torch.tensor(1.))
+        assert node1.successors != dict()
+        
+        # Repeat
+        node2 = tk.renormalize(node1)
+        
+        node3 = node1.renormalize(p=1, axis='left')
+        assert node3 is not node1
+        assert node3 is not node2
+        assert node3.shape == (3, 3, 3)
+        assert node3.tensor.norm(p=1, dim=0).allclose(torch.ones(3, 3))
+        assert node1.successors != dict()
+        
+        # Repeat
+        node3 = node1.renormalize(p=1, axis='left')
+        
+        node4 = node1.renormalize(axis=['left', 'right'])
+        assert node4 is not node1
+        assert node4 is not node2
+        assert node4 is not node3
+        assert node4.shape == (3, 3, 3)
+        assert node4.tensor.norm(dim=[0, 2]).allclose(torch.ones(3))
+        assert node1.successors != dict()
+        
+        # Repeat
+        node4 = node1.renormalize(axis=['left', 'right'])
 
 
 class TestSplitSVD:

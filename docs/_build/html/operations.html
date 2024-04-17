@@ -1487,13 +1487,16 @@ resultant node.</p></li>
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">mul</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#mul"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.mul" title="Permalink to this definition">#</a></dt>
 <dd><p>Element-wise product between two nodes. It can also be performed using the
 operator <code class="docutils literal notranslate"><span class="pre">*</span></code>.</p>
+<p>It also admits to take as <code class="docutils literal notranslate"><span class="pre">node2</span></code> a number or tensor, that will be
+multiplied by the <code class="docutils literal notranslate"><span class="pre">node1</span></code> tensor as <code class="docutils literal notranslate"><span class="pre">node1.tensor</span> <span class="pre">*</span> <span class="pre">node2</span></code>.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;mul&quot;</span></code>. The node
 that keeps information about the <a class="reference internal" href="components.html#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">node1</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>node1</strong> (<a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – First node to be multiplied. Its edges will appear in the resultant node.</p></li>
-<li><p><strong>node2</strong> (<a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – Second node to be multiplied.</p></li>
+<li><p><strong>node2</strong> (<a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em>, </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>, </em><em>torch.Tensor</em><em> or </em><em>number</em>) – Second node to be multiplied. It can also be a number or tensor with
+appropiate shape.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
@@ -1509,6 +1512,14 @@ that keeps information about the <a class="reference internal" href="components.
 <span class="go">torch.Size([2, 3])</span>
 </pre></div>
 </div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">net</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tensorB</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">nodeA</span> <span class="o">*</span> <span class="n">tensorB</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([2, 3])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>
@@ -1519,13 +1530,16 @@ that keeps information about the <a class="reference internal" href="components.
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">add</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#add"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.add" title="Permalink to this definition">#</a></dt>
 <dd><p>Element-wise addition between two nodes. It can also be performed using the
 operator <code class="docutils literal notranslate"><span class="pre">+</span></code>.</p>
+<p>It also admits to take as <code class="docutils literal notranslate"><span class="pre">node2</span></code> a number or tensor, that will be
+added to the <code class="docutils literal notranslate"><span class="pre">node1</span></code> tensor as <code class="docutils literal notranslate"><span class="pre">node1.tensor</span> <span class="pre">+</span> <span class="pre">node2</span></code>.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;add&quot;</span></code>. The node
 that keeps information about the <a class="reference internal" href="components.html#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">node1</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>node1</strong> (<a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – First node to be added. Its edges will appear in the resultant node.</p></li>
-<li><p><strong>node2</strong> (<a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – Second node to be added.</p></li>
+<li><p><strong>node2</strong> (<a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em>, </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>, </em><em>torch.Tensor</em><em> or </em><em>numeric</em>) – Second node to be added. It can also be a number or tensor with
+appropiate shape.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
@@ -1541,6 +1555,14 @@ that keeps information about the <a class="reference internal" href="components.
 <span class="go">torch.Size([2, 3])</span>
 </pre></div>
 </div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">net</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tensorB</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">nodeA</span> <span class="o">+</span> <span class="n">tensorB</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([2, 3])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>
@@ -1551,13 +1573,16 @@ that keeps information about the <a class="reference internal" href="components.
 <span class="sig-prename descclassname"><span class="pre">tensorkrowch.</span></span><span class="sig-name descname"><span class="pre">sub</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/operations.html#sub"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.sub" title="Permalink to this definition">#</a></dt>
 <dd><p>Element-wise subtraction between two nodes. It can also be performed using
 the operator <code class="docutils literal notranslate"><span class="pre">-</span></code>.</p>
+<p>It also admits to take as <code class="docutils literal notranslate"><span class="pre">node2</span></code> a number or tensor, that will be
+subtracted from the <code class="docutils literal notranslate"><span class="pre">node1</span></code> tensor as <code class="docutils literal notranslate"><span class="pre">node1.tensor</span> <span class="pre">-</span> <span class="pre">node2</span></code>.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;sub&quot;</span></code>. The node
 that keeps information about the <a class="reference internal" href="components.html#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is <code class="docutils literal notranslate"><span class="pre">node1</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>node1</strong> (<a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – First node, minuend . Its edges will appear in the resultant node.</p></li>
-<li><p><strong>node2</strong> (<a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em> or </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a>) – Second node, subtrahend.</p></li>
+<li><p><strong>node2</strong> (<a class="reference internal" href="components.html#tensorkrowch.Node" title="tensorkrowch.Node"><em>Node</em></a><em>, </em><a class="reference internal" href="components.html#tensorkrowch.ParamNode" title="tensorkrowch.ParamNode"><em>ParamNode</em></a><em>, </em><em>torch.Tensor</em><em> or </em><em>number</em>) – Second node, subtrahend. It can also be a number or tensor with
+appropiate shape.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
@@ -1569,6 +1594,14 @@ that keeps information about the <a class="reference internal" href="components.
 <span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">nodeB</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">nodeA</span> <span class="o">-</span> <span class="n">nodeB</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([2, 3])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">net</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">TensorNetwork</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">network</span><span class="o">=</span><span class="n">net</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tensorB</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">nodeA</span> <span class="o">-</span> <span class="n">tensorB</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">shape</span>
 <span class="go">torch.Size([2, 3])</span>
 </pre></div>

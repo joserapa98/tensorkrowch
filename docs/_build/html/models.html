@@ -975,7 +975,10 @@ inline or as a sequence of pairwise stacked contrations.</p></li>
 If not, it may happen that the norm explodes or vanishes, as it
 is being accumulated from all nodes. Renormalization aims to avoid
 this undesired behavior by extracting the norm of each node on a
-logarithmic scale.</p></li>
+logarithmic scale. The renormalization only occurs when multiplying
+sequences of matrices, once the <cite>input</cite> contractions have been
+already performed, including contracting against embedding matrices
+or MPOs when <code class="docutils literal notranslate"><span class="pre">marginalize_output</span> <span class="pre">=</span> <span class="pre">True</span></code>.</p></li>
 <li><p><strong>marginalize_output</strong> (<em>bool</em>) – Boolean indicating whether output nodes should be marginalized. If
 <code class="docutils literal notranslate"><span class="pre">True</span></code>, after contracting all the input nodes with their
 neighbouring data nodes, this resultant network is contracted with

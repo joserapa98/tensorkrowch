@@ -1169,15 +1169,15 @@ title="Source repository"
             <span class="n">result_node</span> <span class="o">=</span> <span class="n">mats_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">mats_env</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
                 <span class="n">result_node</span> <span class="o">@=</span> <span class="n">node</span>
-                <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
-                    <span class="n">result_node</span> <span class="o">=</span> <span class="n">result_node</span> <span class="o">/</span> <span class="n">result_node</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">renormalize</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="n">result_node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">):</span>
+                    <span class="n">result_node</span> <span class="o">=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">renormalize</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">result_node</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">result_node</span> <span class="o">=</span> <span class="n">mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
                 <span class="n">result_node</span> <span class="o">=</span> <span class="n">node</span> <span class="o">@</span> <span class="n">result_node</span>
-                <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
-                    <span class="n">result_node</span> <span class="o">=</span> <span class="n">result_node</span> <span class="o">/</span> <span class="n">result_node</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">renormalize</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;left&#39;</span> <span class="ow">in</span> <span class="n">result_node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">):</span>
+                    <span class="n">result_node</span> <span class="o">=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">renormalize</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">result_node</span>
 
     <span class="k">def</span> <span class="nf">_contract_envs_inline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -1220,8 +1220,8 @@ title="Source repository"
             
             <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">aux_nodes</span><span class="p">)):</span>
-                    <span class="n">aux_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">aux_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> \
-                        <span class="n">aux_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">])</span>
+                    <span class="n">aux_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">aux_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">renormalize</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
+                                                                  <span class="s1">&#39;right&#39;</span><span class="p">])</span>
 
             <span class="k">return</span> <span class="n">aux_nodes</span><span class="p">,</span> <span class="n">leftover</span>
         <span class="k">return</span> <span class="n">mats_env</span><span class="p">,</span> <span class="p">[]</span>
@@ -1318,7 +1318,10 @@ title="Source repository"
 <span class="sd">            If not, it may happen that the norm explodes or vanishes, as it</span>
 <span class="sd">            is being accumulated from all nodes. Renormalization aims to avoid</span>
 <span class="sd">            this undesired behavior by extracting the norm of each node on a</span>
-<span class="sd">            logarithmic scale.</span>
+<span class="sd">            logarithmic scale. The renormalization only occurs when multiplying</span>
+<span class="sd">            sequences of matrices, once the `input` contractions have been</span>
+<span class="sd">            already performed, including contracting against embedding matrices</span>
+<span class="sd">            or MPOs when ``marginalize_output = True``.</span>
 <span class="sd">        marginalize_output : bool</span>
 <span class="sd">            Boolean indicating whether output nodes should be marginalized. If</span>
 <span class="sd">            ``True``, after contracting all the input nodes with their</span>
@@ -1384,6 +1387,21 @@ title="Source repository"
             <span class="n">nodes_env</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">in_env</span><span class="p">,</span>
             <span class="n">input_nodes</span><span class="o">=</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_env</span><span class="p">],</span>
             <span class="n">inline_input</span><span class="o">=</span><span class="n">inline_input</span><span class="p">)</span>
+        
+        <span class="c1"># NOTE: to leave the input edges open and marginalize output</span>
+        <span class="c1"># data_nodes = []</span>
+        <span class="c1"># for node in self.in_env:</span>
+        <span class="c1">#     data_node = node.neighbours(&#39;input&#39;)</span>
+        <span class="c1">#     if data_node:</span>
+        <span class="c1">#         data_nodes.append(data_node)</span>
+        
+        <span class="c1"># if data_nodes:</span>
+        <span class="c1">#     mats_in_env = self._input_contraction(</span>
+        <span class="c1">#         nodes_env=self.in_env,</span>
+        <span class="c1">#         input_nodes=data_nodes,</span>
+        <span class="c1">#         inline_input=inline_input)</span>
+        <span class="c1"># else:</span>
+        <span class="c1">#     mats_in_env = self.in_env</span>
         
         <span class="n">in_results</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">region</span> <span class="ow">in</span> <span class="n">in_regions</span><span class="p">:</span>      

@@ -1433,7 +1433,7 @@ instead of a <a class="reference internal" href="#tensorkrowch.Node" title="tens
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.norm">
-<span class="sig-name descname"><span class="pre">norm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.norm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.norm" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">norm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keepdim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.norm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.norm" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns the norm of all elements in the node’s tensor. If an <code class="docutils literal notranslate"><span class="pre">axis</span></code> is
 specified, the norm is over that axis. If <code class="docutils literal notranslate"><span class="pre">axis</span></code> is a sequence of axes,
 reduce over all of them.</p>
@@ -1445,6 +1445,8 @@ instead of a <a class="reference internal" href="#tensorkrowch.Node" title="tens
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>p</strong> (<em>int</em><em>, </em><em>float</em>) – The order of the norm.</p></li>
 <li><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em>, </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em> or </em><em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em><em>, </em><em>optional</em>) – Axis or sequence of axes over which to reduce.</p></li>
+<li><p><strong>keepdim</strong> (<em>bool</em>) – Boolean indicating whether the output tensor have dimensions
+retained or not.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
@@ -1614,6 +1616,34 @@ underscore indicate <strong>in-place</strong> operations.</p>
 </p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.AbstractNode.renormalize">
+<span class="sig-name descname"><span class="pre">renormalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.AbstractNode.renormalize" title="Permalink to this definition">#</a></dt>
+<dd><p>Normalizes the node with the specified norm. That is, the tensor of <code class="docutils literal notranslate"><span class="pre">node</span></code>
+is divided by its norm.</p>
+<p>Different norms can be taken, specifying the argument <code class="docutils literal notranslate"><span class="pre">p</span></code>, and accross
+different dimensions, or node axes, specifying the argument <code class="docutils literal notranslate"><span class="pre">axis</span></code>.</p>
+<p>See also <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.norm.html">torch.norm()</a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p</strong> (<em>int</em><em>, </em><em>float</em>) – The order of the norm.</p></li>
+<li><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em>, </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em> or </em><em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em><em>, </em><em>optional</em>) – Axis or sequence of axes over which to reduce.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">renormA</span> <span class="o">=</span> <span class="n">nodeA</span><span class="o">.</span><span class="n">renormalize</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">renormA</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+<span class="go">tensor(1.)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">

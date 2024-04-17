@@ -871,10 +871,10 @@ title="Source repository"
     <span class="c1"># Record in inverse_memory while contracting, if network is traced</span>
     <span class="c1"># (to delete memory if possible)</span>
     <span class="k">if</span> <span class="n">node1</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_traced</span><span class="p">:</span>
-        <span class="n">node1</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">)</span>
+        <span class="n">node1</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
         
         <span class="k">if</span> <span class="n">is_node2</span><span class="p">:</span>
-            <span class="n">node2</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">)</span>
+            <span class="n">node2</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
     
     <span class="k">return</span> <span class="n">child</span>
 
@@ -1073,10 +1073,10 @@ title="Source repository"
     <span class="c1"># Record in inverse_memory while contracting, if network is traced</span>
     <span class="c1"># (to delete memory if possible)</span>
     <span class="k">if</span> <span class="n">node1</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_traced</span><span class="p">:</span>
-        <span class="n">node1</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">)</span>
+        <span class="n">node1</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
         
         <span class="k">if</span> <span class="n">is_node2</span><span class="p">:</span>
-            <span class="n">node2</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">)</span>
+            <span class="n">node2</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
     
     <span class="k">return</span> <span class="n">child</span>
 
@@ -1084,7 +1084,7 @@ title="Source repository"
 <span class="n">div_op</span> <span class="o">=</span> <span class="n">Operation</span><span class="p">(</span><span class="s1">&#39;div&#39;</span><span class="p">,</span> <span class="n">_check_first_div</span><span class="p">,</span> <span class="n">_div_first</span><span class="p">,</span> <span class="n">_div_next</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">div</span><span class="p">(</span><span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
+<div class="viewcode-block" id="div"><a class="viewcode-back" href="../../operations.html#tensorkrowch.div">[docs]</a><span class="k">def</span> <span class="nf">div</span><span class="p">(</span><span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
         <span class="n">node2</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">,</span>
                      <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
                      <span class="n">Number</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
@@ -1130,7 +1130,7 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; result.shape</span>
 <span class="sd">    torch.Size([2, 3])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">div_op</span><span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">div_op</span><span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span></div>
 
 
 <span class="n">div_node</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">div</span><span class="p">)</span>
@@ -1275,10 +1275,10 @@ title="Source repository"
     <span class="c1"># Record in inverse_memory while contracting, if network is traced</span>
     <span class="c1"># (to delete memory if possible)</span>
     <span class="k">if</span> <span class="n">node1</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_traced</span><span class="p">:</span>
-        <span class="n">node1</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">)</span>
+        <span class="n">node1</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
         
         <span class="k">if</span> <span class="n">is_node2</span><span class="p">:</span>
-            <span class="n">node2</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">)</span>
+            <span class="n">node2</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 
     <span class="k">return</span> <span class="n">child</span>
 
@@ -1477,10 +1477,10 @@ title="Source repository"
     <span class="c1"># Record in inverse_memory while contracting, if network is traced</span>
     <span class="c1"># (to delete memory if possible)</span>
     <span class="k">if</span> <span class="n">node1</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_traced</span><span class="p">:</span>
-        <span class="n">node1</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">)</span>
+        <span class="n">node1</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
         
         <span class="k">if</span> <span class="n">is_node2</span><span class="p">:</span>
-            <span class="n">node2</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">)</span>
+            <span class="n">node2</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 
     <span class="k">return</span> <span class="n">child</span>
 
@@ -1581,6 +1581,167 @@ title="Source repository"
 <span class="sd">    &quot;&quot;&quot;</span>
 
 <span class="n">AbstractNode</span><span class="o">.</span><span class="fm">__sub__</span> <span class="o">=</span> <span class="n">sub_node</span>
+
+
+<span class="c1">###############################   renormalize    ##############################</span>
+<span class="c1"># MARK: renormalize</span>
+<span class="k">def</span> <span class="nf">_check_first_renormalize</span><span class="p">(</span>
+    <span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
+    <span class="n">p</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Ax</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Successor</span><span class="p">]:</span>
+    
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
+        <span class="n">axis</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+    <span class="n">successors</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_successors</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;renormalize&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">successors</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">successors</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_renormalize_first</span><span class="p">(</span>
+    <span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
+    <span class="n">p</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Ax</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+    
+    <span class="n">axis_num</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
+            <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axis</span><span class="p">:</span>
+                <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">ax</span><span class="p">))</span>
+            <span class="n">axis</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">))</span>
+    
+    <span class="n">norm</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis_num</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">new_tensor</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">/</span> <span class="n">norm</span>
+    <span class="n">new_node</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">_create_resultant</span><span class="p">(</span><span class="n">axes_names</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">,</span>
+                                      <span class="n">name</span><span class="o">=</span><span class="s1">&#39;renormalize&#39;</span><span class="p">,</span>
+                                      <span class="n">network</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_network</span><span class="p">,</span>
+                                      <span class="n">tensor</span><span class="o">=</span><span class="n">new_tensor</span><span class="p">,</span>
+                                      <span class="n">edges</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span>
+                                      <span class="n">node1_list</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">is_node1</span><span class="p">())</span>
+
+    <span class="c1"># Create successor</span>
+    <span class="n">net</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_network</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+    <span class="n">successor</span> <span class="o">=</span> <span class="n">Successor</span><span class="p">(</span><span class="n">node_ref</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">node_ref</span><span class="p">(),</span>
+                          <span class="n">index</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">],</span>
+                          <span class="n">child</span><span class="o">=</span><span class="n">new_node</span><span class="p">,</span>
+                          <span class="n">hints</span><span class="o">=</span><span class="n">axis_num</span><span class="p">)</span>
+
+    <span class="c1"># Add successor to parent</span>
+    <span class="k">if</span> <span class="s1">&#39;renormalize&#39;</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">_successors</span><span class="p">:</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">_successors</span><span class="p">[</span><span class="s1">&#39;renormalize&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">args</span><span class="p">:</span> <span class="n">successor</span><span class="p">})</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">_successors</span><span class="p">[</span><span class="s1">&#39;renormalize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">args</span><span class="p">:</span> <span class="n">successor</span><span class="p">}</span>
+
+    <span class="c1"># Add operation to list of performed operations of TN</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">_seq_ops</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s1">&#39;renormalize&#39;</span><span class="p">,</span> <span class="n">args</span><span class="p">))</span>
+
+    <span class="c1"># Record in inverse_memory while tracing</span>
+    <span class="k">if</span> <span class="n">net</span><span class="o">.</span><span class="n">_tracing</span><span class="p">:</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">_record_in_inverse_memory</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">new_node</span>
+
+
+<span class="k">def</span> <span class="nf">_renormalize_next</span><span class="p">(</span>
+    <span class="n">successor</span><span class="p">:</span> <span class="n">Successor</span><span class="p">,</span>
+    <span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
+    <span class="n">p</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Ax</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+    
+    <span class="n">axis_num</span> <span class="o">=</span> <span class="n">successor</span><span class="o">.</span><span class="n">hints</span>
+    <span class="n">tensor</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_direct_get_tensor</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">,</span>
+                                     <span class="n">successor</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+    <span class="n">norm</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis_num</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">new_tensor</span> <span class="o">=</span> <span class="n">tensor</span> <span class="o">/</span> <span class="n">norm</span>
+    
+    <span class="n">child</span> <span class="o">=</span> <span class="n">successor</span><span class="o">.</span><span class="n">child</span>
+    <span class="n">child</span><span class="o">.</span><span class="n">_direct_set_tensor</span><span class="p">(</span><span class="n">new_tensor</span><span class="p">)</span>
+
+    <span class="c1"># Record in inverse_memory while contracting, if network is traced</span>
+    <span class="c1"># (to delete memory if possible)</span>
+    <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_traced</span><span class="p">:</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">child</span>
+
+
+<span class="n">renormalize_op</span> <span class="o">=</span> <span class="n">Operation</span><span class="p">(</span><span class="s1">&#39;renormalize&#39;</span><span class="p">,</span>
+                           <span class="n">_check_first_renormalize</span><span class="p">,</span>
+                           <span class="n">_renormalize_first</span><span class="p">,</span>
+                           <span class="n">_renormalize_next</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="renormalize"><a class="viewcode-back" href="../../operations.html#tensorkrowch.renormalize">[docs]</a><span class="k">def</span> <span class="nf">renormalize</span><span class="p">(</span>
+    <span class="n">node</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
+    <span class="n">p</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Ax</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Normalizes the node with the specified norm. That is, the tensor of ``node``</span>
+<span class="sd">    is divided by its norm.</span>
+<span class="sd">    </span>
+<span class="sd">    Different norms can be taken, specifying the argument ``p``, and accross</span>
+<span class="sd">    different dimensions, or node axes, specifying the argument ``axis``.</span>
+<span class="sd">    </span>
+<span class="sd">    See also `torch.norm() &lt;https://pytorch.org/docs/stable/generated/torch.norm.html&gt;`_.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    node : Node or ParamNode</span>
+<span class="sd">        Node that is to be renormalized.</span>
+<span class="sd">    p : int, float</span>
+<span class="sd">        The order of the norm.</span>
+<span class="sd">    axis : int, str, Axis or list[int, str or Axis], optional</span>
+<span class="sd">        Axis or sequence of axes over which to reduce.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((3, 3))</span>
+<span class="sd">    &gt;&gt;&gt; renormA = tk.renormalize(nodeA)</span>
+<span class="sd">    &gt;&gt;&gt; renormA.norm()</span>
+<span class="sd">    tensor(1.)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">renormalize_op</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span></div>
+
+
+<span class="n">renormalize_node</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">renormalize</span><span class="p">)</span>
+<span class="n">renormalize_node</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Normalizes the node with the specified norm. That is, the tensor of ``node``</span>
+<span class="sd">    is divided by its norm.</span>
+<span class="sd">    </span>
+<span class="sd">    Different norms can be taken, specifying the argument ``p``, and accross</span>
+<span class="sd">    different dimensions, or node axes, specifying the argument ``axis``.</span>
+<span class="sd">    </span>
+<span class="sd">    See also `torch.norm() &lt;https://pytorch.org/docs/stable/generated/torch.norm.html&gt;`_.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    p : int, float</span>
+<span class="sd">        The order of the norm.</span>
+<span class="sd">    axis : int, str, Axis or list[int, str or Axis], optional</span>
+<span class="sd">        Axis or sequence of axes over which to reduce.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((3, 3))</span>
+<span class="sd">    &gt;&gt;&gt; renormA = nodeA.renormalize()</span>
+<span class="sd">    &gt;&gt;&gt; renormA.norm()</span>
+<span class="sd">    tensor(1.)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<span class="n">AbstractNode</span><span class="o">.</span><span class="n">renormalize</span> <span class="o">=</span> <span class="n">renormalize_node</span>
 
 
 <span class="c1">###############################################################################</span>

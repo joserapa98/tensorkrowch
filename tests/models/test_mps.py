@@ -403,31 +403,34 @@ class TestMPS:  # MARK: TestMPS
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mps.auto_stack = auto_stack
-                                mps.auto_unbind = auto_unbind
+                                for renormalize in [True, False]:
+                                    mps.auto_stack = auto_stack
+                                    mps.auto_unbind = auto_unbind
 
-                                mps.trace(example,
-                                          inline_input=inline_input,
-                                          inline_mats=inline_mats)
-                                result = mps(data,
-                                             inline_input=inline_input,
-                                             inline_mats=inline_mats)
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              renormalize=renormalize)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 renormalize=renormalize)
 
-                                assert result.shape == (100,)
-                                assert len(mps.edges) == 0
-                                if boundary == 'obc':
-                                    assert len(mps.leaf_nodes) == n_features + 2
-                                else:
-                                    assert len(mps.leaf_nodes) == n_features
-                                assert len(mps.data_nodes) == n_features
-                                if not inline_input and auto_stack:
-                                    assert len(mps.virtual_nodes) == 2
-                                else:
-                                    assert len(mps.virtual_nodes) == 1
-                                
-                                result.sum().backward()
-                                for node in mps.mats_env:
-                                    assert node.grad is not None
+                                    assert result.shape == (100,)
+                                    assert len(mps.edges) == 0
+                                    if boundary == 'obc':
+                                        assert len(mps.leaf_nodes) == n_features + 2
+                                    else:
+                                        assert len(mps.leaf_nodes) == n_features
+                                    assert len(mps.data_nodes) == n_features
+                                    if not inline_input and auto_stack:
+                                        assert len(mps.virtual_nodes) == 2
+                                    else:
+                                        assert len(mps.virtual_nodes) == 1
+                                    
+                                    result.sum().backward()
+                                    for node in mps.mats_env:
+                                        assert node.grad is not None
     
     def test_all_algorithms_cuda(self):
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -447,31 +450,34 @@ class TestMPS:  # MARK: TestMPS
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mps.auto_stack = auto_stack
-                                mps.auto_unbind = auto_unbind
+                                for renormalize in [True, False]:
+                                    mps.auto_stack = auto_stack
+                                    mps.auto_unbind = auto_unbind
 
-                                mps.trace(example,
-                                          inline_input=inline_input,
-                                          inline_mats=inline_mats)
-                                result = mps(data,
-                                             inline_input=inline_input,
-                                             inline_mats=inline_mats)
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              renormalize=renormalize)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 renormalize=renormalize)
 
-                                assert result.shape == (100,)
-                                assert len(mps.edges) == 0
-                                if boundary == 'obc':
-                                    assert len(mps.leaf_nodes) == n_features + 2
-                                else:
-                                    assert len(mps.leaf_nodes) == n_features
-                                assert len(mps.data_nodes) == n_features
-                                if not inline_input and auto_stack:
-                                    assert len(mps.virtual_nodes) == 2
-                                else:
-                                    assert len(mps.virtual_nodes) == 1
-                                
-                                result.sum().backward()
-                                for node in mps.mats_env:
-                                    assert node.grad is not None
+                                    assert result.shape == (100,)
+                                    assert len(mps.edges) == 0
+                                    if boundary == 'obc':
+                                        assert len(mps.leaf_nodes) == n_features + 2
+                                    else:
+                                        assert len(mps.leaf_nodes) == n_features
+                                    assert len(mps.data_nodes) == n_features
+                                    if not inline_input and auto_stack:
+                                        assert len(mps.virtual_nodes) == 2
+                                    else:
+                                        assert len(mps.virtual_nodes) == 1
+                                    
+                                    result.sum().backward()
+                                    for node in mps.mats_env:
+                                        assert node.grad is not None
 
     def test_all_algorithms_diff_in_dim(self):
         for n_features in [1, 2, 3, 4, 6]:
@@ -496,37 +502,40 @@ class TestMPS:  # MARK: TestMPS
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mps.auto_stack = auto_stack
-                                mps.auto_unbind = auto_unbind
+                                for renormalize in [True, False]:
+                                    mps.auto_stack = auto_stack
+                                    mps.auto_unbind = auto_unbind
 
-                                mps.trace(example,
-                                          inline_input=inline_input,
-                                          inline_mats=inline_mats)
-                                result = mps(data,
-                                             inline_input=inline_input,
-                                             inline_mats=inline_mats)
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              renormalize=renormalize)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 renormalize=renormalize)
 
-                                assert result.shape == (100,)
-                                assert len(mps.edges) == 0
-                                if boundary == 'obc':
-                                    assert len(mps.leaf_nodes) == n_features + 2
-                                else:
-                                    assert len(mps.leaf_nodes) == n_features
-                                assert len(mps.data_nodes) == n_features
-                                if not inline_input and auto_stack:
-                                    if n_features == 1:
-                                        assert len(mps.virtual_nodes) == 2
+                                    assert result.shape == (100,)
+                                    assert len(mps.edges) == 0
+                                    if boundary == 'obc':
+                                        assert len(mps.leaf_nodes) == n_features + 2
                                     else:
-                                        assert len(mps.virtual_nodes) == 1
-                                else:
-                                    if n_features == 1:
-                                        assert len(mps.virtual_nodes) == 1
+                                        assert len(mps.leaf_nodes) == n_features
+                                    assert len(mps.data_nodes) == n_features
+                                    if not inline_input and auto_stack:
+                                        if n_features == 1:
+                                            assert len(mps.virtual_nodes) == 2
+                                        else:
+                                            assert len(mps.virtual_nodes) == 1
                                     else:
-                                        assert len(mps.virtual_nodes) == 0
-                                
-                                result.sum().backward()
-                                for node in mps.mats_env:
-                                    assert node.grad is not None
+                                        if n_features == 1:
+                                            assert len(mps.virtual_nodes) == 1
+                                        else:
+                                            assert len(mps.virtual_nodes) == 0
+                                    
+                                    result.sum().backward()
+                                    for node in mps.mats_env:
+                                        assert node.grad is not None
 
     def test_all_algorithms_diff_bond_dim(self):
         for n_features in [1, 2, 3, 4, 6]:
@@ -545,31 +554,34 @@ class TestMPS:  # MARK: TestMPS
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mps.auto_stack = auto_stack
-                                mps.auto_unbind = auto_unbind
+                                for renormalize in [True, False]:
+                                    mps.auto_stack = auto_stack
+                                    mps.auto_unbind = auto_unbind
 
-                                mps.trace(example,
-                                          inline_input=inline_input,
-                                          inline_mats=inline_mats)
-                                result = mps(data,
-                                             inline_input=inline_input,
-                                             inline_mats=inline_mats)
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              renormalize=renormalize)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 renormalize=renormalize)
 
-                                assert result.shape == (100,)
-                                assert len(mps.edges) == 0
-                                if boundary == 'obc':
-                                    assert len(mps.leaf_nodes) == n_features + 2
-                                else:
-                                    assert len(mps.leaf_nodes) == n_features
-                                assert len(mps.data_nodes) == n_features
-                                if not inline_input and auto_stack:
-                                    assert len(mps.virtual_nodes) == 2
-                                else:
-                                    assert len(mps.virtual_nodes) == 1
-                                
-                                result.sum().backward()
-                                for node in mps.mats_env:
-                                    assert node.grad is not None
+                                    assert result.shape == (100,)
+                                    assert len(mps.edges) == 0
+                                    if boundary == 'obc':
+                                        assert len(mps.leaf_nodes) == n_features + 2
+                                    else:
+                                        assert len(mps.leaf_nodes) == n_features
+                                    assert len(mps.data_nodes) == n_features
+                                    if not inline_input and auto_stack:
+                                        assert len(mps.virtual_nodes) == 2
+                                    else:
+                                        assert len(mps.virtual_nodes) == 1
+                                    
+                                    result.sum().backward()
+                                    for node in mps.mats_env:
+                                        assert node.grad is not None
 
     def test_all_algorithms_diff_in_dim_bond_dim(self):
         for n_features in [1, 2, 3, 4, 6]:
@@ -596,40 +608,43 @@ class TestMPS:  # MARK: TestMPS
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mps.auto_stack = auto_stack
-                                mps.auto_unbind = auto_unbind
+                                for renormalize in [True, False]:
+                                    mps.auto_stack = auto_stack
+                                    mps.auto_unbind = auto_unbind
 
-                                mps.trace(example,
-                                          inline_input=inline_input,
-                                          inline_mats=inline_mats)
-                                result = mps(data,
-                                             inline_input=inline_input,
-                                             inline_mats=inline_mats)
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              renormalize=renormalize)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 renormalize=renormalize)
 
-                                assert result.shape == (100,)
-                                assert len(mps.edges) == 0
-                                
-                                if boundary == 'obc':
-                                    assert len(mps.leaf_nodes) == n_features + 2
-                                else:
-                                    assert len(mps.leaf_nodes) == n_features
+                                    assert result.shape == (100,)
+                                    assert len(mps.edges) == 0
                                     
-                                assert len(mps.data_nodes) == n_features
-                                
-                                if not inline_input and auto_stack:
-                                    if n_features == 1:
-                                        assert len(mps.virtual_nodes) == 2
+                                    if boundary == 'obc':
+                                        assert len(mps.leaf_nodes) == n_features + 2
                                     else:
-                                        assert len(mps.virtual_nodes) == 1
-                                else:
-                                    if n_features == 1:
-                                        assert len(mps.virtual_nodes) == 1
+                                        assert len(mps.leaf_nodes) == n_features
+                                        
+                                    assert len(mps.data_nodes) == n_features
+                                    
+                                    if not inline_input and auto_stack:
+                                        if n_features == 1:
+                                            assert len(mps.virtual_nodes) == 2
+                                        else:
+                                            assert len(mps.virtual_nodes) == 1
                                     else:
-                                        assert len(mps.virtual_nodes) == 0
-                                
-                                result.sum().backward()
-                                for node in mps.mats_env:
-                                    assert node.grad is not None
+                                        if n_features == 1:
+                                            assert len(mps.virtual_nodes) == 1
+                                        else:
+                                            assert len(mps.virtual_nodes) == 0
+                                    
+                                    result.sum().backward()
+                                    for node in mps.mats_env:
+                                        assert node.grad is not None
     
     def test_all_algorithms_marginalize(self):
         for n_features in [1, 2, 3, 4, 10]:
@@ -656,43 +671,46 @@ class TestMPS:  # MARK: TestMPS
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mps.auto_stack = auto_stack
-                                mps.auto_unbind = auto_unbind
+                                for renormalize in [True, False]:
+                                    mps.auto_stack = auto_stack
+                                    mps.auto_unbind = auto_unbind
 
-                                mps.trace(example,
-                                          inline_input=inline_input,
-                                          inline_mats=inline_mats,
-                                          marginalize_output=True)
-                                result = mps(data,
-                                             inline_input=inline_input,
-                                             inline_mats=inline_mats,
-                                             marginalize_output=True)
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              renormalize=renormalize,
+                                              marginalize_output=True)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 renormalize=renormalize,
+                                                 marginalize_output=True)
 
-                                if in_features:
-                                    assert result.shape == (100, 100)
-                                    
-                                    if not inline_input and auto_stack:
-                                        assert len(mps.virtual_nodes) == \
-                                            (2 + len(mps.out_features))
-                                    else:
-                                        assert len(mps.virtual_nodes) == \
-                                            (1 + len(mps.out_features))
+                                    if in_features:
+                                        assert result.shape == (100, 100)
                                         
-                                else:
-                                    assert result.shape == tuple()
-                                    assert len(mps.virtual_nodes) == \
-                                        len(mps.out_features)
-                                
-                                if boundary == 'obc':
-                                    assert len(mps.leaf_nodes) == n_features + 2
-                                else:
-                                    assert len(mps.leaf_nodes) == n_features
+                                        if not inline_input and auto_stack:
+                                            assert len(mps.virtual_nodes) == \
+                                                (2 + len(mps.out_features))
+                                        else:
+                                            assert len(mps.virtual_nodes) == \
+                                                (1 + len(mps.out_features))
+                                            
+                                    else:
+                                        assert result.shape == tuple()
+                                        assert len(mps.virtual_nodes) == \
+                                            len(mps.out_features)
                                     
-                                assert len(mps.data_nodes) == len(in_features)
-                                
-                                result.sum().backward()
-                                for node in mps.mats_env:
-                                    assert node.grad is not None
+                                    if boundary == 'obc':
+                                        assert len(mps.leaf_nodes) == n_features + 2
+                                    else:
+                                        assert len(mps.leaf_nodes) == n_features
+                                        
+                                    assert len(mps.data_nodes) == len(in_features)
+                                    
+                                    result.sum().backward()
+                                    for node in mps.mats_env:
+                                        assert node.grad is not None
     
     def test_all_algorithms_marginalize_with_list_matrices(self):
         for n_features in [1, 2, 3, 4, 10]:
@@ -722,45 +740,48 @@ class TestMPS:  # MARK: TestMPS
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mps.auto_stack = auto_stack
-                                mps.auto_unbind = auto_unbind
+                                for renormalize in [True, False]:
+                                    mps.auto_stack = auto_stack
+                                    mps.auto_unbind = auto_unbind
 
-                                mps.trace(example,
-                                          inline_input=inline_input,
-                                          inline_mats=inline_mats,
-                                          marginalize_output=True,
-                                          embedding_matrices=embedding_matrices)
-                                result = mps(data,
-                                             inline_input=inline_input,
-                                             inline_mats=inline_mats,
-                                             marginalize_output=True,
-                                             embedding_matrices=embedding_matrices)
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              renormalize=renormalize,
+                                              marginalize_output=True,
+                                              embedding_matrices=embedding_matrices)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 renormalize=renormalize,
+                                                 marginalize_output=True,
+                                                 embedding_matrices=embedding_matrices)
 
-                                if in_features:
-                                    assert result.shape == (100, 100)
-                                    
-                                    if not inline_input and auto_stack:
-                                        assert len(mps.virtual_nodes) == \
-                                            (2 + 2 * len(mps.out_features))
-                                    else:
-                                        assert len(mps.virtual_nodes) == \
-                                            (1 + 2 * len(mps.out_features))
+                                    if in_features:
+                                        assert result.shape == (100, 100)
                                         
-                                else:
-                                    assert result.shape == tuple()
-                                    assert len(mps.virtual_nodes) == \
-                                        2 * len(mps.out_features)
-                                
-                                if boundary == 'obc':
-                                    assert len(mps.leaf_nodes) == n_features + 2
-                                else:
-                                    assert len(mps.leaf_nodes) == n_features
+                                        if not inline_input and auto_stack:
+                                            assert len(mps.virtual_nodes) == \
+                                                (2 + 2 * len(mps.out_features))
+                                        else:
+                                            assert len(mps.virtual_nodes) == \
+                                                (1 + 2 * len(mps.out_features))
+                                            
+                                    else:
+                                        assert result.shape == tuple()
+                                        assert len(mps.virtual_nodes) == \
+                                            2 * len(mps.out_features)
                                     
-                                assert len(mps.data_nodes) == len(in_features)
-                                
-                                result.sum().backward()
-                                for node in mps.mats_env:
-                                    assert node.grad is not None
+                                    if boundary == 'obc':
+                                        assert len(mps.leaf_nodes) == n_features + 2
+                                    else:
+                                        assert len(mps.leaf_nodes) == n_features
+                                        
+                                    assert len(mps.data_nodes) == len(in_features)
+                                    
+                                    result.sum().backward()
+                                    for node in mps.mats_env:
+                                        assert node.grad is not None
     
     def test_all_algorithms_marginalize_with_matrix(self):
         for n_features in [1, 2, 3, 4, 10]:
@@ -788,45 +809,48 @@ class TestMPS:  # MARK: TestMPS
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mps.auto_stack = auto_stack
-                                mps.auto_unbind = auto_unbind
+                                for renormalize in [True, False]:
+                                    mps.auto_stack = auto_stack
+                                    mps.auto_unbind = auto_unbind
 
-                                mps.trace(example,
-                                          inline_input=inline_input,
-                                          inline_mats=inline_mats,
-                                          marginalize_output=True,
-                                          embedding_matrices=embedding_matrix)
-                                result = mps(data,
-                                             inline_input=inline_input,
-                                             inline_mats=inline_mats,
-                                             marginalize_output=True,
-                                             embedding_matrices=embedding_matrix)
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              renormalize=renormalize,
+                                              marginalize_output=True,
+                                              embedding_matrices=embedding_matrix)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 renormalize=renormalize,
+                                                 marginalize_output=True,
+                                                 embedding_matrices=embedding_matrix)
 
-                                if in_features:
-                                    assert result.shape == (100, 100)
-                                    
-                                    if not inline_input and auto_stack:
-                                        assert len(mps.virtual_nodes) == \
-                                            (2 + 2 * len(mps.out_features))
-                                    else:
-                                        assert len(mps.virtual_nodes) == \
-                                            (1 + 2 * len(mps.out_features))
+                                    if in_features:
+                                        assert result.shape == (100, 100)
                                         
-                                else:
-                                    assert result.shape == tuple()
-                                    assert len(mps.virtual_nodes) == \
-                                        2 * len(mps.out_features)
-                                
-                                if boundary == 'obc':
-                                    assert len(mps.leaf_nodes) == n_features + 2
-                                else:
-                                    assert len(mps.leaf_nodes) == n_features
+                                        if not inline_input and auto_stack:
+                                            assert len(mps.virtual_nodes) == \
+                                                (2 + 2 * len(mps.out_features))
+                                        else:
+                                            assert len(mps.virtual_nodes) == \
+                                                (1 + 2 * len(mps.out_features))
+                                            
+                                    else:
+                                        assert result.shape == tuple()
+                                        assert len(mps.virtual_nodes) == \
+                                            2 * len(mps.out_features)
                                     
-                                assert len(mps.data_nodes) == len(in_features)
-                                
-                                result.sum().backward()
-                                for node in mps.mats_env:
-                                    assert node.grad is not None
+                                    if boundary == 'obc':
+                                        assert len(mps.leaf_nodes) == n_features + 2
+                                    else:
+                                        assert len(mps.leaf_nodes) == n_features
+                                        
+                                    assert len(mps.data_nodes) == len(in_features)
+                                    
+                                    result.sum().backward()
+                                    for node in mps.mats_env:
+                                        assert node.grad is not None
     
     def test_all_algorithms_marginalize_with_matrix_cuda(self):
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -857,45 +881,48 @@ class TestMPS:  # MARK: TestMPS
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mps.auto_stack = auto_stack
-                                mps.auto_unbind = auto_unbind
+                                for renormalize in [True, False]:
+                                    mps.auto_stack = auto_stack
+                                    mps.auto_unbind = auto_unbind
 
-                                mps.trace(example,
-                                          inline_input=inline_input,
-                                          inline_mats=inline_mats,
-                                          marginalize_output=True,
-                                          embedding_matrices=embedding_matrix)
-                                result = mps(data,
-                                             inline_input=inline_input,
-                                             inline_mats=inline_mats,
-                                             marginalize_output=True,
-                                             embedding_matrices=embedding_matrix)
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              renormalize=renormalize,
+                                              marginalize_output=True,
+                                              embedding_matrices=embedding_matrix)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 renormalize=renormalize,
+                                                 marginalize_output=True,
+                                                 embedding_matrices=embedding_matrix)
 
-                                if in_features:
-                                    assert result.shape == (100, 100)
-                                    
-                                    if not inline_input and auto_stack:
-                                        assert len(mps.virtual_nodes) == \
-                                            (2 + 2 * len(mps.out_features))
-                                    else:
-                                        assert len(mps.virtual_nodes) == \
-                                            (1 + 2 * len(mps.out_features))
+                                    if in_features:
+                                        assert result.shape == (100, 100)
                                         
-                                else:
-                                    assert result.shape == tuple()
-                                    assert len(mps.virtual_nodes) == \
-                                        2 * len(mps.out_features)
-                                
-                                if boundary == 'obc':
-                                    assert len(mps.leaf_nodes) == n_features + 2
-                                else:
-                                    assert len(mps.leaf_nodes) == n_features
+                                        if not inline_input and auto_stack:
+                                            assert len(mps.virtual_nodes) == \
+                                                (2 + 2 * len(mps.out_features))
+                                        else:
+                                            assert len(mps.virtual_nodes) == \
+                                                (1 + 2 * len(mps.out_features))
+                                            
+                                    else:
+                                        assert result.shape == tuple()
+                                        assert len(mps.virtual_nodes) == \
+                                            2 * len(mps.out_features)
                                     
-                                assert len(mps.data_nodes) == len(in_features)
-                                
-                                result.sum().backward()
-                                for node in mps.mats_env:
-                                    assert node.grad is not None
+                                    if boundary == 'obc':
+                                        assert len(mps.leaf_nodes) == n_features + 2
+                                    else:
+                                        assert len(mps.leaf_nodes) == n_features
+                                        
+                                    assert len(mps.data_nodes) == len(in_features)
+                                    
+                                    result.sum().backward()
+                                    for node in mps.mats_env:
+                                        assert node.grad is not None
     
     def test_all_algorithms_marginalize_with_mpo(self):
         for n_features in [1, 2, 3, 4, 10]:
@@ -932,49 +959,52 @@ class TestMPS:  # MARK: TestMPS
                         for auto_unbind in [True, False]:
                             for inline_input in [True, False]:
                                 for inline_mats in [True, False]:
-                                    mps.auto_stack = auto_stack
-                                    mps.auto_unbind = auto_unbind
+                                    for renormalize in [True, False]:
+                                        mps.auto_stack = auto_stack
+                                        mps.auto_unbind = auto_unbind
 
-                                    mps.trace(example,
-                                              inline_input=inline_input,
-                                              inline_mats=inline_mats,
-                                              marginalize_output=True,
-                                              mpo=mpo)
-                                    result = mps(data,
-                                                 inline_input=inline_input,
-                                                 inline_mats=inline_mats,
-                                                 marginalize_output=True,
-                                                 mpo=mpo)
-                                    
-                                    if in_features:
-                                        assert result.shape == (100, 100)
-                                    else:
-                                        assert result.shape == tuple()
-                                    
-                                    if mps_boundary == 'obc':
-                                        if mpo_boundary == 'obc':
-                                            leaf = (n_features + 2) + \
-                                                (n_features - len(in_features) + 2)
-                                            assert len(mps.leaf_nodes) == leaf
+                                        mps.trace(example,
+                                                  inline_input=inline_input,
+                                                  inline_mats=inline_mats,
+                                                  renormalize=renormalize,
+                                                  marginalize_output=True,
+                                                  mpo=mpo)
+                                        result = mps(data,
+                                                     inline_input=inline_input,
+                                                     inline_mats=inline_mats,
+                                                     renormalize=renormalize,
+                                                     marginalize_output=True,
+                                                     mpo=mpo)
+                                        
+                                        if in_features:
+                                            assert result.shape == (100, 100)
                                         else:
-                                            leaf = (n_features + 2) + \
-                                                (n_features - len(in_features))
-                                            assert len(mps.leaf_nodes) == leaf
-                                    else:
-                                        if mpo_boundary == 'obc':
-                                            leaf = n_features + \
-                                                (n_features - len(in_features) + 2)
-                                            assert len(mps.leaf_nodes) == leaf
+                                            assert result.shape == tuple()
+                                        
+                                        if mps_boundary == 'obc':
+                                            if mpo_boundary == 'obc':
+                                                leaf = (n_features + 2) + \
+                                                    (n_features - len(in_features) + 2)
+                                                assert len(mps.leaf_nodes) == leaf
+                                            else:
+                                                leaf = (n_features + 2) + \
+                                                    (n_features - len(in_features))
+                                                assert len(mps.leaf_nodes) == leaf
                                         else:
-                                            leaf = n_features + \
-                                                (n_features - len(in_features))
-                                            assert len(mps.leaf_nodes) == leaf
-                                    
-                                    result.sum().backward()
-                                    for node in mps.mats_env:
-                                        assert node.grad is not None
-                                    for node in mpo.mats_env:
-                                        assert node.tensor.grad is None
+                                            if mpo_boundary == 'obc':
+                                                leaf = n_features + \
+                                                    (n_features - len(in_features) + 2)
+                                                assert len(mps.leaf_nodes) == leaf
+                                            else:
+                                                leaf = n_features + \
+                                                    (n_features - len(in_features))
+                                                assert len(mps.leaf_nodes) == leaf
+                                        
+                                        result.sum().backward()
+                                        for node in mps.mats_env:
+                                            assert node.grad is not None
+                                        for node in mpo.mats_env:
+                                            assert node.tensor.grad is None
     
     def test_all_algorithms_marginalize_with_mpo_cuda(self):
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -1019,49 +1049,52 @@ class TestMPS:  # MARK: TestMPS
                         for auto_unbind in [True, False]:
                             for inline_input in [True, False]:
                                 for inline_mats in [True, False]:
-                                    mps.auto_stack = auto_stack
-                                    mps.auto_unbind = auto_unbind
+                                    for renormalize in [True, False]:
+                                        mps.auto_stack = auto_stack
+                                        mps.auto_unbind = auto_unbind
 
-                                    mps.trace(example,
-                                              inline_input=inline_input,
-                                              inline_mats=inline_mats,
-                                              marginalize_output=True,
-                                              mpo=mpo)
-                                    result = mps(data,
-                                                 inline_input=inline_input,
-                                                 inline_mats=inline_mats,
-                                                 marginalize_output=True,
-                                                 mpo=mpo)
-                                    
-                                    if in_features:
-                                        assert result.shape == (100, 100)
-                                    else:
-                                        assert result.shape == tuple()
-                                    
-                                    if mps_boundary == 'obc':
-                                        if mpo_boundary == 'obc':
-                                            leaf = (n_features + 2) + \
-                                                (n_features - len(in_features) + 2)
-                                            assert len(mps.leaf_nodes) == leaf
+                                        mps.trace(example,
+                                                  inline_input=inline_input,
+                                                  inline_mats=inline_mats,
+                                                  renormalize=renormalize,
+                                                  marginalize_output=True,
+                                                  mpo=mpo)
+                                        result = mps(data,
+                                                     inline_input=inline_input,
+                                                     inline_mats=inline_mats,
+                                                     renormalize=renormalize,
+                                                     marginalize_output=True,
+                                                     mpo=mpo)
+                                        
+                                        if in_features:
+                                            assert result.shape == (100, 100)
                                         else:
-                                            leaf = (n_features + 2) + \
-                                                (n_features - len(in_features))
-                                            assert len(mps.leaf_nodes) == leaf
-                                    else:
-                                        if mpo_boundary == 'obc':
-                                            leaf = n_features + \
-                                                (n_features - len(in_features) + 2)
-                                            assert len(mps.leaf_nodes) == leaf
+                                            assert result.shape == tuple()
+                                        
+                                        if mps_boundary == 'obc':
+                                            if mpo_boundary == 'obc':
+                                                leaf = (n_features + 2) + \
+                                                    (n_features - len(in_features) + 2)
+                                                assert len(mps.leaf_nodes) == leaf
+                                            else:
+                                                leaf = (n_features + 2) + \
+                                                    (n_features - len(in_features))
+                                                assert len(mps.leaf_nodes) == leaf
                                         else:
-                                            leaf = n_features + \
-                                                (n_features - len(in_features))
-                                            assert len(mps.leaf_nodes) == leaf
-                                    
-                                    result.sum().backward()
-                                    for node in mps.mats_env:
-                                        assert node.grad is not None
-                                    for node in mpo.mats_env:
-                                        assert node.tensor.grad is None
+                                            if mpo_boundary == 'obc':
+                                                leaf = n_features + \
+                                                    (n_features - len(in_features) + 2)
+                                                assert len(mps.leaf_nodes) == leaf
+                                            else:
+                                                leaf = n_features + \
+                                                    (n_features - len(in_features))
+                                                assert len(mps.leaf_nodes) == leaf
+                                        
+                                        result.sum().backward()
+                                        for node in mps.mats_env:
+                                            assert node.grad is not None
+                                        for node in mpo.mats_env:
+                                            assert node.tensor.grad is None
                                     
     def test_all_algorithms_no_marginalize(self):
         for n_features in [1, 2, 3, 4, 10]:
@@ -1088,42 +1121,45 @@ class TestMPS:  # MARK: TestMPS
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mps.auto_stack = auto_stack
-                                mps.auto_unbind = auto_unbind
+                                for renormalize in [True, False]:
+                                    mps.auto_stack = auto_stack
+                                    mps.auto_unbind = auto_unbind
 
-                                mps.trace(example,
-                                          inline_input=inline_input,
-                                          inline_mats=inline_mats)
-                                result = mps(data,
-                                             inline_input=inline_input,
-                                             inline_mats=inline_mats)
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              renormalize=renormalize)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 renormalize=renormalize)
 
-                                aux_shape = [5] * len(mps.out_features)
-                                if in_features:
-                                    aux_shape = [100] + aux_shape
-                                    assert result.shape == tuple(aux_shape)
-                                    
-                                    if not inline_input and auto_stack:
-                                        assert len(mps.virtual_nodes) == 2
-                                    else:
-                                        assert len(mps.virtual_nodes) == 1
+                                    aux_shape = [5] * len(mps.out_features)
+                                    if in_features:
+                                        aux_shape = [100] + aux_shape
+                                        assert result.shape == tuple(aux_shape)
                                         
-                                else:
-                                    assert result.shape == tuple(aux_shape)
-                                    assert len(mps.virtual_nodes) == 0
+                                        if not inline_input and auto_stack:
+                                            assert len(mps.virtual_nodes) == 2
+                                        else:
+                                            assert len(mps.virtual_nodes) == 1
+                                            
+                                    else:
+                                        assert result.shape == tuple(aux_shape)
+                                        assert len(mps.virtual_nodes) == 0
+                                        
+                                    assert len(mps.edges) == len(mps.out_features)
                                     
-                                assert len(mps.edges) == len(mps.out_features)
-                                
-                                if boundary == 'obc':
-                                    assert len(mps.leaf_nodes) == n_features + 2
-                                else:
-                                    assert len(mps.leaf_nodes) == n_features
+                                    if boundary == 'obc':
+                                        assert len(mps.leaf_nodes) == n_features + 2
+                                    else:
+                                        assert len(mps.leaf_nodes) == n_features
+                                        
+                                    assert len(mps.data_nodes) == len(in_features)
                                     
-                                assert len(mps.data_nodes) == len(in_features)
-                                
-                                result.sum().backward()
-                                for node in mps.mats_env:
-                                    assert node.grad is not None
+                                    result.sum().backward()
+                                    for node in mps.mats_env:
+                                        assert node.grad is not None
     
     def test_norm(self):
         for n_features in [1, 2, 3, 4, 10]:
@@ -1721,26 +1757,29 @@ class TestUMPS:  # MARK: TestUMPS
                 for auto_unbind in [True, False]:
                     for inline_input in [True, False]:
                         for inline_mats in [True, False]:
-                            mps.auto_stack = auto_stack
-                            mps.auto_unbind = auto_unbind
+                            for renormalize in [True, False]:
+                                mps.auto_stack = auto_stack
+                                mps.auto_unbind = auto_unbind
 
-                            mps.trace(example,
-                                      inline_input=inline_input,
-                                      inline_mats=inline_mats)
-                            result = mps(data,
-                                         inline_input=inline_input,
-                                         inline_mats=inline_mats)
+                                mps.trace(example,
+                                          inline_input=inline_input,
+                                          inline_mats=inline_mats,
+                                          renormalize=renormalize)
+                                result = mps(data,
+                                             inline_input=inline_input,
+                                             inline_mats=inline_mats,
+                                             renormalize=renormalize)
 
-                            assert result.shape == (100,)
-                            assert len(mps.edges) == 0
-                            assert len(mps.leaf_nodes) == n_features
-                            assert len(mps.data_nodes) == n_features
-                            assert len(mps.virtual_nodes) == 2
-                            
-                            result.sum().backward()
-                            for node in mps.mats_env:
-                                assert node.grad is not None
-                            assert mps.uniform_memory.grad is not None
+                                assert result.shape == (100,)
+                                assert len(mps.edges) == 0
+                                assert len(mps.leaf_nodes) == n_features
+                                assert len(mps.data_nodes) == n_features
+                                assert len(mps.virtual_nodes) == 2
+                                
+                                result.sum().backward()
+                                for node in mps.mats_env:
+                                    assert node.grad is not None
+                                assert mps.uniform_memory.grad is not None
     
     def test_all_algorithms_marginalize(self):
         for n_features in [1, 2, 3, 4, 10]:
@@ -1765,34 +1804,37 @@ class TestUMPS:  # MARK: TestUMPS
                 for auto_unbind in [True, False]:
                     for inline_input in [True, False]:
                         for inline_mats in [True, False]:
-                            mps.auto_stack = auto_stack
-                            mps.auto_unbind = auto_unbind
+                            for renormalize in [True, False]:
+                                mps.auto_stack = auto_stack
+                                mps.auto_unbind = auto_unbind
 
-                            mps.trace(example,
-                                      inline_input=inline_input,
-                                      inline_mats=inline_mats,
-                                      marginalize_output=True)
-                            result = mps(data,
-                                         inline_input=inline_input,
-                                         inline_mats=inline_mats,
-                                         marginalize_output=True)
+                                mps.trace(example,
+                                          inline_input=inline_input,
+                                          inline_mats=inline_mats,
+                                          renormalize=renormalize,
+                                          marginalize_output=True)
+                                result = mps(data,
+                                             inline_input=inline_input,
+                                             inline_mats=inline_mats,
+                                             renormalize=renormalize,
+                                             marginalize_output=True)
 
-                            if in_features:
-                                assert result.shape == (100, 100)
-                                assert len(mps.virtual_nodes) == \
-                                    (2 + len(mps.out_features))  
-                            else:
-                                assert result.shape == tuple()
-                                assert len(mps.virtual_nodes) == \
-                                    (1 + len(mps.out_features))
-                            
-                            assert len(mps.leaf_nodes) == n_features
-                            assert len(mps.data_nodes) == len(in_features)
-                            
-                            result.sum().backward()
-                            for node in mps.mats_env:
-                                assert node.grad is not None
-                            assert mps.uniform_memory.grad is not None
+                                if in_features:
+                                    assert result.shape == (100, 100)
+                                    assert len(mps.virtual_nodes) == \
+                                        (2 + len(mps.out_features))  
+                                else:
+                                    assert result.shape == tuple()
+                                    assert len(mps.virtual_nodes) == \
+                                        (1 + len(mps.out_features))
+                                
+                                assert len(mps.leaf_nodes) == n_features
+                                assert len(mps.data_nodes) == len(in_features)
+                                
+                                result.sum().backward()
+                                for node in mps.mats_env:
+                                    assert node.grad is not None
+                                assert mps.uniform_memory.grad is not None
                                     
     def test_all_algorithms_no_marginalize(self):
         for n_features in [1, 2, 3, 4, 10]:
@@ -1817,33 +1859,36 @@ class TestUMPS:  # MARK: TestUMPS
                 for auto_unbind in [True, False]:
                     for inline_input in [True, False]:
                         for inline_mats in [True, False]:
-                            mps.auto_stack = auto_stack
-                            mps.auto_unbind = auto_unbind
+                            for renormalize in [True, False]:
+                                mps.auto_stack = auto_stack
+                                mps.auto_unbind = auto_unbind
 
-                            mps.trace(example,
-                                      inline_input=inline_input,
-                                      inline_mats=inline_mats)
-                            result = mps(data,
+                                mps.trace(example,
                                          inline_input=inline_input,
-                                         inline_mats=inline_mats)
+                                         inline_mats=inline_mats,
+                                         renormalize=renormalize)
+                                result = mps(data,
+                                             inline_input=inline_input,
+                                             inline_mats=inline_mats,
+                                             renormalize=renormalize)
 
-                            aux_shape = [5] * len(mps.out_features)
-                            if in_features:
-                                aux_shape = [100] + aux_shape
-                                assert result.shape == tuple(aux_shape)
-                                assert len(mps.virtual_nodes) == 2    
-                            else:
-                                assert result.shape == tuple(aux_shape)
-                                assert len(mps.virtual_nodes) == 1
+                                aux_shape = [5] * len(mps.out_features)
+                                if in_features:
+                                    aux_shape = [100] + aux_shape
+                                    assert result.shape == tuple(aux_shape)
+                                    assert len(mps.virtual_nodes) == 2    
+                                else:
+                                    assert result.shape == tuple(aux_shape)
+                                    assert len(mps.virtual_nodes) == 1
+                                    
+                                assert len(mps.edges) == len(mps.out_features)
+                                assert len(mps.leaf_nodes) == n_features
+                                assert len(mps.data_nodes) == len(in_features)
                                 
-                            assert len(mps.edges) == len(mps.out_features)
-                            assert len(mps.leaf_nodes) == n_features
-                            assert len(mps.data_nodes) == len(in_features)
-                            
-                            result.sum().backward()
-                            for node in mps.mats_env:
-                                assert node.grad is not None
-                            assert mps.uniform_memory.grad is not None
+                                result.sum().backward()
+                                for node in mps.mats_env:
+                                    assert node.grad is not None
+                                assert mps.uniform_memory.grad is not None
     
     def test_norm(self):
         for n_features in [1, 2, 3, 4, 10]:

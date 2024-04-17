@@ -873,20 +873,27 @@ class MPS(TensorNetwork):  # MARK: MPS
 
     @staticmethod
     def _inline_contraction(mats_env: List[AbstractNode],
+                            renormalize: bool = False,
                             from_left: bool = True) -> Node:
         """Contracts sequence of MPS nodes (matrices) inline."""
         if from_left:
             result_node = mats_env[0]
             for node in mats_env[1:]:
                 result_node @= node
+                if renormalize and ('right' in result_node.axes_names):
+                    result_node = result_node.renormalize(axis='right')
             return result_node
         else:
             result_node = mats_env[-1]
             for node in mats_env[-2::-1]:
                 result_node = node @ result_node
+                if renormalize and ('left' in result_node.axes_names):
+                    result_node = result_node.renormalize(axis='left')
             return result_node
 
-    def _contract_envs_inline(self, mats_env: List[AbstractNode]) -> Node:
+    def _contract_envs_inline(self,
+                              mats_env: List[AbstractNode],
+                              renormalize: bool = False) -> Node:
         """Contracts nodes environments inline."""
         from_left = True
         if self._boundary == 'obc':
@@ -895,13 +902,17 @@ class MPS(TensorNetwork):  # MARK: MPS
             if mats_env[-1].neighbours('right') is self._right_node:
                 mats_env = mats_env + [self._right_node]
                 from_left = False
-        return self._inline_contraction(mats_env=mats_env, from_left=from_left)
+        return self._inline_contraction(mats_env=mats_env,
+                                        renormalize=renormalize,
+                                        from_left=from_left)
 
-    def _aux_pairwise(self, nodes: List[AbstractNode]) -> Tuple[List[Node],
+    def _aux_pairwise(self,
+                      mats_env: List[AbstractNode],
+                      renormalize: bool = False) -> Tuple[List[Node],
     List[Node]]:
         """Contracts a sequence of MPS nodes (matrices) pairwise."""
-        length = len(nodes)
-        aux_nodes = nodes
+        length = len(mats_env)
+        aux_nodes = mats_env
         if length > 1:
             half_length = length // 2
             nice_length = 2 * half_length
@@ -917,30 +928,41 @@ class MPS(TensorNetwork):  # MARK: MPS
 
             aux_nodes = stack1 @ stack2
             aux_nodes = op.unbind(aux_nodes)
+            
+            if renormalize:
+                for i in range(len(aux_nodes)):
+                    aux_nodes[i] = aux_nodes[i].renormalize(axis=['left',
+                                                                  'right'])
 
             return aux_nodes, leftover
-        return nodes, []
+        return mats_env, []
 
-    def _pairwise_contraction(self, mats_env: List[AbstractNode]) -> Node:
+    def _pairwise_contraction(self,
+                              mats_env: List[AbstractNode],
+                              renormalize: bool = False) -> Node:
         """Contracts nodes environments pairwise."""
         length = len(mats_env)
         aux_nodes = mats_env
         if length > 1:
             leftovers = []
             while length > 1:
-                aux1, aux2 = self._aux_pairwise(aux_nodes)
+                aux1, aux2 = self._aux_pairwise(mats_env=aux_nodes,
+                                                renormalize=renormalize)
                 aux_nodes = aux1
                 leftovers = aux2 + leftovers
                 length = len(aux1)
 
             aux_nodes = aux_nodes + leftovers
-            return self._pairwise_contraction(aux_nodes)
+            return self._pairwise_contraction(mats_env=aux_nodes,
+                                              renormalize=renormalize)
 
-        return self._contract_envs_inline(aux_nodes)
+        return self._contract_envs_inline(mats_env=aux_nodes,
+                                          renormalize=renormalize)
 
     def contract(self,
                  inline_input: bool = False,
                  inline_mats: bool = False,
+                 renormalize: bool = False,
                  marginalize_output: bool = False,
                  embedding_matrices: Optional[
                                         Union[torch.Tensor,
@@ -1002,6 +1024,12 @@ class MPS(TensorNetwork):  # MARK: MPS
             Boolean indicating whether the sequence of matrices (resultant
             after contracting the input ``data`` nodes) should be contracted
             inline or as a sequence of pairwise stacked contrations.
+        renormalize : bool
+            Indicates whether nodes should be renormalized after contraction.
+            If not, it may happen that the norm explodes or vanishes, as it
+            is being accumulated from all nodes. Renormalization aims to avoid
+            this undesired behavior by extracting the norm of each node on a
+            logarithmic scale.
         marginalize_output : bool
             Boolean indicating whether output nodes should be marginalized. If
             ``True``, after contracting all the input nodes with their
@@ -1068,14 +1096,31 @@ class MPS(TensorNetwork):  # MARK: MPS
             input_nodes=[node.neighbours('input') for node in self.in_env],
             inline_input=inline_input)
         
+        # NOTE: to leave the input edges open and marginalize output
+        # data_nodes = []
+        # for node in self.in_env:
+        #     data_node = node.neighbours('input')
+        #     if data_node:
+        #         data_nodes.append(data_node)
+        
+        # if data_nodes:
+        #     mats_in_env = self._input_contraction(
+        #         nodes_env=self.in_env,
+        #         input_nodes=data_nodes,
+        #         inline_input=inline_input)
+        # else:
+        #     mats_in_env = self.in_env
+        
         in_results = []
         for region in in_regions:      
             if inline_mats:
                 result = self._contract_envs_inline(
-                    mats_env=mats_in_env[:len(region)])
+                    mats_env=mats_in_env[:len(region)],
+                    renormalize=renormalize)
             else:
                 result = self._pairwise_contraction(
-                    mats_env=mats_in_env[:len(region)])
+                    mats_env=mats_in_env[:len(region)],
+                    renormalize=renormalize)
             
             mats_in_env = mats_in_env[len(region):]
             in_results.append(result)
@@ -1109,7 +1154,8 @@ class MPS(TensorNetwork):  # MARK: MPS
             
             if not marginalize_output:
                 # Contract all output nodes sequentially
-                result = self._inline_contraction(mats_env=nodes_out_env)
+                result = self._inline_contraction(mats_env=nodes_out_env,
+                                                  renormalize=renormalize)
             
             else:
                 # Copy output nodes sharing tensors
@@ -1214,7 +1260,8 @@ class MPS(TensorNetwork):  # MARK: MPS
                     inline_input=True)
                 
                 # Contract resultant matrices
-                result = self._inline_contraction(mats_env=mats_out_env)
+                result = self._inline_contraction(mats_env=mats_out_env,
+                                                  renormalize=renormalize)
             
         # Contract periodic edge
         if result.is_connected_to(result):

@@ -259,6 +259,25 @@ class TestBasicOps:
         # Tensor product cannot be performed between connected nodes
         with pytest.raises(ValueError):
             node3 = node1 % node2
+    
+    def test_mul_with_tensor(self, setup):
+        node1, _ = setup
+        
+        assert node1.successors == dict()
+        
+        node2 = node1 * torch.randn(node1.shape)
+        assert node2.shape == (2, 3)
+        assert node2.edges == node1.edges
+        assert node1.successors != dict()
+        assert node1.successors['mul'][(node1,)].child == node2
+
+        # Second time (with maybe different tensor)
+        node3 = node1 * torch.randn(node1.shape)
+        assert node2 is node3
+        
+        # Third time (with maybe another type of operand)
+        node4 = node1 * 5.
+        assert node2 is node4
 
     def test_add(self, setup):
         node1, node2 = setup
@@ -304,6 +323,25 @@ class TestBasicOps:
         # Tensor product cannot be performed between connected nodes
         with pytest.raises(ValueError):
             node3 = node1 % node2
+    
+    def test_add_with_tensor(self, setup):
+        node1, _ = setup
+        
+        assert node1.successors == dict()
+        
+        node2 = node1 + torch.randn(node1.shape)
+        assert node2.shape == (2, 3)
+        assert node2.edges == node1.edges
+        assert node1.successors != dict()
+        assert node1.successors['add'][(node1,)].child == node2
+
+        # Second time (with maybe different tensor)
+        node3 = node1 + torch.randn(node1.shape)
+        assert node2 is node3
+        
+        # Third time (with maybe another type of operand)
+        node4 = node1 + 5.
+        assert node2 is node4
 
     def test_sub(self, setup):
         node1, node2 = setup
@@ -349,6 +387,25 @@ class TestBasicOps:
         # Tensor product cannot be performed between connected nodes
         with pytest.raises(ValueError):
             node3 = node1 % node2
+    
+    def test_sub_with_tensor(self, setup):
+        node1, _ = setup
+        
+        assert node1.successors == dict()
+        
+        node2 = node1 - torch.randn(node1.shape)
+        assert node2.shape == (2, 3)
+        assert node2.edges == node1.edges
+        assert node1.successors != dict()
+        assert node1.successors['sub'][(node1,)].child == node2
+
+        # Second time (with maybe different tensor)
+        node3 = node1 - torch.randn(node1.shape)
+        assert node2 is node3
+        
+        # Third time (with maybe another type of operand)
+        node4 = node1 - 5.
+        assert node2 is node4
 
     @pytest.fixture
     def setup_param(self):

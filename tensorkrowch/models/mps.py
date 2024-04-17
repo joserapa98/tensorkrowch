@@ -1029,7 +1029,10 @@ class MPS(TensorNetwork):  # MARK: MPS
             If not, it may happen that the norm explodes or vanishes, as it
             is being accumulated from all nodes. Renormalization aims to avoid
             this undesired behavior by extracting the norm of each node on a
-            logarithmic scale.
+            logarithmic scale. The renormalization only occurs when multiplying
+            sequences of matrices, once the `input` contractions have been
+            already performed, including contracting against embedding matrices
+            or MPOs when ``marginalize_output = True``.
         marginalize_output : bool
             Boolean indicating whether output nodes should be marginalized. If
             ``True``, after contracting all the input nodes with their

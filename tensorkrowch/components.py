@@ -814,6 +814,11 @@ class AbstractNode(ABC):  # MARK: AbstractNode
                                                              List['AbstractNode']]:
         """
         Returns the neighbours of the node, the nodes to which it is connected.
+        
+        If ``self`` is a ``resultant`` node, this will return the neighbours of
+        the ``leaf`` nodes from which ``self`` inherits the edges. Therefore,
+        one cannot check if two ``resultant`` nodes are connected by looking
+        into their neighbours lists. To do that, use :meth:`is_connected_to`.
 
         Parameters
         ----------

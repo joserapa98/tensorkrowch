@@ -1103,6 +1103,11 @@ title="Source repository"
                                                              <span class="n">List</span><span class="p">[</span><span class="s1">&#39;AbstractNode&#39;</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the neighbours of the node, the nodes to which it is connected.</span>
+<span class="sd">        </span>
+<span class="sd">        If ``self`` is a ``resultant`` node, this will return the neighbours of</span>
+<span class="sd">        the ``leaf`` nodes from which ``self`` inherits the edges. Therefore,</span>
+<span class="sd">        one cannot check if two ``resultant`` nodes are connected by looking</span>
+<span class="sd">        into their neighbours lists. To do that, use :meth:`is_connected_to`.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>

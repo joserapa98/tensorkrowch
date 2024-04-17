@@ -602,7 +602,11 @@ def mul(node1: AbstractNode,
     operator ``*``.
     
     It also admits to take as ``node2`` a number or tensor, that will be
-    multiplied by the ``node1`` tensor as ``node1.tensor * node2``.
+    multiplied by the ``node1`` tensor as ``node1.tensor * node2``. If this
+    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method
+    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called
+    explicitly to contract the network, rather than relying on its internal
+    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.
     
     Nodes ``resultant`` from this operation are called ``"mul"``. The node
     that keeps information about the :class:`Successor` is ``node1``.
@@ -645,7 +649,11 @@ mul_node.__doc__ = \
     operator ``*``.
     
     It also admits to take as ``node2`` a number or tensor, that will be
-    multiplied by the ``self`` tensor as ``self.tensor * node2``.
+    multiplied by the ``self`` tensor as ``self.tensor * node2``. If this
+    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method
+    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called
+    explicitly to contract the network, rather than relying on its internal
+    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.
     
     Nodes ``resultant`` from this operation are called ``"mul"``. The node
     that keeps information about the :class:`Successor` is ``self``.
@@ -796,7 +804,11 @@ def div(node1: AbstractNode,
     operator ``/``.
     
     It also admits to take as ``node2`` a number or tensor, that will
-    divide the ``node1`` tensor as ``node1.tensor / node2``.
+    divide the ``node1`` tensor as ``node1.tensor / node2``. If this
+    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method
+    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called
+    explicitly to contract the network, rather than relying on its internal
+    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.
     
     Nodes ``resultant`` from this operation are called ``"div"``. The node
     that keeps information about the :class:`Successor` is ``node1``.
@@ -836,10 +848,14 @@ div_node = copy_func(div)
 div_node.__doc__ = \
     """
     Element-wise division between two nodes. It can also be performed using the
-    operator ``*``.
+    operator ``/``.
     
     It also admits to take as ``node2`` a number or tensor, that will
-    divide the ``self`` tensor as ``self.tensor * node2``.
+    divide the ``self`` tensor as ``self.tensor / node2``. If this
+    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method
+    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called
+    explicitly to contract the network, rather than relying on its internal
+    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.
     
     Nodes ``resultant`` from this operation are called ``"div"``. The node
     that keeps information about the :class:`Successor` is ``self``.
@@ -990,7 +1006,11 @@ def add(node1: AbstractNode,
     operator ``+``.
     
     It also admits to take as ``node2`` a number or tensor, that will be
-    added to the ``node1`` tensor as ``node1.tensor + node2``.
+    added to the ``node1`` tensor as ``node1.tensor + node2``. If this
+    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method
+    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called
+    explicitly to contract the network, rather than relying on its internal
+    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.
     
     Nodes ``resultant`` from this operation are called ``"add"``. The node
     that keeps information about the :class:`Successor` is ``node1``.
@@ -1033,7 +1053,11 @@ add_node.__doc__ = \
     operator ``+``.
     
     It also admits to take as ``node2`` a number or tensor, that will be
-    added to the ``self`` tensor as ``self.tensor * node2``.
+    added to the ``self`` tensor as ``self.tensor + node2``. If this
+    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method
+    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called
+    explicitly to contract the network, rather than relying on its internal
+    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.
     
     Nodes ``resultant`` from this operation are called ``"add"``. The node
     that keeps information about the :class:`Successor` is ``self``.
@@ -1184,7 +1208,11 @@ def sub(node1: AbstractNode,
     the operator ``-``.
     
     It also admits to take as ``node2`` a number or tensor, that will be
-    subtracted from the ``node1`` tensor as ``node1.tensor - node2``.
+    subtracted from the ``node1`` tensor as ``node1.tensor - node2``. If this
+    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method
+    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called
+    explicitly to contract the network, rather than relying on its internal
+    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.
     
     Nodes ``resultant`` from this operation are called ``"sub"``. The node
     that keeps information about the :class:`Successor` is ``node1``.
@@ -1227,7 +1255,11 @@ sub_node.__doc__ = \
     the operator ``-``.
     
     It also admits to take as ``node2`` a number or tensor, that will be
-    subtracted from the ``self`` tensor as ``self.tensor - node2``.
+    subtracted from the ``self`` tensor as ``self.tensor - node2``. If this
+    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method
+    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called
+    explicitly to contract the network, rather than relying on its internal
+    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.
     
     Nodes ``resultant`` from this operation are called ``"sub"``. The node
     that keeps information about the :class:`Successor` is ``self``.
@@ -2039,6 +2071,10 @@ def svd(edge: Edge,
     Contracts an edge via :func:`contract` and splits it via :func:`split`
     using ``mode = "svd"``. See :func:`split` for a more complete explanation.
     
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
+    
     This operation is the same as :meth:`~Edge.svd`.
 
     Parameters
@@ -2162,6 +2198,10 @@ svd_edge.__doc__ = \
     Contracts an edge via :meth:`~Edge.contract` and splits it via
     :meth:`~AbstractNode.split` using ``mode = "svd"``. See :func:`split` for
     a more complete explanation.
+    
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
 
     Parameters
     ----------
@@ -2432,6 +2472,10 @@ def svdr(edge: Edge,
     Contracts an edge via :func:`contract` and splits it via :func:`split`
     using ``mode = "svdr"``. See :func:`split` for a more complete explanation.
     
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
+    
     This operation is the same as :meth:`~Edge.svdr`.
 
     Parameters
@@ -2555,6 +2599,10 @@ svdr_edge.__doc__ = \
     Contracts an edge via :meth:`~Edge.contract` and splits it via
     :meth:`~AbstractNode.split` using ``mode = "svdr"``. See :func:`split` for
     a more complete explanation.
+    
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
 
     Parameters
     ----------
@@ -2821,6 +2869,10 @@ def qr(edge: Edge) -> Tuple[Node, Node]:
     Contracts an edge via :func:`contract` and splits it via :func:`split`
     using ``mode = "qr"``. See :func:`split` for a more complete explanation.
     
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
+    
     This operation is the same as :meth:`~Edge.qr`.
 
     Parameters
@@ -2922,6 +2974,10 @@ qr_edge.__doc__ = \
     Contracts an edge via :meth:`~Edge.contract` and splits it via
     :meth:`~AbstractNode.split` using ``mode = "qr"``. See :func:`split` for
     a more complete explanation.
+    
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
 
     Returns
     -------
@@ -3120,6 +3176,10 @@ def rq(edge: Edge) -> Tuple[Node, Node]:
     Contracts an edge via :func:`contract` and splits it via :func:`split`
     using ``mode = "rq"``. See :func:`split` for a more complete explanation.
     
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
+    
     This operation is the same as :meth:`~Edge.rq`.
 
     Parameters
@@ -3221,6 +3281,10 @@ rq_edge.__doc__ = \
     Contracts an edge via :meth:`~Edge.contract` and splits it via
     :meth:`~AbstractNode.split` using ``mode = "rq"``. See :func:`split` for
     a more complete explanation.
+    
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
 
     Returns
     -------
@@ -3772,6 +3836,10 @@ def contract(edge: Edge) -> Node:
     """
     Contracts the nodes that are connected through the edge.
     
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
+    
     Nodes ``resultant`` from this operation are called ``"contract_edges"``.
     The node that keeps information about the :class:`Successor` is
     ``edge.node1``.
@@ -3810,6 +3878,10 @@ contract_edge = copy_func(contract)
 contract_edge.__doc__ = \
     """
     Contracts the nodes that are connected through the edge.
+    
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
     
     Nodes ``resultant`` from this operation are called ``"contract_edges"``.
     The node that keeps information about the :class:`Successor` is
@@ -4405,6 +4477,13 @@ def stack(nodes: Sequence[AbstractNode]):
     See :class:`ParamStackNode` and :class:`TensorNetwork` to learn how the
     :meth:`~TensorNetwork.auto_stack` mode affects the computation of
     :func:`stack`.
+    
+    If this operation is used several times with the same input nodes, but their
+    dimensions can change from one call to another, this will lead to undesired
+    behaviour. The network should be :meth:`~tensorkrwoch.TensorNetwork.reset`.
+    This situation should be avoided in the
+    :meth:`~tensorkrowch.TensorNetwork.contract` method. Otherwise it will fail
+    in subsequent calls to ``contract`` or :meth:`~tensorkrowch.TensorNetwork.forward`
     
     Nodes ``resultant`` from this operation are called ``"stack"``. If this
     operation returns a ``virtual`` :class:`ParamStackNode`, it will be called

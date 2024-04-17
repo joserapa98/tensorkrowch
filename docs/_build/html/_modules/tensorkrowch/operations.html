@@ -690,7 +690,7 @@ title="Source repository"
                 <span class="n">node2</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
     <span class="n">tensor1</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">_direct_get_tensor</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                                        <span class="n">successor</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-    <span class="n">tensor2</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">_direct_get_tensor</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+    <span class="n">tensor2</span> <span class="o">=</span> <span class="n">node2</span><span class="o">.</span><span class="n">_direct_get_tensor</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
                                        <span class="n">successor</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
     <span class="n">new_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">tensor1</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
                              <span class="n">tensor2</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">_shape</span><span class="p">)</span> <span class="o">+</span> 
@@ -859,7 +859,7 @@ title="Source repository"
     <span class="n">tensor1</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">_direct_get_tensor</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                                        <span class="n">successor</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
     <span class="k">if</span> <span class="n">is_node2</span><span class="p">:</span>
-        <span class="n">tensor2</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">_direct_get_tensor</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">tensor2</span> <span class="o">=</span> <span class="n">node2</span><span class="o">.</span><span class="n">_direct_get_tensor</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
                                            <span class="n">successor</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">tensor2</span> <span class="o">=</span> <span class="n">node2</span>
@@ -891,7 +891,11 @@ title="Source repository"
 <span class="sd">    operator ``*``.</span>
 <span class="sd">    </span>
 <span class="sd">    It also admits to take as ``node2`` a number or tensor, that will be</span>
-<span class="sd">    multiplied by the ``node1`` tensor as ``node1.tensor * node2``.</span>
+<span class="sd">    multiplied by the ``node1`` tensor as ``node1.tensor * node2``. If this</span>
+<span class="sd">    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method</span>
+<span class="sd">    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called</span>
+<span class="sd">    explicitly to contract the network, rather than relying on its internal</span>
+<span class="sd">    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.</span>
 <span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;mul&quot;``. The node</span>
 <span class="sd">    that keeps information about the :class:`Successor` is ``node1``.</span>
@@ -934,7 +938,11 @@ title="Source repository"
 <span class="sd">    operator ``*``.</span>
 <span class="sd">    </span>
 <span class="sd">    It also admits to take as ``node2`` a number or tensor, that will be</span>
-<span class="sd">    multiplied by the ``self`` tensor as ``self.tensor * node2``.</span>
+<span class="sd">    multiplied by the ``self`` tensor as ``self.tensor * node2``. If this</span>
+<span class="sd">    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method</span>
+<span class="sd">    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called</span>
+<span class="sd">    explicitly to contract the network, rather than relying on its internal</span>
+<span class="sd">    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.</span>
 <span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;mul&quot;``. The node</span>
 <span class="sd">    that keeps information about the :class:`Successor` is ``self``.</span>
@@ -961,12 +969,214 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
 <span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((2, 3), network=net)</span>
 <span class="sd">    &gt;&gt;&gt; tensorB = torch.randn(2, 3)</span>
-<span class="sd">    &gt;&gt;&gt; result = nodeA * tensorB</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA.mul(tensorB)</span>
 <span class="sd">    &gt;&gt;&gt; result.shape</span>
 <span class="sd">    torch.Size([2, 3])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
 <span class="n">AbstractNode</span><span class="o">.</span><span class="fm">__mul__</span> <span class="o">=</span> <span class="n">mul_node</span>
+
+
+<span class="c1">###################################   DIV    ##################################</span>
+<span class="c1"># MARK: div</span>
+<span class="k">def</span> <span class="nf">_check_first_div</span><span class="p">(</span><span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
+                     <span class="n">node2</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">,</span>
+                                  <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                                  <span class="n">Number</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Successor</span><span class="p">]:</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node2</span><span class="p">,</span> <span class="n">AbstractNode</span><span class="p">):</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node1</span><span class="p">,)</span>
+    <span class="n">successors</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">_successors</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;div&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">successors</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">successors</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_div_first</span><span class="p">(</span><span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
+               <span class="n">node2</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">,</span>
+                            <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                            <span class="n">Number</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+    <span class="n">is_node2</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node2</span><span class="p">,</span> <span class="n">AbstractNode</span><span class="p">):</span>
+        <span class="n">is_node2</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="n">node1</span><span class="o">.</span><span class="n">_network</span> <span class="o">!=</span> <span class="n">node2</span><span class="o">.</span><span class="n">_network</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Nodes must be in the same network&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">is_node2</span><span class="p">:</span>
+        <span class="n">new_tensor</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">tensor</span> <span class="o">/</span> <span class="n">node2</span><span class="o">.</span><span class="n">tensor</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">new_tensor</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">tensor</span> <span class="o">/</span> <span class="n">node2</span>
+    
+    <span class="n">new_node</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">_create_resultant</span><span class="p">(</span><span class="n">axes_names</span><span class="o">=</span><span class="n">node1</span><span class="o">.</span><span class="n">axes_names</span><span class="p">,</span>
+                                      <span class="n">name</span><span class="o">=</span><span class="s1">&#39;div&#39;</span><span class="p">,</span>
+                                      <span class="n">network</span><span class="o">=</span><span class="n">node1</span><span class="o">.</span><span class="n">_network</span><span class="p">,</span>
+                                      <span class="n">tensor</span><span class="o">=</span><span class="n">new_tensor</span><span class="p">,</span>
+                                      <span class="n">edges</span><span class="o">=</span><span class="n">node1</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span>
+                                      <span class="n">node1_list</span><span class="o">=</span><span class="n">node1</span><span class="o">.</span><span class="n">is_node1</span><span class="p">())</span>
+
+    <span class="c1"># Create successor</span>
+    <span class="n">net</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">_network</span>
+    
+    <span class="k">if</span> <span class="n">is_node2</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span>
+        <span class="n">successor</span> <span class="o">=</span> <span class="n">Successor</span><span class="p">(</span><span class="n">node_ref</span><span class="o">=</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">node_ref</span><span class="p">(),</span>
+                                        <span class="n">node2</span><span class="o">.</span><span class="n">node_ref</span><span class="p">()),</span>
+                              <span class="n">index</span><span class="o">=</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">],</span>
+                                     <span class="n">node2</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">]),</span>
+                              <span class="n">child</span><span class="o">=</span><span class="n">new_node</span><span class="p">,</span>
+                              <span class="n">hints</span><span class="o">=</span><span class="n">is_node2</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node1</span><span class="p">,)</span>
+        <span class="n">successor</span> <span class="o">=</span> <span class="n">Successor</span><span class="p">(</span><span class="n">node_ref</span><span class="o">=</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">node_ref</span><span class="p">(),),</span>
+                              <span class="n">index</span><span class="o">=</span><span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">_tensor_info</span><span class="p">[</span><span class="s1">&#39;index&#39;</span><span class="p">],),</span>
+                              <span class="n">child</span><span class="o">=</span><span class="n">new_node</span><span class="p">,</span>
+                              <span class="n">hints</span><span class="o">=</span><span class="n">is_node2</span><span class="p">)</span>
+
+    <span class="c1"># Add successor to parent</span>
+    <span class="k">if</span> <span class="s1">&#39;mul&#39;</span> <span class="ow">in</span> <span class="n">node1</span><span class="o">.</span><span class="n">_successors</span><span class="p">:</span>
+        <span class="n">node1</span><span class="o">.</span><span class="n">_successors</span><span class="p">[</span><span class="s1">&#39;div&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">args</span><span class="p">:</span> <span class="n">successor</span><span class="p">})</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">node1</span><span class="o">.</span><span class="n">_successors</span><span class="p">[</span><span class="s1">&#39;div&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">args</span><span class="p">:</span> <span class="n">successor</span><span class="p">}</span>
+
+    <span class="c1"># Add operation to list of performed operations of TN</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">_seq_ops</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s1">&#39;div&#39;</span><span class="p">,</span> <span class="n">args</span><span class="p">))</span>
+
+    <span class="c1"># Record in inverse_memory while tracing</span>
+    <span class="k">if</span> <span class="n">net</span><span class="o">.</span><span class="n">_tracing</span><span class="p">:</span>
+        <span class="n">node1</span><span class="o">.</span><span class="n">_record_in_inverse_memory</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="n">is_node2</span><span class="p">:</span>
+            <span class="n">node2</span><span class="o">.</span><span class="n">_record_in_inverse_memory</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">new_node</span>
+
+
+<span class="k">def</span> <span class="nf">_div_next</span><span class="p">(</span><span class="n">successor</span><span class="p">:</span> <span class="n">Successor</span><span class="p">,</span>
+              <span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
+              <span class="n">node2</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">,</span>
+                           <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                           <span class="n">Number</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+    <span class="n">is_node2</span> <span class="o">=</span> <span class="n">successor</span><span class="o">.</span><span class="n">hints</span>
+    <span class="n">tensor1</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">_direct_get_tensor</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                       <span class="n">successor</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">is_node2</span><span class="p">:</span>
+        <span class="n">tensor2</span> <span class="o">=</span> <span class="n">node2</span><span class="o">.</span><span class="n">_direct_get_tensor</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                                           <span class="n">successor</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">tensor2</span> <span class="o">=</span> <span class="n">node2</span>
+    
+    <span class="n">new_tensor</span> <span class="o">=</span> <span class="n">tensor1</span> <span class="o">/</span> <span class="n">tensor2</span>
+    <span class="n">child</span> <span class="o">=</span> <span class="n">successor</span><span class="o">.</span><span class="n">child</span>
+    <span class="n">child</span><span class="o">.</span><span class="n">_direct_set_tensor</span><span class="p">(</span><span class="n">new_tensor</span><span class="p">)</span>
+
+    <span class="c1"># Record in inverse_memory while contracting, if network is traced</span>
+    <span class="c1"># (to delete memory if possible)</span>
+    <span class="k">if</span> <span class="n">node1</span><span class="o">.</span><span class="n">_network</span><span class="o">.</span><span class="n">_traced</span><span class="p">:</span>
+        <span class="n">node1</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">is_node2</span><span class="p">:</span>
+            <span class="n">node2</span><span class="o">.</span><span class="n">_check_inverse_memory</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">child</span>
+
+
+<span class="n">div_op</span> <span class="o">=</span> <span class="n">Operation</span><span class="p">(</span><span class="s1">&#39;div&#39;</span><span class="p">,</span> <span class="n">_check_first_div</span><span class="p">,</span> <span class="n">_div_first</span><span class="p">,</span> <span class="n">_div_next</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">div</span><span class="p">(</span><span class="n">node1</span><span class="p">:</span> <span class="n">AbstractNode</span><span class="p">,</span>
+        <span class="n">node2</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">,</span>
+                     <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                     <span class="n">Number</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Element-wise division between two nodes. It can also be performed using the</span>
+<span class="sd">    operator ``/``.</span>
+<span class="sd">    </span>
+<span class="sd">    It also admits to take as ``node2`` a number or tensor, that will</span>
+<span class="sd">    divide the ``node1`` tensor as ``node1.tensor / node2``. If this</span>
+<span class="sd">    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method</span>
+<span class="sd">    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called</span>
+<span class="sd">    explicitly to contract the network, rather than relying on its internal</span>
+<span class="sd">    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;div&quot;``. The node</span>
+<span class="sd">    that keeps information about the :class:`Successor` is ``node1``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    node1 : Node or ParamNode</span>
+<span class="sd">        First node to be divided. Its edges will appear in the resultant node.</span>
+<span class="sd">    node2 : Node, ParamNode, torch.Tensor or number</span>
+<span class="sd">        Second node, the divisor. It can also be a number or tensor with</span>
+<span class="sd">        appropiate shape.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA / nodeB</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([2, 3])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; tensorB = torch.randn(2, 3)</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA / tensorB</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([2, 3])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">div_op</span><span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span>
+
+
+<span class="n">div_node</span> <span class="o">=</span> <span class="n">copy_func</span><span class="p">(</span><span class="n">div</span><span class="p">)</span>
+<span class="n">div_node</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Element-wise division between two nodes. It can also be performed using the</span>
+<span class="sd">    operator ``/``.</span>
+<span class="sd">    </span>
+<span class="sd">    It also admits to take as ``node2`` a number or tensor, that will</span>
+<span class="sd">    divide the ``self`` tensor as ``self.tensor / node2``. If this</span>
+<span class="sd">    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method</span>
+<span class="sd">    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called</span>
+<span class="sd">    explicitly to contract the network, rather than relying on its internal</span>
+<span class="sd">    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.</span>
+<span class="sd">    </span>
+<span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;div&quot;``. The node</span>
+<span class="sd">    that keeps information about the :class:`Successor` is ``self``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    node2 : Node, ParamNode, torch.Tensor or number</span>
+<span class="sd">        Second node, the divisor. It can also be a number or tensor with</span>
+<span class="sd">        appropiate shape.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Node</span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; nodeB = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA.div(nodeB)</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([2, 3])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
+<span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((2, 3), network=net)</span>
+<span class="sd">    &gt;&gt;&gt; tensorB = torch.randn(2, 3)</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA.div(tensorB)</span>
+<span class="sd">    &gt;&gt;&gt; result.shape</span>
+<span class="sd">    torch.Size([2, 3])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<span class="n">AbstractNode</span><span class="o">.</span><span class="fm">__truediv__</span> <span class="o">=</span> <span class="n">div_node</span>
 
 
 <span class="c1">###################################   ADD    ##################################</span>
@@ -1053,7 +1263,7 @@ title="Source repository"
     <span class="n">tensor1</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">_direct_get_tensor</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                                        <span class="n">successor</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
     <span class="k">if</span> <span class="n">is_node2</span><span class="p">:</span>
-        <span class="n">tensor2</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">_direct_get_tensor</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">tensor2</span> <span class="o">=</span> <span class="n">node2</span><span class="o">.</span><span class="n">_direct_get_tensor</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
                                            <span class="n">successor</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">tensor2</span> <span class="o">=</span> <span class="n">node2</span>
@@ -1085,7 +1295,11 @@ title="Source repository"
 <span class="sd">    operator ``+``.</span>
 <span class="sd">    </span>
 <span class="sd">    It also admits to take as ``node2`` a number or tensor, that will be</span>
-<span class="sd">    added to the ``node1`` tensor as ``node1.tensor + node2``.</span>
+<span class="sd">    added to the ``node1`` tensor as ``node1.tensor + node2``. If this</span>
+<span class="sd">    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method</span>
+<span class="sd">    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called</span>
+<span class="sd">    explicitly to contract the network, rather than relying on its internal</span>
+<span class="sd">    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.</span>
 <span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;add&quot;``. The node</span>
 <span class="sd">    that keeps information about the :class:`Successor` is ``node1``.</span>
@@ -1128,7 +1342,11 @@ title="Source repository"
 <span class="sd">    operator ``+``.</span>
 <span class="sd">    </span>
 <span class="sd">    It also admits to take as ``node2`` a number or tensor, that will be</span>
-<span class="sd">    added to the ``self`` tensor as ``self.tensor * node2``.</span>
+<span class="sd">    added to the ``self`` tensor as ``self.tensor + node2``. If this</span>
+<span class="sd">    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method</span>
+<span class="sd">    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called</span>
+<span class="sd">    explicitly to contract the network, rather than relying on its internal</span>
+<span class="sd">    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.</span>
 <span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;add&quot;``. The node</span>
 <span class="sd">    that keeps information about the :class:`Successor` is ``self``.</span>
@@ -1155,7 +1373,7 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
 <span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((2, 3), network=net)</span>
 <span class="sd">    &gt;&gt;&gt; tensorB = torch.randn(2, 3)</span>
-<span class="sd">    &gt;&gt;&gt; result = nodeA + tensorB</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA.add(tensorB)</span>
 <span class="sd">    &gt;&gt;&gt; result.shape</span>
 <span class="sd">    torch.Size([2, 3])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1247,7 +1465,7 @@ title="Source repository"
     <span class="n">tensor1</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">_direct_get_tensor</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                                        <span class="n">successor</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
     <span class="k">if</span> <span class="n">is_node2</span><span class="p">:</span>
-        <span class="n">tensor2</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">_direct_get_tensor</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">tensor2</span> <span class="o">=</span> <span class="n">node2</span><span class="o">.</span><span class="n">_direct_get_tensor</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
                                            <span class="n">successor</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">tensor2</span> <span class="o">=</span> <span class="n">node2</span>
@@ -1279,7 +1497,11 @@ title="Source repository"
 <span class="sd">    the operator ``-``.</span>
 <span class="sd">    </span>
 <span class="sd">    It also admits to take as ``node2`` a number or tensor, that will be</span>
-<span class="sd">    subtracted from the ``node1`` tensor as ``node1.tensor - node2``.</span>
+<span class="sd">    subtracted from the ``node1`` tensor as ``node1.tensor - node2``. If this</span>
+<span class="sd">    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method</span>
+<span class="sd">    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called</span>
+<span class="sd">    explicitly to contract the network, rather than relying on its internal</span>
+<span class="sd">    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.</span>
 <span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;sub&quot;``. The node</span>
 <span class="sd">    that keeps information about the :class:`Successor` is ``node1``.</span>
@@ -1322,7 +1544,11 @@ title="Source repository"
 <span class="sd">    the operator ``-``.</span>
 <span class="sd">    </span>
 <span class="sd">    It also admits to take as ``node2`` a number or tensor, that will be</span>
-<span class="sd">    subtracted from the ``self`` tensor as ``self.tensor - node2``.</span>
+<span class="sd">    subtracted from the ``self`` tensor as ``self.tensor - node2``. If this</span>
+<span class="sd">    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method</span>
+<span class="sd">    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called</span>
+<span class="sd">    explicitly to contract the network, rather than relying on its internal</span>
+<span class="sd">    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.</span>
 <span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;sub&quot;``. The node</span>
 <span class="sd">    that keeps information about the :class:`Successor` is ``self``.</span>
@@ -1349,7 +1575,7 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; net = tk.TensorNetwork()</span>
 <span class="sd">    &gt;&gt;&gt; nodeA = tk.randn((2, 3), network=net)</span>
 <span class="sd">    &gt;&gt;&gt; tensorB = torch.randn(2, 3)</span>
-<span class="sd">    &gt;&gt;&gt; result = nodeA - tensorB</span>
+<span class="sd">    &gt;&gt;&gt; result = nodeA.sub(tensorB)</span>
 <span class="sd">    &gt;&gt;&gt; result.shape</span>
 <span class="sd">    torch.Size([2, 3])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -2134,6 +2360,10 @@ title="Source repository"
 <span class="sd">    Contracts an edge via :func:`contract` and splits it via :func:`split`</span>
 <span class="sd">    using ``mode = &quot;svd&quot;``. See :func:`split` for a more complete explanation.</span>
 <span class="sd">    </span>
+<span class="sd">    This only works if the nodes connected through the edge are ``leaf`` nodes.</span>
+<span class="sd">    Otherwise, this will perform the contraction between the ``leaf`` nodes</span>
+<span class="sd">    that were connected through this edge.</span>
+<span class="sd">    </span>
 <span class="sd">    This operation is the same as :meth:`~Edge.svd`.</span>
 
 <span class="sd">    Parameters</span>
@@ -2257,6 +2487,10 @@ title="Source repository"
 <span class="sd">    Contracts an edge via :meth:`~Edge.contract` and splits it via</span>
 <span class="sd">    :meth:`~AbstractNode.split` using ``mode = &quot;svd&quot;``. See :func:`split` for</span>
 <span class="sd">    a more complete explanation.</span>
+<span class="sd">    </span>
+<span class="sd">    This only works if the nodes connected through the edge are ``leaf`` nodes.</span>
+<span class="sd">    Otherwise, this will perform the contraction between the ``leaf`` nodes</span>
+<span class="sd">    that were connected through this edge.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2527,6 +2761,10 @@ title="Source repository"
 <span class="sd">    Contracts an edge via :func:`contract` and splits it via :func:`split`</span>
 <span class="sd">    using ``mode = &quot;svdr&quot;``. See :func:`split` for a more complete explanation.</span>
 <span class="sd">    </span>
+<span class="sd">    This only works if the nodes connected through the edge are ``leaf`` nodes.</span>
+<span class="sd">    Otherwise, this will perform the contraction between the ``leaf`` nodes</span>
+<span class="sd">    that were connected through this edge.</span>
+<span class="sd">    </span>
 <span class="sd">    This operation is the same as :meth:`~Edge.svdr`.</span>
 
 <span class="sd">    Parameters</span>
@@ -2650,6 +2888,10 @@ title="Source repository"
 <span class="sd">    Contracts an edge via :meth:`~Edge.contract` and splits it via</span>
 <span class="sd">    :meth:`~AbstractNode.split` using ``mode = &quot;svdr&quot;``. See :func:`split` for</span>
 <span class="sd">    a more complete explanation.</span>
+<span class="sd">    </span>
+<span class="sd">    This only works if the nodes connected through the edge are ``leaf`` nodes.</span>
+<span class="sd">    Otherwise, this will perform the contraction between the ``leaf`` nodes</span>
+<span class="sd">    that were connected through this edge.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -2916,6 +3158,10 @@ title="Source repository"
 <span class="sd">    Contracts an edge via :func:`contract` and splits it via :func:`split`</span>
 <span class="sd">    using ``mode = &quot;qr&quot;``. See :func:`split` for a more complete explanation.</span>
 <span class="sd">    </span>
+<span class="sd">    This only works if the nodes connected through the edge are ``leaf`` nodes.</span>
+<span class="sd">    Otherwise, this will perform the contraction between the ``leaf`` nodes</span>
+<span class="sd">    that were connected through this edge.</span>
+<span class="sd">    </span>
 <span class="sd">    This operation is the same as :meth:`~Edge.qr`.</span>
 
 <span class="sd">    Parameters</span>
@@ -3017,6 +3263,10 @@ title="Source repository"
 <span class="sd">    Contracts an edge via :meth:`~Edge.contract` and splits it via</span>
 <span class="sd">    :meth:`~AbstractNode.split` using ``mode = &quot;qr&quot;``. See :func:`split` for</span>
 <span class="sd">    a more complete explanation.</span>
+<span class="sd">    </span>
+<span class="sd">    This only works if the nodes connected through the edge are ``leaf`` nodes.</span>
+<span class="sd">    Otherwise, this will perform the contraction between the ``leaf`` nodes</span>
+<span class="sd">    that were connected through this edge.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -3215,6 +3465,10 @@ title="Source repository"
 <span class="sd">    Contracts an edge via :func:`contract` and splits it via :func:`split`</span>
 <span class="sd">    using ``mode = &quot;rq&quot;``. See :func:`split` for a more complete explanation.</span>
 <span class="sd">    </span>
+<span class="sd">    This only works if the nodes connected through the edge are ``leaf`` nodes.</span>
+<span class="sd">    Otherwise, this will perform the contraction between the ``leaf`` nodes</span>
+<span class="sd">    that were connected through this edge.</span>
+<span class="sd">    </span>
 <span class="sd">    This operation is the same as :meth:`~Edge.rq`.</span>
 
 <span class="sd">    Parameters</span>
@@ -3316,6 +3570,10 @@ title="Source repository"
 <span class="sd">    Contracts an edge via :meth:`~Edge.contract` and splits it via</span>
 <span class="sd">    :meth:`~AbstractNode.split` using ``mode = &quot;rq&quot;``. See :func:`split` for</span>
 <span class="sd">    a more complete explanation.</span>
+<span class="sd">    </span>
+<span class="sd">    This only works if the nodes connected through the edge are ``leaf`` nodes.</span>
+<span class="sd">    Otherwise, this will perform the contraction between the ``leaf`` nodes</span>
+<span class="sd">    that were connected through this edge.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -3867,6 +4125,10 @@ title="Source repository"
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts the nodes that are connected through the edge.</span>
 <span class="sd">    </span>
+<span class="sd">    This only works if the nodes connected through the edge are ``leaf`` nodes.</span>
+<span class="sd">    Otherwise, this will perform the contraction between the ``leaf`` nodes</span>
+<span class="sd">    that were connected through this edge.</span>
+<span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;contract_edges&quot;``.</span>
 <span class="sd">    The node that keeps information about the :class:`Successor` is</span>
 <span class="sd">    ``edge.node1``.</span>
@@ -3905,6 +4167,10 @@ title="Source repository"
 <span class="n">contract_edge</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> \
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Contracts the nodes that are connected through the edge.</span>
+<span class="sd">    </span>
+<span class="sd">    This only works if the nodes connected through the edge are ``leaf`` nodes.</span>
+<span class="sd">    Otherwise, this will perform the contraction between the ``leaf`` nodes</span>
+<span class="sd">    that were connected through this edge.</span>
 <span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;contract_edges&quot;``.</span>
 <span class="sd">    The node that keeps information about the :class:`Successor` is</span>
@@ -4500,6 +4766,13 @@ title="Source repository"
 <span class="sd">    See :class:`ParamStackNode` and :class:`TensorNetwork` to learn how the</span>
 <span class="sd">    :meth:`~TensorNetwork.auto_stack` mode affects the computation of</span>
 <span class="sd">    :func:`stack`.</span>
+<span class="sd">    </span>
+<span class="sd">    If this operation is used several times with the same input nodes, but their</span>
+<span class="sd">    dimensions can change from one call to another, this will lead to undesired</span>
+<span class="sd">    behaviour. The network should be :meth:`~tensorkrwoch.TensorNetwork.reset`.</span>
+<span class="sd">    This situation should be avoided in the</span>
+<span class="sd">    :meth:`~tensorkrowch.TensorNetwork.contract` method. Otherwise it will fail</span>
+<span class="sd">    in subsequent calls to ``contract`` or :meth:`~tensorkrowch.TensorNetwork.forward`</span>
 <span class="sd">    </span>
 <span class="sd">    Nodes ``resultant`` from this operation are called ``&quot;stack&quot;``. If this</span>
 <span class="sd">    operation returns a ``virtual`` :class:`ParamStackNode`, it will be called</span>

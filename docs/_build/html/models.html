@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Models &#8212; TensorKrowch 1.0.1 documentation</title>
+    <title>Models &#8212; TensorKrowch 1.1.0 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -852,9 +852,15 @@ the given method, <code class="docutils literal notranslate"><span class="pre">d
 <a class="reference external" href="https://arxiv.org/abs/1605.03795">paper</a>, adding identities at the
 top of random gaussian tensors. In this case, <code class="docutils literal notranslate"><span class="pre">std</span></code> should be
 specified with a low value, e.g., <code class="docutils literal notranslate"><span class="pre">std</span> <span class="pre">=</span> <span class="pre">1e-9</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">&quot;unit&quot;</span></code>: Nodes are initialized as random unitaries, so that the
-MPS is in canonical form, with the orthogonality center at the
-rightmost node.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;unit&quot;</span></code>: Nodes are initialized as stacks of random unitaries. This,
+combined (at least) with an embedding of the inputs as elements of
+the computational basis (<a class="reference internal" href="embeddings.html#tensorkrowch.embeddings.discretize" title="tensorkrowch.embeddings.discretize"><code class="xref py py-func docutils literal notranslate"><span class="pre">discretize()</span></code></a>
+combined with <a class="reference internal" href="embeddings.html#tensorkrowch.embeddings.basis" title="tensorkrowch.embeddings.basis"><code class="xref py py-func docutils literal notranslate"><span class="pre">basis()</span></code></a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;canonical&quot;`</span></code>: MPS is initialized in canonical form with a squared
+norm <cite>close</cite> to the product of all the physical dimensions (if bond
+dimensions are bigger than the powers of the physical dimensions,
+the norm could vary). Th orthogonality center is at the rightmost
+node.</p></li>
 </ul>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -864,7 +870,7 @@ is <code class="docutils literal notranslate"><span class="pre">&quot;obc&quot;<
 last ones, which can be rank-2, or rank-1 (if the first and last are
 the same). If <code class="docutils literal notranslate"><span class="pre">boundary</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;pbc&quot;</span></code>, all tensors should be
 rank-3.</p></li>
-<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;}</em><em>, </em><em>optional</em>) – Initialization method.</p></li>
+<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;</em><em>, </em><em>&quot;canonical&quot;}</em><em>, </em><em>optional</em>) – Initialization method.</p></li>
 <li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensors if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
 <li><p><strong>kwargs</strong> (<em>float</em>) – Keyword arguments for the different initialization methods. See
 <a class="reference internal" href="components.html#tensorkrowch.AbstractNode.make_tensor" title="tensorkrowch.AbstractNode.make_tensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">make_tensor()</span></code></a>.</p></li>
@@ -1057,8 +1063,13 @@ Decompositions. To avoid this, it is recommended to set
 <code class="docutils literal notranslate"><span class="pre">renormalize</span> <span class="pre">=</span> <span class="pre">True</span></code>. In this case, the norm of each node after the
 SVD is extracted in logarithmic form, and accumulated. As a result,
 the function will return the tuple <code class="docutils literal notranslate"><span class="pre">(mi,</span> <span class="pre">log_norm)</span></code>, which is a sort
-of <cite>scaled</cite> mutual information. The actual mutual information could be
-obtained as <code class="docutils literal notranslate"><span class="pre">exp(log_norm)</span> <span class="pre">*</span> <span class="pre">mi</span></code>.</p>
+of <cite>scaled</cite> mutual information. This is, indeed, the mutual information
+of a distribution, since the schmidt values are normalized to sum up
+to 1.</p>
+<p>The actual mutual information, without rescaling, could be obtained as:</p>
+<div class="math notranslate nohighlight">
+\[\exp(\texttt{log_norm})^2 \cdot \textrm{MI}(A:B) -
+\exp(\texttt{log_norm})^2 \cdot 2 \cdot \texttt{log_norm}\]</div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -1214,8 +1225,14 @@ the given method, <code class="docutils literal notranslate"><span class="pre">d
 <a class="reference external" href="https://arxiv.org/abs/1605.03795">paper</a>, adding identities at the
 top of a random gaussian tensor. In this case, <code class="docutils literal notranslate"><span class="pre">std</span></code> should be
 specified with a low value, e.g., <code class="docutils literal notranslate"><span class="pre">std</span> <span class="pre">=</span> <span class="pre">1e-9</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">&quot;unit&quot;</span></code>: Tensor is initialized as a random unitary, so that the
-MPS is in canonical form.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;unit&quot;</span></code>: Tensor is initialized as a stack of random unitaries. This,
+combined (at least) with an embedding of the inputs as elements of
+the computational basis (<a class="reference internal" href="embeddings.html#tensorkrowch.embeddings.discretize" title="tensorkrowch.embeddings.discretize"><code class="xref py py-func docutils literal notranslate"><span class="pre">discretize()</span></code></a>
+combined with <a class="reference internal" href="embeddings.html#tensorkrowch.embeddings.basis" title="tensorkrowch.embeddings.basis"><code class="xref py py-func docutils literal notranslate"><span class="pre">basis()</span></code></a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;canonical&quot;`</span></code>: MPS is initialized in canonical form with a squared
+norm <cite>close</cite> to the product of all the physical dimensions (if bond
+dimensions are bigger than the powers of the physical dimensions,
+the norm could vary).</p></li>
 </ul>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1223,7 +1240,7 @@ MPS is in canonical form.</p></li>
 <li><p><strong>tensors</strong> (<em>list</em><em>[</em><em>torch.Tensor</em><em>] or </em><em>tuple</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – Sequence of a single tensor to set in each of the MPS nodes. The
 tensor should be rank-3, with its first and last dimensions being
 equal.</p></li>
-<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;}</em><em>, </em><em>optional</em>) – Initialization method.</p></li>
+<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;</em><em>, </em><em>&quot;canonical&quot;}</em><em>, </em><em>optional</em>) – Initialization method.</p></li>
 <li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensors if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
 <li><p><strong>kwargs</strong> (<em>float</em>) – Keyword arguments for the different initialization methods. See
 <a class="reference internal" href="components.html#tensorkrowch.AbstractNode.make_tensor" title="tensorkrowch.AbstractNode.make_tensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">make_tensor()</span></code></a>.</p></li>
@@ -1409,9 +1426,14 @@ the given method, <code class="docutils literal notranslate"><span class="pre">d
 <a class="reference external" href="https://arxiv.org/abs/1605.03795">paper</a>, adding identities at the
 top of random gaussian tensors. In this case, <code class="docutils literal notranslate"><span class="pre">std</span></code> should be
 specified with a low value, e.g., <code class="docutils literal notranslate"><span class="pre">std</span> <span class="pre">=</span> <span class="pre">1e-9</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">&quot;unit&quot;</span></code>: Nodes are initialized as random unitaries, so that the
-MPS is in canonical form, with the orthogonality center at the
-rightmost node.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;unit&quot;</span></code>: Nodes are initialized as stacks of random unitaries. This,
+combined (at least) with an embedding of the inputs as elements of
+the computational basis (<a class="reference internal" href="embeddings.html#tensorkrowch.embeddings.discretize" title="tensorkrowch.embeddings.discretize"><code class="xref py py-func docutils literal notranslate"><span class="pre">discretize()</span></code></a>
+combined with <a class="reference internal" href="embeddings.html#tensorkrowch.embeddings.basis" title="tensorkrowch.embeddings.basis"><code class="xref py py-func docutils literal notranslate"><span class="pre">basis()</span></code></a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;canonical&quot;`</span></code>: MPS is initialized in canonical form with a squared
+norm <cite>close</cite> to the product of all the physical dimensions (if bond
+dimensions are bigger than the powers of the physical dimensions,
+the norm could vary). Th orthogonality center is at the output node.</p></li>
 </ul>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1421,7 +1443,7 @@ is <code class="docutils literal notranslate"><span class="pre">&quot;obc&quot;<
 last ones, which can be rank-2, or rank-1 (if the first and last are
 the same). If <code class="docutils literal notranslate"><span class="pre">boundary</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;pbc&quot;</span></code>, all tensors should be
 rank-3.</p></li>
-<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;}</em><em>, </em><em>optional</em>) – Initialization method.</p></li>
+<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;</em><em>, </em><em>&quot;canonical&quot;}</em><em>, </em><em>optional</em>) – Initialization method.</p></li>
 <li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensors if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
 <li><p><strong>kwargs</strong> (<em>float</em>) – Keyword arguments for the different initialization methods. See
 <a class="reference internal" href="components.html#tensorkrowch.AbstractNode.make_tensor" title="tensorkrowch.AbstractNode.make_tensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">make_tensor()</span></code></a>.</p></li>
@@ -1555,8 +1577,14 @@ the given method, <code class="docutils literal notranslate"><span class="pre">d
 <a class="reference external" href="https://arxiv.org/abs/1605.03795">paper</a>, adding identities at the
 top of a random gaussian tensor. In this case, <code class="docutils literal notranslate"><span class="pre">std</span></code> should be
 specified with a low value, e.g., <code class="docutils literal notranslate"><span class="pre">std</span> <span class="pre">=</span> <span class="pre">1e-9</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">&quot;unit&quot;</span></code>: Tensor is initialized as a random unitary, so that the
-MPS is in canonical form.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;unit&quot;</span></code>: Tensor is initialized as a stack of random unitaries. This,
+combined (at least) with an embedding of the inputs as elements of
+the computational basis (<a class="reference internal" href="embeddings.html#tensorkrowch.embeddings.discretize" title="tensorkrowch.embeddings.discretize"><code class="xref py py-func docutils literal notranslate"><span class="pre">discretize()</span></code></a>
+combined with <a class="reference internal" href="embeddings.html#tensorkrowch.embeddings.basis" title="tensorkrowch.embeddings.basis"><code class="xref py py-func docutils literal notranslate"><span class="pre">basis()</span></code></a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;canonical&quot;`</span></code>: MPS is initialized in canonical form with a squared
+norm <cite>close</cite> to the product of all the physical dimensions (if bond
+dimensions are bigger than the powers of the physical dimensions,
+the norm could vary).</p></li>
 </ul>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1565,7 +1593,7 @@ MPS is in canonical form.</p></li>
 that will be set in all input nodes, and the second one will be the
 output node’s tensor. Both tensors should be rank-3, with all their
 first and last dimensions being equal.</p></li>
-<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;}</em><em>, </em><em>optional</em>) – Initialization method.</p></li>
+<li><p><strong>init_method</strong> (<em>{&quot;zeros&quot;</em><em>, </em><em>&quot;ones&quot;</em><em>, </em><em>&quot;copy&quot;</em><em>, </em><em>&quot;rand&quot;</em><em>, </em><em>&quot;randn&quot;</em><em>, </em><em>&quot;randn_eye&quot;</em><em>, </em><em>&quot;unit&quot;</em><em>, </em><em>&quot;canonical&quot;}</em><em>, </em><em>optional</em>) – Initialization method.</p></li>
 <li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – Device where to initialize the tensors if <code class="docutils literal notranslate"><span class="pre">init_method</span></code> is provided.</p></li>
 <li><p><strong>kwargs</strong> (<em>float</em>) – Keyword arguments for the different initialization methods. See
 <a class="reference internal" href="components.html#tensorkrowch.AbstractNode.make_tensor" title="tensorkrowch.AbstractNode.make_tensor"><code class="xref py py-meth docutils literal notranslate"><span class="pre">make_tensor()</span></code></a>.</p></li>

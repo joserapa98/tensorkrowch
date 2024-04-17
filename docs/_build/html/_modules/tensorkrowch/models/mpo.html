@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.models.mpo &#8212; TensorKrowch 1.0.1 documentation</title>
+    <title>tensorkrowch.models.mpo &#8212; TensorKrowch 1.1.0 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -700,10 +700,6 @@ title="Source repository"
 <span class="sd">            Keyword arguments for the different initialization methods. See</span>
 <span class="sd">            :meth:`~tensorkrowch.AbstractNode.make_tensor`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span><span class="o">.</span><span class="n">set_tensor</span><span class="p">(</span><span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;copy&#39;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span><span class="o">.</span><span class="n">set_tensor</span><span class="p">(</span><span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;copy&#39;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
-
         <span class="k">if</span> <span class="n">tensors</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`tensors` should be a sequence of `n_features`&#39;</span>
@@ -711,6 +707,10 @@ title="Source repository"
             
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
                 <span class="n">tensors</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[:]</span>
+                
+                <span class="k">if</span> <span class="n">device</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">device</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">device</span>
+                
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span>
                                                     <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
@@ -720,13 +720,13 @@ title="Source repository"
                 <span class="k">else</span><span class="p">:</span>
                     <span class="c1"># Left node</span>
                     <span class="n">aux_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
-                                             <span class="n">device</span><span class="o">=</span><span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+                                             <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
                     <span class="n">aux_tensor</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                     <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">aux_tensor</span>
                     
                     <span class="c1"># Right node</span>
                     <span class="n">aux_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
-                                             <span class="n">device</span><span class="o">=</span><span class="n">tensors</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+                                             <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
                     <span class="n">aux_tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
                     <span class="n">tensors</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">aux_tensor</span>
                 
@@ -748,7 +748,11 @@ title="Source repository"
                     <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
                         <span class="c1"># Right node</span>
                         <span class="n">aux_tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
-                    <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">aux_tensor</span></div>
+                    <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">aux_tensor</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span><span class="o">.</span><span class="n">set_tensor</span><span class="p">(</span><span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;copy&#39;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span><span class="o">.</span><span class="n">set_tensor</span><span class="p">(</span><span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;copy&#39;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span></div>
     
 <div class="viewcode-block" id="MPO.set_data_nodes"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.set_data_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1174,8 +1178,6 @@ title="Source repository"
 <span class="sd">            Keyword arguments for the different initialization methods. See</span>
 <span class="sd">            :meth:`~tensorkrowch.AbstractNode.make_tensor`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span>
-        
         <span class="k">if</span> <span class="n">tensors</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">uniform_memory</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         

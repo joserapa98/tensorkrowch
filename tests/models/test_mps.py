@@ -96,7 +96,8 @@ class TestMPS:  # MARK: TestMPS
             mps = tk.models.MPS(tensors=tensors)
     
     def test_initialize_init_method(self):
-        methods = ['zeros', 'ones', 'copy', 'rand', 'randn', 'randn_eye']
+        methods = ['zeros', 'ones', 'copy', 'rand', 'randn',
+                   'randn_eye', 'unit', 'canonical']
         for n in [1, 2, 5]:
             for init_method in methods:
                 # PBC
@@ -133,7 +134,8 @@ class TestMPS:  # MARK: TestMPS
     
     def test_initialize_init_method_cuda(self):
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        methods = ['zeros', 'ones', 'copy', 'rand', 'randn', 'randn_eye']
+        methods = ['zeros', 'ones', 'copy', 'rand', 'randn',
+                   'randn_eye', 'unit', 'canonical']
         for n in [1, 2, 5]:
             for init_method in methods:
                 # PBC
@@ -174,47 +176,46 @@ class TestMPS:  # MARK: TestMPS
                 assert torch.equal(mps.right_node.tensor[1:],
                                    torch.zeros_like(mps.right_node.tensor)[1:])
     
-    def test_initialize_with_unitaries(self):
+    def test_initialize_canonical(self):
         for n in [1, 2, 5]:
             # PBC
             mps = tk.models.MPS(boundary='pbc',
                                 n_features=n,
                                 phys_dim=2,
                                 bond_dim=2,
-                                init_method='unit')
+                                init_method='canonical')
             assert mps.n_features == n
             assert mps.boundary == 'pbc'
             assert mps.phys_dim == [2] * n
             assert mps.bond_dim == [2] * n
             
-            # For PBC norm does not have to be 1. always
+            # For PBC norm does not have to be 2**n always
             
             # OBC
             mps = tk.models.MPS(boundary='obc',
                                 n_features=n,
                                 phys_dim=2,
                                 bond_dim=2,
-                                init_method='unit')
+                                init_method='canonical')
             assert mps.n_features == n
             assert mps.boundary == 'obc'
             assert mps.phys_dim == [2] * n
             assert mps.bond_dim == [2] * (n - 1)
             
-            # Check it has norm == 1
-            assert mps.norm().isclose(torch.tensor(1.))
-            # Norm is close to 1. if bond dimension is <= than
-            # physical dimension, otherwise, it will not be exactly 1.
+            # Check it has norm == 2**n
+            assert mps.norm().isclose(torch.tensor(2. ** n).sqrt())
+            # Norm is close to 2**n if bond dimension is <= than
+            # physical dimension, otherwise, it will not be exactly 2**n
     
-    def test_initialize_with_unitaries_cuda(self):
+    def test_initialize_canonical_cuda(self):
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        
         for n in [1, 2, 5]:
             # PBC
             mps = tk.models.MPS(boundary='pbc',
                                 n_features=n,
                                 phys_dim=2,
                                 bond_dim=2,
-                                init_method='unit',
+                                init_method='canonical',
                                 device=device)
             assert mps.n_features == n
             assert mps.boundary == 'pbc'
@@ -223,14 +224,14 @@ class TestMPS:  # MARK: TestMPS
             for node in mps.mats_env:
                 assert node.device == device
             
-            # For PBC norm does not have to be 1. always
+            # For PBC norm does not have to be 2**n always
             
             # OBC
             mps = tk.models.MPS(boundary='obc',
                                 n_features=n,
                                 phys_dim=2,
                                 bond_dim=2,
-                                init_method='unit',
+                                init_method='canonical',
                                 device=device)
             assert mps.n_features == n
             assert mps.boundary == 'obc'
@@ -239,10 +240,11 @@ class TestMPS:  # MARK: TestMPS
             for node in mps.mats_env:
                 assert node.device == device
             
-            # Check it has norm == 1
-            assert mps.norm().isclose(torch.tensor(1.))
-            # Norm is close to 1. if bond dimension is <= than
-            # physical dimension, otherwise, it will not be exactly 1.
+            # Check it has norm == 2**n
+            norm = mps.norm()
+            assert mps.norm().isclose(torch.tensor(2. ** n).sqrt())
+            # Norm is close to 2**n if bond dimension is <= than
+            # physical dimension, otherwise, it will not be exactly 2**n
     
     def test_in_and_out_features(self):
         tensors = [torch.randn(10, 2, 10) for _ in range(10)]
@@ -1561,7 +1563,8 @@ class TestUMPS:  # MARK: TestUMPS
                                  tensor=tensor)
     
     def test_initialize_init_method(self):
-        methods = ['zeros', 'ones', 'copy', 'rand', 'randn', 'randn_eye']
+        methods = ['zeros', 'ones', 'copy', 'rand', 'randn',
+                   'randn_eye', 'unit', 'canonical']
         for n in [1, 2, 5]:
             for init_method in methods:
                 mps = tk.models.UMPS(n_features=n,
@@ -1575,7 +1578,8 @@ class TestUMPS:  # MARK: TestUMPS
     
     def test_initialize_init_method_cuda(self):
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        methods = ['zeros', 'ones', 'copy', 'rand', 'randn', 'randn_eye']
+        methods = ['zeros', 'ones', 'copy', 'rand', 'randn',
+                   'randn_eye', 'unit', 'canonical']
         for n in [1, 2, 5]:
             for init_method in methods:
                 mps = tk.models.UMPS(n_features=n,
@@ -2029,7 +2033,8 @@ class TestMPSLayer:  # MARK: TestMPSLayer
         assert mps.bond_dim == [10] * 10
     
     def test_initialize_init_method(self):
-        methods = ['zeros', 'ones', 'copy', 'rand', 'randn', 'randn_eye']
+        methods = ['zeros', 'ones', 'copy', 'rand', 'randn',
+                   'randn_eye', 'unit', 'canonical']
         for n in [1, 2, 5]:
             for init_method in methods:
                 # PBC
@@ -2070,7 +2075,8 @@ class TestMPSLayer:  # MARK: TestMPSLayer
     
     def test_initialize_init_method_cuda(self):
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        methods = ['zeros', 'ones', 'copy', 'rand', 'randn', 'randn_eye']
+        methods = ['zeros', 'ones', 'copy', 'rand', 'randn',
+                   'randn_eye', 'unit', 'canonical']
         for n in [1, 2, 5]:
             for init_method in methods:
                 # PBC
@@ -2114,6 +2120,81 @@ class TestMPSLayer:  # MARK: TestMPSLayer
                                    torch.ones_like(mps.right_node.tensor)[0])
                 assert torch.equal(mps.right_node.tensor[1:],
                                    torch.zeros_like(mps.right_node.tensor)[1:])
+    
+    def test_initialize_canonical(self):
+        for n in [1, 2, 5]:
+            # PBC
+            mps = tk.models.MPSLayer(boundary='pbc',
+                                     n_features=n,
+                                     in_dim=10,
+                                     out_dim=10,
+                                     bond_dim=10,
+                                     init_method='canonical')
+            assert mps.n_features == n
+            assert mps.boundary == 'pbc'
+            assert mps.phys_dim == [10] * n
+            assert mps.bond_dim == [10] * n
+            
+            # For PBC norm does not have to be 10**n always
+            
+            # OBC
+            mps = tk.models.MPSLayer(boundary='obc',
+                                     n_features=n,
+                                     in_dim=10,
+                                     out_dim=10,
+                                     bond_dim=10,
+                                     init_method='canonical')
+            assert mps.n_features == n
+            assert mps.boundary == 'obc'
+            assert mps.phys_dim == [10] * n
+            assert mps.bond_dim == [10] * (n - 1)
+            
+            # Check it has norm == 10**n
+            norm = mps.norm()
+            assert mps.norm().isclose(torch.tensor(10. ** n).sqrt())
+            # Norm is close to 10**n if bond dimension is <= than
+            # physical dimension, otherwise, it will not be exactly 10**n
+    
+    def test_initialize_canonical_cuda(self):
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        for n in [1, 2, 5]:
+            # PBC
+            mps = tk.models.MPSLayer(boundary='pbc',
+                                     n_features=n,
+                                     in_dim=10,
+                                     out_dim=10,
+                                     bond_dim=10,
+                                     init_method='canonical',
+                                     device=device)
+            assert mps.n_features == n
+            assert mps.boundary == 'pbc'
+            assert mps.phys_dim == [10] * n
+            assert mps.bond_dim == [10] * n
+            for node in mps.mats_env:
+                assert node.device == device
+            
+            # For PBC norm does not have to be 10**n always
+            
+            # OBC
+            mps = tk.models.MPSLayer(boundary='obc',
+                                     n_features=n,
+                                     in_dim=10,
+                                     out_dim=10,
+                                     bond_dim=10,
+                                     init_method='canonical',
+                                     device=device)
+            assert mps.n_features == n
+            assert mps.boundary == 'obc'
+            assert mps.phys_dim == [10] * n
+            assert mps.bond_dim == [10] * (n - 1)
+            for node in mps.mats_env:
+                assert node.device == device
+            
+            # Check it has norm == 10**n
+            norm = mps.norm()
+            assert mps.norm().isclose(torch.tensor(10. ** n).sqrt())
+            # Norm is close to 10**n if bond dimension is <= than
+            # physical dimension, otherwise, it will not be exactly 10**n
     
     def test_in_and_out_features(self):
         tensors = [torch.randn(10, 2, 10) for _ in range(10)]
@@ -2253,9 +2334,11 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
             assert mps.out_node.tensor is not mps.uniform_memory.tensor
     
     def test_initialize_init_method(self):
-        methods = ['zeros', 'ones', 'copy', 'rand', 'randn', 'randn_eye']
+        methods = ['zeros', 'ones', 'copy', 'rand', 'randn',
+                   'randn_eye', 'unit', 'canonical']
         for n in [1, 2, 5]:
             for init_method in methods:
+                print(init_method)
                 mps = tk.models.UMPSLayer(n_features=n,
                                           in_dim=2,
                                           out_dim=5,

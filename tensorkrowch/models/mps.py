@@ -566,35 +566,88 @@ class MPS(TensorNetwork):  # MARK: MPS
                 if i == self._n_features - 1:
                     self._mats_env[-1]['right'] ^ self._right_node['left']
     
-    def _make_unitaries(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
+    def _make_canonical(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
         """
         Creates random unitaries to initialize the MPS in canonical form with
-        orthogonality center at the rightmost node."""
+        orthogonality center at the rightmost node. Unitaries in nodes are
+        scaled so that the total norm squared of the initial MPS is the product
+        of all the physical dimensions.
+        """
         tensors = []
         for i, node in enumerate(self._mats_env):
             if self._boundary == 'obc':
                 if i == 0:
                     node_shape = node.shape[1:]
                     aux_shape = node_shape
+                    phys_dim = node_shape[0]
                 elif i == (self._n_features - 1):
                     node_shape = node.shape[:2]
                     aux_shape = node_shape
+                    phys_dim = node_shape[1]
                 else:
                     node_shape = node.shape
                     aux_shape = (node.shape[:2].numel(), node.shape[2])
+                    phys_dim = node_shape[1]
             else:
                 node_shape = node.shape
                 aux_shape = (node.shape[:2].numel(), node.shape[2])
+                phys_dim = node_shape[1]
             size = max(aux_shape[0], aux_shape[1])
             
             tensor = random_unitary(size, device=device)
             tensor = tensor[:min(aux_shape[0], size), :min(aux_shape[1], size)]
             tensor = tensor.reshape(*node_shape)
             
+            if i == (self._n_features - 1):
+                if self._boundary == 'obc':
+                    tensor = tensor.t() / tensor.norm() * sqrt(phys_dim)
+                else:
+                    tensor = tensor / tensor.norm() * sqrt(phys_dim)
+            else:
+                tensor = tensor * sqrt(phys_dim)
+            
             tensors.append(tensor)
-        
-        if self._boundary == 'obc':
-            tensors[-1] = tensors[-1] / tensors[-1].norm()
+        return tensors
+    
+    def _make_unitaries(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
+        """
+        Creates random unitaries to initialize the MPS nodes as stacks of
+        unitaries.
+        """
+        tensors = []
+        for i, node in enumerate(self._mats_env):
+            units = []
+            size = max(node.shape[0], node.shape[2])
+            if self._boundary == 'obc':
+                if i == 0:
+                    size_1 = 1
+                    size_2 = min(node.shape[2], size)
+                elif i == (self._n_features - 1):
+                    size_1 = min(node.shape[0], size)
+                    size_2 = 1
+                else:
+                    size_1 = min(node.shape[0], size)
+                    size_2 = min(node.shape[2], size)
+            else:
+                size_1 = min(node.shape[0], size)
+                size_2 = min(node.shape[2], size)
+            
+            for _ in range(node.shape[1]):
+                tensor = random_unitary(size, device=device)
+                tensor = tensor[:size_1, :size_2]
+                units.append(tensor)
+            
+            units = torch.stack(units, dim=1)
+            
+            if self._boundary == 'obc':
+                if i == 0:
+                    tensors.append(units.squeeze(0))
+                elif i == (self._n_features - 1):
+                    tensors.append(units.squeeze(-1))
+                else:
+                    tensors.append(units)
+            else:    
+                tensors.append(units)
         return tensors
 
     def initialize(self,
@@ -617,9 +670,16 @@ class MPS(TensorNetwork):  # MARK: MPS
           top of random gaussian tensors. In this case, ``std`` should be
           specified with a low value, e.g., ``std = 1e-9``.
         
-        * ``"unit"``: Nodes are initialized as random unitaries, so that the
-          MPS is in canonical form, with the orthogonality center at the
-          rightmost node.
+        * ``"unit"``: Nodes are initialized as stacks of random unitaries. This,
+          combined (at least) with an embedding of the inputs as elements of
+          the computational basis (:func:`~tensorkrowch.embeddings.discretize`
+          combined with :func:`~tensorkrowch.embeddings.basis`)
+        
+        * ``"canonical"```: MPS is initialized in canonical form with a squared
+          norm `close` to the product of all the physical dimensions (if bond
+          dimensions are bigger than the powers of the physical dimensions,
+          the norm could vary). Th orthogonality center is at the rightmost
+          node.
         
         Parameters
         ----------
@@ -629,7 +689,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             last ones, which can be rank-2, or rank-1 (if the first and last are
             the same). If ``boundary`` is ``"pbc"``, all tensors should be
             rank-3.
-        init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit"}, optional
+        init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
             Initialization method.
         device : torch.device, optional
             Device where to initialize the tensors if ``init_method`` is provided.
@@ -639,11 +699,13 @@ class MPS(TensorNetwork):  # MARK: MPS
         """
         if init_method == 'unit':
             tensors = self._make_unitaries(device=device)
+        elif init_method == 'canonical':
+            tensors = self._make_canonical(device=device)
 
         if tensors is not None:
             if len(tensors) != self._n_features:
-                raise ValueError('`tensors` should be a sequence of `n_features`'
-                                 ' elements')
+                raise ValueError(
+                    '`tensors` should be a sequence of `n_features` elements')
             
             if self._boundary == 'obc':
                 tensors = tensors[:]
@@ -791,7 +853,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         """Contracts input data nodes with MPS input nodes."""
         if inline_input:
             mats_result = [
-                node @ in_node
+                in_node @ node
                 for node, in_node in zip(nodes_env, input_nodes)
                 ]
             return mats_result
@@ -1889,17 +1951,39 @@ class UMPS(MPS):  # MARK: UMPS
         for node in self._mats_env:
             node.set_tensor_from(uniform_memory)
     
-    def _make_unitaries(self, device: Optional[torch.device] = None) -> torch.Tensor:
-        """Initializes MPS in canonical form."""
+    def _make_canonical(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
+        """
+        Creates random unitaries to initialize the MPS in canonical form with
+        orthogonality center at the rightmost node. Unitaries in nodes are
+        scaled so that the total norm squared of the initial MPS is the product
+        of all the physical dimensions.
+        """
         node = self.uniform_memory
         node_shape = node.shape
         aux_shape = (node.shape[:2].numel(), node.shape[2])
         
         size = max(aux_shape[0], aux_shape[1])
+        phys_dim = node_shape[1]
         
         tensor = random_unitary(size, device=device)
         tensor = tensor[:min(aux_shape[0], size), :min(aux_shape[1], size)]
         tensor = tensor.reshape(*node_shape)
+        tensor = tensor * sqrt(phys_dim)
+        return tensor
+    
+    def _make_unitaries(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
+        """
+        Creates random unitaries to initialize the MPS nodes as stacks of
+        unitaries.
+        """
+        node = self.uniform_memory
+        node_shape = node.shape
+        
+        units = []
+        for _ in range(node_shape[1]):
+            tensor = random_unitary(node_shape[0], device=device)
+            units.append(tensor)
+        tensor = torch.stack(units, dim=1)
         return tensor
 
     def initialize(self,
@@ -1922,8 +2006,15 @@ class UMPS(MPS):  # MARK: UMPS
           top of a random gaussian tensor. In this case, ``std`` should be
           specified with a low value, e.g., ``std = 1e-9``.
         
-        * ``"unit"``: Tensor is initialized as a random unitary, so that the
-          MPS is in canonical form.
+        * ``"unit"``: Tensor is initialized as a stack of random unitaries. This,
+          combined (at least) with an embedding of the inputs as elements of
+          the computational basis (:func:`~tensorkrowch.embeddings.discretize`
+          combined with :func:`~tensorkrowch.embeddings.basis`)
+        
+        * ``"canonical"```: MPS is initialized in canonical form with a squared
+          norm `close` to the product of all the physical dimensions (if bond
+          dimensions are bigger than the powers of the physical dimensions,
+          the norm could vary).
         
         Parameters
         ----------
@@ -1931,7 +2022,7 @@ class UMPS(MPS):  # MARK: UMPS
             Sequence of a single tensor to set in each of the MPS nodes. The
             tensor should be rank-3, with its first and last dimensions being
             equal.
-        init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit"}, optional
+        init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
             Initialization method.
         device : torch.device, optional
             Device where to initialize the tensors if ``init_method`` is provided.
@@ -1943,6 +2034,8 @@ class UMPS(MPS):  # MARK: UMPS
         
         if init_method == 'unit':
             tensors = [self._make_unitaries(device=device)]
+        elif init_method == 'canonical':
+            tensors = [self._make_canonical(device=device)]
         
         if tensors is not None:
             node.tensor = tensors[0]
@@ -2264,10 +2357,13 @@ class MPSLayer(MPS):  # MARK: MPSLayer
         """Returns the output node."""
         return self._mats_env[self._out_position]
     
-    def _make_unitaries(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
+    def _make_canonical(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
         """
         Creates random unitaries to initialize the MPS in canonical form with
-        orthogonality center at the output node."""
+        orthogonality center at the rightmost node. Unitaries in nodes are
+        scaled so that the total norm squared of the initial MPS is the product
+        of all the physical dimensions.
+        """
         # Left nodes
         left_tensors = []
         for i, node in enumerate(self._mats_env[:self._out_position]):
@@ -2275,54 +2371,193 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                 if i == 0:
                     node_shape = node.shape[1:]
                     aux_shape = node_shape
+                    phys_dim = node_shape[0]
                 else:
                     node_shape = node.shape
                     aux_shape = (node.shape[:2].numel(), node.shape[2])
+                    phys_dim = node_shape[1]
             else:
                 node_shape = node.shape
                 aux_shape = (node.shape[:2].numel(), node.shape[2])
+                phys_dim = node_shape[1]
             size = max(aux_shape[0], aux_shape[1])
             
             tensor = random_unitary(size, device=device)
             tensor = tensor[:min(aux_shape[0], size), :min(aux_shape[1], size)]
             tensor = tensor.reshape(*node_shape)
             
-            left_tensors.append(tensor)
+            left_tensors.append(tensor * sqrt(phys_dim))
+        
+        # Output node
+        out_tensor = torch.randn(self.out_node.shape, device=device)
+        phys_dim = out_tensor.shape[1]
+        if self._boundary == 'obc':
+            if self._out_position == 0:
+                out_tensor = out_tensor[0]
+            if self._out_position == (self._n_features - 1):
+                out_tensor = out_tensor[..., 0]
+        out_tensor = out_tensor / out_tensor.norm() * sqrt(phys_dim)
         
         # Right nodes
         right_tensors = []
         for i, node in enumerate(self._mats_env[-1:self._out_position:-1]):
             if self._boundary == 'obc':
-                if i == (self._n_features - 1):
+                if i == 0:
                     node_shape = node.shape[:2]
                     aux_shape = node_shape
+                    phys_dim = node_shape[1]
                 else:
                     node_shape = node.shape
                     aux_shape = (node.shape[0], node.shape[1:].numel())
+                    phys_dim = node_shape[1]
             else:
                 node_shape = node.shape
                 aux_shape = (node.shape[0], node.shape[1:].numel())
+                phys_dim = node_shape[1]
             size = max(aux_shape[0], aux_shape[1])
             
             tensor = random_unitary(size, device=device)
             tensor = tensor[:min(aux_shape[0], size), :min(aux_shape[1], size)]
             tensor = tensor.reshape(*node_shape)
             
-            right_tensors.append(tensor)
-        
-        # Output node
-        node_shape = self.out_node.shape
-        aux_shape = (node_shape[0] * node_shape[2], node_shape[1])
-        size = max(aux_shape[0], aux_shape[1])
-            
-        out_tensor = random_unitary(size, device=device)
-        out_tensor = out_tensor[:min(aux_shape[0], size), :min(aux_shape[1], size)]
-        out_tensor = out_tensor.reshape(node_shape[0], node_shape[2], node_shape[1])
-        out_tensor = out_tensor.permute(0, 2, 1)
+            right_tensors.append(tensor * sqrt(phys_dim))
+        right_tensors.reverse()
         
         # All tensors
         tensors = left_tensors + [out_tensor] + right_tensors
         return tensors
+    
+    def _make_unitaries(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
+        """
+        Creates random unitaries to initialize the MPS nodes as stacks of
+        unitaries.
+        """
+        # Left_nodes
+        left_tensors = []
+        for i, node in enumerate(self._mats_env[:self._out_position]):
+            units = []
+            size = max(node.shape[0], node.shape[2])
+            if self._boundary == 'obc':
+                if i == 0:
+                    size_1 = 1
+                    size_2 = min(node.shape[2], size)
+                else:
+                    size_1 = min(node.shape[0], size)
+                    size_2 = min(node.shape[2], size)
+            else:
+                size_1 = min(node.shape[0], size)
+                size_2 = min(node.shape[2], size)
+            
+            for _ in range(node.shape[1]):
+                tensor = random_unitary(size, device=device)
+                tensor = tensor[:size_1, :size_2]
+                units.append(tensor)
+            
+            units = torch.stack(units, dim=1)
+            
+            if self._boundary == 'obc':
+                if i == 0:
+                    left_tensors.append(units.squeeze(0))
+                else:
+                    left_tensors.append(units)
+            else:    
+                left_tensors.append(units)
+        
+        # Output node
+        out_tensor = torch.randn(self.out_node.shape, device=device)
+        if self._boundary == 'obc':
+            if self._out_position == 0:
+                out_tensor = out_tensor[0]
+            if self._out_position == (self._n_features - 1):
+                out_tensor = out_tensor[..., 0]
+        
+        # Right nodes
+        right_tensors = []
+        for i, node in enumerate(self._mats_env[-1:self._out_position:-1]):
+            units = []
+            size = max(node.shape[0], node.shape[2])
+            if self._boundary == 'obc':
+                if i == 0:
+                    size_1 = min(node.shape[0], size)
+                    size_2 = 1
+                else:
+                    size_1 = min(node.shape[0], size)
+                    size_2 = min(node.shape[2], size)
+            else:
+                size_1 = min(node.shape[0], size)
+                size_2 = min(node.shape[2], size)
+            
+            for _ in range(node.shape[1]):
+                tensor = random_unitary(size, device=device).t()
+                tensor = tensor[:size_1, :size_2]
+                units.append(tensor)
+            
+            units = torch.stack(units, dim=1)
+            
+            if self._boundary == 'obc':
+                if i == 0:
+                    right_tensors.append(units.squeeze(-1))
+                else:
+                    right_tensors.append(units)
+            else:    
+                right_tensors.append(units)
+        right_tensors.reverse()
+        
+        # All tensors
+        tensors = left_tensors + [out_tensor] + right_tensors
+        return tensors
+
+    def initialize(self,
+                   tensors: Optional[Sequence[torch.Tensor]] = None,
+                   init_method: Optional[Text] = 'randn',
+                   device: Optional[torch.device] = None,
+                   **kwargs: float) -> None:
+        """
+        Initializes all the nodes of the :class:`MPS`. It can be called when
+        instantiating the model, or to override the existing nodes' tensors.
+        
+        There are different methods to initialize the nodes:
+        
+        * ``{"zeros", "ones", "copy", "rand", "randn"}``: Each node is
+          initialized calling :meth:`~tensorkrowch.AbstractNode.set_tensor` with
+          the given method, ``device`` and ``kwargs``.
+        
+        * ``"randn_eye"``: Nodes are initialized as in this
+          `paper <https://arxiv.org/abs/1605.03795>`_, adding identities at the
+          top of random gaussian tensors. In this case, ``std`` should be
+          specified with a low value, e.g., ``std = 1e-9``.
+        
+        * ``"unit"``: Nodes are initialized as stacks of random unitaries. This,
+          combined (at least) with an embedding of the inputs as elements of
+          the computational basis (:func:`~tensorkrowch.embeddings.discretize`
+          combined with :func:`~tensorkrowch.embeddings.basis`)
+        
+        * ``"canonical"```: MPS is initialized in canonical form with a squared
+          norm `close` to the product of all the physical dimensions (if bond
+          dimensions are bigger than the powers of the physical dimensions,
+          the norm could vary). Th orthogonality center is at the rightmost
+          node.
+        
+        Parameters
+        ----------
+        tensors : list[torch.Tensor] or tuple[torch.Tensor], optional
+            Sequence of tensors to set in each of the MPS nodes. If ``boundary``
+            is ``"obc"``, all tensors should be rank-3, except the first and
+            last ones, which can be rank-2, or rank-1 (if the first and last are
+            the same). If ``boundary`` is ``"pbc"``, all tensors should be
+            rank-3.
+        init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
+            Initialization method.
+        device : torch.device, optional
+            Device where to initialize the tensors if ``init_method`` is provided.
+        kwargs : float
+            Keyword arguments for the different initialization methods. See
+            :meth:`~tensorkrowch.AbstractNode.make_tensor`.
+        """
+        if init_method == 'unit':
+            tensors = self._make_unitaries(device=device)
+        elif init_method == 'canonical':
+            tensors = self._make_canonical(device=device)
     
     def initialize(self,
                    tensors: Optional[Sequence[torch.Tensor]] = None,
@@ -2344,9 +2579,15 @@ class MPSLayer(MPS):  # MARK: MPSLayer
           top of random gaussian tensors. In this case, ``std`` should be
           specified with a low value, e.g., ``std = 1e-9``.
         
-        * ``"unit"``: Nodes are initialized as random unitaries, so that the
-          MPS is in canonical form, with the orthogonality center at the
-          rightmost node.
+        * ``"unit"``: Nodes are initialized as stacks of random unitaries. This,
+          combined (at least) with an embedding of the inputs as elements of
+          the computational basis (:func:`~tensorkrowch.embeddings.discretize`
+          combined with :func:`~tensorkrowch.embeddings.basis`)
+        
+        * ``"canonical"```: MPS is initialized in canonical form with a squared
+          norm `close` to the product of all the physical dimensions (if bond
+          dimensions are bigger than the powers of the physical dimensions,
+          the norm could vary). Th orthogonality center is at the output node.
         
         Parameters
         ----------
@@ -2356,7 +2597,7 @@ class MPSLayer(MPS):  # MARK: MPSLayer
             last ones, which can be rank-2, or rank-1 (if the first and last are
             the same). If ``boundary`` is ``"pbc"``, all tensors should be
             rank-3.
-        init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit"}, optional
+        init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
             Initialization method.
         device : torch.device, optional
             Device where to initialize the tensors if ``init_method`` is provided.
@@ -2366,6 +2607,8 @@ class MPSLayer(MPS):  # MARK: MPSLayer
         """
         if init_method == 'unit':
             tensors = self._make_unitaries(device=device)
+        elif init_method == 'canonical':
+            tensors = self._make_canonical(device=device)
 
         if tensors is not None:
             if len(tensors) != self._n_features:
@@ -2676,20 +2919,48 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
         for node in in_nodes:
             node.set_tensor_from(uniform_memory)
     
+    def _make_canonical(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
+        """
+        Creates random unitaries to initialize the MPS in canonical form with
+        orthogonality center at the rightmost node. Unitaries in nodes are
+        scaled so that the total norm squared of the initial MPS is the product
+        of all the physical dimensions.
+        """
+        # Uniform node
+        node = self.uniform_memory
+        node_shape = node.shape
+        aux_shape = (node.shape[:2].numel(), node.shape[2])
+        
+        size = max(aux_shape[0], aux_shape[1])
+        phys_dim = node_shape[1]
+        
+        uni_tensor = random_unitary(size, device=device)
+        uni_tensor = uni_tensor[:min(aux_shape[0], size), :min(aux_shape[1], size)]
+        uni_tensor = uni_tensor.reshape(*node_shape)
+        uni_tensor = uni_tensor * sqrt(phys_dim)
+        
+        # Output node
+        out_tensor = torch.randn(self.out_node.shape, device=device)
+        out_tensor = out_tensor / out_tensor.norm() * sqrt(out_tensor.shape[1])
+        
+        return [uni_tensor, out_tensor]
+    
     def _make_unitaries(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
-        """Initializes MPS in canonical form."""
+        """
+        Creates random unitaries to initialize the MPS nodes as stacks of
+        unitaries.
+        """
         tensors = []
         for node in [self.uniform_memory, self.out_node]:
             node_shape = node.shape
-            aux_shape = (node.shape[:2].numel(), node.shape[2])
             
-            size = max(aux_shape[0], aux_shape[1])
+            units = []
+            for _ in range(node_shape[1]):
+                tensor = random_unitary(node_shape[0], device=device)
+                units.append(tensor)
             
-            tensor = random_unitary(size, device=device)
-            tensor = tensor[:min(aux_shape[0], size), :min(aux_shape[1], size)]
-            tensor = tensor.reshape(*node_shape)
-            
-            tensors.append(tensor)
+            tensors.append(torch.stack(units, dim=1))
+        
         return tensors
 
     def initialize(self,
@@ -2711,9 +2982,16 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
           `paper <https://arxiv.org/abs/1605.03795>`_, adding identities at the
           top of a random gaussian tensor. In this case, ``std`` should be
           specified with a low value, e.g., ``std = 1e-9``.
+          
+        * ``"unit"``: Tensor is initialized as a stack of random unitaries. This,
+          combined (at least) with an embedding of the inputs as elements of
+          the computational basis (:func:`~tensorkrowch.embeddings.discretize`
+          combined with :func:`~tensorkrowch.embeddings.basis`)
         
-        * ``"unit"``: Tensor is initialized as a random unitary, so that the
-          MPS is in canonical form.
+        * ``"canonical"```: MPS is initialized in canonical form with a squared
+          norm `close` to the product of all the physical dimensions (if bond
+          dimensions are bigger than the powers of the physical dimensions,
+          the norm could vary).
         
         Parameters
         ----------
@@ -2722,7 +3000,7 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
             that will be set in all input nodes, and the second one will be the
             output node's tensor. Both tensors should be rank-3, with all their
             first and last dimensions being equal.
-        init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit"}, optional
+        init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
             Initialization method.
         device : torch.device, optional
             Device where to initialize the tensors if ``init_method`` is provided.
@@ -2732,6 +3010,8 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
         """
         if init_method == 'unit':
             tensors = self._make_unitaries(device=device)
+        elif init_method == 'canonical':
+            tensors = self._make_canonical(device=device)
         
         if tensors is not None:
             self.uniform_memory.tensor = tensors[0]

@@ -8,6 +8,8 @@ import warnings
 from typing import (List, Optional, Sequence,
                     Text, Tuple, Union)
 
+from math import sqrt
+
 import torch
 
 import tensorkrowch.operations as op
@@ -547,20 +549,23 @@ class MPO(TensorNetwork):  # MARK: MPO
         return net
     
     def _input_contraction(self,
-                           nodes_env: List[Node],
+                           nodes_env: List[AbstractNode],
+                           input_nodes: List[AbstractNode],
                            inline_input: bool = False) -> Tuple[
                                                        Optional[List[Node]],
                                                        Optional[List[Node]]]:
         """Contracts input data nodes with MPO nodes."""
         if inline_input:
-            mats_result = [node['input'].contract() for node in nodes_env]
+            mats_result = [
+                in_node @ node
+                for node, in_node in zip(nodes_env, input_nodes)
+                ]
             return mats_result
 
         else:
             if nodes_env:
                 stack = op.stack(nodes_env)
-                stack_data = op.stack(
-                    [node.neighbours('input') for node in nodes_env])
+                stack_data = op.stack(input_nodes)
 
                 stack ^ stack_data
 
@@ -571,15 +576,26 @@ class MPO(TensorNetwork):  # MARK: MPO
                 return []
 
     @staticmethod
-    def _inline_contraction(nodes: List[Node]) -> Node:
+    def _inline_contraction(mats_env: List[AbstractNode],
+                            renormalize: bool = False) -> Node:
         """Contracts sequence of MPO nodes (matrices) inline."""
-        result_node = nodes[0]
-        for node in nodes[1:]:
+        result_node = mats_env[0]
+        for node in mats_env[1:]:
             result_node @= node
+            
+            if renormalize:
+                right_axes = []
+                for ax_name in result_node.axes_names:
+                    if 'right' in ax_name:
+                        right_axes.append(ax_name)
+                if right_axes:
+                    result_node = result_node.renormalize(axis=right_axes)
+            
         return result_node
 
     def _contract_envs_inline(self,
-                              mats_env: List[Node],
+                              mats_env: List[AbstractNode],
+                              renormalize: bool = False,
                               mps: Optional[MPSData] = None) -> Node:
         """Contracts nodes environments inline."""
         if (mps is not None) and (mps._boundary == 'obc'):
@@ -589,13 +605,16 @@ class MPO(TensorNetwork):  # MARK: MPO
         if self._boundary == 'obc':
             mats_env = [self._left_node] + mats_env
             mats_env = mats_env + [self._right_node]
-        return self._inline_contraction(mats_env)
+        return self._inline_contraction(mats_env=mats_env,
+                                        renormalize=renormalize)
 
-    def _aux_pairwise(self, nodes: List[Node]) -> Tuple[List[Node],
+    def _aux_pairwise(self,
+                      mats_env: List[AbstractNode],
+                      renormalize: bool = False) -> Tuple[List[Node],
     List[Node]]:
         """Contracts a sequence of MPO nodes (matrices) pairwise."""
-        length = len(nodes)
-        aux_nodes = nodes
+        length = len(mats_env)
+        aux_nodes = mats_env
         if length > 1:
             half_length = length // 2
             nice_length = 2 * half_length
@@ -611,32 +630,48 @@ class MPO(TensorNetwork):  # MARK: MPO
 
             aux_nodes = stack1 @ stack2
             aux_nodes = op.unbind(aux_nodes)
+            
+            if renormalize:
+                for i in range(len(aux_nodes)):
+                    axes = []
+                    for ax_name in aux_nodes[i].axes_names:
+                        if ('left' in ax_name) or ('right' in ax_name):
+                            axes.append(ax_name)
+                    if axes:
+                        aux_nodes[i] = aux_nodes[i].renormalize(axis=axes)
 
             return aux_nodes, leftover
-        return nodes, []
+        return mats_env, []
 
     def _pairwise_contraction(self,
-                              mats_nodes: List[Node],
-                              mps: Optional[MPSData] = None) -> Node:
+                              mats_env: List[Node],
+                              mps: Optional[MPSData] = None,
+                              renormalize: bool = False) -> Node:
         """Contracts nodes environments pairwise."""
-        length = len(mats_nodes)
-        aux_nodes = mats_nodes
+        length = len(mats_env)
+        aux_nodes = mats_env
         if length > 1:
             leftovers = []
             while length > 1:
-                aux1, aux2 = self._aux_pairwise(aux_nodes)
+                aux1, aux2 = self._aux_pairwise(mats_env=aux_nodes,
+                                                renormalize=renormalize)
                 aux_nodes = aux1
                 leftovers = aux2 + leftovers
                 length = len(aux1)
 
             aux_nodes = aux_nodes + leftovers
-            return self._pairwise_contraction(aux_nodes, mps)
+            return self._pairwise_contraction(mats_env=aux_nodes,
+                                              renormalize=renormalize,
+                                              mps=mps)
 
-        return self._contract_envs_inline(aux_nodes, mps)
+        return self._contract_envs_inline(mats_env=aux_nodes,
+                                          renormalize=renormalize,
+                                          mps=mps)
     
     def contract(self,
                  inline_input: bool = False,
                  inline_mats: bool = False,
+                 renormalize: bool = False,
                  mps: Optional[MPSData] = None) -> Node:
         """
         Contracts the whole MPO with input data nodes. The input can be in the
@@ -678,6 +713,14 @@ class MPO(TensorNetwork):  # MARK: MPO
             Boolean indicating whether the sequence of matrices (resultant
             after contracting the input ``data`` nodes) should be contracted
             inline or as a sequence of pairwise stacked contrations.
+        renormalize : bool
+            Indicates whether nodes should be renormalized after contraction.
+            If not, it may happen that the norm explodes or vanishes, as it
+            is being accumulated from all nodes. Renormalization aims to avoid
+            this undesired behavior by extracting the norm of each node on a
+            logarithmic scale. The renormalization only occurs when multiplying
+            sequences of matrices, once the `input` contractions have been
+            already performed, including contracting against ``MPSData``.
         mps : MPSData, optional
             MPS that is to be contracted with the MPO. New data can be
             put into the MPS via :meth:`MPSData.add_data`, and the MPS-MPO
@@ -703,12 +746,19 @@ class MPO(TensorNetwork):  # MARK: MPO
             for mps_node, mpo_node in zip(mps._mats_env, self._mats_env):
                 mps_node['feature'] ^ mpo_node['input']
                 
-        mats_env = self._input_contraction(self._mats_env, inline_input)
+        mats_env = self._input_contraction(
+            nodes_env=self._mats_env,
+            input_nodes=[node.neighbours('input') for node in self._mats_env],
+            inline_input=inline_input)
         
         if inline_mats:
-            result = self._contract_envs_inline(mats_env, mps)
+            result = self._contract_envs_inline(mats_env=mats_env,
+                                                renormalize=renormalize,
+                                                mps=mps)
         else:
-            result = self._pairwise_contraction(mats_env, mps)
+            result = self._pairwise_contraction(mats_env=mats_env,
+                                                renormalize=renormalize,
+                                                mps=mps)
             
         # Contract periodic edge
         if result.is_connected_to(result):

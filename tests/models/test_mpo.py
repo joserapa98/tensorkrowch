@@ -334,31 +334,34 @@ class TestMPO:
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mpo.auto_stack = auto_stack
-                                mpo.auto_unbind = auto_unbind
+                                for renormalize in [True, False]:
+                                    mpo.auto_stack = auto_stack
+                                    mpo.auto_unbind = auto_unbind
 
-                                mpo.trace(example,
-                                          inline_input=inline_input,
-                                          inline_mats=inline_mats)
-                                result = mpo(data,
-                                             inline_input=inline_input,
-                                             inline_mats=inline_mats)
+                                    mpo.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              renormalize=renormalize)
+                                    result = mpo(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 renormalize=renormalize)
 
-                                assert result.shape == tuple([100] + [2] * n_features)
-                                assert len(mpo.edges) == n_features
-                                if boundary == 'obc':
-                                    assert len(mpo.leaf_nodes) == n_features + 2
-                                else:
-                                    assert len(mpo.leaf_nodes) == n_features
-                                assert len(mpo.data_nodes) == n_features
-                                if not inline_input and auto_stack:
-                                    assert len(mpo.virtual_nodes) == 2
-                                else:
-                                    assert len(mpo.virtual_nodes) == 1
-                                
-                                result.sum().backward()
-                                for node in mpo.mats_env:
-                                    assert node.grad is not None
+                                    assert result.shape == tuple([100] + [2] * n_features)
+                                    assert len(mpo.edges) == n_features
+                                    if boundary == 'obc':
+                                        assert len(mpo.leaf_nodes) == n_features + 2
+                                    else:
+                                        assert len(mpo.leaf_nodes) == n_features
+                                    assert len(mpo.data_nodes) == n_features
+                                    if not inline_input and auto_stack:
+                                        assert len(mpo.virtual_nodes) == 2
+                                    else:
+                                        assert len(mpo.virtual_nodes) == 1
+                                    
+                                    result.sum().backward()
+                                    for node in mpo.mats_env:
+                                        assert node.grad is not None
     
     def test_all_algorithms_cuda(self):
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -379,31 +382,34 @@ class TestMPO:
                     for auto_unbind in [True, False]:
                         for inline_input in [True, False]:
                             for inline_mats in [True, False]:
-                                mpo.auto_stack = auto_stack
-                                mpo.auto_unbind = auto_unbind
+                                for renormalize in [True, False]:
+                                    mpo.auto_stack = auto_stack
+                                    mpo.auto_unbind = auto_unbind
 
-                                mpo.trace(example,
-                                          inline_input=inline_input,
-                                          inline_mats=inline_mats)
-                                result = mpo(data,
-                                             inline_input=inline_input,
-                                             inline_mats=inline_mats)
+                                    mpo.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              renormalize=renormalize)
+                                    result = mpo(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 renormalize=renormalize)
 
-                                assert result.shape == tuple([100] + [2] * n_features)
-                                assert len(mpo.edges) == n_features
-                                if boundary == 'obc':
-                                    assert len(mpo.leaf_nodes) == n_features + 2
-                                else:
-                                    assert len(mpo.leaf_nodes) == n_features
-                                assert len(mpo.data_nodes) == n_features
-                                if not inline_input and auto_stack:
-                                    assert len(mpo.virtual_nodes) == 2
-                                else:
-                                    assert len(mpo.virtual_nodes) == 1
-                                
-                                result.sum().backward()
-                                for node in mpo.mats_env:
-                                    assert node.grad is not None
+                                    assert result.shape == tuple([100] + [2] * n_features)
+                                    assert len(mpo.edges) == n_features
+                                    if boundary == 'obc':
+                                        assert len(mpo.leaf_nodes) == n_features + 2
+                                    else:
+                                        assert len(mpo.leaf_nodes) == n_features
+                                    assert len(mpo.data_nodes) == n_features
+                                    if not inline_input and auto_stack:
+                                        assert len(mpo.virtual_nodes) == 2
+                                    else:
+                                        assert len(mpo.virtual_nodes) == 1
+                                    
+                                    result.sum().backward()
+                                    for node in mpo.mats_env:
+                                        assert node.grad is not None
     
     def test_mpo_mps_data_manually(self):
         mpo = tk.models.MPO(n_features=10,
@@ -452,6 +458,64 @@ class TestMPO:
                 for mps_boundary in ['obc', 'pbc']:
                     for inline_input in [True, False]:
                         for inline_mats in [True, False]:
+                            for renormalize in [True, False]:
+                                phys_dim = torch.randint(low=2, high=10,
+                                                        size=(n_features,)).tolist()
+                                bond_dim = torch.randint(low=2, high=8,
+                                                        size=(n_features,)).tolist()
+                                
+                                mpo = tk.models.MPO(
+                                    n_features=n_features,
+                                    in_dim=phys_dim,
+                                    out_dim=2,
+                                    bond_dim=10,
+                                    boundary=mpo_boundary)
+                                
+                                mps_data = tk.models.MPSData(
+                                    n_features=n_features,
+                                    phys_dim=phys_dim,
+                                    bond_dim=bond_dim[:-1] \
+                                        if mps_boundary == 'obc' else bond_dim,
+                                    boundary=mps_boundary)
+                                
+                                for _ in range(10):
+                                    # MPO needs to be reset each time if inline_input
+                                    # or inline_mats are False, since the bond dims
+                                    # of MPSData may change, and therefore the
+                                    # computation of stacks may fail
+                                    if not inline_input or not inline_mats:
+                                        mpo.reset()
+                                    
+                                    bond_dim = torch.randint(low=2, high=8,
+                                                            size=(n_features,)).tolist()
+                                    tensors = [
+                                        torch.randn(10,
+                                                    bond_dim[i - 1],
+                                                    phys_dim[i],
+                                                    bond_dim[i]) 
+                                        for i in range(n_features)]
+                                    if mps_boundary == 'obc':
+                                        tensors[0] = tensors[0][:, 0]
+                                        tensors[-1] = tensors[-1][..., 0]
+                                    
+                                    mps_data.add_data(tensors)
+                                    result = mpo(mps=mps_data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 renormalize=renormalize)
+                                    
+                                    assert result.shape == tuple([10] + [2] * n_features)
+                                
+                                for i, node in enumerate(mpo.mats_env):
+                                    assert node.is_connected_to(mps_data.mats_env[i])
+                                
+                                # Check if unset_data_nodes removes MPSData nodes
+                                # from MPO
+                                mpo.unset_data_nodes()
+                                
+                                for i, node in enumerate(mpo.mats_env):
+                                    assert not node.is_connected_to(mps_data.mats_env[i])
+                                    assert mps_data.mats_env[i].network is None
     
     def test_canonicalize(self):                
         for n_features in [1, 2, 3, 4, 10]:

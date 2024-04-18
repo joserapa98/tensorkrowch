@@ -1324,10 +1324,12 @@ class MPS(TensorNetwork):  # MARK: MPS
         result = result.sqrt()
         return result
 
-    def partial_density(self, trace_sites: Sequence[int] = []) -> torch.Tensor:
-        """
+    def partial_density(self,
+                        trace_sites: Sequence[int] = [],
+                        renormalize: bool = True) -> torch.Tensor:
+        r"""
         Returns de partial density matrix, tracing out the sites specified
-        by ``trace_sites``.
+        by ``trace_sites``: :math:`\rho_A`.
         
         This method internally sets ``out_features = trace_sites``, and calls
         the :meth:`~tensorkrowch.TensorNetwork.forward` method with
@@ -1351,6 +1353,14 @@ class MPS(TensorNetwork):  # MARK: MPS
             nodes that should be traced to compute the density matrix. If
             it is empty ``[]``, the total density matrix will be returned,
             though this may be costly if :attr:`n_features` is big.
+        renormalize : bool
+            Indicates whether nodes should be renormalized after contraction.
+            If not, it may happen that the norm explodes or vanishes, as it
+            is being accumulated from all nodes. Renormalization aims to avoid
+            this undesired behavior by extracting the norm of each node on a
+            logarithmic scale. The renormalization only occurs when multiplying
+            sequences of matrices, once the `input` contractions have been
+            already performed.
         
         Examples
         --------
@@ -1402,10 +1412,13 @@ class MPS(TensorNetwork):  # MARK: MPS
                     ]
             
             self.n_batches = len(dims)
-            result = self.forward(data, marginalize_output=True)
+            result = self.forward(data,
+                                  renormalize=renormalize,
+                                  marginalize_output=True)
             
         else:
-            result = self.forward(marginalize_output=True)
+            result = self.forward(renormalize=renormalize,
+                                  marginalize_output=True)
         
         return result
     

@@ -745,7 +745,7 @@ def _div_first(node1: AbstractNode,
                               hints=is_node2)
 
     # Add successor to parent
-    if 'mul' in node1._successors:
+    if 'div' in node1._successors:
         node1._successors['div'].update({args: successor})
     else:
         node1._successors['div'] = {args: successor}

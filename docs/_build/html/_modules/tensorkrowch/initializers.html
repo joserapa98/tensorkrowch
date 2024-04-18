@@ -300,303 +300,200 @@ title="Source repository"
 <span class="kn">from</span> <span class="nn">tensorkrowch.components</span> <span class="kn">import</span> <span class="n">TensorNetwork</span>
 
 
-<span class="k">def</span> <span class="nf">_initializer</span><span class="p">(</span><span class="n">init_method</span><span class="p">,</span>
+<span class="k">def</span> <span class="nf">_initializer</span><span class="p">(</span><span class="n">init_method</span><span class="p">:</span> <span class="n">Text</span><span class="p">,</span>
                  <span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
-                 <span class="n">axes_names</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Text</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="n">network</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">TensorNetwork</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">param_node</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                 <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
+                 <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">param_node</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
-                    <span class="n">axes_names</span><span class="o">=</span><span class="n">axes_names</span><span class="p">,</span>
-                    <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
-                    <span class="n">network</span><span class="o">=</span><span class="n">network</span><span class="p">,</span>
-                    <span class="n">init_method</span><span class="o">=</span><span class="n">init_method</span><span class="p">,</span>
-                    <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
-                    <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Node</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="n">init_method</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
-                         <span class="n">axes_names</span><span class="o">=</span><span class="n">axes_names</span><span class="p">,</span>
-                         <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
-                         <span class="n">network</span><span class="o">=</span><span class="n">network</span><span class="p">,</span>
-                         <span class="n">init_method</span><span class="o">=</span><span class="n">init_method</span><span class="p">,</span>
-                         <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
-                         <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
+        <span class="k">return</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="n">init_method</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+   
 
 <div class="viewcode-block" id="empty"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.empty">[docs]</a><span class="k">def</span> <span class="nf">empty</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
-          <span class="n">axes_names</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Text</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-          <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-          <span class="n">network</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">TensorNetwork</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
           <span class="n">param_node</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-          <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Returns :class:`Node` or :class:`ParamNode` without tensor.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    shape : list[int], tuple[int] or torch.Size</span>
-<span class="sd">         Node&#39;s shape, that is, the shape of its tensor.</span>
-<span class="sd">    axes_names : list[str] or tuple[str], optional</span>
-<span class="sd">         Sequence of names for each of the node&#39;s axes. Names are used to access</span>
-<span class="sd">         the edge that is attached to the node in a certain axis. Hence, they</span>
-<span class="sd">         should be all distinct.</span>
-<span class="sd">    name : str, optional</span>
-<span class="sd">         Node&#39;s name, used to access the node from de :class:`TensorNetwork`</span>
-<span class="sd">         where it belongs. It cannot contain blank spaces.</span>
-<span class="sd">    network : TensorNetwork, optional</span>
-<span class="sd">         Tensor network where the node should belong. If None, a new tensor</span>
-<span class="sd">         network, will be created to contain the node.</span>
-<span class="sd">    param_node : bool</span>
-<span class="sd">         Boolean indicating whether the node should be a :class:`ParamNode`</span>
-<span class="sd">         (``True``) or a :class:`Node` (``False``).</span>
-<span class="sd">    device : torch.device, optional</span>
-<span class="sd">       Device where to initialize the tensor.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    Node or ParamNode</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">_initializer</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span>
-                        <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
-                        <span class="n">axes_names</span><span class="o">=</span><span class="n">axes_names</span><span class="p">,</span>
-                        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
-                        <span class="n">network</span><span class="o">=</span><span class="n">network</span><span class="p">,</span>
-                        <span class="n">param_node</span><span class="o">=</span><span class="n">param_node</span><span class="p">,</span>
-                        <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span></div>
+          <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+          <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
+<span class="w">     </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">     Returns :class:`Node` or :class:`ParamNode` without tensor.</span>
+<span class="sd"> </span>
+<span class="sd">     Parameters</span>
+<span class="sd">     ----------</span>
+<span class="sd">     shape : list[int], tuple[int] or torch.Size</span>
+<span class="sd">          Node&#39;s shape, that is, the shape of its tensor.</span>
+<span class="sd">     param_node : bool</span>
+<span class="sd">          Boolean indicating whether the node should be a :class:`ParamNode`</span>
+<span class="sd">          (``True``) or a :class:`Node` (``False``).</span>
+<span class="sd">     args :</span>
+<span class="sd">          Arguments to initialize an :class:`~tensorkrowch.AbstractNode`.</span>
+<span class="sd">     kwargs :</span>
+<span class="sd">          Keyword arguments to initialize an :class:`~tensorkrowch.AbstractNode`.</span>
+<span class="sd"> </span>
+<span class="sd">     Returns</span>
+<span class="sd">     -------</span>
+<span class="sd">     Node or ParamNode</span>
+<span class="sd">     &quot;&quot;&quot;</span>
+     <span class="k">return</span> <span class="n">_initializer</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span>
+                         <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
+                         <span class="n">param_node</span><span class="o">=</span><span class="n">param_node</span><span class="p">,</span>
+                         <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+                         <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="zeros"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.zeros">[docs]</a><span class="k">def</span> <span class="nf">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
-          <span class="n">axes_names</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Text</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-          <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-          <span class="n">network</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">TensorNetwork</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
           <span class="n">param_node</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-          <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Returns :class:`Node` or :class:`ParamNode` filled with zeros.</span>
+          <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+          <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
+<span class="w">     </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">     Returns :class:`Node` or :class:`ParamNode` filled with zeros.</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    shape : list[int], tuple[int] or torch.Size</span>
-<span class="sd">         Node&#39;s shape, that is, the shape of its tensor.</span>
-<span class="sd">    axes_names : list[str] or tuple[str], optional</span>
-<span class="sd">         Sequence of names for each of the node&#39;s axes. Names are used to access</span>
-<span class="sd">         the edge that is attached to the node in a certain axis. Hence, they</span>
-<span class="sd">         should be all distinct.</span>
-<span class="sd">    name : str, optional</span>
-<span class="sd">         Node&#39;s name, used to access the node from de :class:`TensorNetwork`</span>
-<span class="sd">         where it belongs. It cannot contain blank spaces.</span>
-<span class="sd">    network : TensorNetwork, optional</span>
-<span class="sd">         Tensor network where the node should belong. If None, a new tensor</span>
-<span class="sd">         network, will be created to contain the node.</span>
-<span class="sd">    param_node : bool</span>
-<span class="sd">         Boolean indicating whether the node should be a :class:`ParamNode`</span>
-<span class="sd">         (``True``) or a :class:`Node` (``False``).</span>
-<span class="sd">    device : torch.device, optional</span>
-<span class="sd">       Device where to initialize the tensor.</span>
+<span class="sd">     Parameters</span>
+<span class="sd">     ----------</span>
+<span class="sd">     shape : list[int], tuple[int] or torch.Size</span>
+<span class="sd">          Node&#39;s shape, that is, the shape of its tensor.</span>
+<span class="sd">     param_node : bool</span>
+<span class="sd">          Boolean indicating whether the node should be a :class:`ParamNode`</span>
+<span class="sd">          (``True``) or a :class:`Node` (``False``).</span>
+<span class="sd">     args :</span>
+<span class="sd">          Arguments to initialize an :class:`~tensorkrowch.AbstractNode`.</span>
+<span class="sd">     kwargs :</span>
+<span class="sd">          Keyword arguments to initialize an :class:`~tensorkrowch.AbstractNode`.</span>
 
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    Node or ParamNode</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">_initializer</span><span class="p">(</span><span class="s1">&#39;zeros&#39;</span><span class="p">,</span>
-                        <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
-                        <span class="n">axes_names</span><span class="o">=</span><span class="n">axes_names</span><span class="p">,</span>
-                        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
-                        <span class="n">network</span><span class="o">=</span><span class="n">network</span><span class="p">,</span>
-                        <span class="n">param_node</span><span class="o">=</span><span class="n">param_node</span><span class="p">,</span>
-                        <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span></div>
+<span class="sd">     Returns</span>
+<span class="sd">     -------</span>
+<span class="sd">     Node or ParamNode</span>
+<span class="sd">     &quot;&quot;&quot;</span>
+     <span class="k">return</span> <span class="n">_initializer</span><span class="p">(</span><span class="s1">&#39;zeros&#39;</span><span class="p">,</span>
+                         <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
+                         <span class="n">param_node</span><span class="o">=</span><span class="n">param_node</span><span class="p">,</span>
+                         <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+                         <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="ones"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.ones">[docs]</a><span class="k">def</span> <span class="nf">ones</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Shape</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-         <span class="n">axes_names</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Text</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-         <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-         <span class="n">network</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">TensorNetwork</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<div class="viewcode-block" id="ones"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.ones">[docs]</a><span class="k">def</span> <span class="nf">ones</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
          <span class="n">param_node</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-         <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Returns :class:`Node` or :class:`ParamNode` filled with ones.</span>
+         <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+         <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
+<span class="w">     </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">     Returns :class:`Node` or :class:`ParamNode` filled with ones.</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    shape : list[int], tuple[int] or torch.Size</span>
-<span class="sd">         Node&#39;s shape, that is, the shape of its tensor.</span>
-<span class="sd">    axes_names : list[str] or tuple[str], optional</span>
-<span class="sd">         Sequence of names for each of the node&#39;s axes. Names are used to access</span>
-<span class="sd">         the edge that is attached to the node in a certain axis. Hence, they</span>
-<span class="sd">         should be all distinct.</span>
-<span class="sd">    name : str, optional</span>
-<span class="sd">         Node&#39;s name, used to access the node from de :class:`TensorNetwork`</span>
-<span class="sd">         where it belongs. It cannot contain blank spaces.</span>
-<span class="sd">    network : TensorNetwork, optional</span>
-<span class="sd">         Tensor network where the node should belong. If None, a new tensor</span>
-<span class="sd">         network, will be created to contain the node.</span>
-<span class="sd">    param_node : bool</span>
-<span class="sd">         Boolean indicating whether the node should be a :class:`ParamNode`</span>
-<span class="sd">         (``True``) or a :class:`Node` (``False``).</span>
-<span class="sd">    device : torch.device, optional</span>
-<span class="sd">       Device where to initialize the tensor.</span>
+<span class="sd">     Parameters</span>
+<span class="sd">     ----------</span>
+<span class="sd">     shape : list[int], tuple[int] or torch.Size</span>
+<span class="sd">          Node&#39;s shape, that is, the shape of its tensor.</span>
+<span class="sd">     param_node : bool</span>
+<span class="sd">          Boolean indicating whether the node should be a :class:`ParamNode`</span>
+<span class="sd">          (``True``) or a :class:`Node` (``False``).</span>
+<span class="sd">     args :</span>
+<span class="sd">          Arguments to initialize an :class:`~tensorkrowch.AbstractNode`.</span>
+<span class="sd">     kwargs :</span>
+<span class="sd">          Keyword arguments to initialize an :class:`~tensorkrowch.AbstractNode`.</span>
 
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    Node or ParamNode</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">_initializer</span><span class="p">(</span><span class="s1">&#39;ones&#39;</span><span class="p">,</span>
-                        <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
-                        <span class="n">axes_names</span><span class="o">=</span><span class="n">axes_names</span><span class="p">,</span>
-                        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
-                        <span class="n">network</span><span class="o">=</span><span class="n">network</span><span class="p">,</span>
-                        <span class="n">param_node</span><span class="o">=</span><span class="n">param_node</span><span class="p">,</span>
-                        <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span></div>
+<span class="sd">     Returns</span>
+<span class="sd">     -------</span>
+<span class="sd">     Node or ParamNode</span>
+<span class="sd">     &quot;&quot;&quot;</span>
+     <span class="k">return</span> <span class="n">_initializer</span><span class="p">(</span><span class="s1">&#39;ones&#39;</span><span class="p">,</span>
+                         <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
+                         <span class="n">param_node</span><span class="o">=</span><span class="n">param_node</span><span class="p">,</span>
+                         <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+                         <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="copy"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.copy">[docs]</a><span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Shape</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-         <span class="n">axes_names</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Text</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-         <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-         <span class="n">network</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">TensorNetwork</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<div class="viewcode-block" id="copy"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.copy">[docs]</a><span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
          <span class="n">param_node</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-         <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Returns :class:`Node` or :class:`ParamNode` with a copy tensor, that is,</span>
-<span class="sd">    a tensor filled with zeros except in the diagonal (elements</span>
-<span class="sd">    :math:`T_{i_1 \ldots i_n}` with :math:`i_1 = \ldots = i_n`), which is</span>
-<span class="sd">    filled with ones.</span>
+         <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+         <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
+<span class="w">     </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">     Returns :class:`Node` or :class:`ParamNode` with a copy tensor, that is,</span>
+<span class="sd">     a tensor filled with zeros except in the diagonal (elements</span>
+<span class="sd">     :math:`T_{i_1 \ldots i_n}` with :math:`i_1 = \ldots = i_n`), which is</span>
+<span class="sd">     filled with ones.</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    shape : list[int], tuple[int] or torch.Size</span>
-<span class="sd">         Node&#39;s shape, that is, the shape of its tensor.</span>
-<span class="sd">    axes_names : list[str] or tuple[str], optional</span>
-<span class="sd">         Sequence of names for each of the node&#39;s axes. Names are used to access</span>
-<span class="sd">         the edge that is attached to the node in a certain axis. Hence, they</span>
-<span class="sd">         should be all distinct.</span>
-<span class="sd">    name : str, optional</span>
-<span class="sd">         Node&#39;s name, used to access the node from de :class:`TensorNetwork`</span>
-<span class="sd">         where it belongs. It cannot contain blank spaces.</span>
-<span class="sd">    network : TensorNetwork, optional</span>
-<span class="sd">         Tensor network where the node should belong. If None, a new tensor</span>
-<span class="sd">         network, will be created to contain the node.</span>
-<span class="sd">    param_node : bool</span>
-<span class="sd">         Boolean indicating whether the node should be a :class:`ParamNode`</span>
-<span class="sd">         (``True``) or a :class:`Node` (``False``).</span>
-<span class="sd">    device : torch.device, optional</span>
-<span class="sd">       Device where to initialize the tensor.</span>
+<span class="sd">     Parameters</span>
+<span class="sd">     ----------</span>
+<span class="sd">     shape : list[int], tuple[int] or torch.Size</span>
+<span class="sd">          Node&#39;s shape, that is, the shape of its tensor.</span>
+<span class="sd">     param_node : bool</span>
+<span class="sd">          Boolean indicating whether the node should be a :class:`ParamNode`</span>
+<span class="sd">          (``True``) or a :class:`Node` (``False``).</span>
+<span class="sd">     args :</span>
+<span class="sd">          Arguments to initialize an :class:`~tensorkrowch.AbstractNode`.</span>
+<span class="sd">     kwargs :</span>
+<span class="sd">          Keyword arguments to initialize an :class:`~tensorkrowch.AbstractNode`.</span>
 
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    Node or ParamNode</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">_initializer</span><span class="p">(</span><span class="s1">&#39;copy&#39;</span><span class="p">,</span>
-                        <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
-                        <span class="n">axes_names</span><span class="o">=</span><span class="n">axes_names</span><span class="p">,</span>
-                        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
-                        <span class="n">network</span><span class="o">=</span><span class="n">network</span><span class="p">,</span>
-                        <span class="n">param_node</span><span class="o">=</span><span class="n">param_node</span><span class="p">,</span>
-                        <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span></div>
+<span class="sd">     Returns</span>
+<span class="sd">     -------</span>
+<span class="sd">     Node or ParamNode</span>
+<span class="sd">     &quot;&quot;&quot;</span>
+     <span class="k">return</span> <span class="n">_initializer</span><span class="p">(</span><span class="s1">&#39;copy&#39;</span><span class="p">,</span>
+                         <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
+                         <span class="n">param_node</span><span class="o">=</span><span class="n">param_node</span><span class="p">,</span>
+                         <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+                         <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="rand"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.rand">[docs]</a><span class="k">def</span> <span class="nf">rand</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Shape</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-         <span class="n">axes_names</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Text</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-         <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-         <span class="n">network</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">TensorNetwork</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<div class="viewcode-block" id="rand"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.rand">[docs]</a><span class="k">def</span> <span class="nf">rand</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
          <span class="n">param_node</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-         <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-         <span class="n">low</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.</span><span class="p">,</span>
-         <span class="n">high</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.</span><span class="p">,</span> <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Returns :class:`Node` or :class:`ParamNode` filled with elements drawn from</span>
-<span class="sd">    a uniform distribution :math:`U(low, high)`.</span>
+         <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+         <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
+<span class="w">     </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">     Returns :class:`Node` or :class:`ParamNode` filled with elements drawn from</span>
+<span class="sd">     a uniform distribution :math:`U(low, high)`.</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    shape : list[int], tuple[int] or torch.Size</span>
-<span class="sd">         Node&#39;s shape, that is, the shape of its tensor.</span>
-<span class="sd">    axes_names : list[str] or tuple[str], optional</span>
-<span class="sd">         Sequence of names for each of the node&#39;s axes. Names are used to access</span>
-<span class="sd">         the edge that is attached to the node in a certain axis. Hence, they</span>
-<span class="sd">         should be all distinct.</span>
-<span class="sd">    name : str, optional</span>
-<span class="sd">         Node&#39;s name, used to access the node from de :class:`TensorNetwork`</span>
-<span class="sd">         where it belongs. It cannot contain blank spaces.</span>
-<span class="sd">    network : TensorNetwork, optional</span>
-<span class="sd">         Tensor network where the node should belong. If None, a new tensor</span>
-<span class="sd">         network, will be created to contain the node.</span>
-<span class="sd">    param_node : bool</span>
-<span class="sd">         Boolean indicating whether the node should be a :class:`ParamNode`</span>
-<span class="sd">         (``True``) or a :class:`Node` (``False``).</span>
-<span class="sd">    device : torch.device, optional</span>
-<span class="sd">       Device where to initialize the tensor.</span>
-<span class="sd">    low : float</span>
-<span class="sd">         Lower limit of the uniform distribution.</span>
-<span class="sd">    high : float</span>
-<span class="sd">         Upper limit of the uniform distribution.</span>
+<span class="sd">     Parameters</span>
+<span class="sd">     ----------</span>
+<span class="sd">     shape : list[int], tuple[int] or torch.Size</span>
+<span class="sd">          Node&#39;s shape, that is, the shape of its tensor.</span>
+<span class="sd">     param_node : bool</span>
+<span class="sd">          Boolean indicating whether the node should be a :class:`ParamNode`</span>
+<span class="sd">          (``True``) or a :class:`Node` (``False``).</span>
+<span class="sd">     args :</span>
+<span class="sd">          Arguments to initialize an :class:`~tensorkrowch.AbstractNode`.</span>
+<span class="sd">     kwargs :</span>
+<span class="sd">          Keyword arguments to initialize an :class:`~tensorkrowch.AbstractNode`.</span>
 
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    Node or ParamNode</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">_initializer</span><span class="p">(</span><span class="s1">&#39;rand&#39;</span><span class="p">,</span>
-                        <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
-                        <span class="n">axes_names</span><span class="o">=</span><span class="n">axes_names</span><span class="p">,</span>
-                        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
-                        <span class="n">network</span><span class="o">=</span><span class="n">network</span><span class="p">,</span>
-                        <span class="n">param_node</span><span class="o">=</span><span class="n">param_node</span><span class="p">,</span>
-                        <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
-                        <span class="n">low</span><span class="o">=</span><span class="n">low</span><span class="p">,</span>
-                        <span class="n">high</span><span class="o">=</span><span class="n">high</span><span class="p">)</span></div>
+<span class="sd">     Returns</span>
+<span class="sd">     -------</span>
+<span class="sd">     Node or ParamNode</span>
+<span class="sd">     &quot;&quot;&quot;</span>
+     <span class="k">return</span> <span class="n">_initializer</span><span class="p">(</span><span class="s1">&#39;rand&#39;</span><span class="p">,</span>
+                         <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
+                         <span class="n">param_node</span><span class="o">=</span><span class="n">param_node</span><span class="p">,</span>
+                         <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+                         <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="randn"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.randn">[docs]</a><span class="k">def</span> <span class="nf">randn</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Shape</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-          <span class="n">axes_names</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Text</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-          <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-          <span class="n">network</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">TensorNetwork</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<div class="viewcode-block" id="randn"><a class="viewcode-back" href="../../initializers.html#tensorkrowch.randn">[docs]</a><span class="k">def</span> <span class="nf">randn</span><span class="p">(</span><span class="n">shape</span><span class="p">:</span> <span class="n">Shape</span><span class="p">,</span>
           <span class="n">param_node</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-          <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-          <span class="n">mean</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.</span><span class="p">,</span>
-          <span class="n">std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.</span><span class="p">,</span> <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Returns :class:`Node` or :class:`ParamNode` filled with elements drawn from</span>
-<span class="sd">    a normal distribution :math:`N(mean, std)`.</span>
+          <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+          <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AbstractNode</span><span class="p">:</span>
+<span class="w">     </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">     Returns :class:`Node` or :class:`ParamNode` filled with elements drawn from</span>
+<span class="sd">     a normal distribution :math:`N(mean, std)`.</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    shape : list[int], tuple[int] or torch.Size</span>
-<span class="sd">         Node&#39;s shape, that is, the shape of its tensor.</span>
-<span class="sd">    axes_names : list[str] or tuple[str], optional</span>
-<span class="sd">         Sequence of names for each of the node&#39;s axes. Names are used to access</span>
-<span class="sd">         the edge that is attached to the node in a certain axis. Hence, they</span>
-<span class="sd">         should be all distinct.</span>
-<span class="sd">    name : str, optional</span>
-<span class="sd">         Node&#39;s name, used to access the node from de :class:`TensorNetwork`</span>
-<span class="sd">         where it belongs. It cannot contain blank spaces.</span>
-<span class="sd">    network : TensorNetwork, optional</span>
-<span class="sd">         Tensor network where the node should belong. If None, a new tensor</span>
-<span class="sd">         network, will be created to contain the node.</span>
-<span class="sd">    param_node : bool</span>
-<span class="sd">         Boolean indicating whether the node should be a :class:`ParamNode`</span>
-<span class="sd">         (``True``) or a :class:`Node` (``False``).</span>
-<span class="sd">    device : torch.device, optional</span>
-<span class="sd">       Device where to initialize the tensor.</span>
-<span class="sd">    mean : float</span>
-<span class="sd">         Mean of the normal distribution.</span>
-<span class="sd">    std : float</span>
-<span class="sd">         Standard deviation of the normal distribution.</span>
+<span class="sd">     Parameters</span>
+<span class="sd">     ----------</span>
+<span class="sd">     shape : list[int], tuple[int] or torch.Size</span>
+<span class="sd">          Node&#39;s shape, that is, the shape of its tensor.</span>
+<span class="sd">     param_node : bool</span>
+<span class="sd">          Boolean indicating whether the node should be a :class:`ParamNode`</span>
+<span class="sd">          (``True``) or a :class:`Node` (``False``).</span>
+<span class="sd">     args :</span>
+<span class="sd">          Arguments to initialize an :class:`~tensorkrowch.AbstractNode`.</span>
+<span class="sd">     kwargs :</span>
+<span class="sd">          Keyword arguments to initialize an :class:`~tensorkrowch.AbstractNode`.</span>
 
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    Node or ParamNode</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">_initializer</span><span class="p">(</span><span class="s1">&#39;randn&#39;</span><span class="p">,</span>
-                        <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
-                        <span class="n">axes_names</span><span class="o">=</span><span class="n">axes_names</span><span class="p">,</span>
-                        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
-                        <span class="n">network</span><span class="o">=</span><span class="n">network</span><span class="p">,</span>
-                        <span class="n">param_node</span><span class="o">=</span><span class="n">param_node</span><span class="p">,</span>
-                        <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
-                        <span class="n">mean</span><span class="o">=</span><span class="n">mean</span><span class="p">,</span>
-                        <span class="n">std</span><span class="o">=</span><span class="n">std</span><span class="p">)</span></div>
+<span class="sd">     Returns</span>
+<span class="sd">     -------</span>
+<span class="sd">     Node or ParamNode</span>
+<span class="sd">     &quot;&quot;&quot;</span>
+     <span class="k">return</span> <span class="n">_initializer</span><span class="p">(</span><span class="s1">&#39;randn&#39;</span><span class="p">,</span>
+                         <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span>
+                         <span class="n">param_node</span><span class="o">=</span><span class="n">param_node</span><span class="p">,</span>
+                         <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+                         <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 </pre></div>
 
               </div>

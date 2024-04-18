@@ -93,8 +93,8 @@ compute between nodes. We can distinguish between two types of operations:
 
 a) **Tensor-like**: We refer to the operations one can compute using tensors in
    vanilla ``PyTorch`` like :func:`permute` (and the in-place variant
-   :func:`permute_`), :func:`tprod` (tensor product), :func:`mul`, :func:`add`
-   and :func:`sub`.
+   :func:`permute_`), :func:`tprod` (tensor product), :func:`mul`, :func:`div`,
+   :func:`add`, :func:`sub` and :func:`renormalize`.
 
 b) **Node-like**: We refer to the operations one will need to contract a tensor
    network. These we will explain in more detail in this section.

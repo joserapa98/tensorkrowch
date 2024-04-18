@@ -1034,7 +1034,7 @@ title="Source repository"
                               <span class="n">hints</span><span class="o">=</span><span class="n">is_node2</span><span class="p">)</span>
 
     <span class="c1"># Add successor to parent</span>
-    <span class="k">if</span> <span class="s1">&#39;mul&#39;</span> <span class="ow">in</span> <span class="n">node1</span><span class="o">.</span><span class="n">_successors</span><span class="p">:</span>
+    <span class="k">if</span> <span class="s1">&#39;div&#39;</span> <span class="ow">in</span> <span class="n">node1</span><span class="o">.</span><span class="n">_successors</span><span class="p">:</span>
         <span class="n">node1</span><span class="o">.</span><span class="n">_successors</span><span class="p">[</span><span class="s1">&#39;div&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">args</span><span class="p">:</span> <span class="n">successor</span><span class="p">})</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">node1</span><span class="o">.</span><span class="n">_successors</span><span class="p">[</span><span class="s1">&#39;div&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">args</span><span class="p">:</span> <span class="n">successor</span><span class="p">}</span>

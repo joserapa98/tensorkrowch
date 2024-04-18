@@ -537,9 +537,9 @@ class MPS(TensorNetwork):  # MARK: MPS
                                         name='left_node',
                                         network=self)
             self._right_node = ParamNode(shape=(aux_bond_dim[-1],),
-                                    axes_names=('left',),
-                                    name='right_node',
-                                    network=self)
+                                         axes_names=('left',),
+                                         name='right_node',
+                                         network=self)
             
             aux_bond_dim = aux_bond_dim + [aux_bond_dim[-1]] + [aux_bond_dim[0]]
         

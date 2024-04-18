@@ -452,62 +452,77 @@ class TestMPO:
                 for mps_boundary in ['obc', 'pbc']:
                     for inline_input in [True, False]:
                         for inline_mats in [True, False]:
-                            phys_dim = torch.randint(low=2, high=10,
-                                                     size=(n_features,)).tolist()
-                            bond_dim = torch.randint(low=2, high=8,
-                                                     size=(n_features,)).tolist()
-                            
+    
+    def test_canonicalize(self):                
+        for n_features in [1, 2, 3, 4, 10]:
+            for boundary in ['obc', 'pbc']:
+                for oc in range(n_features):
+                    for mode in ['svd', 'svdr', 'qr']:
+                        for renormalize in [True, False]:
                             mpo = tk.models.MPO(
                                 n_features=n_features,
-                                in_dim=phys_dim,
+                                in_dim=2,
                                 out_dim=2,
                                 bond_dim=10,
-                                boundary=mpo_boundary)
+                                boundary=boundary)
                             
-                            mps_data = tk.models.MPSData(
+                            # Canonicalize
+                            rank = torch.randint(5, 11, (1,)).item()
+                            mpo.canonicalize(oc=oc,
+                                             mode=mode,
+                                             rank=rank,
+                                             cum_percentage=0.98,
+                                             cutoff=1e-5,
+                                             renormalize=renormalize)
+                            
+                            if mpo.bond_dim and mode != 'qr':
+                                if mpo.boundary == 'obc':
+                                    assert (torch.tensor(mpo.bond_dim) <= rank).all()
+                                else:
+                                    assert (torch.tensor(mpo.bond_dim[:-1]) <= rank).all()
+                            
+                            if mpo.boundary == 'obc':
+                                assert len(mpo.leaf_nodes) == n_features + 2
+                            else:
+                                assert len(mpo.leaf_nodes) == n_features
+    
+    def test_canonicalize_diff_bond_dims(self):
+        for n_features in [1, 2, 3, 4, 10]:
+            for boundary in ['obc', 'pbc']:
+                for oc in range(n_features):
+                    for mode in ['svd', 'svdr', 'qr']:
+                        for renormalize in [True, False]:
+                            bond_dim = torch.randint(low=2, high=10,
+                                                     size=(n_features,)).tolist()
+                            bond_dim = bond_dim[:-1] if boundary == 'obc' \
+                                else bond_dim
+                                
+                            mpo = tk.models.MPO(
                                 n_features=n_features,
-                                phys_dim=phys_dim,
-                                bond_dim=bond_dim[:-1] \
-                                    if mps_boundary == 'obc' else bond_dim,
-                                boundary=mps_boundary)
+                                in_dim=2,
+                                out_dim=2,
+                                bond_dim=bond_dim,
+                                boundary=boundary)
                             
-                            for _ in range(10):
-                                # MPO needs to be reset each time if inline_input
-                                # or inline_mats are False, since the bond dims
-                                # of MPSData may change, and therefore the
-                                # computation of stacks may fail
-                                if not inline_input or not inline_mats:
-                                    mpo.reset()
-                                
-                                bond_dim = torch.randint(low=2, high=8,
-                                                         size=(n_features,)).tolist()
-                                tensors = [
-                                    torch.randn(10,
-                                                bond_dim[i - 1],
-                                                phys_dim[i],
-                                                bond_dim[i]) 
-                                    for i in range(n_features)]
-                                if mps_boundary == 'obc':
-                                    tensors[0] = tensors[0][:, 0]
-                                    tensors[-1] = tensors[-1][..., 0]
-                                
-                                mps_data.add_data(tensors)
-                                result = mpo(mps=mps_data,
-                                             inline_input=inline_input,
-                                             inline_mats=inline_mats)
-                                
-                                assert result.shape == tuple([10] + [2] * n_features)
+                            # Canonicalize
+                            rank = torch.randint(5, 11, (1,)).item()
+                            mpo.canonicalize(oc=oc,
+                                             mode=mode,
+                                             rank=rank,
+                                             cum_percentage=0.98,
+                                             cutoff=1e-5,
+                                             renormalize=renormalize)
                             
-                            for i, node in enumerate(mpo.mats_env):
-                                assert node.is_connected_to(mps_data.mats_env[i])
+                            if mpo.bond_dim and mode != 'qr':
+                                if mpo.boundary == 'obc':
+                                    assert (torch.tensor(mpo.bond_dim) <= rank).all()
+                                else:
+                                    assert (torch.tensor(mpo.bond_dim[:-1]) <= rank).all()
                             
-                            # Check if unset_data_nodes removes MPSData nodes
-                            # from MPO
-                            mpo.unset_data_nodes()
-                            
-                            for i, node in enumerate(mpo.mats_env):
-                                assert not node.is_connected_to(mps_data.mats_env[i])
-                                assert mps_data.mats_env[i].network is None
+                            if mpo.boundary == 'obc':
+                                assert len(mpo.leaf_nodes) == n_features + 2
+                            else:
+                                assert len(mpo.leaf_nodes) == n_features
 
 
 class TestUMPO:

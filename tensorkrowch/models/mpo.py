@@ -728,6 +728,171 @@ class MPO(TensorNetwork):  # MARK: MPO
             result = op.permute(result, tuple(all_edges))
         
         return result
+    
+    @torch.no_grad()
+    def canonicalize(self,
+                     oc: Optional[int] = None,
+                     mode: Text = 'svd',
+                     rank: Optional[int] = None,
+                     cum_percentage: Optional[float] = None,
+                     cutoff: Optional[float] = None,
+                     renormalize: bool = False) -> None:
+        r"""
+        Turns MPO into `canonical` form via local SVD/QR decompositions in the
+        same way this transformation is applied to :class:`~tensorkrowch.models.MPS`.
+        
+        To specify the new bond dimensions, the arguments ``rank``,
+        ``cum_percentage`` or ``cutoff`` can be specified. These will be used
+        equally for all SVD computations.
+        
+        If none of them are specified, the bond dimensions won't be modified
+        if possible. Only when the bond dimension is bigger than the physical
+        dimension multiplied by the other bond dimension of the node, it will
+        be cropped to that size.
+        
+        Parameters
+        ----------
+        oc : int
+            Position of the orthogonality center. It should be between 0 and 
+            ``n_features - 1``.
+        mode : {"svd", "svdr", "qr"}
+            Indicates which decomposition should be used to split a node after
+            contracting it. See more at :func:`~tensorkrowch.svd_`,
+            :func:`~tensorkrowch.svdr_`, :func:`~tensorkrowch.qr_`.
+            If mode is "qr", operation :func:`~tensorkrowch.qr_` will be
+            performed on nodes at the left of the output node, whilst operation
+            :func:`~tensorkrowch.rq_` will be used for nodes at the right.
+        rank : int, optional
+            Number of singular values to keep.
+        cum_percentage : float, optional
+            Proportion that should be satisfied between the sum of all singular
+            values kept and the total sum of all singular values.
+            
+            .. math::
+            
+                \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+                cum\_percentage
+        cutoff : float, optional
+            Quantity that lower bounds singular values in order to be kept.
+        renormalize : bool
+            Indicates whether nodes should be renormalized after SVD/QR
+            decompositions. If not, it may happen that the norm explodes as it
+            is being accumulated from all nodes. Renormalization aims to avoid
+            this undesired behavior by extracting the norm of each node on a
+            logarithmic scale after SVD/QR decompositions are computed. Finally,
+            the normalization factor is evenly distributed among all nodes of
+            the MPO.
+            
+        Examples
+        --------
+        >>> mpo = tk.models.MPO(n_features=4,
+        ...                     in_dim=2,
+        ...                     out_dim=2,
+        ...                     bond_dim=5)
+        >>> mpo.canonicalize(rank=3)
+        >>> mpo.bond_dim
+        [3, 3, 3]
+        """
+        self.reset()
+
+        prev_auto_stack = self._auto_stack
+        self.auto_stack = False
+
+        if oc is None:
+            oc = self._n_features - 1
+        elif (oc < 0) or (oc >= self._n_features):
+            raise ValueError('Orthogonality center position `oc` should be '
+                             'between 0 and `n_features` - 1')
+        
+        log_norm = 0
+        
+        nodes = self._mats_env[:]
+        if self._boundary == 'obc':
+            nodes[0].tensor[1:] = torch.zeros_like(
+                nodes[0].tensor[1:])
+            nodes[-1].tensor[..., 1:, :] = torch.zeros_like(
+                nodes[-1].tensor[..., 1:, :])
+        
+        # If mode is svd or svr and none of the args is provided, the ranks are
+        # kept as they were originally
+        keep_rank = False
+        if (rank is None) and (cum_percentage is None) and (cutoff is None):
+            keep_rank = True
+        
+        for i in range(oc):
+            if mode == 'svd':
+                result1, result2 = nodes[i]['right'].svd_(
+                    side='right',
+                    rank=nodes[i]['right'].size() if keep_rank else rank,
+                    cum_percentage=cum_percentage,
+                    cutoff=cutoff)
+            elif mode == 'svdr':
+                result1, result2 = nodes[i]['right'].svdr_(
+                    side='right',
+                    rank=nodes[i]['right'].size() if keep_rank else rank,
+                    cum_percentage=cum_percentage,
+                    cutoff=cutoff)
+            elif mode == 'qr':
+                result1, result2 = nodes[i]['right'].qr_()
+            else:
+                raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
+            
+            if renormalize:
+                aux_norm = result2.norm() / sqrt(result2.shape[0])
+                if not aux_norm.isinf() and (aux_norm > 0):
+                    result2.tensor = result2.tensor / aux_norm
+                    log_norm += aux_norm.log()
+
+            result1 = result1.parameterize()
+            nodes[i] = result1
+            nodes[i + 1] = result2
+
+        for i in range(len(nodes) - 1, oc, -1):
+            if mode == 'svd':
+                result1, result2 = nodes[i]['left'].svd_(
+                    side='left',
+                    rank=nodes[i]['left'].size() if keep_rank else rank,
+                    cum_percentage=cum_percentage,
+                    cutoff=cutoff)
+            elif mode == 'svdr':
+                result1, result2 = nodes[i]['left'].svdr_(
+                    side='left',
+                    rank=nodes[i]['left'].size() if keep_rank else rank,
+                    cum_percentage=cum_percentage,
+                    cutoff=cutoff)
+            elif mode == 'qr':
+                result1, result2 = nodes[i]['left'].rq_()
+            else:
+                raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
+            
+            if renormalize:
+                aux_norm = result1.norm() / sqrt(result1.shape[0])
+                if not aux_norm.isinf() and (aux_norm > 0):
+                    result1.tensor = result1.tensor / aux_norm
+                    log_norm += aux_norm.log()
+
+            result2 = result2.parameterize()
+            nodes[i] = result2
+            nodes[i - 1] = result1
+
+        nodes[oc] = nodes[oc].parameterize()
+        
+        # Rescale
+        if log_norm != 0:
+            rescale = (log_norm / len(nodes)).exp()
+        
+        if renormalize and (log_norm != 0):
+            for node in nodes:
+                node.tensor = node.tensor * rescale
+        
+        # Update variables
+        if self._boundary == 'obc':
+            self._bond_dim = [node['right'].size() for node in nodes[:-1]]
+        else:
+            self._bond_dim = [node['right'].size() for node in nodes]
+        self._mats_env = nodes
+
+        self.auto_stack = prev_auto_stack
 
 
 class UMPO(MPO):  # MARK: UMPO
@@ -969,3 +1134,14 @@ class UMPO(MPO):  # MARK: UMPO
             node.set_tensor_from(net.uniform_memory)
             
         return net
+    
+    def canonicalize(self,
+                     oc: Optional[int] = None,
+                     mode: Text = 'svd',
+                     rank: Optional[int] = None,
+                     cum_percentage: Optional[float] = None,
+                     cutoff: Optional[float] = None,
+                     renormalize: bool = False) -> None:
+        """:meta private:"""
+        raise NotImplementedError(
+            '`canonicalize` not implemented for UMPO')

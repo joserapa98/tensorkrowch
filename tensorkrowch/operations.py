@@ -37,6 +37,7 @@ This script contains:
 
 import types
 from typing import Callable
+from numbers import Number
 
 from itertools import starmap
 import opt_einsum
@@ -400,7 +401,7 @@ def _tprod_next(successor: Successor,
                 node2: AbstractNode) -> Node:
     tensor1 = node1._direct_get_tensor(successor.node_ref[0],
                                        successor.index[0])
-    tensor2 = node1._direct_get_tensor(successor.node_ref[1],
+    tensor2 = node2._direct_get_tensor(successor.node_ref[1],
                                        successor.index[1])
     new_tensor = torch.outer(tensor1.flatten(),
                              tensor2.flatten()).view(*(list(node1._shape) + 
@@ -488,19 +489,34 @@ AbstractNode.__mod__ = tprod_node
 ###################################   MUL    ##################################
 # MARK: mul
 def _check_first_mul(node1: AbstractNode,
-                     node2: AbstractNode) -> Optional[Successor]:
-    args = (node1, node2)
+                     node2: Union[AbstractNode,
+                                  torch.Tensor,
+                                  Number]) -> Optional[Successor]:
+    if isinstance(node2, AbstractNode):
+        args = (node1, node2)
+    else:
+        args = (node1,)
     successors = node1._successors.get('mul')
     if not successors:
         return None
     return successors.get(args)
 
 
-def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
-    if node1._network != node2._network:
-        raise ValueError('Nodes must be in the same network')
+def _mul_first(node1: AbstractNode,
+               node2: Union[AbstractNode,
+                            torch.Tensor,
+                            Number]) -> Node:
+    is_node2 = False
+    if isinstance(node2, AbstractNode):
+        is_node2 = True
+        if node1._network != node2._network:
+            raise ValueError('Nodes must be in the same network')
 
-    new_tensor = node1.tensor * node2.tensor
+    if is_node2:
+        new_tensor = node1.tensor * node2.tensor
+    else:
+        new_tensor = node1.tensor * node2
+    
     new_node = Node._create_resultant(axes_names=node1.axes_names,
                                       name='mul',
                                       network=node1._network,
@@ -510,12 +526,21 @@ def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
 
     # Create successor
     net = node1._network
-    args = (node1, node2)
-    successor = Successor(node_ref=(node1.node_ref(),
-                                    node2.node_ref()),
-                          index=(node1._tensor_info['index'],
-                                 node2._tensor_info['index']),
-                          child=new_node)
+    
+    if is_node2:
+        args = (node1, node2)
+        successor = Successor(node_ref=(node1.node_ref(),
+                                        node2.node_ref()),
+                              index=(node1._tensor_info['index'],
+                                     node2._tensor_info['index']),
+                              child=new_node,
+                              hints=is_node2)
+    else:
+        args = (node1,)
+        successor = Successor(node_ref=(node1.node_ref(),),
+                              index=(node1._tensor_info['index'],),
+                              child=new_node,
+                              hints=is_node2)
 
     # Add successor to parent
     if 'mul' in node1._successors:
@@ -529,18 +554,27 @@ def _mul_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     # Record in inverse_memory while tracing
     if net._tracing:
         node1._record_in_inverse_memory()
-        node2._record_in_inverse_memory()
+        
+        if is_node2:
+            node2._record_in_inverse_memory()
 
     return new_node
 
 
 def _mul_next(successor: Successor,
               node1: AbstractNode,
-              node2: AbstractNode) -> Node:
+              node2: Union[AbstractNode,
+                           torch.Tensor,
+                           Number]) -> Node:
+    is_node2 = successor.hints
     tensor1 = node1._direct_get_tensor(successor.node_ref[0],
                                        successor.index[0])
-    tensor2 = node1._direct_get_tensor(successor.node_ref[1],
-                                       successor.index[1])
+    if is_node2:
+        tensor2 = node2._direct_get_tensor(successor.node_ref[1],
+                                           successor.index[1])
+    else:
+        tensor2 = node2
+    
     new_tensor = tensor1 * tensor2
     child = successor.child
     child._direct_set_tensor(new_tensor)
@@ -548,19 +582,31 @@ def _mul_next(successor: Successor,
     # Record in inverse_memory while contracting, if network is traced
     # (to delete memory if possible)
     if node1._network._traced:
-        node1._check_inverse_memory(successor.node_ref)
-        node2._check_inverse_memory(successor.node_ref)
-
+        node1._check_inverse_memory(successor.node_ref[0])
+        
+        if is_node2:
+            node2._check_inverse_memory(successor.node_ref[1])
+    
     return child
 
 
 mul_op = Operation('mul', _check_first_mul, _mul_first, _mul_next)
 
 
-def mul(node1: AbstractNode, node2: AbstractNode) -> Node:
+def mul(node1: AbstractNode,
+        node2: Union[AbstractNode,
+                     torch.Tensor,
+                     Number]) -> Node:
     """
     Element-wise product between two nodes. It can also be performed using the
     operator ``*``.
+    
+    It also admits to take as ``node2`` a number or tensor, that will be
+    multiplied by the ``node1`` tensor as ``node1.tensor * node2``. If this
+    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method
+    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called
+    explicitly to contract the network, rather than relying on its internal
+    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.
     
     Nodes ``resultant`` from this operation are called ``"mul"``. The node
     that keeps information about the :class:`Successor` is ``node1``.
@@ -569,8 +615,9 @@ def mul(node1: AbstractNode, node2: AbstractNode) -> Node:
     ----------
     node1 : Node or ParamNode
         First node to be multiplied. Its edges will appear in the resultant node.
-    node2 : Node or ParamNode
-        Second node to be multiplied.
+    node2 : Node, ParamNode, torch.Tensor or number
+        Second node to be multiplied. It can also be a number or tensor with
+        appropiate shape.
 
     Returns
     -------
@@ -584,6 +631,13 @@ def mul(node1: AbstractNode, node2: AbstractNode) -> Node:
     >>> result = nodeA * nodeB
     >>> result.shape
     torch.Size([2, 3])
+    
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> tensorB = torch.randn(2, 3)
+    >>> result = nodeA * tensorB
+    >>> result.shape
+    torch.Size([2, 3])
     """
     return mul_op(node1, node2)
 
@@ -594,13 +648,21 @@ mul_node.__doc__ = \
     Element-wise product between two nodes. It can also be performed using the
     operator ``*``.
     
+    It also admits to take as ``node2`` a number or tensor, that will be
+    multiplied by the ``self`` tensor as ``self.tensor * node2``. If this
+    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method
+    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called
+    explicitly to contract the network, rather than relying on its internal
+    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.
+    
     Nodes ``resultant`` from this operation are called ``"mul"``. The node
     that keeps information about the :class:`Successor` is ``self``.
 
     Parameters
     ----------
-    node2 : Node or ParamNode
-        Second node to be multiplied.
+    node2 : Node, ParamNode, torch.Tensor or number
+        Second node to be multiplied. It can also be a number or tensor with
+        appropiate shape.
 
     Returns
     -------
@@ -614,27 +676,251 @@ mul_node.__doc__ = \
     >>> result = nodeA.mul(nodeB)
     >>> result.shape
     torch.Size([2, 3])
+    
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> tensorB = torch.randn(2, 3)
+    >>> result = nodeA.mul(tensorB)
+    >>> result.shape
+    torch.Size([2, 3])
     """
 
 AbstractNode.__mul__ = mul_node
 
 
+###################################   DIV    ##################################
+# MARK: div
+def _check_first_div(node1: AbstractNode,
+                     node2: Union[AbstractNode,
+                                  torch.Tensor,
+                                  Number]) -> Optional[Successor]:
+    if isinstance(node2, AbstractNode):
+        args = (node1, node2)
+    else:
+        args = (node1,)
+    successors = node1._successors.get('div')
+    if not successors:
+        return None
+    return successors.get(args)
+
+
+def _div_first(node1: AbstractNode,
+               node2: Union[AbstractNode,
+                            torch.Tensor,
+                            Number]) -> Node:
+    is_node2 = False
+    if isinstance(node2, AbstractNode):
+        is_node2 = True
+        if node1._network != node2._network:
+            raise ValueError('Nodes must be in the same network')
+
+    if is_node2:
+        new_tensor = node1.tensor / node2.tensor
+    else:
+        new_tensor = node1.tensor / node2
+    
+    new_node = Node._create_resultant(axes_names=node1.axes_names,
+                                      name='div',
+                                      network=node1._network,
+                                      tensor=new_tensor,
+                                      edges=node1._edges,
+                                      node1_list=node1.is_node1())
+
+    # Create successor
+    net = node1._network
+    
+    if is_node2:
+        args = (node1, node2)
+        successor = Successor(node_ref=(node1.node_ref(),
+                                        node2.node_ref()),
+                              index=(node1._tensor_info['index'],
+                                     node2._tensor_info['index']),
+                              child=new_node,
+                              hints=is_node2)
+    else:
+        args = (node1,)
+        successor = Successor(node_ref=(node1.node_ref(),),
+                              index=(node1._tensor_info['index'],),
+                              child=new_node,
+                              hints=is_node2)
+
+    # Add successor to parent
+    if 'div' in node1._successors:
+        node1._successors['div'].update({args: successor})
+    else:
+        node1._successors['div'] = {args: successor}
+
+    # Add operation to list of performed operations of TN
+    net._seq_ops.append(('div', args))
+
+    # Record in inverse_memory while tracing
+    if net._tracing:
+        node1._record_in_inverse_memory()
+        
+        if is_node2:
+            node2._record_in_inverse_memory()
+
+    return new_node
+
+
+def _div_next(successor: Successor,
+              node1: AbstractNode,
+              node2: Union[AbstractNode,
+                           torch.Tensor,
+                           Number]) -> Node:
+    is_node2 = successor.hints
+    tensor1 = node1._direct_get_tensor(successor.node_ref[0],
+                                       successor.index[0])
+    if is_node2:
+        tensor2 = node2._direct_get_tensor(successor.node_ref[1],
+                                           successor.index[1])
+    else:
+        tensor2 = node2
+    
+    new_tensor = tensor1 / tensor2
+    child = successor.child
+    child._direct_set_tensor(new_tensor)
+
+    # Record in inverse_memory while contracting, if network is traced
+    # (to delete memory if possible)
+    if node1._network._traced:
+        node1._check_inverse_memory(successor.node_ref[0])
+        
+        if is_node2:
+            node2._check_inverse_memory(successor.node_ref[1])
+    
+    return child
+
+
+div_op = Operation('div', _check_first_div, _div_first, _div_next)
+
+
+def div(node1: AbstractNode,
+        node2: Union[AbstractNode,
+                     torch.Tensor,
+                     Number]) -> Node:
+    """
+    Element-wise division between two nodes. It can also be performed using the
+    operator ``/``.
+    
+    It also admits to take as ``node2`` a number or tensor, that will
+    divide the ``node1`` tensor as ``node1.tensor / node2``. If this
+    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method
+    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called
+    explicitly to contract the network, rather than relying on its internal
+    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.
+    
+    Nodes ``resultant`` from this operation are called ``"div"``. The node
+    that keeps information about the :class:`Successor` is ``node1``.
+
+    Parameters
+    ----------
+    node1 : Node or ParamNode
+        First node to be divided. Its edges will appear in the resultant node.
+    node2 : Node, ParamNode, torch.Tensor or number
+        Second node, the divisor. It can also be a number or tensor with
+        appropiate shape.
+
+    Returns
+    -------
+    Node
+    
+    Examples
+    --------
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = nodeA / nodeB
+    >>> result.shape
+    torch.Size([2, 3])
+    
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> tensorB = torch.randn(2, 3)
+    >>> result = nodeA / tensorB
+    >>> result.shape
+    torch.Size([2, 3])
+    """
+    return div_op(node1, node2)
+
+
+div_node = copy_func(div)
+div_node.__doc__ = \
+    """
+    Element-wise division between two nodes. It can also be performed using the
+    operator ``/``.
+    
+    It also admits to take as ``node2`` a number or tensor, that will
+    divide the ``self`` tensor as ``self.tensor / node2``. If this
+    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method
+    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called
+    explicitly to contract the network, rather than relying on its internal
+    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.
+    
+    Nodes ``resultant`` from this operation are called ``"div"``. The node
+    that keeps information about the :class:`Successor` is ``self``.
+
+    Parameters
+    ----------
+    node2 : Node, ParamNode, torch.Tensor or number
+        Second node, the divisor. It can also be a number or tensor with
+        appropiate shape.
+
+    Returns
+    -------
+    Node
+    
+    Examples
+    --------
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> nodeB = tk.randn((2, 3), network=net)
+    >>> result = nodeA.div(nodeB)
+    >>> result.shape
+    torch.Size([2, 3])
+    
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> tensorB = torch.randn(2, 3)
+    >>> result = nodeA.div(tensorB)
+    >>> result.shape
+    torch.Size([2, 3])
+    """
+
+AbstractNode.__truediv__ = div_node
+
+
 ###################################   ADD    ##################################
 # MARK: add
 def _check_first_add(node1: AbstractNode,
-                     node2: AbstractNode) -> Optional[Successor]:
-    args = (node1, node2)
+                     node2: Union[AbstractNode,
+                                  torch.Tensor,
+                                  Number]) -> Optional[Successor]:
+    if isinstance(node2, AbstractNode):
+        args = (node1, node2)
+    else:
+        args = (node1,)
     successors = node1._successors.get('add')
     if not successors:
         return None
     return successors.get(args)
 
 
-def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
-    if node1._network != node2._network:
-        raise ValueError('Nodes must be in the same network')
+def _add_first(node1: AbstractNode,
+               node2: Union[AbstractNode,
+                            torch.Tensor,
+                            Number]) -> Node:
+    is_node2 = False
+    if isinstance(node2, AbstractNode):
+        is_node2 = True
+        if node1._network != node2._network:
+            raise ValueError('Nodes must be in the same network')
 
-    new_tensor = node1.tensor + node2.tensor
+    if is_node2:
+        new_tensor = node1.tensor + node2.tensor
+    else:
+        new_tensor = node1.tensor + node2
+    
     new_node = Node._create_resultant(axes_names=node1.axes_names,
                                       name='add',
                                       network=node1._network,
@@ -644,12 +930,21 @@ def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
 
     # Create successor
     net = node1._network
-    args = (node1, node2)
-    successor = Successor(node_ref=(node1.node_ref(),
-                                    node2.node_ref()),
-                          index=(node1._tensor_info['index'],
-                                 node2._tensor_info['index']),
-                          child=new_node)
+    
+    if is_node2:
+        args = (node1, node2)
+        successor = Successor(node_ref=(node1.node_ref(),
+                                        node2.node_ref()),
+                              index=(node1._tensor_info['index'],
+                                     node2._tensor_info['index']),
+                              child=new_node,
+                              hints=is_node2)
+    else:
+        args = (node1,)
+        successor = Successor(node_ref=(node1.node_ref(),),
+                              index=(node1._tensor_info['index'],),
+                              child=new_node,
+                              hints=is_node2)
 
     # Add successor to parent
     if 'add' in node1._successors:
@@ -663,18 +958,27 @@ def _add_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     # Record in inverse_memory while tracing
     if net._tracing:
         node1._record_in_inverse_memory()
-        node2._record_in_inverse_memory()
+        
+        if is_node2:
+            node2._record_in_inverse_memory()
 
     return new_node
 
 
 def _add_next(successor: Successor,
               node1: AbstractNode,
-              node2: AbstractNode) -> Node:
+              node2: Union[AbstractNode,
+                           torch.Tensor,
+                           Number]) -> Node:
+    is_node2 = successor.hints
     tensor1 = node1._direct_get_tensor(successor.node_ref[0],
                                        successor.index[0])
-    tensor2 = node1._direct_get_tensor(successor.node_ref[1],
-                                       successor.index[1])
+    if is_node2:
+        tensor2 = node2._direct_get_tensor(successor.node_ref[1],
+                                           successor.index[1])
+    else:
+        tensor2 = node2
+    
     new_tensor = tensor1 + tensor2
     child = successor.child
     child._direct_set_tensor(new_tensor)
@@ -682,8 +986,10 @@ def _add_next(successor: Successor,
     # Record in inverse_memory while contracting, if network is traced
     # (to delete memory if possible)
     if node1._network._traced:
-        node1._check_inverse_memory(successor.node_ref)
-        node2._check_inverse_memory(successor.node_ref)
+        node1._check_inverse_memory(successor.node_ref[0])
+        
+        if is_node2:
+            node2._check_inverse_memory(successor.node_ref[1])
 
     return child
 
@@ -691,10 +997,20 @@ def _add_next(successor: Successor,
 add_op = Operation('add', _check_first_add, _add_first, _add_next)
 
 
-def add(node1: AbstractNode, node2: AbstractNode) -> Node:
+def add(node1: AbstractNode,
+        node2: Union[AbstractNode,
+                     torch.Tensor,
+                     Number]) -> Node:
     """
     Element-wise addition between two nodes. It can also be performed using the
     operator ``+``.
+    
+    It also admits to take as ``node2`` a number or tensor, that will be
+    added to the ``node1`` tensor as ``node1.tensor + node2``. If this
+    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method
+    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called
+    explicitly to contract the network, rather than relying on its internal
+    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.
     
     Nodes ``resultant`` from this operation are called ``"add"``. The node
     that keeps information about the :class:`Successor` is ``node1``.
@@ -703,8 +1019,9 @@ def add(node1: AbstractNode, node2: AbstractNode) -> Node:
     ----------
     node1 : Node or ParamNode
         First node to be added. Its edges will appear in the resultant node.
-    node2 : Node or ParamNode
-        Second node to be added.
+    node2 : Node, ParamNode, torch.Tensor or numeric
+        Second node to be added. It can also be a number or tensor with
+        appropiate shape.
 
     Returns
     -------
@@ -718,6 +1035,13 @@ def add(node1: AbstractNode, node2: AbstractNode) -> Node:
     >>> result = nodeA + nodeB
     >>> result.shape
     torch.Size([2, 3])
+    
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> tensorB = torch.randn(2, 3)
+    >>> result = nodeA + tensorB
+    >>> result.shape
+    torch.Size([2, 3])
     """
     return add_op(node1, node2)
 
@@ -728,13 +1052,21 @@ add_node.__doc__ = \
     Element-wise addition between two nodes. It can also be performed using the
     operator ``+``.
     
+    It also admits to take as ``node2`` a number or tensor, that will be
+    added to the ``self`` tensor as ``self.tensor + node2``. If this
+    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method
+    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called
+    explicitly to contract the network, rather than relying on its internal
+    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.
+    
     Nodes ``resultant`` from this operation are called ``"add"``. The node
     that keeps information about the :class:`Successor` is ``self``.
 
     Parameters
     ----------
-    node2 : Node or ParamNode
-        Second node to be multiplied.
+    node2 : Node, ParamNode, torch.Tensor or number
+        Second node to be added. It can also be a number or tensor with
+        appropiate shape.
 
     Returns
     -------
@@ -748,6 +1080,13 @@ add_node.__doc__ = \
     >>> result = nodeA.add(nodeB)
     >>> result.shape
     torch.Size([2, 3])
+    
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> tensorB = torch.randn(2, 3)
+    >>> result = nodeA.add(tensorB)
+    >>> result.shape
+    torch.Size([2, 3])
     """
 
 AbstractNode.__add__ = add_node
@@ -756,19 +1095,34 @@ AbstractNode.__add__ = add_node
 ###################################   SUB    ##################################
 # MARK: sub
 def _check_first_sub(node1: AbstractNode,
-                     node2: AbstractNode) -> Optional[Successor]:
-    args = (node1, node2)
+                     node2: Union[AbstractNode,
+                                  torch.Tensor,
+                                  Number]) -> Optional[Successor]:
+    if isinstance(node2, AbstractNode):
+        args = (node1, node2)
+    else:
+        args = (node1,)
     successors = node1._successors.get('sub')
     if not successors:
         return None
     return successors.get(args)
 
 
-def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
-    if node1._network != node2._network:
-        raise ValueError('Nodes must be in the same network')
+def _sub_first(node1: AbstractNode,
+               node2: Union[AbstractNode,
+                            torch.Tensor,
+                            Number]) -> Node:
+    is_node2 = False
+    if isinstance(node2, AbstractNode):
+        is_node2 = True
+        if node1._network != node2._network:
+            raise ValueError('Nodes must be in the same network')
 
-    new_tensor = node1.tensor - node2.tensor
+    if is_node2:
+        new_tensor = node1.tensor - node2.tensor
+    else:
+        new_tensor = node1.tensor - node2
+    
     new_node = Node._create_resultant(axes_names=node1.axes_names,
                                       name='sub',
                                       network=node1._network,
@@ -778,12 +1132,21 @@ def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
 
     # Create successor
     net = node1._network
-    args = (node1, node2)
-    successor = Successor(node_ref=(node1.node_ref(),
-                                    node2.node_ref()),
-                          index=(node1._tensor_info['index'],
-                                 node2._tensor_info['index']),
-                          child=new_node)
+    
+    if is_node2:
+        args = (node1, node2)
+        successor = Successor(node_ref=(node1.node_ref(),
+                                        node2.node_ref()),
+                              index=(node1._tensor_info['index'],
+                                     node2._tensor_info['index']),
+                              child=new_node,
+                              hints=is_node2)
+    else:
+        args = (node1,)
+        successor = Successor(node_ref=(node1.node_ref(),),
+                              index=(node1._tensor_info['index'],),
+                              child=new_node,
+                              hints=is_node2)
 
     # Add successor to parent
     if 'sub' in node1._successors:
@@ -797,18 +1160,27 @@ def _sub_first(node1: AbstractNode, node2: AbstractNode) -> Node:
     # Record in inverse_memory while tracing
     if net._tracing:
         node1._record_in_inverse_memory()
-        node2._record_in_inverse_memory()
+        
+        if is_node2:
+            node2._record_in_inverse_memory()
 
     return new_node
 
 
 def _sub_next(successor: Successor,
               node1: AbstractNode,
-              node2: AbstractNode) -> Node:
+              node2: Union[AbstractNode,
+                           torch.Tensor,
+                           Number]) -> Node:
+    is_node2 = successor.hints
     tensor1 = node1._direct_get_tensor(successor.node_ref[0],
                                        successor.index[0])
-    tensor2 = node1._direct_get_tensor(successor.node_ref[1],
-                                       successor.index[1])
+    if is_node2:
+        tensor2 = node2._direct_get_tensor(successor.node_ref[1],
+                                           successor.index[1])
+    else:
+        tensor2 = node2
+    
     new_tensor = tensor1 - tensor2
     child = successor.child
     child._direct_set_tensor(new_tensor)
@@ -816,8 +1188,10 @@ def _sub_next(successor: Successor,
     # Record in inverse_memory while contracting, if network is traced
     # (to delete memory if possible)
     if node1._network._traced:
-        node1._check_inverse_memory(successor.node_ref)
-        node2._check_inverse_memory(successor.node_ref)
+        node1._check_inverse_memory(successor.node_ref[0])
+        
+        if is_node2:
+            node2._check_inverse_memory(successor.node_ref[1])
 
     return child
 
@@ -825,10 +1199,20 @@ def _sub_next(successor: Successor,
 sub_op = Operation('sub', _check_first_sub, _sub_first, _sub_next)
 
 
-def sub(node1: AbstractNode, node2: AbstractNode) -> Node:
+def sub(node1: AbstractNode,
+        node2: Union[AbstractNode,
+                     torch.Tensor,
+                     Number]) -> Node:
     """
     Element-wise subtraction between two nodes. It can also be performed using
     the operator ``-``.
+    
+    It also admits to take as ``node2`` a number or tensor, that will be
+    subtracted from the ``node1`` tensor as ``node1.tensor - node2``. If this
+    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method
+    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called
+    explicitly to contract the network, rather than relying on its internal
+    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.
     
     Nodes ``resultant`` from this operation are called ``"sub"``. The node
     that keeps information about the :class:`Successor` is ``node1``.
@@ -837,8 +1221,9 @@ def sub(node1: AbstractNode, node2: AbstractNode) -> Node:
     ----------
     node1 : Node or ParamNode
         First node, minuend . Its edges will appear in the resultant node.
-    node2 : Node or ParamNode
-        Second node, subtrahend.
+    node2 : Node, ParamNode, torch.Tensor or number
+        Second node, subtrahend. It can also be a number or tensor with
+        appropiate shape.
 
     Returns
     -------
@@ -852,6 +1237,13 @@ def sub(node1: AbstractNode, node2: AbstractNode) -> Node:
     >>> result = nodeA - nodeB
     >>> result.shape
     torch.Size([2, 3])
+    
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> tensorB = torch.randn(2, 3)
+    >>> result = nodeA - tensorB
+    >>> result.shape
+    torch.Size([2, 3])
     """
     return sub_op(node1, node2)
 
@@ -862,13 +1254,21 @@ sub_node.__doc__ = \
     Element-wise subtraction between two nodes. It can also be performed using
     the operator ``-``.
     
+    It also admits to take as ``node2`` a number or tensor, that will be
+    subtracted from the ``self`` tensor as ``self.tensor - node2``. If this
+    is used like this in the :meth:`~tensorkrowch.TensorNetwork.contract` method
+    of a  :class:`~tensorkrowch.TensorNetwork`, this will have to be called
+    explicitly to contract the network, rather than relying on its internal
+    call via the :meth:`~tensorkrowch.TensorNetwork.forward`.
+    
     Nodes ``resultant`` from this operation are called ``"sub"``. The node
     that keeps information about the :class:`Successor` is ``self``.
 
     Parameters
     ----------
-    node2 : Node or ParamNode
-        Second node, subtrahend.
+    node2 : Node, ParamNode, torch.Tensor or number
+        Second node, subtrahend. It can also be a number or tensor with
+        appropiate shape.
 
     Returns
     -------
@@ -882,9 +1282,177 @@ sub_node.__doc__ = \
     >>> result = nodeA.sub(nodeB)
     >>> result.shape
     torch.Size([2, 3])
+    
+    >>> net = tk.TensorNetwork()
+    >>> nodeA = tk.randn((2, 3), network=net)
+    >>> tensorB = torch.randn(2, 3)
+    >>> result = nodeA.sub(tensorB)
+    >>> result.shape
+    torch.Size([2, 3])
     """
 
 AbstractNode.__sub__ = sub_node
+
+
+###############################   renormalize    ##############################
+# MARK: renormalize
+def _check_first_renormalize(
+    node: AbstractNode,
+    p: Union[int, float] = 2,
+    axis: Optional[Union[Ax, Sequence[Ax]]] = None) -> Optional[Successor]:
+    
+    if isinstance(axis, (tuple, list)):
+        axis = tuple(axis)
+    args = (node, p, axis)
+    successors = node._successors.get('renormalize')
+    if not successors:
+        return None
+    return successors.get(args)
+
+
+def _renormalize_first(
+    node: AbstractNode,
+    p: Union[int, float] = 2,
+    axis: Optional[Union[Ax, Sequence[Ax]]] = None) -> Node:
+    
+    axis_num = []
+    if axis is not None:
+        if isinstance(axis, (tuple, list)):
+            for ax in axis:
+                axis_num.append(node.get_axis_num(ax))
+            axis = tuple(axis)
+        else:
+            axis_num.append(node.get_axis_num(axis))
+    
+    norm = node.tensor.norm(p=p, dim=axis_num, keepdim=True)
+    new_tensor = node.tensor / norm
+    new_node = Node._create_resultant(axes_names=node.axes_names,
+                                      name='renormalize',
+                                      network=node._network,
+                                      tensor=new_tensor,
+                                      edges=node._edges,
+                                      node1_list=node.is_node1())
+
+    # Create successor
+    net = node._network
+    args = (node, p, axis)
+    successor = Successor(node_ref=node.node_ref(),
+                          index=node._tensor_info['index'],
+                          child=new_node,
+                          hints=axis_num)
+
+    # Add successor to parent
+    if 'renormalize' in node._successors:
+        node._successors['renormalize'].update({args: successor})
+    else:
+        node._successors['renormalize'] = {args: successor}
+
+    # Add operation to list of performed operations of TN
+    net._seq_ops.append(('renormalize', args))
+
+    # Record in inverse_memory while tracing
+    if net._tracing:
+        node._record_in_inverse_memory()
+
+    return new_node
+
+
+def _renormalize_next(
+    successor: Successor,
+    node: AbstractNode,
+    p: Union[int, float] = 2,
+    axis: Optional[Union[Ax, Sequence[Ax]]] = None) -> Node:
+    
+    axis_num = successor.hints
+    tensor = node._direct_get_tensor(successor.node_ref,
+                                     successor.index)
+    norm = tensor.norm(p=p, dim=axis_num, keepdim=True)
+    new_tensor = tensor / norm
+    
+    child = successor.child
+    child._direct_set_tensor(new_tensor)
+
+    # Record in inverse_memory while contracting, if network is traced
+    # (to delete memory if possible)
+    if node._network._traced:
+        node._check_inverse_memory(successor.node_ref)
+    
+    return child
+
+
+renormalize_op = Operation('renormalize',
+                           _check_first_renormalize,
+                           _renormalize_first,
+                           _renormalize_next)
+
+
+def renormalize(
+    node: AbstractNode,
+    p: Union[int, float] = 2,
+    axis: Optional[Union[Ax, Sequence[Ax]]] = None) -> Node:
+    """
+    Normalizes the node with the specified norm. That is, the tensor of ``node``
+    is divided by its norm.
+    
+    Different norms can be taken, specifying the argument ``p``, and accross
+    different dimensions, or node axes, specifying the argument ``axis``.
+    
+    See also `torch.norm() <https://pytorch.org/docs/stable/generated/torch.norm.html>`_.
+
+    Parameters
+    ----------
+    node : Node or ParamNode
+        Node that is to be renormalized.
+    p : int, float
+        The order of the norm.
+    axis : int, str, Axis or list[int, str or Axis], optional
+        Axis or sequence of axes over which to reduce.
+
+    Returns
+    -------
+    Node
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn((3, 3))
+    >>> renormA = tk.renormalize(nodeA)
+    >>> renormA.norm()
+    tensor(1.)
+    """
+    return renormalize_op(node, p, axis)
+
+
+renormalize_node = copy_func(renormalize)
+renormalize_node.__doc__ = \
+    """
+    Normalizes the node with the specified norm. That is, the tensor of ``node``
+    is divided by its norm.
+    
+    Different norms can be taken, specifying the argument ``p``, and accross
+    different dimensions, or node axes, specifying the argument ``axis``.
+    
+    See also `torch.norm() <https://pytorch.org/docs/stable/generated/torch.norm.html>`_.
+
+    Parameters
+    ----------
+    p : int, float
+        The order of the norm.
+    axis : int, str, Axis or list[int, str or Axis], optional
+        Axis or sequence of axes over which to reduce.
+
+    Returns
+    -------
+    Node
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn((3, 3))
+    >>> renormA = nodeA.renormalize()
+    >>> renormA.norm()
+    tensor(1.)
+    """
+
+AbstractNode.renormalize = renormalize_node
 
 
 ###############################################################################
@@ -1003,7 +1571,7 @@ def _split_first(node: AbstractNode,
             cp_rank = torch.lt(
                 s_percentages,
                 cum_percentage_tensor
-                ).view(-1, s.shape[-1]).all(dim=0).sum()
+                ).view(-1, s.shape[-1]).any(dim=0).sum()
             lst_ranks.append(max(1, cp_rank.item() + 1))
             
         if cutoff is not None:
@@ -1011,7 +1579,7 @@ def _split_first(node: AbstractNode,
             co_rank = torch.ge(
                 s,
                 cutoff_tensor
-                ).view(-1, s.shape[-1]).all(dim=0).sum()
+                ).view(-1, s.shape[-1]).any(dim=0).sum()
             lst_ranks.append(max(1, co_rank.item()))
         
         # Select rank from specified restrictions
@@ -1202,7 +1770,7 @@ def _split_next(successor: Successor,
             cp_rank = torch.lt(
                 s_percentages,
                 cum_percentage_tensor
-                ).view(-1, s.shape[-1]).all(dim=0).sum()
+                ).view(-1, s.shape[-1]).any(dim=0).sum()
             lst_ranks.append(max(1, cp_rank.item() + 1))
             
         if cutoff is not None:
@@ -1210,7 +1778,7 @@ def _split_next(successor: Successor,
             co_rank = torch.ge(
                 s,
                 cutoff_tensor
-                ).view(-1, s.shape[-1]).all(dim=0).sum()
+                ).view(-1, s.shape[-1]).any(dim=0).sum()
             lst_ranks.append(max(1, co_rank.item()))
         
         # Select rank from specified restrictions
@@ -1664,6 +2232,10 @@ def svd(edge: Edge,
     Contracts an edge via :func:`contract` and splits it via :func:`split`
     using ``mode = "svd"``. See :func:`split` for a more complete explanation.
     
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
+    
     This operation is the same as :meth:`~Edge.svd`.
 
     Parameters
@@ -1787,6 +2359,10 @@ svd_edge.__doc__ = \
     Contracts an edge via :meth:`~Edge.contract` and splits it via
     :meth:`~AbstractNode.split` using ``mode = "svd"``. See :func:`split` for
     a more complete explanation.
+    
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
 
     Parameters
     ----------
@@ -2057,6 +2633,10 @@ def svdr(edge: Edge,
     Contracts an edge via :func:`contract` and splits it via :func:`split`
     using ``mode = "svdr"``. See :func:`split` for a more complete explanation.
     
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
+    
     This operation is the same as :meth:`~Edge.svdr`.
 
     Parameters
@@ -2180,6 +2760,10 @@ svdr_edge.__doc__ = \
     Contracts an edge via :meth:`~Edge.contract` and splits it via
     :meth:`~AbstractNode.split` using ``mode = "svdr"``. See :func:`split` for
     a more complete explanation.
+    
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
 
     Parameters
     ----------
@@ -2446,6 +3030,10 @@ def qr(edge: Edge) -> Tuple[Node, Node]:
     Contracts an edge via :func:`contract` and splits it via :func:`split`
     using ``mode = "qr"``. See :func:`split` for a more complete explanation.
     
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
+    
     This operation is the same as :meth:`~Edge.qr`.
 
     Parameters
@@ -2547,6 +3135,10 @@ qr_edge.__doc__ = \
     Contracts an edge via :meth:`~Edge.contract` and splits it via
     :meth:`~AbstractNode.split` using ``mode = "qr"``. See :func:`split` for
     a more complete explanation.
+    
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
 
     Returns
     -------
@@ -2745,6 +3337,10 @@ def rq(edge: Edge) -> Tuple[Node, Node]:
     Contracts an edge via :func:`contract` and splits it via :func:`split`
     using ``mode = "rq"``. See :func:`split` for a more complete explanation.
     
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
+    
     This operation is the same as :meth:`~Edge.rq`.
 
     Parameters
@@ -2846,6 +3442,10 @@ rq_edge.__doc__ = \
     Contracts an edge via :meth:`~Edge.contract` and splits it via
     :meth:`~AbstractNode.split` using ``mode = "rq"``. See :func:`split` for
     a more complete explanation.
+    
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
 
     Returns
     -------
@@ -3397,6 +3997,10 @@ def contract(edge: Edge) -> Node:
     """
     Contracts the nodes that are connected through the edge.
     
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
+    
     Nodes ``resultant`` from this operation are called ``"contract_edges"``.
     The node that keeps information about the :class:`Successor` is
     ``edge.node1``.
@@ -3435,6 +4039,10 @@ contract_edge = copy_func(contract)
 contract_edge.__doc__ = \
     """
     Contracts the nodes that are connected through the edge.
+    
+    This only works if the nodes connected through the edge are ``leaf`` nodes.
+    Otherwise, this will perform the contraction between the ``leaf`` nodes
+    that were connected through this edge.
     
     Nodes ``resultant`` from this operation are called ``"contract_edges"``.
     The node that keeps information about the :class:`Successor` is
@@ -4031,6 +4639,13 @@ def stack(nodes: Sequence[AbstractNode]):
     :meth:`~TensorNetwork.auto_stack` mode affects the computation of
     :func:`stack`.
     
+    If this operation is used several times with the same input nodes, but their
+    dimensions can change from one call to another, this will lead to undesired
+    behaviour. The network should be :meth:`~tensorkrwoch.TensorNetwork.reset`.
+    This situation should be avoided in the
+    :meth:`~tensorkrowch.TensorNetwork.contract` method. Otherwise it will fail
+    in subsequent calls to ``contract`` or :meth:`~tensorkrowch.TensorNetwork.forward`
+    
     Nodes ``resultant`` from this operation are called ``"stack"``. If this
     operation returns a ``virtual`` :class:`ParamStackNode`, it will be called
     ``"virtual_result_stack"``. See :class:AbstractNode` to learn about this
@@ -4569,7 +5184,7 @@ einsum_op = Operation('einsum',
 
 
 def einsum(string: Text, *nodes: Sequence[AbstractNode]) -> Node:
-    """
+    r"""
     Performs einsum contraction based on `opt_einsum
     <https://optimized-einsum.readthedocs.io/en/stable/autosummary/opt_einsum.contract.html>`_.
     This operation facilitates contracting several nodes at once, specifying
@@ -4634,7 +5249,7 @@ def einsum(string: Text, *nodes: Sequence[AbstractNode]) -> Node:
 ##############################   STACKED EINSUM   #############################
 def stacked_einsum(string: Text,
                    *nodes_lists: List[AbstractNode]) -> List[Node]:
-    """
+    r"""
     Applies the same :func:`einsum` operation (same ``string``) to a sequence
     of groups of nodes (all groups having the same amount of nodes, with the
     same properties, etc.). That is, it stacks these groups of nodes into a

@@ -1276,7 +1276,7 @@ class ConvPEPS(PEPS):
 
     @property
     def kernel_size(self) -> Tuple[int, int]:
-        """
+        r"""
         Returns ``kernel_size``. Number of rows and columns in the 2D grid is
         given by :math:`kernel\_size_0` and :math:`kernel\_size_1`, respectively.
         """
@@ -1454,7 +1454,7 @@ class ConvUPEPS(UPEPS):
 
     @property
     def kernel_size(self) -> Tuple[int, int]:
-        """
+        r"""
         Returns ``kernel_size``. Number of rows and columns in the 2D grid is
         given by :math:`kernel\_size_0` and :math:`kernel\_size_1`, respectively.
         """

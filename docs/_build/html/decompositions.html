@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Decompositions &#8212; TensorKrowch 1.0.1 documentation</title>
+    <title>Decompositions &#8212; TensorKrowch 1.1.0 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -388,7 +388,7 @@ title="Print to PDF"
 <h2>vec_to_mps<a class="headerlink" href="#vec-to-mps" title="Permalink to this headline">#</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.decompositions.vec_to_mps">
-<span class="sig-prename descclassname"><span class="pre">tensorkrowch.decompositions.</span></span><span class="sig-name descname"><span class="pre">vec_to_mps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cum_percentage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/decompositions/svd_decompositions.html#vec_to_mps"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.decompositions.vec_to_mps" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.decompositions.</span></span><span class="sig-name descname"><span class="pre">vec_to_mps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_batches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cum_percentage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">renormalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/decompositions/svd_decompositions.html#vec_to_mps"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.decompositions.vec_to_mps" title="Permalink to this definition">#</a></dt>
 <dd><p>Splits a vector into a sequence of MPS tensors via consecutive SVD
 decompositions. The resultant tensors can be used to instantiate a
 <a class="reference internal" href="models.html#tensorkrowch.models.MPS" title="tensorkrowch.models.MPS"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPS</span></code></a> with <code class="docutils literal notranslate"><span class="pre">boundary</span> <span class="pre">=</span> <span class="pre">&quot;obc&quot;</span></code>.</p>
@@ -425,6 +425,13 @@ values kept and the total sum of all singular values.</p>
 cum\_percentage\]</div>
 </p></li>
 <li><p><strong>cutoff</strong> (<em>float</em><em>, </em><em>optional</em>) – Quantity that lower bounds singular values in order to be kept.</p></li>
+<li><p><strong>renormalize</strong> (<em>bool</em>) – Indicates whether nodes should be renormalized after SVD/QR
+decompositions. If not, it may happen that the norm explodes as it
+is being accumulated from all nodes. Renormalization aims to avoid
+this undesired behavior by extracting the norm of each node on a
+logarithmic scale after SVD/QR decompositions are computed. Finally,
+the normalization factor is evenly distributed among all nodes of
+the MPS.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
@@ -438,7 +445,7 @@ cum\_percentage\]</div>
 <h2>mat_to_mpo<a class="headerlink" href="#mat-to-mpo" title="Permalink to this headline">#</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="tensorkrowch.decompositions.mat_to_mpo">
-<span class="sig-prename descclassname"><span class="pre">tensorkrowch.decompositions.</span></span><span class="sig-name descname"><span class="pre">mat_to_mpo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cum_percentage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/decompositions/svd_decompositions.html#mat_to_mpo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.decompositions.mat_to_mpo" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">tensorkrowch.decompositions.</span></span><span class="sig-name descname"><span class="pre">mat_to_mpo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rank</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cum_percentage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">renormalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/decompositions/svd_decompositions.html#mat_to_mpo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.decompositions.mat_to_mpo" title="Permalink to this definition">#</a></dt>
 <dd><p>Splits a matrix into a sequence of MPO tensors via consecutive SVD
 decompositions. The resultant tensors can be used to instantiate a
 <a class="reference internal" href="models.html#tensorkrowch.models.MPO" title="tensorkrowch.models.MPO"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPO</span></code></a> with <code class="docutils literal notranslate"><span class="pre">boundary</span> <span class="pre">=</span> <span class="pre">&quot;obc&quot;</span></code>.</p>
@@ -467,6 +474,13 @@ values kept and the total sum of all singular values.</p>
 cum\_percentage\]</div>
 </p></li>
 <li><p><strong>cutoff</strong> (<em>float</em><em>, </em><em>optional</em>) – Quantity that lower bounds singular values in order to be kept.</p></li>
+<li><p><strong>renormalize</strong> (<em>bool</em>) – Indicates whether nodes should be renormalized after SVD/QR
+decompositions. If not, it may happen that the norm explodes as it
+is being accumulated from all nodes. Renormalization aims to avoid
+this undesired behavior by extracting the norm of each node on a
+logarithmic scale after SVD/QR decompositions are computed. Finally,
+the normalization factor is evenly distributed among all nodes of
+the MPS.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>

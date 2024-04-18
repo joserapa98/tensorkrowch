@@ -373,7 +373,6 @@ class MPSData(TensorNetwork):  # MARK: MPSData
             self._right_node.set_tensor(init_method='copy', device=device)
                 
         if init_method is not None:
-                
             for i, node in enumerate(self._mats_env):
                 node.set_tensor(init_method=init_method,
                                 device=device,
@@ -435,28 +434,41 @@ class MPSData(TensorNetwork):  # MARK: MPSData
                         f'{node.shape[-2]} of the MPS')
         
         data = data[:]
+        device = data[0].device
         for i, node in enumerate(self._mats_env):
             if self._boundary == 'obc':
-                aux_tensor = torch.zeros(*node.shape,
-                                         device=data[i].device)
+                aux_tensor = torch.zeros(*node.shape, device=device)
                 if (i == 0) and (i == (self._n_features - 1)):
                     aux_tensor = torch.zeros(*data[i].shape[:-1],
                                              *node.shape[-3:],
-                                             device=data[i].device)
+                                             device=device)
                     aux_tensor[..., 0, :, 0] = data[i]
                     data[i] = aux_tensor
                 elif i == 0:
                     aux_tensor = torch.zeros(*data[i].shape[:-2],
                                              *node.shape[-3:-1],
                                              data[i].shape[-1],
-                                             device=data[i].device)
+                                             device=device)
                     aux_tensor[..., 0, :, :] = data[i]
                     data[i] = aux_tensor
                 elif i == (self._n_features - 1):
                     aux_tensor = torch.zeros(*data[i].shape[:-1],
                                              *node.shape[-2:],
-                                             device=data[i].device)
+                                             device=device)
                     aux_tensor[..., 0] = data[i]
                     data[i] = aux_tensor
                     
             node._direct_set_tensor(data[i])
+        
+        # Send left and right nodes to correct device
+        if self._boundary == 'obc':
+            if self._left_node.device != device:
+                self._left_node.tensor = self._left_node.tensor.to(device)
+            if self._right_node.device != device:
+                self._right_node.tensor = self._right_node.tensor.to(device)
+        
+        # Update bond dim
+        if self._boundary == 'obc':
+            self._bond_dim = [node['right'].size() for node in self._mats_env[:-1]]
+        else:
+            self._bond_dim = [node['right'].size() for node in self._mats_env]

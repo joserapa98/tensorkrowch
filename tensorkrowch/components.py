@@ -814,6 +814,11 @@ class AbstractNode(ABC):  # MARK: AbstractNode
                                                              List['AbstractNode']]:
         """
         Returns the neighbours of the node, the nodes to which it is connected.
+        
+        If ``self`` is a ``resultant`` node, this will return the neighbours of
+        the ``leaf`` nodes from which ``self`` inherits the edges. Therefore,
+        one cannot check if two ``resultant`` nodes are connected by looking
+        into their neighbours lists. To do that, use :meth:`is_connected_to`.
 
         Parameters
         ----------
@@ -1853,7 +1858,8 @@ class AbstractNode(ABC):  # MARK: AbstractNode
 
     def norm(self,
              p: Union[int, float] = 2,
-             axis: Optional[Union[Ax, Sequence[Ax]]] = None) -> Tensor:
+             axis: Optional[Union[Ax, Sequence[Ax]]] = None,
+             keepdim: bool = False) -> Tensor:
         """
         Returns the norm of all elements in the node's tensor. If an ``axis`` is
         specified, the norm is over that axis. If ``axis`` is a sequence of axes,
@@ -1870,6 +1876,9 @@ class AbstractNode(ABC):  # MARK: AbstractNode
             The order of the norm.
         axis : int, str, Axis or list[int, str or Axis], optional
             Axis or sequence of axes over which to reduce.
+        keepdim : bool
+            Boolean indicating whether the output tensor have dimensions
+            retained or not.
 
         Returns
         -------
@@ -1895,7 +1904,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
                     axis_num.append(self.get_axis_num(ax))
             else:
                 axis_num.append(self.get_axis_num(axis))
-        return self.tensor.norm(p=p, dim=axis_num)
+        return self.tensor.norm(p=p, dim=axis_num, keepdim=keepdim)
 
     def numel(self) -> Tensor:
         """

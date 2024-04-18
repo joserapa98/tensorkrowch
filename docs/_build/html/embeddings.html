@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Embeddings &#8212; TensorKrowch 1.0.1 documentation</title>
+    <title>Embeddings &#8212; TensorKrowch 1.1.0 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -684,6 +684,19 @@ shape</p>
 <span class="go">torch.Size([100, 5, 3])</span>
 </pre></div>
 </div>
+<p>To embed a data tensor with elements between 0 and 1 as basis vectors, one
+can concatenate <a class="reference internal" href="#tensorkrowch.embeddings.discretize" title="tensorkrowch.embeddings.discretize"><code class="xref py py-func docutils literal notranslate"><span class="pre">discretize()</span></code></a> with <a class="reference internal" href="#tensorkrowch.embeddings.basis" title="tensorkrowch.embeddings.basis"><code class="xref py py-func docutils literal notranslate"><span class="pre">basis()</span></code></a>.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">discretize</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([100, 10, 1])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="n">emb_a</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">int</span><span class="p">(),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([100, 10, 5])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>
@@ -752,6 +765,19 @@ shape</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">emb_b</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">emb_b</span><span class="o">.</span><span class="n">shape</span>
 <span class="go">torch.Size([100, 5, 10])</span>
+</pre></div>
+</div>
+<p>To embed a data tensor with elements between 0 and 1 as basis vectors, one
+can concatenate <a class="reference internal" href="#tensorkrowch.embeddings.discretize" title="tensorkrowch.embeddings.discretize"><code class="xref py py-func docutils literal notranslate"><span class="pre">discretize()</span></code></a> with <a class="reference internal" href="#tensorkrowch.embeddings.basis" title="tensorkrowch.embeddings.basis"><code class="xref py py-func docutils literal notranslate"><span class="pre">basis()</span></code></a>.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">discretize</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([100, 10, 1])</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="n">emb_a</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">int</span><span class="p">(),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">emb_a</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([100, 10, 5])</span>
 </pre></div>
 </div>
 </dd></dl>

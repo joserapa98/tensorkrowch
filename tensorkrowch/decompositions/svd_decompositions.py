@@ -14,7 +14,8 @@ def vec_to_mps(vec: torch.Tensor,
                n_batches: int = 0,
                rank: Optional[int] = None,
                cum_percentage: Optional[float] = None,
-               cutoff: Optional[float] = None) -> List[torch.Tensor]:
+               cutoff: Optional[float] = None,
+               renormalize: bool = False) -> List[torch.Tensor]:
     r"""
     Splits a vector into a sequence of MPS tensors via consecutive SVD
     decompositions. The resultant tensors can be used to instantiate a
@@ -67,6 +68,14 @@ def vec_to_mps(vec: torch.Tensor,
             cum\_percentage
     cutoff : float, optional
         Quantity that lower bounds singular values in order to be kept.
+    renormalize : bool
+            Indicates whether nodes should be renormalized after SVD/QR
+            decompositions. If not, it may happen that the norm explodes as it
+            is being accumulated from all nodes. Renormalization aims to avoid
+            this undesired behavior by extracting the norm of each node on a
+            logarithmic scale after SVD/QR decompositions are computed. Finally,
+            the normalization factor is evenly distributed among all nodes of
+            the MPS.
 
     Returns
     -------
@@ -82,20 +91,21 @@ def vec_to_mps(vec: torch.Tensor,
     batches_shape = vec.shape[:n_batches]
     phys_dims = torch.tensor(vec.shape[n_batches:])
     
+    log_norm = 0
     prev_bond = 1
     tensors = []
     for i in range(len(phys_dims) - 1):
-        vec = vec.view(*batches_shape,
-                       prev_bond * phys_dims[i],
-                       phys_dims[(i + 1):].prod())
+        vec = vec.reshape(*batches_shape,
+                          prev_bond * phys_dims[i],
+                          phys_dims[(i + 1):].prod())
         
         u, s, vh = torch.linalg.svd(vec, full_matrices=False)
         
         lst_ranks = []
         
         if rank is None:
-            rank = s.shape[-1]
-            lst_ranks.append(rank)
+            aux_rank = s.shape[-1]
+            lst_ranks.append(aux_rank)
         else:
             lst_ranks.append(min(max(1, int(rank)), s.shape[-1]))
             
@@ -106,7 +116,7 @@ def vec_to_mps(vec: torch.Tensor,
             cp_rank = torch.lt(
                 s_percentages,
                 cum_percentage_tensor
-                ).view(-1, s.shape[-1]).all(dim=0).sum()
+                ).view(-1, s.shape[-1]).any(dim=0).sum()
             lst_ranks.append(max(1, cp_rank.item() + 1))
             
         if cutoff is not None:
@@ -114,32 +124,45 @@ def vec_to_mps(vec: torch.Tensor,
             co_rank = torch.ge(
                 s,
                 cutoff_tensor
-                ).view(-1, s.shape[-1]).all(dim=0).sum()
+                ).view(-1, s.shape[-1]).any(dim=0).sum()
             lst_ranks.append(max(1, co_rank.item()))
         
         # Select rank from specified restrictions
-        rank = min(lst_ranks)
+        aux_rank = min(lst_ranks)
         
-        u = u[..., :rank]
+        u = u[..., :aux_rank]
         if i > 0:
-            u = u.reshape(*batches_shape, prev_bond, phys_dims[i], rank)
+            u = u.reshape(*batches_shape, prev_bond, phys_dims[i], aux_rank)
             
-        s = s[..., :rank]
-        vh = vh[..., :rank, :]
-        vh = torch.diag_embed(s) @ vh
+        s = s[..., :aux_rank]
+        vh = vh[..., :aux_rank, :]
+        
+        if renormalize:
+            aux_norm = s.norm(dim=-1, keepdim=True)
+            if not aux_norm.isinf().any() and (aux_norm > 0).any():
+                s = s / aux_norm
+                log_norm += aux_norm.log()
         
         tensors.append(u)
-        prev_bond = rank
+        prev_bond = aux_rank
         vec = torch.diag_embed(s) @ vh
         
     tensors.append(vec)
+    
+    if log_norm is not 0:
+        rescale = (log_norm / len(tensors)).exp()
+        for vec in tensors:
+            vec *= rescale.view(*vec.shape[:n_batches],
+                                *([1] * len(vec.shape[n_batches:])))
+    
     return tensors
 
 
 def mat_to_mpo(mat: torch.Tensor,
                rank: Optional[int] = None,
                cum_percentage: Optional[float] = None,
-               cutoff: Optional[float] = None) -> List[torch.Tensor]:
+               cutoff: Optional[float] = None,
+               renormalize: bool = False) -> List[torch.Tensor]:
     r"""
     Splits a matrix into a sequence of MPO tensors via consecutive SVD
     decompositions. The resultant tensors can be used to instantiate a
@@ -179,6 +202,14 @@ def mat_to_mpo(mat: torch.Tensor,
             cum\_percentage
     cutoff : float, optional
         Quantity that lower bounds singular values in order to be kept.
+    renormalize : bool
+            Indicates whether nodes should be renormalized after SVD/QR
+            decompositions. If not, it may happen that the norm explodes as it
+            is being accumulated from all nodes. Renormalization aims to avoid
+            this undesired behavior by extracting the norm of each node on a
+            logarithmic scale after SVD/QR decompositions are computed. Finally,
+            the normalization factor is evenly distributed among all nodes of
+            the MPS.
 
     Returns
     -------
@@ -193,19 +224,20 @@ def mat_to_mpo(mat: torch.Tensor,
     if len(in_out_dims) == 2:
         return [mat]
     
+    log_norm = 0
     prev_bond = 1
     tensors = []
     for i in range(0, len(in_out_dims) - 2, 2):
-        mat = mat.view(prev_bond * in_out_dims[i] * in_out_dims[i + 1],
-                       in_out_dims[(i + 2):].prod())
+        mat = mat.reshape(prev_bond * in_out_dims[i] * in_out_dims[i + 1],
+                          in_out_dims[(i + 2):].prod())
         
         u, s, vh = torch.linalg.svd(mat, full_matrices=False)
         
         lst_ranks = []
         
         if rank is None:
-            rank = s.shape[-1]
-            lst_ranks.append(rank)
+            aux_rank = s.shape[-1]
+            lst_ranks.append(aux_rank)
         else:
             lst_ranks.append(min(max(1, int(rank)), s.shape[-1]))
             
@@ -216,7 +248,7 @@ def mat_to_mpo(mat: torch.Tensor,
             cp_rank = torch.lt(
                 s_percentages,
                 cum_percentage_tensor
-                ).view(-1, s.shape[-1]).all(dim=0).sum()
+                ).view(-1, s.shape[-1]).any(dim=0).sum()
             lst_ranks.append(max(1, cp_rank.item() + 1))
             
         if cutoff is not None:
@@ -224,28 +256,39 @@ def mat_to_mpo(mat: torch.Tensor,
             co_rank = torch.ge(
                 s,
                 cutoff_tensor
-                ).view(-1, s.shape[-1]).all(dim=0).sum()
+                ).view(-1, s.shape[-1]).any(dim=0).sum()
             lst_ranks.append(max(1, co_rank.item()))
         
         # Select rank from specified restrictions
-        rank = min(lst_ranks)
+        aux_rank = min(lst_ranks)
         
-        u = u[..., :rank]
+        u = u[..., :aux_rank]
         if i == 0:
-            u = u.reshape(in_out_dims[i], in_out_dims[i + 1], rank)
-            u = u.permute(0, 2, 1) # left x input x right
+            u = u.reshape(in_out_dims[i], in_out_dims[i + 1], aux_rank)
+            u = u.permute(0, 2, 1) # input x right x output
         else:
-            u = u.reshape(prev_bond, in_out_dims[i], in_out_dims[i + 1], rank)
+            u = u.reshape(prev_bond, in_out_dims[i], in_out_dims[i + 1], aux_rank)
             u = u.permute(0, 1, 3, 2) # left x input x right x output
             
-        s = s[..., :rank]
-        vh = vh[..., :rank, :]
-        vh = torch.diag_embed(s) @ vh
+        s = s[..., :aux_rank]
+        vh = vh[..., :aux_rank, :]
+        
+        if renormalize:
+            aux_norm = s.norm(dim=-1)
+            if not aux_norm.isinf() and (aux_norm > 0):
+                s = s / aux_norm
+                log_norm += aux_norm.log()
         
         tensors.append(u)
-        prev_bond = rank
+        prev_bond = aux_rank
         mat = torch.diag_embed(s) @ vh
     
-    mat = mat.reshape(rank, in_out_dims[-2], in_out_dims[-1])
+    mat = mat.reshape(aux_rank, in_out_dims[-2], in_out_dims[-1])
     tensors.append(mat)
+    
+    if renormalize:
+        rescale = (log_norm / len(tensors)).exp()
+        for mat in tensors:
+            mat *= rescale
+    
     return tensors

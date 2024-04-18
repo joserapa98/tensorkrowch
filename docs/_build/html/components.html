@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Components &#8212; TensorKrowch 1.0.1 documentation</title>
+    <title>Components &#8212; TensorKrowch 1.1.0 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -945,6 +945,10 @@ returns the <code class="docutils literal notranslate"><span class="pre">node1</
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.neighbours">
 <span class="sig-name descname"><span class="pre">neighbours</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.neighbours"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.neighbours" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns the neighbours of the node, the nodes to which it is connected.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">self</span></code> is a <code class="docutils literal notranslate"><span class="pre">resultant</span></code> node, this will return the neighbours of
+the <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes from which <code class="docutils literal notranslate"><span class="pre">self</span></code> inherits the edges. Therefore,
+one cannot check if two <code class="docutils literal notranslate"><span class="pre">resultant</span></code> nodes are connected by looking
+into their neighbours lists. To do that, use <a class="reference internal" href="#tensorkrowch.AbstractNode.is_connected_to" title="tensorkrowch.AbstractNode.is_connected_to"><code class="xref py py-meth docutils literal notranslate"><span class="pre">is_connected_to()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>, </em><em>optional</em>) – Axis for which to retrieve the neighbour.</p>
@@ -1429,7 +1433,7 @@ instead of a <a class="reference internal" href="#tensorkrowch.Node" title="tens
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.AbstractNode.norm">
-<span class="sig-name descname"><span class="pre">norm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.norm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.norm" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">norm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keepdim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/components.html#AbstractNode.norm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.AbstractNode.norm" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns the norm of all elements in the node’s tensor. If an <code class="docutils literal notranslate"><span class="pre">axis</span></code> is
 specified, the norm is over that axis. If <code class="docutils literal notranslate"><span class="pre">axis</span></code> is a sequence of axes,
 reduce over all of them.</p>
@@ -1441,6 +1445,8 @@ instead of a <a class="reference internal" href="#tensorkrowch.Node" title="tens
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>p</strong> (<em>int</em><em>, </em><em>float</em>) – The order of the norm.</p></li>
 <li><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em>, </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em> or </em><em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em><em>, </em><em>optional</em>) – Axis or sequence of axes over which to reduce.</p></li>
+<li><p><strong>keepdim</strong> (<em>bool</em>) – Boolean indicating whether the output tensor have dimensions
+retained or not.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
@@ -1610,6 +1616,34 @@ underscore indicate <strong>in-place</strong> operations.</p>
 </p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.AbstractNode.renormalize">
+<span class="sig-name descname"><span class="pre">renormalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.AbstractNode.renormalize" title="Permalink to this definition">#</a></dt>
+<dd><p>Normalizes the node with the specified norm. That is, the tensor of <code class="docutils literal notranslate"><span class="pre">node</span></code>
+is divided by its norm.</p>
+<p>Different norms can be taken, specifying the argument <code class="docutils literal notranslate"><span class="pre">p</span></code>, and accross
+different dimensions, or node axes, specifying the argument <code class="docutils literal notranslate"><span class="pre">axis</span></code>.</p>
+<p>See also <a class="reference external" href="https://pytorch.org/docs/stable/generated/torch.norm.html">torch.norm()</a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p</strong> (<em>int</em><em>, </em><em>float</em>) – The order of the norm.</p></li>
+<li><p><strong>axis</strong> (<em>int</em><em>, </em><em>str</em><em>, </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em> or </em><em>list</em><em>[</em><em>int</em><em>, </em><em>str</em><em> or </em><a class="reference internal" href="#tensorkrowch.Axis" title="tensorkrowch.Axis"><em>Axis</em></a><em>]</em><em>, </em><em>optional</em>) – Axis or sequence of axes over which to reduce.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a></p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">randn</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">renormA</span> <span class="o">=</span> <span class="n">nodeA</span><span class="o">.</span><span class="n">renormalize</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">renormA</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+<span class="go">tensor(1.)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
@@ -2863,6 +2897,9 @@ two dangling edges, one for each node.</p>
 <dt class="sig sig-object py" id="tensorkrowch.Edge.contract">
 <span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tensorkrowch.Edge.contract" title="Permalink to this definition">#</a></dt>
 <dd><p>Contracts the nodes that are connected through the edge.</p>
+<p>This only works if the nodes connected through the edge are <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes.
+Otherwise, this will perform the contraction between the <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes
+that were connected through this edge.</p>
 <p>Nodes <code class="docutils literal notranslate"><span class="pre">resultant</span></code> from this operation are called <code class="docutils literal notranslate"><span class="pre">&quot;contract_edges&quot;</span></code>.
 The node that keeps information about the <a class="reference internal" href="#tensorkrowch.Successor" title="tensorkrowch.Successor"><code class="xref py py-class docutils literal notranslate"><span class="pre">Successor</span></code></a> is
 <code class="docutils literal notranslate"><span class="pre">self.node1</span></code>.</p>
@@ -2938,6 +2975,9 @@ underscore indicate <strong>in-place</strong> operations.</p>
 <dd><p>Contracts an edge via <a class="reference internal" href="#tensorkrowch.Edge.contract" title="tensorkrowch.Edge.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a> and splits it via
 <a class="reference internal" href="#tensorkrowch.AbstractNode.split" title="tensorkrowch.AbstractNode.split"><code class="xref py py-meth docutils literal notranslate"><span class="pre">split()</span></code></a> using <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">&quot;qr&quot;</span></code>. See <a class="reference internal" href="operations.html#tensorkrowch.split" title="tensorkrowch.split"><code class="xref py py-func docutils literal notranslate"><span class="pre">split()</span></code></a> for
 a more complete explanation.</p>
+<p>This only works if the nodes connected through the edge are <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes.
+Otherwise, this will perform the contraction between the <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes
+that were connected through this edge.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p>tuple[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
@@ -3028,6 +3068,9 @@ nodes connected by <code class="docutils literal notranslate"><span class="pre">
 <dd><p>Contracts an edge via <a class="reference internal" href="#tensorkrowch.Edge.contract" title="tensorkrowch.Edge.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a> and splits it via
 <a class="reference internal" href="#tensorkrowch.AbstractNode.split" title="tensorkrowch.AbstractNode.split"><code class="xref py py-meth docutils literal notranslate"><span class="pre">split()</span></code></a> using <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">&quot;rq&quot;</span></code>. See <a class="reference internal" href="operations.html#tensorkrowch.split" title="tensorkrowch.split"><code class="xref py py-func docutils literal notranslate"><span class="pre">split()</span></code></a> for
 a more complete explanation.</p>
+<p>This only works if the nodes connected through the edge are <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes.
+Otherwise, this will perform the contraction between the <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes
+that were connected through this edge.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p>tuple[<a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>, <a class="reference internal" href="#tensorkrowch.Node" title="tensorkrowch.Node">Node</a>]</p>
@@ -3118,6 +3161,9 @@ nodes connected by <code class="docutils literal notranslate"><span class="pre">
 <dd><p>Contracts an edge via <a class="reference internal" href="#tensorkrowch.Edge.contract" title="tensorkrowch.Edge.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a> and splits it via
 <a class="reference internal" href="#tensorkrowch.AbstractNode.split" title="tensorkrowch.AbstractNode.split"><code class="xref py py-meth docutils literal notranslate"><span class="pre">split()</span></code></a> using <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">&quot;svd&quot;</span></code>. See <a class="reference internal" href="operations.html#tensorkrowch.split" title="tensorkrowch.split"><code class="xref py py-func docutils literal notranslate"><span class="pre">split()</span></code></a> for
 a more complete explanation.</p>
+<p>This only works if the nodes connected through the edge are <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes.
+Otherwise, this will perform the contraction between the <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes
+that were connected through this edge.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -3242,6 +3288,9 @@ cum\_percentage\]</div>
 <dd><p>Contracts an edge via <a class="reference internal" href="#tensorkrowch.Edge.contract" title="tensorkrowch.Edge.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a> and splits it via
 <a class="reference internal" href="#tensorkrowch.AbstractNode.split" title="tensorkrowch.AbstractNode.split"><code class="xref py py-meth docutils literal notranslate"><span class="pre">split()</span></code></a> using <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">&quot;svdr&quot;</span></code>. See <a class="reference internal" href="operations.html#tensorkrowch.split" title="tensorkrowch.split"><code class="xref py py-func docutils literal notranslate"><span class="pre">split()</span></code></a> for
 a more complete explanation.</p>
+<p>This only works if the nodes connected through the edge are <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes.
+Otherwise, this will perform the contraction between the <code class="docutils literal notranslate"><span class="pre">leaf</span></code> nodes
+that were connected through this edge.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">

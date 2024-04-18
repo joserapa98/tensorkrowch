@@ -323,6 +323,18 @@ def discretize(data: torch.Tensor,
     >>> emb_b = tk.embeddings.discretize(b, level=3)
     >>> emb_b.shape
     torch.Size([100, 5, 3])
+    
+    To embed a data tensor with elements between 0 and 1 as basis vectors, one
+    can concatenate :func:`discretize` with :func:`basis`.
+    
+    >>> a = torch.rand(100, 10)
+    >>> emb_a = tk.embeddings.discretize(a, level=1, base=5)
+    >>> emb_a.shape
+    torch.Size([100, 10, 1])
+    
+    >>> emb_a = tk.embeddings.basis(emb_a.squeeze(2).int(), dim=5)
+    >>> emb_a.shape
+    torch.Size([100, 10, 5])
     """
     if not isinstance(data, torch.Tensor):
         raise TypeError('`data` should be torch.Tensor type')
@@ -412,6 +424,18 @@ def basis(data: torch.Tensor, dim: int = 2, axis: int = -1) -> torch.Tensor:
     >>> emb_b = tk.embeddings.basis(b, dim=10)
     >>> emb_b.shape
     torch.Size([100, 5, 10])
+    
+    To embed a data tensor with elements between 0 and 1 as basis vectors, one
+    can concatenate :func:`discretize` with :func:`basis`.
+    
+    >>> a = torch.rand(100, 10)
+    >>> emb_a = tk.embeddings.discretize(a, level=1, base=5)
+    >>> emb_a.shape
+    torch.Size([100, 10, 1])
+    
+    >>> emb_a = tk.embeddings.basis(emb_a.squeeze(2).int(), dim=5)
+    >>> emb_a.shape
+    torch.Size([100, 10, 5])
     """
     if not isinstance(data, torch.Tensor):
         raise TypeError('`data` should be torch.Tensor type')

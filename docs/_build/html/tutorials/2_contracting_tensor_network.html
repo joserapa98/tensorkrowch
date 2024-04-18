@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Contracting and Differentiating the Tensor Network &#8212; TensorKrowch 1.0.1 documentation</title>
+    <title>Contracting and Differentiating the Tensor Network &#8212; TensorKrowch 1.1.0 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -496,8 +496,8 @@ compute between nodes. We can distinguish between two types of operations:</p>
 <ol class="loweralpha simple">
 <li><p><strong>Tensor-like</strong>: We refer to the operations one can compute using tensors in
 vanilla <code class="docutils literal notranslate"><span class="pre">PyTorch</span></code> like <a class="reference internal" href="../operations.html#tensorkrowch.permute" title="tensorkrowch.permute"><code class="xref py py-func docutils literal notranslate"><span class="pre">permute()</span></code></a> (and the in-place variant
-<a class="reference internal" href="../operations.html#tensorkrowch.permute_" title="tensorkrowch.permute_"><code class="xref py py-func docutils literal notranslate"><span class="pre">permute_()</span></code></a>), <a class="reference internal" href="../operations.html#tensorkrowch.tprod" title="tensorkrowch.tprod"><code class="xref py py-func docutils literal notranslate"><span class="pre">tprod()</span></code></a> (tensor product), <a class="reference internal" href="../operations.html#tensorkrowch.mul" title="tensorkrowch.mul"><code class="xref py py-func docutils literal notranslate"><span class="pre">mul()</span></code></a>, <a class="reference internal" href="../operations.html#tensorkrowch.add" title="tensorkrowch.add"><code class="xref py py-func docutils literal notranslate"><span class="pre">add()</span></code></a>
-and <a class="reference internal" href="../operations.html#tensorkrowch.sub" title="tensorkrowch.sub"><code class="xref py py-func docutils literal notranslate"><span class="pre">sub()</span></code></a>.</p></li>
+<a class="reference internal" href="../operations.html#tensorkrowch.permute_" title="tensorkrowch.permute_"><code class="xref py py-func docutils literal notranslate"><span class="pre">permute_()</span></code></a>), <a class="reference internal" href="../operations.html#tensorkrowch.tprod" title="tensorkrowch.tprod"><code class="xref py py-func docutils literal notranslate"><span class="pre">tprod()</span></code></a> (tensor product), <a class="reference internal" href="../operations.html#tensorkrowch.mul" title="tensorkrowch.mul"><code class="xref py py-func docutils literal notranslate"><span class="pre">mul()</span></code></a>, <a class="reference internal" href="../operations.html#tensorkrowch.div" title="tensorkrowch.div"><code class="xref py py-func docutils literal notranslate"><span class="pre">div()</span></code></a>,
+<a class="reference internal" href="../operations.html#tensorkrowch.add" title="tensorkrowch.add"><code class="xref py py-func docutils literal notranslate"><span class="pre">add()</span></code></a>, <a class="reference internal" href="../operations.html#tensorkrowch.sub" title="tensorkrowch.sub"><code class="xref py py-func docutils literal notranslate"><span class="pre">sub()</span></code></a> and <a class="reference internal" href="../operations.html#tensorkrowch.renormalize" title="tensorkrowch.renormalize"><code class="xref py py-func docutils literal notranslate"><span class="pre">renormalize()</span></code></a>.</p></li>
 <li><p><strong>Node-like</strong>: We refer to the operations one will need to contract a tensor
 network. These we will explain in more detail in this section.</p></li>
 </ol>

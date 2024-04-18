@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.decompositions.svd_decompositions &#8212; TensorKrowch 1.0.1 documentation</title>
+    <title>tensorkrowch.decompositions.svd_decompositions &#8212; TensorKrowch 1.1.0 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -303,7 +303,8 @@ title="Source repository"
                <span class="n">n_batches</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
                <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-               <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+               <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Splits a vector into a sequence of MPS tensors via consecutive SVD</span>
 <span class="sd">    decompositions. The resultant tensors can be used to instantiate a</span>
@@ -356,6 +357,14 @@ title="Source repository"
 <span class="sd">            cum\_percentage</span>
 <span class="sd">    cutoff : float, optional</span>
 <span class="sd">        Quantity that lower bounds singular values in order to be kept.</span>
+<span class="sd">    renormalize : bool</span>
+<span class="sd">            Indicates whether nodes should be renormalized after SVD/QR</span>
+<span class="sd">            decompositions. If not, it may happen that the norm explodes as it</span>
+<span class="sd">            is being accumulated from all nodes. Renormalization aims to avoid</span>
+<span class="sd">            this undesired behavior by extracting the norm of each node on a</span>
+<span class="sd">            logarithmic scale after SVD/QR decompositions are computed. Finally,</span>
+<span class="sd">            the normalization factor is evenly distributed among all nodes of</span>
+<span class="sd">            the MPS.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -371,20 +380,21 @@ title="Source repository"
     <span class="n">batches_shape</span> <span class="o">=</span> <span class="n">vec</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="n">n_batches</span><span class="p">]</span>
     <span class="n">phys_dims</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">vec</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">n_batches</span><span class="p">:])</span>
     
+    <span class="n">log_norm</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">prev_bond</span> <span class="o">=</span> <span class="mi">1</span>
     <span class="n">tensors</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">phys_dims</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
-        <span class="n">vec</span> <span class="o">=</span> <span class="n">vec</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">batches_shape</span><span class="p">,</span>
-                       <span class="n">prev_bond</span> <span class="o">*</span> <span class="n">phys_dims</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
-                       <span class="n">phys_dims</span><span class="p">[(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):]</span><span class="o">.</span><span class="n">prod</span><span class="p">())</span>
+        <span class="n">vec</span> <span class="o">=</span> <span class="n">vec</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="n">batches_shape</span><span class="p">,</span>
+                          <span class="n">prev_bond</span> <span class="o">*</span> <span class="n">phys_dims</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                          <span class="n">phys_dims</span><span class="p">[(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):]</span><span class="o">.</span><span class="n">prod</span><span class="p">())</span>
         
         <span class="n">u</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">vh</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">vec</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         
         <span class="n">lst_ranks</span> <span class="o">=</span> <span class="p">[]</span>
         
         <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">rank</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-            <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rank</span><span class="p">)</span>
+            <span class="n">aux_rank</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">aux_rank</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">rank</span><span class="p">)),</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
             
@@ -395,7 +405,7 @@ title="Source repository"
             <span class="n">cp_rank</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">lt</span><span class="p">(</span>
                 <span class="n">s_percentages</span><span class="p">,</span>
                 <span class="n">cum_percentage_tensor</span>
-                <span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
             <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">cp_rank</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
             
         <span class="k">if</span> <span class="n">cutoff</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -403,32 +413,45 @@ title="Source repository"
             <span class="n">co_rank</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ge</span><span class="p">(</span>
                 <span class="n">s</span><span class="p">,</span>
                 <span class="n">cutoff_tensor</span>
-                <span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
             <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">co_rank</span><span class="o">.</span><span class="n">item</span><span class="p">()))</span>
         
         <span class="c1"># Select rank from specified restrictions</span>
-        <span class="n">rank</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">lst_ranks</span><span class="p">)</span>
+        <span class="n">aux_rank</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">lst_ranks</span><span class="p">)</span>
         
-        <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">]</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">aux_rank</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="n">batches_shape</span><span class="p">,</span> <span class="n">prev_bond</span><span class="p">,</span> <span class="n">phys_dims</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">rank</span><span class="p">)</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="n">batches_shape</span><span class="p">,</span> <span class="n">prev_bond</span><span class="p">,</span> <span class="n">phys_dims</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">aux_rank</span><span class="p">)</span>
             
-        <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">]</span>
-        <span class="n">vh</span> <span class="o">=</span> <span class="n">vh</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">,</span> <span class="p">:]</span>
-        <span class="n">vh</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">diag_embed</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">@</span> <span class="n">vh</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">aux_rank</span><span class="p">]</span>
+        <span class="n">vh</span> <span class="o">=</span> <span class="n">vh</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">aux_rank</span><span class="p">,</span> <span class="p">:]</span>
+        
+        <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
+            <span class="n">aux_norm</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">isinf</span><span class="p">()</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">aux_norm</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="n">s</span> <span class="o">/</span> <span class="n">aux_norm</span>
+                <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
         
         <span class="n">tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
-        <span class="n">prev_bond</span> <span class="o">=</span> <span class="n">rank</span>
+        <span class="n">prev_bond</span> <span class="o">=</span> <span class="n">aux_rank</span>
         <span class="n">vec</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">diag_embed</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">@</span> <span class="n">vh</span>
         
     <span class="n">tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">vec</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">log_norm</span> <span class="ow">is</span> <span class="ow">not</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">rescale</span> <span class="o">=</span> <span class="p">(</span><span class="n">log_norm</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">))</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">vec</span> <span class="ow">in</span> <span class="n">tensors</span><span class="p">:</span>
+            <span class="n">vec</span> <span class="o">*=</span> <span class="n">rescale</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">vec</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="n">n_batches</span><span class="p">],</span>
+                                <span class="o">*</span><span class="p">([</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">vec</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">n_batches</span><span class="p">:])))</span>
+    
     <span class="k">return</span> <span class="n">tensors</span></div>
 
 
 <div class="viewcode-block" id="mat_to_mpo"><a class="viewcode-back" href="../../../decompositions.html#tensorkrowch.decompositions.mat_to_mpo">[docs]</a><span class="k">def</span> <span class="nf">mat_to_mpo</span><span class="p">(</span><span class="n">mat</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
                <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-               <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+               <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Splits a matrix into a sequence of MPO tensors via consecutive SVD</span>
 <span class="sd">    decompositions. The resultant tensors can be used to instantiate a</span>
@@ -468,6 +491,14 @@ title="Source repository"
 <span class="sd">            cum\_percentage</span>
 <span class="sd">    cutoff : float, optional</span>
 <span class="sd">        Quantity that lower bounds singular values in order to be kept.</span>
+<span class="sd">    renormalize : bool</span>
+<span class="sd">            Indicates whether nodes should be renormalized after SVD/QR</span>
+<span class="sd">            decompositions. If not, it may happen that the norm explodes as it</span>
+<span class="sd">            is being accumulated from all nodes. Renormalization aims to avoid</span>
+<span class="sd">            this undesired behavior by extracting the norm of each node on a</span>
+<span class="sd">            logarithmic scale after SVD/QR decompositions are computed. Finally,</span>
+<span class="sd">            the normalization factor is evenly distributed among all nodes of</span>
+<span class="sd">            the MPS.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -482,19 +513,20 @@ title="Source repository"
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">in_out_dims</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">mat</span><span class="p">]</span>
     
+    <span class="n">log_norm</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">prev_bond</span> <span class="o">=</span> <span class="mi">1</span>
     <span class="n">tensors</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">in_out_dims</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
-        <span class="n">mat</span> <span class="o">=</span> <span class="n">mat</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">prev_bond</span> <span class="o">*</span> <span class="n">in_out_dims</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">in_out_dims</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span>
-                       <span class="n">in_out_dims</span><span class="p">[(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">):]</span><span class="o">.</span><span class="n">prod</span><span class="p">())</span>
+        <span class="n">mat</span> <span class="o">=</span> <span class="n">mat</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">prev_bond</span> <span class="o">*</span> <span class="n">in_out_dims</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">in_out_dims</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span>
+                          <span class="n">in_out_dims</span><span class="p">[(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">):]</span><span class="o">.</span><span class="n">prod</span><span class="p">())</span>
         
         <span class="n">u</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">vh</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         
         <span class="n">lst_ranks</span> <span class="o">=</span> <span class="p">[]</span>
         
         <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">rank</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-            <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rank</span><span class="p">)</span>
+            <span class="n">aux_rank</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">aux_rank</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">rank</span><span class="p">)),</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
             
@@ -505,7 +537,7 @@ title="Source repository"
             <span class="n">cp_rank</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">lt</span><span class="p">(</span>
                 <span class="n">s_percentages</span><span class="p">,</span>
                 <span class="n">cum_percentage_tensor</span>
-                <span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
             <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">cp_rank</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
             
         <span class="k">if</span> <span class="n">cutoff</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -513,30 +545,41 @@ title="Source repository"
             <span class="n">co_rank</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ge</span><span class="p">(</span>
                 <span class="n">s</span><span class="p">,</span>
                 <span class="n">cutoff_tensor</span>
-                <span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
             <span class="n">lst_ranks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">co_rank</span><span class="o">.</span><span class="n">item</span><span class="p">()))</span>
         
         <span class="c1"># Select rank from specified restrictions</span>
-        <span class="n">rank</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">lst_ranks</span><span class="p">)</span>
+        <span class="n">aux_rank</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">lst_ranks</span><span class="p">)</span>
         
-        <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">]</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">aux_rank</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">in_out_dims</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">in_out_dims</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">rank</span><span class="p">)</span>
-            <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="c1"># left x input x right</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">in_out_dims</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">in_out_dims</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">aux_rank</span><span class="p">)</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="c1"># input x right x output</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">prev_bond</span><span class="p">,</span> <span class="n">in_out_dims</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">in_out_dims</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">rank</span><span class="p">)</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">prev_bond</span><span class="p">,</span> <span class="n">in_out_dims</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">in_out_dims</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">aux_rank</span><span class="p">)</span>
             <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="c1"># left x input x right x output</span>
             
-        <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">]</span>
-        <span class="n">vh</span> <span class="o">=</span> <span class="n">vh</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">rank</span><span class="p">,</span> <span class="p">:]</span>
-        <span class="n">vh</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">diag_embed</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">@</span> <span class="n">vh</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">aux_rank</span><span class="p">]</span>
+        <span class="n">vh</span> <span class="o">=</span> <span class="n">vh</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="n">aux_rank</span><span class="p">,</span> <span class="p">:]</span>
+        
+        <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
+            <span class="n">aux_norm</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">isinf</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">aux_norm</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="n">s</span> <span class="o">/</span> <span class="n">aux_norm</span>
+                <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
         
         <span class="n">tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
-        <span class="n">prev_bond</span> <span class="o">=</span> <span class="n">rank</span>
+        <span class="n">prev_bond</span> <span class="o">=</span> <span class="n">aux_rank</span>
         <span class="n">mat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">diag_embed</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">@</span> <span class="n">vh</span>
     
-    <span class="n">mat</span> <span class="o">=</span> <span class="n">mat</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="n">in_out_dims</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">],</span> <span class="n">in_out_dims</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">mat</span> <span class="o">=</span> <span class="n">mat</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">aux_rank</span><span class="p">,</span> <span class="n">in_out_dims</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">],</span> <span class="n">in_out_dims</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
     <span class="n">tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mat</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
+        <span class="n">rescale</span> <span class="o">=</span> <span class="p">(</span><span class="n">log_norm</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">))</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">mat</span> <span class="ow">in</span> <span class="n">tensors</span><span class="p">:</span>
+            <span class="n">mat</span> <span class="o">*=</span> <span class="n">rescale</span>
+    
     <span class="k">return</span> <span class="n">tensors</span></div>
 </pre></div>
 

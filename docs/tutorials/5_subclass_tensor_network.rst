@@ -311,11 +311,11 @@ With this, you can save your model and load it later::
 Of course, although you can create any tensor network you like, ``TensorKrowch``
 already comes with a handful of widely-known models that you can use:
 
-* :class:`MPS`
-* :class:`MPSLayer`
-* :class:`MPO`
-* :class:`PEPS`
-* :class:`Tree`
+* :class:`~tensorkrowch.models.MPS`
+* :class:`~tensorkrowch.models.MPSLayer`
+* :class:`~tensorkrowch.models.MPO`
+* :class:`~tensorkrowch.models.PEPS`
+* :class:`~tensorkrowch.models.Tree`
 
 There are also uniform and convolutional variants of the four models mentioned
 above.

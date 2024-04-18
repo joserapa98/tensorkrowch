@@ -5184,7 +5184,7 @@ einsum_op = Operation('einsum',
 
 
 def einsum(string: Text, *nodes: Sequence[AbstractNode]) -> Node:
-    """
+    r"""
     Performs einsum contraction based on `opt_einsum
     <https://optimized-einsum.readthedocs.io/en/stable/autosummary/opt_einsum.contract.html>`_.
     This operation facilitates contracting several nodes at once, specifying
@@ -5249,7 +5249,7 @@ def einsum(string: Text, *nodes: Sequence[AbstractNode]) -> Node:
 ##############################   STACKED EINSUM   #############################
 def stacked_einsum(string: Text,
                    *nodes_lists: List[AbstractNode]) -> List[Node]:
-    """
+    r"""
     Applies the same :func:`einsum` operation (same ``string``) to a sequence
     of groups of nodes (all groups having the same amount of nodes, with the
     same properties, etc.). That is, it stacks these groups of nodes into a

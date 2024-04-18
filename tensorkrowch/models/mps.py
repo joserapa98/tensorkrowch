@@ -3352,7 +3352,7 @@ class AbstractConvClass(ABC):  # MARK: AbstractConvClass
 
 
 class ConvMPS(AbstractConvClass, MPS):  # MARK: ConvMPS
-    """
+    r"""
     Convolutional version of :class:`MPS`, where the input data is assumed to
     be a batch of images.
     
@@ -3457,7 +3457,7 @@ class ConvMPS(AbstractConvClass, MPS):  # MARK: ConvMPS
 
     @property
     def kernel_size(self) -> Tuple[int, int]:
-        """
+        r"""
         Returns ``kernel_size``. Number of nodes is given by
         :math:`kernel\_size_0 \cdot kernel\_size_1`.
         """
@@ -3622,7 +3622,7 @@ class ConvUMPS(AbstractConvClass, UMPS):  # MARK: ConvUMPS
 
     @property
     def kernel_size(self) -> Tuple[int, int]:
-        """
+        r"""
         Returns ``kernel_size``. Number of nodes is given by
         :math:`kernel\_size_0 \cdot kernel\_size_1`.
         """
@@ -3689,7 +3689,7 @@ class ConvUMPS(AbstractConvClass, UMPS):  # MARK: ConvUMPS
 
 
 class ConvMPSLayer(AbstractConvClass, MPSLayer):  # MARK: ConvMPSLayer
-    """
+    r"""
     Convolutional version of :class:`MPSLayer`, where the input data is assumed to
     be a batch of images.
     
@@ -3812,7 +3812,7 @@ class ConvMPSLayer(AbstractConvClass, MPSLayer):  # MARK: ConvMPSLayer
 
     @property
     def kernel_size(self) -> Tuple[int, int]:
-        """
+        r"""
         Returns ``kernel_size``. Number of nodes is given by
         :math:`kernel\_size_0 \cdot kernel\_size_1 + 1`.
         """
@@ -3883,7 +3883,7 @@ class ConvMPSLayer(AbstractConvClass, MPSLayer):  # MARK: ConvMPSLayer
 
 
 class ConvUMPSLayer(AbstractConvClass, UMPSLayer):  # MARK: ConvUMPSLayer
-    """
+    r"""
     Convolutional version of :class:`UMPSLayer`, where the input data is assumed to
     be a batch of images.
     
@@ -3999,7 +3999,7 @@ class ConvUMPSLayer(AbstractConvClass, UMPSLayer):  # MARK: ConvUMPSLayer
 
     @property
     def kernel_size(self) -> Tuple[int, int]:
-        """
+        r"""
         Returns ``kernel_size``. Number of nodes is given by
         :math:`kernel\_size_0 \cdot kernel\_size_1 + 1`.
         """

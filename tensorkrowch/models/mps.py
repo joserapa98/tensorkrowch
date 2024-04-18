@@ -880,15 +880,30 @@ class MPS(TensorNetwork):  # MARK: MPS
             result_node = mats_env[0]
             for node in mats_env[1:]:
                 result_node @= node
-                if renormalize and ('right' in result_node.axes_names):
-                    result_node = result_node.renormalize(axis='right')
+                
+                if renormalize:
+                    right_axes = []
+                    for ax_name in result_node.axes_names:
+                        if 'right' in ax_name:
+                            right_axes.append(ax_name)
+                    if right_axes:
+                        result_node = result_node.renormalize(axis=right_axes)
+            
             return result_node
+        
         else:
             result_node = mats_env[-1]
             for node in mats_env[-2::-1]:
                 result_node = node @ result_node
-                if renormalize and ('left' in result_node.axes_names):
-                    result_node = result_node.renormalize(axis='left')
+                
+                if renormalize:
+                    left_axes = []
+                    for ax_name in result_node.axes_names:
+                        if 'left' in ax_name:
+                            left_axes.append(ax_name)
+                    if left_axes:
+                        result_node = result_node.renormalize(axis=left_axes)
+            
             return result_node
 
     def _contract_envs_inline(self,
@@ -931,8 +946,12 @@ class MPS(TensorNetwork):  # MARK: MPS
             
             if renormalize:
                 for i in range(len(aux_nodes)):
-                    aux_nodes[i] = aux_nodes[i].renormalize(axis=['left',
-                                                                  'right'])
+                    axes = []
+                    for ax_name in aux_nodes[i].axes_names:
+                        if ('left' in ax_name) or ('right' in ax_name):
+                            axes.append(ax_name)
+                    if axes:
+                        aux_nodes[i] = aux_nodes[i].renormalize(axis=axes)
 
             return aux_nodes, leftover
         return mats_env, []

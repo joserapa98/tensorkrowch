@@ -1423,36 +1423,36 @@ class MPS(TensorNetwork):  # MARK: MPS
         return result
     
     @torch.no_grad()
-    def mi(self,
-           middle_site: int,
-           renormalize: bool = False) -> Union[float, Tuple[float]]:
+    def entropy(self,
+                middle_site: int,
+                renormalize: bool = False) -> Union[float, Tuple[float]]:
         r"""
-        Computes the Mutual Information between subsystems :math:`A` and
-        :math:`B`, :math:`\textrm{MI}(A:B)`, where :math:`A` goes from site
+        Computes the reduced von Neumann Entropy between subsystems :math:`A`
+        and :math:`B`, :math:`S(\rho_A)`, where :math:`A` goes from site
         0 to ``middle_site``, and :math:`B` goes from ``middle_site + 1`` to
         ``n_features - 1``.
         
-        To compute the mutual information, the MPS is put into canonical form
+        To compute the reduced entropy, the MPS is put into canonical form
         with orthogonality center at ``middle_site``. Bond dimensions are not
         changed if possible. Only when the bond dimension is bigger than the
         physical dimension multiplied by the other bond dimension of the node,
         it will be cropped to that size.
         
         If the MPS is not normalized, it may happen that the computation of the
-        mutual information fails due to errors in the Singular Value
+        reduced entropy fails due to errors in the Singular Value
         Decompositions. To avoid this, it is recommended to set
         ``renormalize = True``. In this case, the norm of each node after the
         SVD is extracted in logarithmic form, and accumulated. As a result,
-        the function will return the tuple ``(mi, log_norm)``, which is a sort
-        of `scaled` mutual information. This is, indeed, the mutual information
+        the function will return the tuple ``(entropy, log_norm)``, which is a
+        sort of `scaled` reduced entropy. This is, indeed, the reduced entropy
         of a distribution, since the schmidt values are normalized to sum up
         to 1.
         
-        The actual mutual information, without rescaling, could be obtained as:
+        The actual reduced entropy, without rescaling, could be obtained as:
         
         .. math::
         
-            \exp(\texttt{log_norm})^2 \cdot \textrm{MI}(A:B) - 
+            \exp(\texttt{log_norm})^2 \cdot S(\rho_A) - 
             \exp(\texttt{log_norm})^2 \cdot 2 \cdot \texttt{log_norm}
         
         Parameters
@@ -1537,7 +1537,7 @@ class MPS(TensorNetwork):  # MARK: MPS
             full_matrices=False)
         
         s = s[s > 0]
-        mutual_info = -(s.pow(2) * s.pow(2).log()).sum()
+        entropy = -(s.pow(2) * s.pow(2).log()).sum()
         
         # Rescale
         if log_norm != 0:
@@ -1557,9 +1557,9 @@ class MPS(TensorNetwork):  # MARK: MPS
         self.auto_stack = prev_auto_stack
         
         if renormalize:
-            return mutual_info, log_norm
+            return entropy, log_norm
         else:
-            return mutual_info
+            return entropy
 
     @torch.no_grad()
     def canonicalize(self,

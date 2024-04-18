@@ -1169,15 +1169,30 @@ title="Source repository"
             <span class="n">result_node</span> <span class="o">=</span> <span class="n">mats_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">mats_env</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
                 <span class="n">result_node</span> <span class="o">@=</span> <span class="n">node</span>
-                <span class="k">if</span> <span class="n">renormalize</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="n">result_node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">):</span>
-                    <span class="n">result_node</span> <span class="o">=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">renormalize</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+                
+                <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
+                    <span class="n">right_axes</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">ax_name</span> <span class="ow">in</span> <span class="n">result_node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="n">ax_name</span><span class="p">:</span>
+                            <span class="n">right_axes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ax_name</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">right_axes</span><span class="p">:</span>
+                        <span class="n">result_node</span> <span class="o">=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">renormalize</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">right_axes</span><span class="p">)</span>
+            
             <span class="k">return</span> <span class="n">result_node</span>
+        
         <span class="k">else</span><span class="p">:</span>
             <span class="n">result_node</span> <span class="o">=</span> <span class="n">mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
                 <span class="n">result_node</span> <span class="o">=</span> <span class="n">node</span> <span class="o">@</span> <span class="n">result_node</span>
-                <span class="k">if</span> <span class="n">renormalize</span> <span class="ow">and</span> <span class="p">(</span><span class="s1">&#39;left&#39;</span> <span class="ow">in</span> <span class="n">result_node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">):</span>
-                    <span class="n">result_node</span> <span class="o">=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">renormalize</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+                
+                <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
+                    <span class="n">left_axes</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">ax_name</span> <span class="ow">in</span> <span class="n">result_node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="s1">&#39;left&#39;</span> <span class="ow">in</span> <span class="n">ax_name</span><span class="p">:</span>
+                            <span class="n">left_axes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ax_name</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">left_axes</span><span class="p">:</span>
+                        <span class="n">result_node</span> <span class="o">=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">renormalize</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">left_axes</span><span class="p">)</span>
+            
             <span class="k">return</span> <span class="n">result_node</span>
 
     <span class="k">def</span> <span class="nf">_contract_envs_inline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -1220,8 +1235,12 @@ title="Source repository"
             
             <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">aux_nodes</span><span class="p">)):</span>
-                    <span class="n">aux_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">aux_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">renormalize</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
-                                                                  <span class="s1">&#39;right&#39;</span><span class="p">])</span>
+                    <span class="n">axes</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">ax_name</span> <span class="ow">in</span> <span class="n">aux_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="p">(</span><span class="s1">&#39;left&#39;</span> <span class="ow">in</span> <span class="n">ax_name</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="n">ax_name</span><span class="p">):</span>
+                            <span class="n">axes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ax_name</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">axes</span><span class="p">:</span>
+                        <span class="n">aux_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">aux_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">renormalize</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">axes</span><span class="p">)</span>
 
             <span class="k">return</span> <span class="n">aux_nodes</span><span class="p">,</span> <span class="n">leftover</span>
         <span class="k">return</span> <span class="n">mats_env</span><span class="p">,</span> <span class="p">[]</span>
@@ -1594,10 +1613,12 @@ title="Source repository"
         <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">result</span></div>
 
-<div class="viewcode-block" id="MPS.partial_density"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.partial_density">[docs]</a>    <span class="k">def</span> <span class="nf">partial_density</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trace_sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="MPS.partial_density"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.partial_density">[docs]</a>    <span class="k">def</span> <span class="nf">partial_density</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                        <span class="n">trace_sites</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[],</span>
+                        <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns de partial density matrix, tracing out the sites specified</span>
-<span class="sd">        by ``trace_sites``.</span>
+<span class="sd">        by ``trace_sites``: :math:`\rho_A`.</span>
 <span class="sd">        </span>
 <span class="sd">        This method internally sets ``out_features = trace_sites``, and calls</span>
 <span class="sd">        the :meth:`~tensorkrowch.TensorNetwork.forward` method with</span>
@@ -1621,6 +1642,14 @@ title="Source repository"
 <span class="sd">            nodes that should be traced to compute the density matrix. If</span>
 <span class="sd">            it is empty ``[]``, the total density matrix will be returned,</span>
 <span class="sd">            though this may be costly if :attr:`n_features` is big.</span>
+<span class="sd">        renormalize : bool</span>
+<span class="sd">            Indicates whether nodes should be renormalized after contraction.</span>
+<span class="sd">            If not, it may happen that the norm explodes or vanishes, as it</span>
+<span class="sd">            is being accumulated from all nodes. Renormalization aims to avoid</span>
+<span class="sd">            this undesired behavior by extracting the norm of each node on a</span>
+<span class="sd">            logarithmic scale. The renormalization only occurs when multiplying</span>
+<span class="sd">            sequences of matrices, once the `input` contractions have been</span>
+<span class="sd">            already performed.</span>
 <span class="sd">        </span>
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
@@ -1672,44 +1701,47 @@ title="Source repository"
                     <span class="p">]</span>
             
             <span class="bp">self</span><span class="o">.</span><span class="n">n_batches</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims</span><span class="p">)</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">marginalize_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">data</span><span class="p">,</span>
+                                  <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
+                                  <span class="n">marginalize_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">marginalize_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
+                                  <span class="n">marginalize_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         
         <span class="k">return</span> <span class="n">result</span></div>
     
-<div class="viewcode-block" id="MPS.mi"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.mi">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
-    <span class="k">def</span> <span class="nf">mi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-           <span class="n">middle_site</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-           <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
+<div class="viewcode-block" id="MPS.entropy"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.entropy">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">entropy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                <span class="n">middle_site</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Computes the Mutual Information between subsystems :math:`A` and</span>
-<span class="sd">        :math:`B`, :math:`\textrm{MI}(A:B)`, where :math:`A` goes from site</span>
+<span class="sd">        Computes the reduced von Neumann Entropy between subsystems :math:`A`</span>
+<span class="sd">        and :math:`B`, :math:`S(\rho_A)`, where :math:`A` goes from site</span>
 <span class="sd">        0 to ``middle_site``, and :math:`B` goes from ``middle_site + 1`` to</span>
 <span class="sd">        ``n_features - 1``.</span>
 <span class="sd">        </span>
-<span class="sd">        To compute the mutual information, the MPS is put into canonical form</span>
+<span class="sd">        To compute the reduced entropy, the MPS is put into canonical form</span>
 <span class="sd">        with orthogonality center at ``middle_site``. Bond dimensions are not</span>
 <span class="sd">        changed if possible. Only when the bond dimension is bigger than the</span>
 <span class="sd">        physical dimension multiplied by the other bond dimension of the node,</span>
 <span class="sd">        it will be cropped to that size.</span>
 <span class="sd">        </span>
 <span class="sd">        If the MPS is not normalized, it may happen that the computation of the</span>
-<span class="sd">        mutual information fails due to errors in the Singular Value</span>
+<span class="sd">        reduced entropy fails due to errors in the Singular Value</span>
 <span class="sd">        Decompositions. To avoid this, it is recommended to set</span>
 <span class="sd">        ``renormalize = True``. In this case, the norm of each node after the</span>
 <span class="sd">        SVD is extracted in logarithmic form, and accumulated. As a result,</span>
-<span class="sd">        the function will return the tuple ``(mi, log_norm)``, which is a sort</span>
-<span class="sd">        of `scaled` mutual information. This is, indeed, the mutual information</span>
+<span class="sd">        the function will return the tuple ``(entropy, log_norm)``, which is a</span>
+<span class="sd">        sort of `scaled` reduced entropy. This is, indeed, the reduced entropy</span>
 <span class="sd">        of a distribution, since the schmidt values are normalized to sum up</span>
 <span class="sd">        to 1.</span>
 <span class="sd">        </span>
-<span class="sd">        The actual mutual information, without rescaling, could be obtained as:</span>
+<span class="sd">        The actual reduced entropy, without rescaling, could be obtained as:</span>
 <span class="sd">        </span>
 <span class="sd">        .. math::</span>
 <span class="sd">        </span>
-<span class="sd">            \exp(\texttt{log_norm})^2 \cdot \textrm{MI}(A:B) - </span>
+<span class="sd">            \exp(\texttt{log_norm})^2 \cdot S(\rho_A) - </span>
 <span class="sd">            \exp(\texttt{log_norm})^2 \cdot 2 \cdot \texttt{log_norm}</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
@@ -1794,7 +1826,7 @@ title="Source repository"
             <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         
         <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="n">s</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
-        <span class="n">mutual_info</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">s</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">log</span><span class="p">())</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">entropy</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">s</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">log</span><span class="p">())</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
         
         <span class="c1"># Rescale</span>
         <span class="k">if</span> <span class="n">log_norm</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
@@ -1814,9 +1846,9 @@ title="Source repository"
         <span class="bp">self</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="n">prev_auto_stack</span>
         
         <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">mutual_info</span><span class="p">,</span> <span class="n">log_norm</span>
+            <span class="k">return</span> <span class="n">entropy</span><span class="p">,</span> <span class="n">log_norm</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">mutual_info</span></div>
+            <span class="k">return</span> <span class="n">entropy</span></div>
 
 <div class="viewcode-block" id="MPS.canonicalize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.canonicalize">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
     <span class="k">def</span> <span class="nf">canonicalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>

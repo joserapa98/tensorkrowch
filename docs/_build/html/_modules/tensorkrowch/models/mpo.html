@@ -297,6 +297,8 @@ title="Source repository"
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span><span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span>
                     <span class="n">Text</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">)</span>
 
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">sqrt</span>
+
 <span class="kn">import</span> <span class="nn">torch</span>
 
 <span class="kn">import</span> <span class="nn">tensorkrowch.operations</span> <span class="k">as</span> <span class="nn">op</span>
@@ -836,20 +838,23 @@ title="Source repository"
         <span class="k">return</span> <span class="n">net</span></div>
     
     <span class="k">def</span> <span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                           <span class="n">nodes_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
+                           <span class="n">nodes_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
+                           <span class="n">input_nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
                            <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span>
                                                        <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]],</span>
                                                        <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts input data nodes with MPO nodes.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">inline_input</span><span class="p">:</span>
-            <span class="n">mats_result</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">contract</span><span class="p">()</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes_env</span><span class="p">]</span>
+            <span class="n">mats_result</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">in_node</span> <span class="o">@</span> <span class="n">node</span>
+                <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">in_node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">nodes_env</span><span class="p">,</span> <span class="n">input_nodes</span><span class="p">)</span>
+                <span class="p">]</span>
             <span class="k">return</span> <span class="n">mats_result</span>
 
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">nodes_env</span><span class="p">:</span>
                 <span class="n">stack</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">nodes_env</span><span class="p">)</span>
-                <span class="n">stack_data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span>
-                    <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes_env</span><span class="p">])</span>
+                <span class="n">stack_data</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">input_nodes</span><span class="p">)</span>
 
                 <span class="n">stack</span> <span class="o">^</span> <span class="n">stack_data</span>
 
@@ -860,15 +865,26 @@ title="Source repository"
                 <span class="k">return</span> <span class="p">[]</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_inline_contraction</span><span class="p">(</span><span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">_inline_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
+                            <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts sequence of MPO nodes (matrices) inline.&quot;&quot;&quot;</span>
-        <span class="n">result_node</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="n">result_node</span> <span class="o">=</span> <span class="n">mats_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">mats_env</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
             <span class="n">result_node</span> <span class="o">@=</span> <span class="n">node</span>
+            
+            <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
+                <span class="n">right_axes</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">ax_name</span> <span class="ow">in</span> <span class="n">result_node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="n">ax_name</span><span class="p">:</span>
+                        <span class="n">right_axes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ax_name</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">right_axes</span><span class="p">:</span>
+                    <span class="n">result_node</span> <span class="o">=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">renormalize</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">right_axes</span><span class="p">)</span>
+            
         <span class="k">return</span> <span class="n">result_node</span>
 
     <span class="k">def</span> <span class="nf">_contract_envs_inline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                              <span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
+                              <span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
+                              <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                               <span class="n">mps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">MPSData</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts nodes environments inline.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="p">(</span><span class="n">mps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">):</span>
@@ -878,13 +894,16 @@ title="Source repository"
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
             <span class="n">mats_env</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span><span class="p">]</span> <span class="o">+</span> <span class="n">mats_env</span>
             <span class="n">mats_env</span> <span class="o">=</span> <span class="n">mats_env</span> <span class="o">+</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span><span class="p">]</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inline_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inline_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="o">=</span><span class="n">mats_env</span><span class="p">,</span>
+                                        <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_aux_pairwise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
+    <span class="k">def</span> <span class="nf">_aux_pairwise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                      <span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
+                      <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
     <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts a sequence of MPO nodes (matrices) pairwise.&quot;&quot;&quot;</span>
-        <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
-        <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">nodes</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mats_env</span><span class="p">)</span>
+        <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">mats_env</span>
         <span class="k">if</span> <span class="n">length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">half_length</span> <span class="o">=</span> <span class="n">length</span> <span class="o">//</span> <span class="mi">2</span>
             <span class="n">nice_length</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">half_length</span>
@@ -900,32 +919,48 @@ title="Source repository"
 
             <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">stack1</span> <span class="o">@</span> <span class="n">stack2</span>
             <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">aux_nodes</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">aux_nodes</span><span class="p">)):</span>
+                    <span class="n">axes</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">ax_name</span> <span class="ow">in</span> <span class="n">aux_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="p">(</span><span class="s1">&#39;left&#39;</span> <span class="ow">in</span> <span class="n">ax_name</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="n">ax_name</span><span class="p">):</span>
+                            <span class="n">axes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ax_name</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">axes</span><span class="p">:</span>
+                        <span class="n">aux_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">aux_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">renormalize</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">axes</span><span class="p">)</span>
 
             <span class="k">return</span> <span class="n">aux_nodes</span><span class="p">,</span> <span class="n">leftover</span>
-        <span class="k">return</span> <span class="n">nodes</span><span class="p">,</span> <span class="p">[]</span>
+        <span class="k">return</span> <span class="n">mats_env</span><span class="p">,</span> <span class="p">[]</span>
 
     <span class="k">def</span> <span class="nf">_pairwise_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                              <span class="n">mats_nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
-                              <span class="n">mps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">MPSData</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+                              <span class="n">mats_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
+                              <span class="n">mps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">MPSData</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                              <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Contracts nodes environments pairwise.&quot;&quot;&quot;</span>
-        <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mats_nodes</span><span class="p">)</span>
-        <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">mats_nodes</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mats_env</span><span class="p">)</span>
+        <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">mats_env</span>
         <span class="k">if</span> <span class="n">length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">leftovers</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">while</span> <span class="n">length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">aux1</span><span class="p">,</span> <span class="n">aux2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_aux_pairwise</span><span class="p">(</span><span class="n">aux_nodes</span><span class="p">)</span>
+                <span class="n">aux1</span><span class="p">,</span> <span class="n">aux2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_aux_pairwise</span><span class="p">(</span><span class="n">mats_env</span><span class="o">=</span><span class="n">aux_nodes</span><span class="p">,</span>
+                                                <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">)</span>
                 <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">aux1</span>
                 <span class="n">leftovers</span> <span class="o">=</span> <span class="n">aux2</span> <span class="o">+</span> <span class="n">leftovers</span>
                 <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">aux1</span><span class="p">)</span>
 
             <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">aux_nodes</span> <span class="o">+</span> <span class="n">leftovers</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pairwise_contraction</span><span class="p">(</span><span class="n">aux_nodes</span><span class="p">,</span> <span class="n">mps</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pairwise_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="o">=</span><span class="n">aux_nodes</span><span class="p">,</span>
+                                              <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
+                                              <span class="n">mps</span><span class="o">=</span><span class="n">mps</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contract_envs_inline</span><span class="p">(</span><span class="n">aux_nodes</span><span class="p">,</span> <span class="n">mps</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contract_envs_inline</span><span class="p">(</span><span class="n">mats_env</span><span class="o">=</span><span class="n">aux_nodes</span><span class="p">,</span>
+                                          <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
+                                          <span class="n">mps</span><span class="o">=</span><span class="n">mps</span><span class="p">)</span>
     
 <div class="viewcode-block" id="MPO.contract"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.contract">[docs]</a>    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">inline_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">inline_mats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">mps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">MPSData</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the whole MPO with input data nodes. The input can be in the</span>
@@ -967,6 +1002,14 @@ title="Source repository"
 <span class="sd">            Boolean indicating whether the sequence of matrices (resultant</span>
 <span class="sd">            after contracting the input ``data`` nodes) should be contracted</span>
 <span class="sd">            inline or as a sequence of pairwise stacked contrations.</span>
+<span class="sd">        renormalize : bool</span>
+<span class="sd">            Indicates whether nodes should be renormalized after contraction.</span>
+<span class="sd">            If not, it may happen that the norm explodes or vanishes, as it</span>
+<span class="sd">            is being accumulated from all nodes. Renormalization aims to avoid</span>
+<span class="sd">            this undesired behavior by extracting the norm of each node on a</span>
+<span class="sd">            logarithmic scale. The renormalization only occurs when multiplying</span>
+<span class="sd">            sequences of matrices, once the `input` contractions have been</span>
+<span class="sd">            already performed, including contracting against ``MPSData``.</span>
 <span class="sd">        mps : MPSData, optional</span>
 <span class="sd">            MPS that is to be contracted with the MPO. New data can be</span>
 <span class="sd">            put into the MPS via :meth:`MPSData.add_data`, and the MPS-MPO</span>
@@ -992,12 +1035,19 @@ title="Source repository"
             <span class="k">for</span> <span class="n">mps_node</span><span class="p">,</span> <span class="n">mpo_node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">):</span>
                 <span class="n">mps_node</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">mpo_node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
                 
-        <span class="n">mats_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">,</span> <span class="n">inline_input</span><span class="p">)</span>
+        <span class="n">mats_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span>
+            <span class="n">nodes_env</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">,</span>
+            <span class="n">input_nodes</span><span class="o">=</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">],</span>
+            <span class="n">inline_input</span><span class="o">=</span><span class="n">inline_input</span><span class="p">)</span>
         
         <span class="k">if</span> <span class="n">inline_mats</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contract_envs_inline</span><span class="p">(</span><span class="n">mats_env</span><span class="p">,</span> <span class="n">mps</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contract_envs_inline</span><span class="p">(</span><span class="n">mats_env</span><span class="o">=</span><span class="n">mats_env</span><span class="p">,</span>
+                                                <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
+                                                <span class="n">mps</span><span class="o">=</span><span class="n">mps</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pairwise_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="p">,</span> <span class="n">mps</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pairwise_contraction</span><span class="p">(</span><span class="n">mats_env</span><span class="o">=</span><span class="n">mats_env</span><span class="p">,</span>
+                                                <span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
+                                                <span class="n">mps</span><span class="o">=</span><span class="n">mps</span><span class="p">)</span>
             
         <span class="c1"># Contract periodic edge</span>
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">is_connected_to</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
@@ -1016,7 +1066,172 @@ title="Source repository"
         <span class="k">if</span> <span class="n">all_edges</span> <span class="o">!=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">all_edges</span><span class="p">))):</span>
             <span class="n">result</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">all_edges</span><span class="p">))</span>
         
-        <span class="k">return</span> <span class="n">result</span></div></div>
+        <span class="k">return</span> <span class="n">result</span></div>
+    
+<div class="viewcode-block" id="MPO.canonicalize"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPO.canonicalize">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">canonicalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                     <span class="n">oc</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">mode</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;svd&#39;</span><span class="p">,</span>
+                     <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Turns MPO into `canonical` form via local SVD/QR decompositions in the</span>
+<span class="sd">        same way this transformation is applied to :class:`~tensorkrowch.models.MPS`.</span>
+<span class="sd">        </span>
+<span class="sd">        To specify the new bond dimensions, the arguments ``rank``,</span>
+<span class="sd">        ``cum_percentage`` or ``cutoff`` can be specified. These will be used</span>
+<span class="sd">        equally for all SVD computations.</span>
+<span class="sd">        </span>
+<span class="sd">        If none of them are specified, the bond dimensions won&#39;t be modified</span>
+<span class="sd">        if possible. Only when the bond dimension is bigger than the physical</span>
+<span class="sd">        dimension multiplied by the other bond dimension of the node, it will</span>
+<span class="sd">        be cropped to that size.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        oc : int</span>
+<span class="sd">            Position of the orthogonality center. It should be between 0 and </span>
+<span class="sd">            ``n_features - 1``.</span>
+<span class="sd">        mode : {&quot;svd&quot;, &quot;svdr&quot;, &quot;qr&quot;}</span>
+<span class="sd">            Indicates which decomposition should be used to split a node after</span>
+<span class="sd">            contracting it. See more at :func:`~tensorkrowch.svd_`,</span>
+<span class="sd">            :func:`~tensorkrowch.svdr_`, :func:`~tensorkrowch.qr_`.</span>
+<span class="sd">            If mode is &quot;qr&quot;, operation :func:`~tensorkrowch.qr_` will be</span>
+<span class="sd">            performed on nodes at the left of the output node, whilst operation</span>
+<span class="sd">            :func:`~tensorkrowch.rq_` will be used for nodes at the right.</span>
+<span class="sd">        rank : int, optional</span>
+<span class="sd">            Number of singular values to keep.</span>
+<span class="sd">        cum_percentage : float, optional</span>
+<span class="sd">            Proportion that should be satisfied between the sum of all singular</span>
+<span class="sd">            values kept and the total sum of all singular values.</span>
+<span class="sd">            </span>
+<span class="sd">            .. math::</span>
+<span class="sd">            </span>
+<span class="sd">                \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge</span>
+<span class="sd">                cum\_percentage</span>
+<span class="sd">        cutoff : float, optional</span>
+<span class="sd">            Quantity that lower bounds singular values in order to be kept.</span>
+<span class="sd">        renormalize : bool</span>
+<span class="sd">            Indicates whether nodes should be renormalized after SVD/QR</span>
+<span class="sd">            decompositions. If not, it may happen that the norm explodes as it</span>
+<span class="sd">            is being accumulated from all nodes. Renormalization aims to avoid</span>
+<span class="sd">            this undesired behavior by extracting the norm of each node on a</span>
+<span class="sd">            logarithmic scale after SVD/QR decompositions are computed. Finally,</span>
+<span class="sd">            the normalization factor is evenly distributed among all nodes of</span>
+<span class="sd">            the MPO.</span>
+<span class="sd">            </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; mpo = tk.models.MPO(n_features=4,</span>
+<span class="sd">        ...                     in_dim=2,</span>
+<span class="sd">        ...                     out_dim=2,</span>
+<span class="sd">        ...                     bond_dim=5)</span>
+<span class="sd">        &gt;&gt;&gt; mpo.canonicalize(rank=3)</span>
+<span class="sd">        &gt;&gt;&gt; mpo.bond_dim</span>
+<span class="sd">        [3, 3, 3]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+
+        <span class="n">prev_auto_stack</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_auto_stack</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="n">oc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">oc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">oc</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">oc</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Orthogonality center position `oc` should be &#39;</span>
+                             <span class="s1">&#39;between 0 and `n_features` - 1&#39;</span><span class="p">)</span>
+        
+        <span class="n">log_norm</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="n">nodes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[:]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+            <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span>
+                <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+            <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span>
+                <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:])</span>
+        
+        <span class="c1"># If mode is svd or svr and none of the args is provided, the ranks are</span>
+        <span class="c1"># kept as they were originally</span>
+        <span class="n">keep_rank</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">cum_percentage</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">cutoff</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">keep_rank</span> <span class="o">=</span> <span class="kc">True</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">oc</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svd&#39;</span><span class="p">:</span>
+                <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svd_</span><span class="p">(</span>
+                    <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
+                    <span class="n">rank</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">if</span> <span class="n">keep_rank</span> <span class="k">else</span> <span class="n">rank</span><span class="p">,</span>
+                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
+                    <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svdr&#39;</span><span class="p">:</span>
+                <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svdr_</span><span class="p">(</span>
+                    <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
+                    <span class="n">rank</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">if</span> <span class="n">keep_rank</span> <span class="k">else</span> <span class="n">rank</span><span class="p">,</span>
+                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
+                    <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;qr&#39;</span><span class="p">:</span>
+                <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">qr_</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`mode` can only be &quot;svd&quot;, &quot;svdr&quot; or &quot;qr&quot;&#39;</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
+                <span class="n">aux_norm</span> <span class="o">=</span> <span class="n">result2</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span> <span class="o">/</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">result2</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">isinf</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">aux_norm</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+                    <span class="n">result2</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">result2</span><span class="o">.</span><span class="n">tensor</span> <span class="o">/</span> <span class="n">aux_norm</span>
+                    <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
+
+            <span class="n">result1</span> <span class="o">=</span> <span class="n">result1</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
+            <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">result1</span>
+            <span class="n">nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">result2</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">oc</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svd&#39;</span><span class="p">:</span>
+                <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svd_</span><span class="p">(</span>
+                    <span class="n">side</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
+                    <span class="n">rank</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">if</span> <span class="n">keep_rank</span> <span class="k">else</span> <span class="n">rank</span><span class="p">,</span>
+                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
+                    <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;svdr&#39;</span><span class="p">:</span>
+                <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">svdr_</span><span class="p">(</span>
+                    <span class="n">side</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
+                    <span class="n">rank</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">if</span> <span class="n">keep_rank</span> <span class="k">else</span> <span class="n">rank</span><span class="p">,</span>
+                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">,</span>
+                    <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;qr&#39;</span><span class="p">:</span>
+                <span class="n">result1</span><span class="p">,</span> <span class="n">result2</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">rq_</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`mode` can only be &quot;svd&quot;, &quot;svdr&quot; or &quot;qr&quot;&#39;</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
+                <span class="n">aux_norm</span> <span class="o">=</span> <span class="n">result1</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span> <span class="o">/</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">result1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">isinf</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">aux_norm</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+                    <span class="n">result1</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">result1</span><span class="o">.</span><span class="n">tensor</span> <span class="o">/</span> <span class="n">aux_norm</span>
+                    <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
+
+            <span class="n">result2</span> <span class="o">=</span> <span class="n">result2</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
+            <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">result2</span>
+            <span class="n">nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">result1</span>
+
+        <span class="n">nodes</span><span class="p">[</span><span class="n">oc</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">oc</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
+        
+        <span class="c1"># Rescale</span>
+        <span class="k">if</span> <span class="n">log_norm</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">rescale</span> <span class="o">=</span> <span class="p">(</span><span class="n">log_norm</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">))</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="n">renormalize</span> <span class="ow">and</span> <span class="p">(</span><span class="n">log_norm</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">*</span> <span class="n">rescale</span>
+        
+        <span class="c1"># Update variables</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span> <span class="o">=</span> <span class="n">nodes</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="n">prev_auto_stack</span></div></div>
 
 
 <div class="viewcode-block" id="UMPO"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.UMPO">[docs]</a><span class="k">class</span> <span class="nc">UMPO</span><span class="p">(</span><span class="n">MPO</span><span class="p">):</span>  <span class="c1"># MARK: UMPO</span>
@@ -1257,7 +1472,18 @@ title="Source repository"
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">net</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">:</span>
             <span class="n">node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="n">net</span><span class="o">.</span><span class="n">uniform_memory</span><span class="p">)</span>
             
-        <span class="k">return</span> <span class="n">net</span></div></div>
+        <span class="k">return</span> <span class="n">net</span></div>
+    
+    <span class="k">def</span> <span class="nf">canonicalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                     <span class="n">oc</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">mode</span><span class="p">:</span> <span class="n">Text</span> <span class="o">=</span> <span class="s1">&#39;svd&#39;</span><span class="p">,</span>
+                     <span class="n">rank</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">cum_percentage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">cutoff</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">renormalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;:meta private:&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="s1">&#39;`canonicalize` not implemented for UMPO&#39;</span><span class="p">)</span></div>
 </pre></div>
 
               </div>

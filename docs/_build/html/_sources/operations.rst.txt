@@ -85,6 +85,10 @@ mul
 ^^^
 .. autofunction:: mul
 
+div
+^^^
+.. autofunction:: div
+
 add
 ^^^
 .. autofunction:: add
@@ -92,6 +96,10 @@ add
 sub
 ^^^
 .. autofunction:: sub
+
+renormalize
+^^^^^^^^^^^
+.. autofunction:: renormalize
 
 
 Node-like Operations

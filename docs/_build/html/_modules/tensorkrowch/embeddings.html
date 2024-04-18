@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.embeddings &#8212; TensorKrowch 1.0.1 documentation</title>
+    <title>tensorkrowch.embeddings &#8212; TensorKrowch 1.1.0 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -612,6 +612,18 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; emb_b = tk.embeddings.discretize(b, level=3)</span>
 <span class="sd">    &gt;&gt;&gt; emb_b.shape</span>
 <span class="sd">    torch.Size([100, 5, 3])</span>
+<span class="sd">    </span>
+<span class="sd">    To embed a data tensor with elements between 0 and 1 as basis vectors, one</span>
+<span class="sd">    can concatenate :func:`discretize` with :func:`basis`.</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; a = torch.rand(100, 10)</span>
+<span class="sd">    &gt;&gt;&gt; emb_a = tk.embeddings.discretize(a, level=1, base=5)</span>
+<span class="sd">    &gt;&gt;&gt; emb_a.shape</span>
+<span class="sd">    torch.Size([100, 10, 1])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; emb_a = tk.embeddings.basis(emb_a.squeeze(2).int(), dim=5)</span>
+<span class="sd">    &gt;&gt;&gt; emb_a.shape</span>
+<span class="sd">    torch.Size([100, 10, 5])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`data` should be torch.Tensor type&#39;</span><span class="p">)</span>
@@ -701,6 +713,18 @@ title="Source repository"
 <span class="sd">    &gt;&gt;&gt; emb_b = tk.embeddings.basis(b, dim=10)</span>
 <span class="sd">    &gt;&gt;&gt; emb_b.shape</span>
 <span class="sd">    torch.Size([100, 5, 10])</span>
+<span class="sd">    </span>
+<span class="sd">    To embed a data tensor with elements between 0 and 1 as basis vectors, one</span>
+<span class="sd">    can concatenate :func:`discretize` with :func:`basis`.</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; a = torch.rand(100, 10)</span>
+<span class="sd">    &gt;&gt;&gt; emb_a = tk.embeddings.discretize(a, level=1, base=5)</span>
+<span class="sd">    &gt;&gt;&gt; emb_a.shape</span>
+<span class="sd">    torch.Size([100, 10, 1])</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; emb_a = tk.embeddings.basis(emb_a.squeeze(2).int(), dim=5)</span>
+<span class="sd">    &gt;&gt;&gt; emb_a.shape</span>
+<span class="sd">    torch.Size([100, 10, 5])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`data` should be torch.Tensor type&#39;</span><span class="p">)</span>

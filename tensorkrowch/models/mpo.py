@@ -8,6 +8,8 @@ import warnings
 from typing import (List, Optional, Sequence,
                     Text, Tuple, Union)
 
+from math import sqrt
+
 import torch
 
 import tensorkrowch.operations as op
@@ -411,10 +413,6 @@ class MPO(TensorNetwork):  # MARK: MPO
             Keyword arguments for the different initialization methods. See
             :meth:`~tensorkrowch.AbstractNode.make_tensor`.
         """
-        if self._boundary == 'obc':
-            self._left_node.set_tensor(init_method='copy', device=device)
-            self._right_node.set_tensor(init_method='copy', device=device)
-
         if tensors is not None:
             if len(tensors) != self._n_features:
                 raise ValueError('`tensors` should be a sequence of `n_features`'
@@ -422,6 +420,10 @@ class MPO(TensorNetwork):  # MARK: MPO
             
             if self._boundary == 'obc':
                 tensors = tensors[:]
+                
+                if device is None:
+                    device = tensors[0].device
+                
                 if len(tensors) == 1:
                     tensors[0] = tensors[0].reshape(1,
                                                     tensors[0].shape[0],
@@ -431,13 +433,13 @@ class MPO(TensorNetwork):  # MARK: MPO
                 else:
                     # Left node
                     aux_tensor = torch.zeros(*self._mats_env[0].shape,
-                                             device=tensors[0].device)
+                                             device=device)
                     aux_tensor[0] = tensors[0]
                     tensors[0] = aux_tensor
                     
                     # Right node
                     aux_tensor = torch.zeros(*self._mats_env[-1].shape,
-                                             device=tensors[-1].device)
+                                             device=device)
                     aux_tensor[..., 0, :] = tensors[-1]
                     tensors[-1] = aux_tensor
                 
@@ -460,6 +462,10 @@ class MPO(TensorNetwork):  # MARK: MPO
                         # Right node
                         aux_tensor[..., 0, :] = node.tensor[..., 0, :]
                     node.tensor = aux_tensor
+        
+        if self._boundary == 'obc':
+            self._left_node.set_tensor(init_method='copy', device=device)
+            self._right_node.set_tensor(init_method='copy', device=device)
     
     def set_data_nodes(self) -> None:
         """
@@ -543,20 +549,23 @@ class MPO(TensorNetwork):  # MARK: MPO
         return net
     
     def _input_contraction(self,
-                           nodes_env: List[Node],
+                           nodes_env: List[AbstractNode],
+                           input_nodes: List[AbstractNode],
                            inline_input: bool = False) -> Tuple[
                                                        Optional[List[Node]],
                                                        Optional[List[Node]]]:
         """Contracts input data nodes with MPO nodes."""
         if inline_input:
-            mats_result = [node['input'].contract() for node in nodes_env]
+            mats_result = [
+                in_node @ node
+                for node, in_node in zip(nodes_env, input_nodes)
+                ]
             return mats_result
 
         else:
             if nodes_env:
                 stack = op.stack(nodes_env)
-                stack_data = op.stack(
-                    [node.neighbours('input') for node in nodes_env])
+                stack_data = op.stack(input_nodes)
 
                 stack ^ stack_data
 
@@ -567,15 +576,26 @@ class MPO(TensorNetwork):  # MARK: MPO
                 return []
 
     @staticmethod
-    def _inline_contraction(nodes: List[Node]) -> Node:
+    def _inline_contraction(mats_env: List[AbstractNode],
+                            renormalize: bool = False) -> Node:
         """Contracts sequence of MPO nodes (matrices) inline."""
-        result_node = nodes[0]
-        for node in nodes[1:]:
+        result_node = mats_env[0]
+        for node in mats_env[1:]:
             result_node @= node
+            
+            if renormalize:
+                right_axes = []
+                for ax_name in result_node.axes_names:
+                    if 'right' in ax_name:
+                        right_axes.append(ax_name)
+                if right_axes:
+                    result_node = result_node.renormalize(axis=right_axes)
+            
         return result_node
 
     def _contract_envs_inline(self,
-                              mats_env: List[Node],
+                              mats_env: List[AbstractNode],
+                              renormalize: bool = False,
                               mps: Optional[MPSData] = None) -> Node:
         """Contracts nodes environments inline."""
         if (mps is not None) and (mps._boundary == 'obc'):
@@ -585,13 +605,16 @@ class MPO(TensorNetwork):  # MARK: MPO
         if self._boundary == 'obc':
             mats_env = [self._left_node] + mats_env
             mats_env = mats_env + [self._right_node]
-        return self._inline_contraction(mats_env)
+        return self._inline_contraction(mats_env=mats_env,
+                                        renormalize=renormalize)
 
-    def _aux_pairwise(self, nodes: List[Node]) -> Tuple[List[Node],
+    def _aux_pairwise(self,
+                      mats_env: List[AbstractNode],
+                      renormalize: bool = False) -> Tuple[List[Node],
     List[Node]]:
         """Contracts a sequence of MPO nodes (matrices) pairwise."""
-        length = len(nodes)
-        aux_nodes = nodes
+        length = len(mats_env)
+        aux_nodes = mats_env
         if length > 1:
             half_length = length // 2
             nice_length = 2 * half_length
@@ -607,32 +630,48 @@ class MPO(TensorNetwork):  # MARK: MPO
 
             aux_nodes = stack1 @ stack2
             aux_nodes = op.unbind(aux_nodes)
+            
+            if renormalize:
+                for i in range(len(aux_nodes)):
+                    axes = []
+                    for ax_name in aux_nodes[i].axes_names:
+                        if ('left' in ax_name) or ('right' in ax_name):
+                            axes.append(ax_name)
+                    if axes:
+                        aux_nodes[i] = aux_nodes[i].renormalize(axis=axes)
 
             return aux_nodes, leftover
-        return nodes, []
+        return mats_env, []
 
     def _pairwise_contraction(self,
-                              mats_nodes: List[Node],
-                              mps: Optional[MPSData] = None) -> Node:
+                              mats_env: List[Node],
+                              mps: Optional[MPSData] = None,
+                              renormalize: bool = False) -> Node:
         """Contracts nodes environments pairwise."""
-        length = len(mats_nodes)
-        aux_nodes = mats_nodes
+        length = len(mats_env)
+        aux_nodes = mats_env
         if length > 1:
             leftovers = []
             while length > 1:
-                aux1, aux2 = self._aux_pairwise(aux_nodes)
+                aux1, aux2 = self._aux_pairwise(mats_env=aux_nodes,
+                                                renormalize=renormalize)
                 aux_nodes = aux1
                 leftovers = aux2 + leftovers
                 length = len(aux1)
 
             aux_nodes = aux_nodes + leftovers
-            return self._pairwise_contraction(aux_nodes, mps)
+            return self._pairwise_contraction(mats_env=aux_nodes,
+                                              renormalize=renormalize,
+                                              mps=mps)
 
-        return self._contract_envs_inline(aux_nodes, mps)
+        return self._contract_envs_inline(mats_env=aux_nodes,
+                                          renormalize=renormalize,
+                                          mps=mps)
     
     def contract(self,
                  inline_input: bool = False,
                  inline_mats: bool = False,
+                 renormalize: bool = False,
                  mps: Optional[MPSData] = None) -> Node:
         """
         Contracts the whole MPO with input data nodes. The input can be in the
@@ -674,6 +713,14 @@ class MPO(TensorNetwork):  # MARK: MPO
             Boolean indicating whether the sequence of matrices (resultant
             after contracting the input ``data`` nodes) should be contracted
             inline or as a sequence of pairwise stacked contrations.
+        renormalize : bool
+            Indicates whether nodes should be renormalized after contraction.
+            If not, it may happen that the norm explodes or vanishes, as it
+            is being accumulated from all nodes. Renormalization aims to avoid
+            this undesired behavior by extracting the norm of each node on a
+            logarithmic scale. The renormalization only occurs when multiplying
+            sequences of matrices, once the `input` contractions have been
+            already performed, including contracting against ``MPSData``.
         mps : MPSData, optional
             MPS that is to be contracted with the MPO. New data can be
             put into the MPS via :meth:`MPSData.add_data`, and the MPS-MPO
@@ -699,12 +746,19 @@ class MPO(TensorNetwork):  # MARK: MPO
             for mps_node, mpo_node in zip(mps._mats_env, self._mats_env):
                 mps_node['feature'] ^ mpo_node['input']
                 
-        mats_env = self._input_contraction(self._mats_env, inline_input)
+        mats_env = self._input_contraction(
+            nodes_env=self._mats_env,
+            input_nodes=[node.neighbours('input') for node in self._mats_env],
+            inline_input=inline_input)
         
         if inline_mats:
-            result = self._contract_envs_inline(mats_env, mps)
+            result = self._contract_envs_inline(mats_env=mats_env,
+                                                renormalize=renormalize,
+                                                mps=mps)
         else:
-            result = self._pairwise_contraction(mats_env, mps)
+            result = self._pairwise_contraction(mats_env=mats_env,
+                                                renormalize=renormalize,
+                                                mps=mps)
             
         # Contract periodic edge
         if result.is_connected_to(result):
@@ -724,6 +778,171 @@ class MPO(TensorNetwork):  # MARK: MPO
             result = op.permute(result, tuple(all_edges))
         
         return result
+    
+    @torch.no_grad()
+    def canonicalize(self,
+                     oc: Optional[int] = None,
+                     mode: Text = 'svd',
+                     rank: Optional[int] = None,
+                     cum_percentage: Optional[float] = None,
+                     cutoff: Optional[float] = None,
+                     renormalize: bool = False) -> None:
+        r"""
+        Turns MPO into `canonical` form via local SVD/QR decompositions in the
+        same way this transformation is applied to :class:`~tensorkrowch.models.MPS`.
+        
+        To specify the new bond dimensions, the arguments ``rank``,
+        ``cum_percentage`` or ``cutoff`` can be specified. These will be used
+        equally for all SVD computations.
+        
+        If none of them are specified, the bond dimensions won't be modified
+        if possible. Only when the bond dimension is bigger than the physical
+        dimension multiplied by the other bond dimension of the node, it will
+        be cropped to that size.
+        
+        Parameters
+        ----------
+        oc : int
+            Position of the orthogonality center. It should be between 0 and 
+            ``n_features - 1``.
+        mode : {"svd", "svdr", "qr"}
+            Indicates which decomposition should be used to split a node after
+            contracting it. See more at :func:`~tensorkrowch.svd_`,
+            :func:`~tensorkrowch.svdr_`, :func:`~tensorkrowch.qr_`.
+            If mode is "qr", operation :func:`~tensorkrowch.qr_` will be
+            performed on nodes at the left of the output node, whilst operation
+            :func:`~tensorkrowch.rq_` will be used for nodes at the right.
+        rank : int, optional
+            Number of singular values to keep.
+        cum_percentage : float, optional
+            Proportion that should be satisfied between the sum of all singular
+            values kept and the total sum of all singular values.
+            
+            .. math::
+            
+                \frac{\sum_{i \in \{kept\}}{s_i}}{\sum_{i \in \{all\}}{s_i}} \ge
+                cum\_percentage
+        cutoff : float, optional
+            Quantity that lower bounds singular values in order to be kept.
+        renormalize : bool
+            Indicates whether nodes should be renormalized after SVD/QR
+            decompositions. If not, it may happen that the norm explodes as it
+            is being accumulated from all nodes. Renormalization aims to avoid
+            this undesired behavior by extracting the norm of each node on a
+            logarithmic scale after SVD/QR decompositions are computed. Finally,
+            the normalization factor is evenly distributed among all nodes of
+            the MPO.
+            
+        Examples
+        --------
+        >>> mpo = tk.models.MPO(n_features=4,
+        ...                     in_dim=2,
+        ...                     out_dim=2,
+        ...                     bond_dim=5)
+        >>> mpo.canonicalize(rank=3)
+        >>> mpo.bond_dim
+        [3, 3, 3]
+        """
+        self.reset()
+
+        prev_auto_stack = self._auto_stack
+        self.auto_stack = False
+
+        if oc is None:
+            oc = self._n_features - 1
+        elif (oc < 0) or (oc >= self._n_features):
+            raise ValueError('Orthogonality center position `oc` should be '
+                             'between 0 and `n_features` - 1')
+        
+        log_norm = 0
+        
+        nodes = self._mats_env[:]
+        if self._boundary == 'obc':
+            nodes[0].tensor[1:] = torch.zeros_like(
+                nodes[0].tensor[1:])
+            nodes[-1].tensor[..., 1:, :] = torch.zeros_like(
+                nodes[-1].tensor[..., 1:, :])
+        
+        # If mode is svd or svr and none of the args is provided, the ranks are
+        # kept as they were originally
+        keep_rank = False
+        if (rank is None) and (cum_percentage is None) and (cutoff is None):
+            keep_rank = True
+        
+        for i in range(oc):
+            if mode == 'svd':
+                result1, result2 = nodes[i]['right'].svd_(
+                    side='right',
+                    rank=nodes[i]['right'].size() if keep_rank else rank,
+                    cum_percentage=cum_percentage,
+                    cutoff=cutoff)
+            elif mode == 'svdr':
+                result1, result2 = nodes[i]['right'].svdr_(
+                    side='right',
+                    rank=nodes[i]['right'].size() if keep_rank else rank,
+                    cum_percentage=cum_percentage,
+                    cutoff=cutoff)
+            elif mode == 'qr':
+                result1, result2 = nodes[i]['right'].qr_()
+            else:
+                raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
+            
+            if renormalize:
+                aux_norm = result2.norm() / sqrt(result2.shape[0])
+                if not aux_norm.isinf() and (aux_norm > 0):
+                    result2.tensor = result2.tensor / aux_norm
+                    log_norm += aux_norm.log()
+
+            result1 = result1.parameterize()
+            nodes[i] = result1
+            nodes[i + 1] = result2
+
+        for i in range(len(nodes) - 1, oc, -1):
+            if mode == 'svd':
+                result1, result2 = nodes[i]['left'].svd_(
+                    side='left',
+                    rank=nodes[i]['left'].size() if keep_rank else rank,
+                    cum_percentage=cum_percentage,
+                    cutoff=cutoff)
+            elif mode == 'svdr':
+                result1, result2 = nodes[i]['left'].svdr_(
+                    side='left',
+                    rank=nodes[i]['left'].size() if keep_rank else rank,
+                    cum_percentage=cum_percentage,
+                    cutoff=cutoff)
+            elif mode == 'qr':
+                result1, result2 = nodes[i]['left'].rq_()
+            else:
+                raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
+            
+            if renormalize:
+                aux_norm = result1.norm() / sqrt(result1.shape[0])
+                if not aux_norm.isinf() and (aux_norm > 0):
+                    result1.tensor = result1.tensor / aux_norm
+                    log_norm += aux_norm.log()
+
+            result2 = result2.parameterize()
+            nodes[i] = result2
+            nodes[i - 1] = result1
+
+        nodes[oc] = nodes[oc].parameterize()
+        
+        # Rescale
+        if log_norm != 0:
+            rescale = (log_norm / len(nodes)).exp()
+        
+        if renormalize and (log_norm != 0):
+            for node in nodes:
+                node.tensor = node.tensor * rescale
+        
+        # Update variables
+        if self._boundary == 'obc':
+            self._bond_dim = [node['right'].size() for node in nodes[:-1]]
+        else:
+            self._bond_dim = [node['right'].size() for node in nodes]
+        self._mats_env = nodes
+
+        self.auto_stack = prev_auto_stack
 
 
 class UMPO(MPO):  # MARK: UMPO
@@ -885,8 +1104,6 @@ class UMPO(MPO):  # MARK: UMPO
             Keyword arguments for the different initialization methods. See
             :meth:`~tensorkrowch.AbstractNode.make_tensor`.
         """
-        node = self.uniform_memory
-        
         if tensors is not None:
             self.uniform_memory.tensor = tensors[0]
         
@@ -967,3 +1184,14 @@ class UMPO(MPO):  # MARK: UMPO
             node.set_tensor_from(net.uniform_memory)
             
         return net
+    
+    def canonicalize(self,
+                     oc: Optional[int] = None,
+                     mode: Text = 'svd',
+                     rank: Optional[int] = None,
+                     cum_percentage: Optional[float] = None,
+                     cutoff: Optional[float] = None,
+                     renormalize: bool = False) -> None:
+        """:meta private:"""
+        raise NotImplementedError(
+            '`canonicalize` not implemented for UMPO')

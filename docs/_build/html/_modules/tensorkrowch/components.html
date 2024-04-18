@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.components &#8212; TensorKrowch 1.0.1 documentation</title>
+    <title>tensorkrowch.components &#8212; TensorKrowch 1.1.0 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -1103,6 +1103,11 @@ title="Source repository"
                                                              <span class="n">List</span><span class="p">[</span><span class="s1">&#39;AbstractNode&#39;</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the neighbours of the node, the nodes to which it is connected.</span>
+<span class="sd">        </span>
+<span class="sd">        If ``self`` is a ``resultant`` node, this will return the neighbours of</span>
+<span class="sd">        the ``leaf`` nodes from which ``self`` inherits the edges. Therefore,</span>
+<span class="sd">        one cannot check if two ``resultant`` nodes are connected by looking</span>
+<span class="sd">        into their neighbours lists. To do that, use :meth:`is_connected_to`.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -2142,7 +2147,8 @@ title="Source repository"
 
 <div class="viewcode-block" id="AbstractNode.norm"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.norm">[docs]</a>    <span class="k">def</span> <span class="nf">norm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
              <span class="n">p</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
-             <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Ax</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+             <span class="n">axis</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Ax</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Ax</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">keepdim</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the norm of all elements in the node&#39;s tensor. If an ``axis`` is</span>
 <span class="sd">        specified, the norm is over that axis. If ``axis`` is a sequence of axes,</span>
@@ -2159,6 +2165,9 @@ title="Source repository"
 <span class="sd">            The order of the norm.</span>
 <span class="sd">        axis : int, str, Axis or list[int, str or Axis], optional</span>
 <span class="sd">            Axis or sequence of axes over which to reduce.</span>
+<span class="sd">        keepdim : bool</span>
+<span class="sd">            Boolean indicating whether the output tensor have dimensions</span>
+<span class="sd">            retained or not.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -2184,7 +2193,7 @@ title="Source repository"
                     <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">ax</span><span class="p">))</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">))</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis_num</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis_num</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="n">keepdim</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="AbstractNode.numel"><a class="viewcode-back" href="../../components.html#tensorkrowch.AbstractNode.numel">[docs]</a>    <span class="k">def</span> <span class="nf">numel</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>

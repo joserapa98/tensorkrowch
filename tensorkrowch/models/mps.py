@@ -1169,7 +1169,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 nodes_out_env += aux_out_env
             
             if out_last:
-                if (self._boundary == 'obc'):
+                if self._boundary == 'obc':
                     nodes_out_env[-1] = nodes_out_env[-1] @ self._right_node
             else:
                 nodes_out_env[-1] = nodes_out_env[-1] @ in_results[-1]
@@ -1304,24 +1304,123 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         return result
     
-    def norm(self) -> torch.Tensor:
+    def norm(self,
+             log_scale: bool = False) -> torch.Tensor:
         """
         Computes the norm of the MPS.
         
-        This method internally sets ``in_features = []``, and calls the
-        :meth:`~tensorkrowch.TensorNetwork.forward` method with
-        ``marginalize_output = True``. Therefore, it may alter the behaviour
-        of the MPS if it is not :meth:`~tensorkrowch.TensorNetwork.reset`
-        afterwards. Also, if the MPS was contracted before with other arguments,
-        it should be ``reset`` before calling ``norm`` to avoid undesired
-        behaviour.
+        This method internally removes all data nodes in the MPS, if any, and
+        contracts the nodes with themselves. Therefore, this may alter the
+        usual behaviour of :meth:`contract` if the MPS is not
+        :meth:`~tensorkrowch.TensorNetwork.reset` afterwards. Also, if the MPS
+        was contracted before with other arguments, it should be ``reset``
+        before calling ``norm`` to avoid undesired behaviour.
+        
+        Since the norm is computed by contracting the MPS, it means one can
+        take gradients of it with respect to the MPS tensors, if it is needed.
+        
+        Parameters
+        ----------
+        log_scale : bool
+            Boolean indicating whether the resulting norm should be given in
+            logarithmoc scale. Useful for cases where the norm explodes or
+            vanishes.
         """
         if self._data_nodes:
             self.unset_data_nodes()
-        self.in_features = []
         
-        result = self.forward(marginalize_output=True)
-        result = result.sqrt()
+        # All nodes belong to the output region
+        all_nodes = self.mats_env[:]
+        
+        if self._boundary == 'obc':
+            all_nodes[0] = self._left_node @ all_nodes[0]
+            all_nodes[-1] = all_nodes[-1] @ self._right_node
+        
+        # Check if nodes are already connected to copied nodes
+        create_copies = []
+        for node in all_nodes:
+            neighbour = node.neighbours('input')
+            if neighbour is None:
+                create_copies.append(True)
+            else:
+                if 'virtual_result_copy' not in neighbour.name:
+                    raise ValueError(
+                        f'Node {node} is already connected to another node '
+                        'at axis "input". Disconnect the node or reset the '
+                        'network before calling `norm`')
+                else:
+                    create_copies.append(False)
+        
+        if any(create_copies) and not all(create_copies):
+            raise ValueError(
+                'There are some nodes connected and some disconnected at axis '
+                '"input". Disconnect all of them before calling `norm`')
+        
+        create_copies = any(create_copies)
+        
+        # Copy output nodes sharing tensors
+        if create_copies:
+            copied_nodes = []
+            for node in all_nodes:
+                copied_node = node.__class__(shape=node._shape,
+                                             axes_names=node.axes_names,
+                                             name='virtual_result_copy',
+                                             network=self,
+                                             virtual=True)
+                copied_node.set_tensor_from(node)
+                copied_nodes.append(copied_node)
+                
+                # Change batch names so that they not coincide with
+                # original batches, which gives dupliicate output batches
+                for ax in copied_node.axes:
+                    if ax._batch:
+                        ax.name = ax.name + '_copy'
+            
+            # Connect copied nodes with neighbours
+            for i in range(len(copied_nodes)):
+                if (i == 0) and (self._boundary == 'pbc'):
+                    if all_nodes[i - 1].is_connected_to(all_nodes[i]):
+                        copied_nodes[i - 1]['right'] ^ copied_nodes[i]['left']
+                elif i > 0:
+                    copied_nodes[i - 1]['right'] ^ copied_nodes[i]['left']
+            
+            # Reattach input edges of resultant output nodes and connect
+            # with copied nodes
+            for node, copied_node in zip(all_nodes, copied_nodes):
+                # Reattach input edges
+                node.reattach_edges(axes=['input'])
+                
+                # Connect copies directly to output nodes
+                copied_node['input'] ^ node['input']
+        else:
+            copied_nodes = []
+            for node in all_nodes:
+                copied_nodes.append(node.neighbours('input'))
+            
+        # Contract output nodes with copies
+        mats_out_env = self._input_contraction(
+            nodes_env=all_nodes,
+            input_nodes=copied_nodes,
+            inline_input=True)
+        
+        # Contract resultant matrices
+        log_norm = 0
+        result_node = mats_out_env[0]
+        if log_scale:
+            log_norm += result_node.norm()
+            result_node = result_node.renormalize()
+                
+        for node in mats_out_env[1:]:
+            result_node @= node
+            
+            if log_scale:
+                log_norm += result_node.norm()
+                result_node = result_node.renormalize()
+        
+        if log_scale:
+            return log_norm.sqrt()
+        
+        result = result_node.tensor.sqrt()
         return result
 
     def partial_density(self,

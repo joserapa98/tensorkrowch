@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.operations &#8212; TensorKrowch 1.1.0 documentation</title>
+    <title>tensorkrowch.operations &#8212; TensorKrowch 1.1.1 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -5473,7 +5473,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="einsum"><a class="viewcode-back" href="../../operations.html#tensorkrowch.einsum">[docs]</a><span class="k">def</span> <span class="nf">einsum</span><span class="p">(</span><span class="n">string</span><span class="p">:</span> <span class="n">Text</span><span class="p">,</span> <span class="o">*</span><span class="n">nodes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Performs einsum contraction based on `opt_einsum</span>
 <span class="sd">    &lt;https://optimized-einsum.readthedocs.io/en/stable/autosummary/opt_einsum.contract.html&gt;`_.</span>
 <span class="sd">    This operation facilitates contracting several nodes at once, specifying</span>
@@ -5538,7 +5538,7 @@ title="Source repository"
 <span class="c1">##############################   STACKED EINSUM   #############################</span>
 <div class="viewcode-block" id="stacked_einsum"><a class="viewcode-back" href="../../operations.html#tensorkrowch.stacked_einsum">[docs]</a><span class="k">def</span> <span class="nf">stacked_einsum</span><span class="p">(</span><span class="n">string</span><span class="p">:</span> <span class="n">Text</span><span class="p">,</span>
                    <span class="o">*</span><span class="n">nodes_lists</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Applies the same :func:`einsum` operation (same ``string``) to a sequence</span>
 <span class="sd">    of groups of nodes (all groups having the same amount of nodes, with the</span>
 <span class="sd">    same properties, etc.). That is, it stacks these groups of nodes into a</span>

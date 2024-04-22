@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Models &#8212; TensorKrowch 1.1.0 documentation</title>
+    <title>Models &#8212; TensorKrowch 1.1.1 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -1006,15 +1006,23 @@ without passing extra data tensors.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.models.MPS.norm">
-<span class="sig-name descname"><span class="pre">norm</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.norm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.norm" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">norm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">log_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.norm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.norm" title="Permalink to this definition">#</a></dt>
 <dd><p>Computes the norm of the MPS.</p>
-<p>This method internally sets <code class="docutils literal notranslate"><span class="pre">in_features</span> <span class="pre">=</span> <span class="pre">[]</span></code>, and calls the
-<a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.forward" title="tensorkrowch.TensorNetwork.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> method with
-<code class="docutils literal notranslate"><span class="pre">marginalize_output</span> <span class="pre">=</span> <span class="pre">True</span></code>. Therefore, it may alter the behaviour
-of the MPS if it is not <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>
-afterwards. Also, if the MPS was contracted before with other arguments,
-it should be <code class="docutils literal notranslate"><span class="pre">reset</span></code> before calling <code class="docutils literal notranslate"><span class="pre">norm</span></code> to avoid undesired
-behaviour.</p>
+<p>This method internally removes all data nodes in the MPS, if any, and
+contracts the nodes with themselves. Therefore, this may alter the
+usual behaviour of <a class="reference internal" href="#tensorkrowch.models.MPS.contract" title="tensorkrowch.models.MPS.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a> if the MPS is not
+<a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> afterwards. Also, if the MPS
+was contracted before with other arguments, it should be <code class="docutils literal notranslate"><span class="pre">reset</span></code>
+before calling <code class="docutils literal notranslate"><span class="pre">norm</span></code> to avoid undesired behaviour.</p>
+<p>Since the norm is computed by contracting the MPS, it means one can
+take gradients of it with respect to the MPS tensors, if it is needed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>log_scale</strong> (<em>bool</em>) – Boolean indicating whether the resulting norm should be given in
+logarithmoc scale. Useful for cases where the norm explodes or
+vanishes.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">

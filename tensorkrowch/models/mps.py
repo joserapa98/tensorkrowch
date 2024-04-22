@@ -1483,9 +1483,10 @@ class MPS(TensorNetwork):  # MARK: MPS
                     'Elements of `trace_sites` should be between 0 and '
                     '(`n_features` - 1)')
         
-        if self._data_nodes:
-            self.unset_data_nodes()
-        self.out_features = trace_sites
+        if set(trace_sites) != set(self.out_features):
+            if self._data_nodes:
+                self.unset_data_nodes()
+            self.out_features = trace_sites
         
         # Create dataset with all possible combinations for the input nodes
         # so that they are kept sort of "open"
@@ -1518,6 +1519,10 @@ class MPS(TensorNetwork):  # MARK: MPS
         else:
             result = self.forward(renormalize=renormalize,
                                   marginalize_output=True)
+        
+        if self._n_features == 1:
+            size = result.shape[0]
+            result = result.kron(result).view(size, size)
         
         return result
     

@@ -1522,7 +1522,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         if self._n_features == 1:
             size = result.shape[0]
-            result = result.kron(result).view(size, size)
+            result = result.outer(result).view(size, size)
         
         return result
     

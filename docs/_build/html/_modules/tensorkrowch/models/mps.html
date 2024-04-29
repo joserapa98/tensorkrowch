@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.models.mps &#8212; TensorKrowch 1.1.0 documentation</title>
+    <title>tensorkrowch.models.mps &#8212; TensorKrowch 1.1.1 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -826,9 +826,9 @@ title="Source repository"
                                         <span class="n">name</span><span class="o">=</span><span class="s1">&#39;left_node&#39;</span><span class="p">,</span>
                                         <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span> <span class="o">=</span> <span class="n">ParamNode</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">aux_bond_dim</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],),</span>
-                                    <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,),</span>
-                                    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;right_node&#39;</span><span class="p">,</span>
-                                    <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+                                         <span class="n">axes_names</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,),</span>
+                                         <span class="n">name</span><span class="o">=</span><span class="s1">&#39;right_node&#39;</span><span class="p">,</span>
+                                         <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
             
             <span class="n">aux_bond_dim</span> <span class="o">=</span> <span class="n">aux_bond_dim</span> <span class="o">+</span> <span class="p">[</span><span class="n">aux_bond_dim</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="o">+</span> <span class="p">[</span><span class="n">aux_bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
         
@@ -1458,7 +1458,7 @@ title="Source repository"
                 <span class="n">nodes_out_env</span> <span class="o">+=</span> <span class="n">aux_out_env</span>
             
             <span class="k">if</span> <span class="n">out_last</span><span class="p">:</span>
-                <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
                     <span class="n">nodes_out_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes_out_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">nodes_out_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes_out_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">@</span> <span class="n">in_results</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -1593,24 +1593,123 @@ title="Source repository"
         
         <span class="k">return</span> <span class="n">result</span></div>
     
-<div class="viewcode-block" id="MPS.norm"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.norm">[docs]</a>    <span class="k">def</span> <span class="nf">norm</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="MPS.norm"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.norm">[docs]</a>    <span class="k">def</span> <span class="nf">norm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+             <span class="n">log_scale</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Computes the norm of the MPS.</span>
 <span class="sd">        </span>
-<span class="sd">        This method internally sets ``in_features = []``, and calls the</span>
-<span class="sd">        :meth:`~tensorkrowch.TensorNetwork.forward` method with</span>
-<span class="sd">        ``marginalize_output = True``. Therefore, it may alter the behaviour</span>
-<span class="sd">        of the MPS if it is not :meth:`~tensorkrowch.TensorNetwork.reset`</span>
-<span class="sd">        afterwards. Also, if the MPS was contracted before with other arguments,</span>
-<span class="sd">        it should be ``reset`` before calling ``norm`` to avoid undesired</span>
-<span class="sd">        behaviour.</span>
+<span class="sd">        This method internally removes all data nodes in the MPS, if any, and</span>
+<span class="sd">        contracts the nodes with themselves. Therefore, this may alter the</span>
+<span class="sd">        usual behaviour of :meth:`contract` if the MPS is not</span>
+<span class="sd">        :meth:`~tensorkrowch.TensorNetwork.reset` afterwards. Also, if the MPS</span>
+<span class="sd">        was contracted before with other arguments, it should be ``reset``</span>
+<span class="sd">        before calling ``norm`` to avoid undesired behaviour.</span>
+<span class="sd">        </span>
+<span class="sd">        Since the norm is computed by contracting the MPS, it means one can</span>
+<span class="sd">        take gradients of it with respect to the MPS tensors, if it is needed.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        log_scale : bool</span>
+<span class="sd">            Boolean indicating whether the resulting norm should be given in</span>
+<span class="sd">            logarithmoc scale. Useful for cases where the norm explodes or</span>
+<span class="sd">            vanishes.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_nodes</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">unset_data_nodes</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">in_features</span> <span class="o">=</span> <span class="p">[]</span>
         
-        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">marginalize_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
+        <span class="c1"># All nodes belong to the output region</span>
+        <span class="n">all_nodes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">[:]</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+            <span class="n">all_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">@</span> <span class="n">all_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">all_nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">all_nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span>
+        
+        <span class="c1"># Check if nodes are already connected to copied nodes</span>
+        <span class="n">create_copies</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">all_nodes</span><span class="p">:</span>
+            <span class="n">neighbour</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">neighbour</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">create_copies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s1">&#39;virtual_result_copy&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">neighbour</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s1">&#39;Node </span><span class="si">{</span><span class="n">node</span><span class="si">}</span><span class="s1"> is already connected to another node &#39;</span>
+                        <span class="s1">&#39;at axis &quot;input&quot;. Disconnect the node or reset the &#39;</span>
+                        <span class="s1">&#39;network before calling `norm`&#39;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">create_copies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">create_copies</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">create_copies</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;There are some nodes connected and some disconnected at axis &#39;</span>
+                <span class="s1">&#39;&quot;input&quot;. Disconnect all of them before calling `norm`&#39;</span><span class="p">)</span>
+        
+        <span class="n">create_copies</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="n">create_copies</span><span class="p">)</span>
+        
+        <span class="c1"># Copy output nodes sharing tensors</span>
+        <span class="k">if</span> <span class="n">create_copies</span><span class="p">:</span>
+            <span class="n">copied_nodes</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">all_nodes</span><span class="p">:</span>
+                <span class="n">copied_node</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_shape</span><span class="p">,</span>
+                                             <span class="n">axes_names</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">,</span>
+                                             <span class="n">name</span><span class="o">=</span><span class="s1">&#39;virtual_result_copy&#39;</span><span class="p">,</span>
+                                             <span class="n">network</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+                                             <span class="n">virtual</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">copied_node</span><span class="o">.</span><span class="n">set_tensor_from</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+                <span class="n">copied_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">copied_node</span><span class="p">)</span>
+                
+                <span class="c1"># Change batch names so that they not coincide with</span>
+                <span class="c1"># original batches, which gives dupliicate output batches</span>
+                <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">copied_node</span><span class="o">.</span><span class="n">axes</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">ax</span><span class="o">.</span><span class="n">_batch</span><span class="p">:</span>
+                        <span class="n">ax</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;_copy&#39;</span>
+            
+            <span class="c1"># Connect copied nodes with neighbours</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">copied_nodes</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;pbc&#39;</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">all_nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">is_connected_to</span><span class="p">(</span><span class="n">all_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+                        <span class="n">copied_nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">copied_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+                <span class="k">elif</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">copied_nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">copied_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
+            
+            <span class="c1"># Reattach input edges of resultant output nodes and connect</span>
+            <span class="c1"># with copied nodes</span>
+            <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">copied_node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">all_nodes</span><span class="p">,</span> <span class="n">copied_nodes</span><span class="p">):</span>
+                <span class="c1"># Reattach input edges</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
+                
+                <span class="c1"># Connect copies directly to output nodes</span>
+                <span class="n">copied_node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">copied_nodes</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">all_nodes</span><span class="p">:</span>
+                <span class="n">copied_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">))</span>
+            
+        <span class="c1"># Contract output nodes with copies</span>
+        <span class="n">mats_out_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_contraction</span><span class="p">(</span>
+            <span class="n">nodes_env</span><span class="o">=</span><span class="n">all_nodes</span><span class="p">,</span>
+            <span class="n">input_nodes</span><span class="o">=</span><span class="n">copied_nodes</span><span class="p">,</span>
+            <span class="n">inline_input</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="c1"># Contract resultant matrices</span>
+        <span class="n">log_norm</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">result_node</span> <span class="o">=</span> <span class="n">mats_out_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">log_scale</span><span class="p">:</span>
+            <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+            <span class="n">result_node</span> <span class="o">=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">renormalize</span><span class="p">()</span>
+                
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">mats_out_env</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">result_node</span> <span class="o">@=</span> <span class="n">node</span>
+            
+            <span class="k">if</span> <span class="n">log_scale</span><span class="p">:</span>
+                <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+                <span class="n">result_node</span> <span class="o">=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">renormalize</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="n">log_scale</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">log_norm</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
+        
+        <span class="n">result</span> <span class="o">=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">result</span></div>
 
 <div class="viewcode-block" id="MPS.partial_density"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.partial_density">[docs]</a>    <span class="k">def</span> <span class="nf">partial_density</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -1673,9 +1772,10 @@ title="Source repository"
                     <span class="s1">&#39;Elements of `trace_sites` should be between 0 and &#39;</span>
                     <span class="s1">&#39;(`n_features` - 1)&#39;</span><span class="p">)</span>
         
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_nodes</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">unset_data_nodes</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">out_features</span> <span class="o">=</span> <span class="n">trace_sites</span>
+        <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">trace_sites</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_features</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_nodes</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">unset_data_nodes</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out_features</span> <span class="o">=</span> <span class="n">trace_sites</span>
         
         <span class="c1"># Create dataset with all possible combinations for the input nodes</span>
         <span class="c1"># so that they are kept sort of &quot;open&quot;</span>
@@ -1708,6 +1808,10 @@ title="Source repository"
         <span class="k">else</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">renormalize</span><span class="o">=</span><span class="n">renormalize</span><span class="p">,</span>
                                   <span class="n">marginalize_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">size</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
         
         <span class="k">return</span> <span class="n">result</span></div>
     
@@ -3641,7 +3745,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="ConvMPS"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvMPS">[docs]</a><span class="k">class</span> <span class="nc">ConvMPS</span><span class="p">(</span><span class="n">AbstractConvClass</span><span class="p">,</span> <span class="n">MPS</span><span class="p">):</span>  <span class="c1"># MARK: ConvMPS</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convolutional version of :class:`MPS`, where the input data is assumed to</span>
 <span class="sd">    be a batch of images.</span>
 <span class="sd">    </span>
@@ -3746,7 +3850,7 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">kernel_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns ``kernel_size``. Number of nodes is given by</span>
 <span class="sd">        :math:`kernel\_size_0 \cdot kernel\_size_1`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -3911,7 +4015,7 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">kernel_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns ``kernel_size``. Number of nodes is given by</span>
 <span class="sd">        :math:`kernel\_size_0 \cdot kernel\_size_1`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -3978,7 +4082,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="ConvMPSLayer"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvMPSLayer">[docs]</a><span class="k">class</span> <span class="nc">ConvMPSLayer</span><span class="p">(</span><span class="n">AbstractConvClass</span><span class="p">,</span> <span class="n">MPSLayer</span><span class="p">):</span>  <span class="c1"># MARK: ConvMPSLayer</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convolutional version of :class:`MPSLayer`, where the input data is assumed to</span>
 <span class="sd">    be a batch of images.</span>
 <span class="sd">    </span>
@@ -4101,7 +4205,7 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">kernel_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns ``kernel_size``. Number of nodes is given by</span>
 <span class="sd">        :math:`kernel\_size_0 \cdot kernel\_size_1 + 1`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -4172,7 +4276,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="ConvUMPSLayer"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.ConvUMPSLayer">[docs]</a><span class="k">class</span> <span class="nc">ConvUMPSLayer</span><span class="p">(</span><span class="n">AbstractConvClass</span><span class="p">,</span> <span class="n">UMPSLayer</span><span class="p">):</span>  <span class="c1"># MARK: ConvUMPSLayer</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convolutional version of :class:`UMPSLayer`, where the input data is assumed to</span>
 <span class="sd">    be a batch of images.</span>
 <span class="sd">    </span>
@@ -4288,7 +4392,7 @@ title="Source repository"
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">kernel_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns ``kernel_size``. Number of nodes is given by</span>
 <span class="sd">        :math:`kernel\_size_0 \cdot kernel\_size_1 + 1`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>

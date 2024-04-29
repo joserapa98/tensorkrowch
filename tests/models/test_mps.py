@@ -1186,24 +1186,26 @@ class TestMPS:  # MARK: TestMPS
                     assert mps.data_nodes
                 assert mps.in_features == in_features
                 
-                # MPS has to be reset, otherwise norm automatically calls
-                # the forward method that was traced when contracting the MPS
-                # with example
-                mps.reset()
-                norm = mps.norm()
-                assert mps.resultant_nodes
-                assert not mps.data_nodes
-                assert mps.in_features == []
-                assert mps.out_features == list(range(n_features))
-                
-                norm.sum().backward()
-                for node in mps.mats_env:
-                    assert node.grad is not None
+                for log_scale in [True, False]:
+                    # MPS has to be reset, otherwise norm automatically calls
+                    # the forward method that was traced when contracting the MPS
+                    # with example
+                    mps.reset()
+                    norm = mps.norm(log_scale=log_scale)
+                    assert mps.resultant_nodes
+                    assert not mps.data_nodes
+                    assert mps.in_features == in_features
+                    
+                    norm.sum().backward()
+                    for node in mps.mats_env:
+                        assert node.grad is not None
+                    
+                    # Repeat norm
+                    norm = mps.norm(log_scale=log_scale)
      
     def test_partial_density(self):
-        for n_features in [3, 4, 5]:
+        for n_features in [1, 2, 3, 4, 5]:
             for boundary in ['obc', 'pbc']:
-                print(n_features, boundary)
                 phys_dim = torch.randint(low=2, high=12,
                                          size=(n_features,)).tolist()
                 bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
@@ -1249,12 +1251,14 @@ class TestMPS:  # MARK: TestMPS
                 density.sum().backward()
                 for node in mps.mats_env:
                     assert node.grad is not None
+                
+                # Repeat density
+                density = mps.partial_density(trace_sites)
     
     def test_partial_density_cuda(self):
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        for n_features in [3, 4, 5]:
+        for n_features in [1, 2, 3, 4, 5]:
             for boundary in ['obc', 'pbc']:
-                print(n_features, boundary)
                 phys_dim = torch.randint(low=2, high=12,
                                          size=(n_features,)).tolist()
                 bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
@@ -1301,6 +1305,9 @@ class TestMPS:  # MARK: TestMPS
                 density.sum().backward()
                 for node in mps.mats_env:
                     assert node.grad is not None
+                
+                # Repeat density
+                density = mps.partial_density(trace_sites)
     
     def test_entropy(self):
         for n_features in [1, 2, 3, 4, 10]:
@@ -1914,23 +1921,26 @@ class TestUMPS:  # MARK: TestUMPS
                 assert mps.data_nodes
             assert mps.in_features == in_features
             
-            # MPS has to be rese, otherwise norm automatically calls
-            # the forward method that was traced when contracting the MPS
-            # with example
-            mps.reset()
-            norm = mps.norm()
-            assert mps.resultant_nodes
-            assert not mps.data_nodes
-            assert mps.in_features == []
-            assert mps.out_features == list(range(n_features))
-            
-            norm.sum().backward()
-            for node in mps.mats_env:
-                assert node.grad is not None
-            assert mps.uniform_memory.grad is not None
+            for log_scale in [True, False]:
+                # MPS has to be rese, otherwise norm automatically calls
+                # the forward method that was traced when contracting the MPS
+                # with example
+                mps.reset()
+                norm = mps.norm(log_scale=log_scale)
+                assert mps.resultant_nodes
+                assert not mps.data_nodes
+                assert mps.in_features == in_features
+                
+                norm.sum().backward()
+                for node in mps.mats_env:
+                    assert node.grad is not None
+                assert mps.uniform_memory.grad is not None
+                
+                # Repeat norm
+                norm = mps.norm(log_scale=log_scale)
     
     def test_partial_density(self):
-        for n_features in [3, 4, 5]:
+        for n_features in [1, 2, 3, 4, 5]:
             phys_dim = torch.randint(low=2, high=12, size=(1,)).item()
             bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
             
@@ -1972,10 +1982,13 @@ class TestUMPS:  # MARK: TestUMPS
             density.sum().backward()
             for node in mps.mats_env:
                 assert node.grad is not None
+            
+            # Repeat density
+            density = mps.partial_density(trace_sites)
     
     def test_partial_density_cuda(self):
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        for n_features in [3, 4, 5]:
+        for n_features in [1, 2, 3, 4, 5]:
             phys_dim = torch.randint(low=2, high=12, size=(1,)).item()
             bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
             
@@ -2018,6 +2031,9 @@ class TestUMPS:  # MARK: TestUMPS
             density.sum().backward()
             for node in mps.mats_env:
                 assert node.grad is not None
+            
+            # Repeat density
+            density = mps.partial_density(trace_sites)
     
     def test_canonicalize_error(self):
         mps = tk.models.UMPS(n_features=10,
@@ -2385,7 +2401,6 @@ class TestUMPSLayer:  # MARK: TestUMPSLayer
                    'randn_eye', 'unit', 'canonical']
         for n in [1, 2, 5]:
             for init_method in methods:
-                print(init_method)
                 mps = tk.models.UMPSLayer(n_features=n,
                                           in_dim=2,
                                           out_dim=5,

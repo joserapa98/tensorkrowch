@@ -241,6 +241,11 @@ def tt_rss(function: Callable,
            device: Optional[torch.device] = None,
            verbose: bool = True) -> List[torch.Tensor]:
     r"""
+    NOTE: we are assuming the function to decompose is given as square roots of
+    probabilities. Outputs are sampled according to the distribution given
+    as the squares of the outputs. What happens when the outputs do not represent
+    probabilities? Do we sample outputs according to distribution? Or just uniformly?
+    
     Tensor Train - Recursive Sketching from Samples.
     
     Decomposes a scalar function of :math:`N` input variables in a Matrix

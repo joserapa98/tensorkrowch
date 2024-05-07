@@ -942,16 +942,16 @@ class MPS(TensorNetwork):  # MARK: MPS
             stack1['right'] ^ stack2['left']
 
             aux_nodes = stack1 @ stack2
-            aux_nodes = op.unbind(aux_nodes)
             
             if renormalize:
-                for i in range(len(aux_nodes)):
-                    axes = []
-                    for ax_name in aux_nodes[i].axes_names:
-                        if ('left' in ax_name) or ('right' in ax_name):
-                            axes.append(ax_name)
-                    if axes:
-                        aux_nodes[i] = aux_nodes[i].renormalize(axis=axes)
+                axes = []
+                for ax_name in aux_nodes.axes_names:
+                    if ('left' in ax_name) or ('right' in ax_name):
+                        axes.append(ax_name)
+                if axes:
+                    aux_nodes = aux_nodes.renormalize(axis=axes)
+            
+            aux_nodes = op.unbind(aux_nodes)
 
             return aux_nodes, leftover
         return mats_env, []

@@ -1327,13 +1327,22 @@ def _renormalize_first(
     norm = node.tensor.norm(p=p, dim=axis_num, keepdim=True)
     norm = torch.where(norm == 0., 1., norm)
     new_tensor = node.tensor / norm
-    new_node = Node._create_resultant(axes_names=node.axes_names,
-                                      name='renormalize',
-                                      network=node._network,
-                                      tensor=new_tensor,
-                                      edges=node._edges,
-                                      node1_list=node.is_node1())
-
+    
+    if isinstance(node, (StackNode, ParamStackNode)):
+        new_node = StackNode._create_resultant(axes_names=node.axes_names,
+                                               name='renormalize',
+                                               network=node._network,
+                                               tensor=new_tensor,
+                                               edges=node._edges,
+                                               node1_list=node.is_node1())
+    else:
+        new_node = Node._create_resultant(axes_names=node.axes_names,
+                                          name='renormalize',
+                                          network=node._network,
+                                          tensor=new_tensor,
+                                          edges=node._edges,
+                                          node1_list=node.is_node1())
+    
     # Create successor
     net = node._network
     args = (node, p, axis)

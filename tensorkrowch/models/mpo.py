@@ -332,6 +332,15 @@ class MPO(TensorNetwork):  # MARK: MPO
         """Returns the list of nodes in ``mats_env``."""
         return self._mats_env
     
+    @property
+    def tensors(self) -> List[torch.Tensor]:
+        """Returns the list of MPO tensors."""
+        mpo_tensors = [node.tensor for node in self._mats_env]
+        if self._boundary == 'obc':
+            mpo_tensors[0] = mpo_tensors[0][0, :, :]
+            mpo_tensors[-1] = mpo_tensors[-1][:, :, 0]
+        return mpo_tensors
+    
     # -------
     # Methods
     # -------

@@ -516,6 +516,15 @@ class MPS(TensorNetwork):  # MARK: MPS
     def out_env(self) -> List[AbstractNode]:
         """Returns the list of output nodes."""
         return [self._mats_env[i] for i in self._out_features]
+
+    @property
+    def tensors(self) -> List[torch.Tensor]:
+        """Returns the list of MPS tensors."""
+        mps_tensors = [node.tensor for node in self._mats_env]
+        if self._boundary == 'obc':
+            mps_tensors[0] = mps_tensors[0][0, :, :]
+            mps_tensors[-1] = mps_tensors[-1][:, :, 0]
+        return mps_tensors
     
     # -------
     # Methods

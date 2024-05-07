@@ -1418,7 +1418,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 result_node = result_node.renormalize()
         
         if log_scale:
-            return log_norm.sqrt()
+            return log_norm / 2
         
         result = result_node.tensor.sqrt()
         return result

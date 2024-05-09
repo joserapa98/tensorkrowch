@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Parallel DMRG-like training of MPS &#8212; TensorKrowch 1.1.1 documentation</title>
+    <title>Hybrid DMRG-like training of MPS &#8212; TensorKrowch 1.1.1 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -182,7 +182,7 @@
    </li>
    <li class="toctree-l2 current active">
     <a class="current reference internal" href="#">
-     Parallel DMRG-like training of MPS
+     Hybrid DMRG-like training of MPS
     </a>
    </li>
   </ul>
@@ -398,7 +398,7 @@ title="Print to PDF"
         <div class="col pl-md-3 pl-lg-5 content-container">
             <!-- Table of contents that is only displayed when printing the page -->
             <div id="jb-print-docs-body" class="onlyprint">
-                <h1>Parallel DMRG-like training of MPS</h1>
+                <h1>Hybrid DMRG-like training of MPS</h1>
                 <!-- Table of contents -->
                 <div id="print-main-content">
                     <div id="jb-print-toc">
@@ -433,8 +433,8 @@ title="Print to PDF"
                 
               <div>
                 
-  <section id="Parallel-DMRG-like-training-of-MPS">
-<h1>Parallel DMRG-like training of MPS<a class="headerlink" href="#Parallel-DMRG-like-training-of-MPS" title="Permalink to this headline">#</a></h1>
+  <section id="Hybrid-DMRG-like-training-of-MPS">
+<h1>Hybrid DMRG-like training of MPS<a class="headerlink" href="#Hybrid-DMRG-like-training-of-MPS" title="Permalink to this headline">#</a></h1>
 <p>Here we show a way of training MPS models in a DMRG fashion, but where all MPS cores are optimized at the same time, thus making the training process much faster. In this approach, MPS cores are merged in pairs, contracting each node with a neighbour, and the whole model is trained like that. After a few iterations, the cores are unmerged and merged again with the other neighbour. This process can be repeated as many times as desired.</p>
 <p>This has the advantage that bond dimensions can be learned during the training process, and also the optimization is much faster than traditional DMRG, since all cores are updated at once.</p>
 <div class="nbinput nblast docutils container">
@@ -561,7 +561,7 @@ device(type=&#39;cuda&#39;, index=0)
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MPS_DMRG</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MPSLayer</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MPS_HDMRG</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MPSLayer</span><span class="p">):</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
@@ -687,14 +687,14 @@ device(type=&#39;cuda&#39;, index=0)
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Initialize network</span>
 <span class="n">model_name</span> <span class="o">=</span> <span class="s1">&#39;mps_dmrg_hybrid&#39;</span>
-<span class="n">mps</span> <span class="o">=</span> <span class="n">MPS_DMRG</span><span class="p">(</span><span class="n">n_features</span><span class="o">=</span><span class="n">input_size</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
-               <span class="n">in_dim</span><span class="o">=</span><span class="n">embedding_dim</span><span class="p">,</span>
-               <span class="n">out_dim</span><span class="o">=</span><span class="n">num_classes</span><span class="p">,</span>
-               <span class="n">bond_dim</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">,</span>
-               <span class="n">boundary</span><span class="o">=</span><span class="s1">&#39;obc&#39;</span><span class="p">,</span>
-               <span class="n">init_method</span><span class="o">=</span><span class="n">init_method</span><span class="p">,</span>
-               <span class="n">std</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span>
-               <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+<span class="n">mps</span> <span class="o">=</span> <span class="n">MPS_HDMRG</span><span class="p">(</span><span class="n">n_features</span><span class="o">=</span><span class="n">input_size</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="n">in_dim</span><span class="o">=</span><span class="n">embedding_dim</span><span class="p">,</span>
+                <span class="n">out_dim</span><span class="o">=</span><span class="n">num_classes</span><span class="p">,</span>
+                <span class="n">bond_dim</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">,</span>
+                <span class="n">boundary</span><span class="o">=</span><span class="s1">&#39;obc&#39;</span><span class="p">,</span>
+                <span class="n">init_method</span><span class="o">=</span><span class="n">init_method</span><span class="p">,</span>
+                <span class="n">std</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span>
+                <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
 
 <span class="c1"># Important to set data nodes before merging nodes</span>
 <span class="n">mps</span><span class="o">.</span><span class="n">set_data_nodes</span><span class="p">()</span>

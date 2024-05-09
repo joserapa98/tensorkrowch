@@ -1688,6 +1688,11 @@ class MPS(TensorNetwork):  # MARK: MPS
         dimension multiplied by the other bond dimension of the node, it will
         be cropped to that size.
         
+        If rank is not specified, the current bond dimensions will be used as
+        the rank. That is, the current bond dimensions will be the upper bound
+        for the possibly new bond dimensions given by the arguments
+        ``cum_percentage`` and/or ``cutoff``.
+        
         Parameters
         ----------
         oc : int
@@ -1753,7 +1758,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         # If mode is svd or svr and none of the args is provided, the ranks are
         # kept as they were originally
         keep_rank = False
-        if (rank is None) and (cum_percentage is None) and (cutoff is None):
+        if rank is None:
             keep_rank = True
         
         for i in range(oc):

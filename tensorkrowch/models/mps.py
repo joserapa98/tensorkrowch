@@ -852,6 +852,16 @@ class MPS(TensorNetwork):  # MARK: MPS
             net._right_node = net._right_node.parameterize(set_param)
             
         return net
+    
+    def update_bond_dim(self) -> None:
+        """
+        Updates the :attr:`bond_dim` attribute of the ``MPS``, in case it is
+        outdated.
+        """
+        if self._boundary == 'obc':
+            self._bond_dim = [node.shape[-1] for node in self._mats_env[:-1]]
+        else:
+            self._bond_dim = [node.shape[-1] for node in self._mats_env]
 
     def _input_contraction(self,
                            nodes_env: List[AbstractNode],

@@ -25,16 +25,23 @@ jobs:
       - name: Test components
         run: pytest tests/test_components.py --cov=tensorkrowch
       - name: Test operations
+        if: always()
         run: pytest tests/test_operations.py --cov=tensorkrowch
       - name: Test embeddings
+        if: always()
         run: pytest tests/test_embeddings.py --cov=tensorkrowch
       - name: Test decompositions
+        if: always()
         run: pytest tests/decompositions/ --cov=tensorkrowch
       - name: Test MPS
+        if: always()
         run: pytest tests/models/test_mps.py --cov=tensorkrowch
       - name: Test MPO
+        if: always()
         run: pytest tests/models/test_mpo.py --cov=tensorkrowch
       - name: Test PEPS
+        if: always()
         run: pytest tests/models/test_peps.py --cov=tensorkrowch
       - name: Test Tree
+        if: always()
         run: pytest tests/models/test_tree.py --cov=tensorkrowch

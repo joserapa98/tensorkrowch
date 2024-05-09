@@ -1610,7 +1610,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 rank=nodes[i]['right'].size())
             
             if renormalize:
-                aux_norm = result2.norm() / sqrt(result2.shape[0])
+                aux_norm = result2.norm()
                 if not aux_norm.isinf() and (aux_norm > 0):
                     result2.tensor = result2.tensor / aux_norm
                     log_norm += aux_norm.log()
@@ -1625,7 +1625,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 rank=nodes[i]['left'].size())
             
             if renormalize:
-                aux_norm = result1.norm() / sqrt(result1.shape[0])
+                aux_norm = result1.norm()
                 if not aux_norm.isinf() and (aux_norm > 0):
                     result1.tensor = result1.tensor / aux_norm
                     log_norm += aux_norm.log()
@@ -1633,12 +1633,6 @@ class MPS(TensorNetwork):  # MARK: MPS
             result2 = result2.parameterize()
             nodes[i] = result2
             nodes[i - 1] = result1
-        
-        if renormalize:
-            aux_norm = nodes[middle_site].norm()
-            if not aux_norm.isinf() and (aux_norm > 0):
-                nodes[middle_site].tensor = nodes[middle_site].tensor / aux_norm
-                log_norm += aux_norm.log()
         
         nodes[middle_site] = nodes[middle_site].parameterize()
         
@@ -1781,7 +1775,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
             
             if renormalize:
-                aux_norm = result2.norm() / sqrt(result2.shape[0])
+                aux_norm = result2.norm()
                 if not aux_norm.isinf() and (aux_norm > 0):
                     result2.tensor = result2.tensor / aux_norm
                     log_norm += aux_norm.log()
@@ -1809,7 +1803,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
             
             if renormalize:
-                aux_norm = result1.norm() / sqrt(result1.shape[0])
+                aux_norm = result1.norm()
                 if not aux_norm.isinf() and (aux_norm > 0):
                     result1.tensor = result1.tensor / aux_norm
                     log_norm += aux_norm.log()

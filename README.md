@@ -169,7 +169,7 @@ examples provide a hands-on approach to understanding the intricacies of
 specific needs.
 
 * [Training MPS in different ways](https://joserapa98.github.io/tensorkrowch/_build/html/examples/training_mps.html)
-* [Hybrid Tensorial Neural Network model)](https://joserapa98.github.io/tensorkrowch/_build/html/examples/hybrid_tnn_model.html)
+* [Hybrid Tensorial Neural Network model](https://joserapa98.github.io/tensorkrowch/_build/html/examples/hybrid_tnn_model.html)
 * [Tensorizing Neural Networks](https://joserapa98.github.io/tensorkrowch/_build/html/examples/tensorizing_nn.html)
 * [DMRG-like training of MPS](https://joserapa98.github.io/tensorkrowch/_build/html/examples/mps_dmrg.html)
 * [Hybrid DMRG-like training of MPS](https://joserapa98.github.io/tensorkrowch/_build/html/examples/mps_dmrg_hybrid.html)

@@ -1,0 +1,40 @@
+name: Run tests
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+  workflow_dispatch:
+
+jobs:
+  tests:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip torch opt_einsum
+      - name: Install pytest
+        run: pip install pytest pytest-cov
+      - name: Test components
+        run: pytest tests/test_components.py --cov=tensorkrowch
+      - name: Test operations
+        run: pytest tests/test_operations.py --cov=tensorkrowch
+      - name: Test embeddings
+        run: pytest tests/test_embeddings.py --cov=tensorkrowch
+      - name: Test decompositions
+        run: pytest tests/decompositions/ --cov=tensorkrowch
+      - name: Test MPS
+        run: pytest tests/models/test_mps.py --cov=tensorkrowch
+      - name: Test MPO
+        run: pytest tests/models/test_mpo.py --cov=tensorkrowch
+      - name: Test PEPS
+        run: pytest tests/models/test_peps.py --cov=tensorkrowch
+      - name: Test Tree
+        run: pytest tests/models/test_tree.py --cov=tensorkrowch

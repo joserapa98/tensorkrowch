@@ -557,6 +557,16 @@ class MPO(TensorNetwork):  # MARK: MPO
             
         return net
     
+    def update_bond_dim(self) -> None:
+        """
+        Updates the :attr:`bond_dim` attribute of the ``MPO``, in case it is
+        outdated.
+        """
+        if self._boundary == 'obc':
+            self._bond_dim = [node.shape[2] for node in self._mats_env[:-1]]
+        else:
+            self._bond_dim = [node.shape[2] for node in self._mats_env]
+    
     def _input_contraction(self,
                            nodes_env: List[AbstractNode],
                            input_nodes: List[AbstractNode],
@@ -809,6 +819,11 @@ class MPO(TensorNetwork):  # MARK: MPO
         dimension multiplied by the other bond dimension of the node, it will
         be cropped to that size.
         
+        If rank is not specified, the current bond dimensions will be used as
+        the rank. That is, the current bond dimensions will be the upper bound
+        for the possibly new bond dimensions given by the arguments
+        ``cum_percentage`` and/or ``cutoff``.
+        
         Parameters
         ----------
         oc : int
@@ -875,7 +890,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         # If mode is svd or svr and none of the args is provided, the ranks are
         # kept as they were originally
         keep_rank = False
-        if (rank is None) and (cum_percentage is None) and (cutoff is None):
+        if rank is None:
             keep_rank = True
         
         for i in range(oc):
@@ -897,7 +912,7 @@ class MPO(TensorNetwork):  # MARK: MPO
                 raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
             
             if renormalize:
-                aux_norm = result2.norm() / sqrt(result2.shape[0])
+                aux_norm = result2.norm()
                 if not aux_norm.isinf() and (aux_norm > 0):
                     result2.tensor = result2.tensor / aux_norm
                     log_norm += aux_norm.log()
@@ -925,7 +940,7 @@ class MPO(TensorNetwork):  # MARK: MPO
                 raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
             
             if renormalize:
-                aux_norm = result1.norm() / sqrt(result1.shape[0])
+                aux_norm = result1.norm()
                 if not aux_norm.isinf() and (aux_norm > 0):
                     result1.tensor = result1.tensor / aux_norm
                     log_norm += aux_norm.log()

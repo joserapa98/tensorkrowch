@@ -156,7 +156,7 @@ enhance your understanding and proficiency with **TensorKrowch**.
 * [Creating a Hybrid Neural-Tensor Network Model](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/6_mix_with_pytorch.html)
 
 
-## Examples
+## Example Notebooks
 
 In addition to the informative tutorials, there is also a collection of examples
 that serve as practical demonstrations of how to apply **TensorKrowch** in

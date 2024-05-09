@@ -113,8 +113,8 @@ enhance your understanding and proficiency with **TensorKrowch**.
    :start-line: 3
 
 
-Examples
-========
+Example Notebooks
+=================
 
 In addition to the informative tutorials, there is also a collection of examples
 that serve as practical demonstrations of how to apply **TensorKrowch** in

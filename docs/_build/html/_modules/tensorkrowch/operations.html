@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.operations &#8212; TensorKrowch 1.1.0 documentation</title>
+    <title>tensorkrowch.operations &#8212; TensorKrowch 1.1.1 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -33,6 +33,7 @@
     <script src="../../_static/clipboard.min.js"></script>
     <script src="../../_static/copybutton.js"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <link rel="shortcut icon" href="../../_static/tensorkrowch_favicon_light.svg"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -144,11 +145,48 @@
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../../api.html">
-   API Reference
+  <a class="reference internal" href="../../examples.html">
+   Examples
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
   <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
    <i class="fas fa-chevron-down">
    </i>
   </label>
@@ -1614,14 +1652,24 @@ title="Source repository"
             <span class="n">axis_num</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">get_axis_num</span><span class="p">(</span><span class="n">axis</span><span class="p">))</span>
     
     <span class="n">norm</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis_num</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">norm</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">norm</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="n">norm</span><span class="p">)</span>
     <span class="n">new_tensor</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">/</span> <span class="n">norm</span>
-    <span class="n">new_node</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">_create_resultant</span><span class="p">(</span><span class="n">axes_names</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">,</span>
-                                      <span class="n">name</span><span class="o">=</span><span class="s1">&#39;renormalize&#39;</span><span class="p">,</span>
-                                      <span class="n">network</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_network</span><span class="p">,</span>
-                                      <span class="n">tensor</span><span class="o">=</span><span class="n">new_tensor</span><span class="p">,</span>
-                                      <span class="n">edges</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span>
-                                      <span class="n">node1_list</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">is_node1</span><span class="p">())</span>
-
+    
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="p">(</span><span class="n">StackNode</span><span class="p">,</span> <span class="n">ParamStackNode</span><span class="p">)):</span>
+        <span class="n">new_node</span> <span class="o">=</span> <span class="n">StackNode</span><span class="o">.</span><span class="n">_create_resultant</span><span class="p">(</span><span class="n">axes_names</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">,</span>
+                                               <span class="n">name</span><span class="o">=</span><span class="s1">&#39;renormalize&#39;</span><span class="p">,</span>
+                                               <span class="n">network</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_network</span><span class="p">,</span>
+                                               <span class="n">tensor</span><span class="o">=</span><span class="n">new_tensor</span><span class="p">,</span>
+                                               <span class="n">edges</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span>
+                                               <span class="n">node1_list</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">is_node1</span><span class="p">())</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">new_node</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">_create_resultant</span><span class="p">(</span><span class="n">axes_names</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">,</span>
+                                          <span class="n">name</span><span class="o">=</span><span class="s1">&#39;renormalize&#39;</span><span class="p">,</span>
+                                          <span class="n">network</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_network</span><span class="p">,</span>
+                                          <span class="n">tensor</span><span class="o">=</span><span class="n">new_tensor</span><span class="p">,</span>
+                                          <span class="n">edges</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">_edges</span><span class="p">,</span>
+                                          <span class="n">node1_list</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">is_node1</span><span class="p">())</span>
+    
     <span class="c1"># Create successor</span>
     <span class="n">net</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_network</span>
     <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
@@ -1656,6 +1704,7 @@ title="Source repository"
     <span class="n">tensor</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_direct_get_tensor</span><span class="p">(</span><span class="n">successor</span><span class="o">.</span><span class="n">node_ref</span><span class="p">,</span>
                                      <span class="n">successor</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
     <span class="n">norm</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis_num</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">norm</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">norm</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="n">norm</span><span class="p">)</span>
     <span class="n">new_tensor</span> <span class="o">=</span> <span class="n">tensor</span> <span class="o">/</span> <span class="n">norm</span>
     
     <span class="n">child</span> <span class="o">=</span> <span class="n">successor</span><span class="o">.</span><span class="n">child</span>
@@ -5473,7 +5522,7 @@ title="Source repository"
 
 
 <div class="viewcode-block" id="einsum"><a class="viewcode-back" href="../../operations.html#tensorkrowch.einsum">[docs]</a><span class="k">def</span> <span class="nf">einsum</span><span class="p">(</span><span class="n">string</span><span class="p">:</span> <span class="n">Text</span><span class="p">,</span> <span class="o">*</span><span class="n">nodes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Performs einsum contraction based on `opt_einsum</span>
 <span class="sd">    &lt;https://optimized-einsum.readthedocs.io/en/stable/autosummary/opt_einsum.contract.html&gt;`_.</span>
 <span class="sd">    This operation facilitates contracting several nodes at once, specifying</span>
@@ -5538,7 +5587,7 @@ title="Source repository"
 <span class="c1">##############################   STACKED EINSUM   #############################</span>
 <div class="viewcode-block" id="stacked_einsum"><a class="viewcode-back" href="../../operations.html#tensorkrowch.stacked_einsum">[docs]</a><span class="k">def</span> <span class="nf">stacked_einsum</span><span class="p">(</span><span class="n">string</span><span class="p">:</span> <span class="n">Text</span><span class="p">,</span>
                    <span class="o">*</span><span class="n">nodes_lists</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Applies the same :func:`einsum` operation (same ``string``) to a sequence</span>
 <span class="sd">    of groups of nodes (all groups having the same amount of nodes, with the</span>
 <span class="sd">    same properties, etc.). That is, it stacks these groups of nodes into a</span>

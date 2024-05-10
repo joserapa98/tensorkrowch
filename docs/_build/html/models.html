@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Models &#8212; TensorKrowch 1.1.0 documentation</title>
+    <title>Models &#8212; TensorKrowch 1.1.1 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -34,7 +34,9 @@
     <script src="_static/clipboard.min.js"></script>
     <script src="_static/copybutton.js"></script>
     <script src="_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
-    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="shortcut icon" href="_static/tensorkrowch_favicon_light.svg"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -147,12 +149,49 @@
    </li>
   </ul>
  </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="examples.html">
+   Examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
  <li class="toctree-l1 current active has-children">
   <a class="reference internal" href="api.html">
    API Reference
   </a>
-  <input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
-  <label for="toctree-checkbox-2">
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
    <i class="fas fa-chevron-down">
    </i>
   </label>
@@ -838,6 +877,12 @@ if there are already data nodes in the network. When changing it,
 <dd><p>Returns the list of output nodes.</p>
 </dd></dl>
 
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPS.tensors">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">tensors</span></span><a class="headerlink" href="#tensorkrowch.models.MPS.tensors" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns the list of MPS tensors.</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.models.MPS.initialize">
 <span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'randn'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.initialize" title="Permalink to this definition">#</a></dt>
@@ -920,6 +965,13 @@ in-place (<code class="docutils literal notranslate"><span class="pre">True</spa
 </ul>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPS.update_bond_dim">
+<span class="sig-name descname"><span class="pre">update_bond_dim</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.update_bond_dim"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.update_bond_dim" title="Permalink to this definition">#</a></dt>
+<dd><p>Updates the <a class="reference internal" href="#tensorkrowch.models.MPS.bond_dim" title="tensorkrowch.models.MPS.bond_dim"><code class="xref py py-attr docutils literal notranslate"><span class="pre">bond_dim</span></code></a> attribute of the <code class="docutils literal notranslate"><span class="pre">MPS</span></code>, in case it is
+outdated.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1006,15 +1058,23 @@ without passing extra data tensors.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.models.MPS.norm">
-<span class="sig-name descname"><span class="pre">norm</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.norm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.norm" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">norm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">log_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.norm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.norm" title="Permalink to this definition">#</a></dt>
 <dd><p>Computes the norm of the MPS.</p>
-<p>This method internally sets <code class="docutils literal notranslate"><span class="pre">in_features</span> <span class="pre">=</span> <span class="pre">[]</span></code>, and calls the
-<a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.forward" title="tensorkrowch.TensorNetwork.forward"><code class="xref py py-meth docutils literal notranslate"><span class="pre">forward()</span></code></a> method with
-<code class="docutils literal notranslate"><span class="pre">marginalize_output</span> <span class="pre">=</span> <span class="pre">True</span></code>. Therefore, it may alter the behaviour
-of the MPS if it is not <a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>
-afterwards. Also, if the MPS was contracted before with other arguments,
-it should be <code class="docutils literal notranslate"><span class="pre">reset</span></code> before calling <code class="docutils literal notranslate"><span class="pre">norm</span></code> to avoid undesired
-behaviour.</p>
+<p>This method internally removes all data nodes in the MPS, if any, and
+contracts the nodes with themselves. Therefore, this may alter the
+usual behaviour of <a class="reference internal" href="#tensorkrowch.models.MPS.contract" title="tensorkrowch.models.MPS.contract"><code class="xref py py-meth docutils literal notranslate"><span class="pre">contract()</span></code></a> if the MPS is not
+<a class="reference internal" href="components.html#tensorkrowch.TensorNetwork.reset" title="tensorkrowch.TensorNetwork.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> afterwards. Also, if the MPS
+was contracted before with other arguments, it should be <code class="docutils literal notranslate"><span class="pre">reset</span></code>
+before calling <code class="docutils literal notranslate"><span class="pre">norm</span></code> to avoid undesired behaviour.</p>
+<p>Since the norm is computed by contracting the MPS, it means one can
+take gradients of it with respect to the MPS tensors, if it is needed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>log_scale</strong> (<em>bool</em>) – Boolean indicating whether the resulting norm should be given in
+logarithmoc scale. Useful for cases where the norm explodes or
+vanishes.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -1118,6 +1178,10 @@ equally for all SVD computations.</p>
 if possible. Only when the bond dimension is bigger than the physical
 dimension multiplied by the other bond dimension of the node, it will
 be cropped to that size.</p>
+<p>If rank is not specified, the current bond dimensions will be used as
+the rank. That is, the current bond dimensions will be the upper bound
+for the possibly new bond dimensions given by the arguments
+<code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code> and/or <code class="docutils literal notranslate"><span class="pre">cutoff</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -2524,6 +2588,12 @@ if there are already data nodes in the network.</p>
 <dd><p>Returns the list of nodes in <code class="docutils literal notranslate"><span class="pre">mats_env</span></code>.</p>
 </dd></dl>
 
+<dl class="py property">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPO.tensors">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">tensors</span></span><a class="headerlink" href="#tensorkrowch.models.MPO.tensors" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns the list of MPO tensors.</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.models.MPO.initialize">
 <span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'randn'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mpo.html#MPO.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPO.initialize" title="Permalink to this definition">#</a></dt>
@@ -2596,6 +2666,13 @@ in-place (<code class="docutils literal notranslate"><span class="pre">True</spa
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="tensorkrowch.models.MPO.update_bond_dim">
+<span class="sig-name descname"><span class="pre">update_bond_dim</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mpo.html#MPO.update_bond_dim"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPO.update_bond_dim" title="Permalink to this definition">#</a></dt>
+<dd><p>Updates the <a class="reference internal" href="#tensorkrowch.models.MPO.bond_dim" title="tensorkrowch.models.MPO.bond_dim"><code class="xref py py-attr docutils literal notranslate"><span class="pre">bond_dim</span></code></a> attribute of the <code class="docutils literal notranslate"><span class="pre">MPO</span></code>, in case it is
+outdated.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="tensorkrowch.models.MPO.contract">
 <span class="sig-name descname"><span class="pre">contract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inline_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inline_mats</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">renormalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mpo.html#MPO.contract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPO.contract" title="Permalink to this definition">#</a></dt>
 <dd><p>Contracts the whole MPO with input data nodes. The input can be in the
@@ -2663,6 +2740,10 @@ equally for all SVD computations.</p>
 if possible. Only when the bond dimension is bigger than the physical
 dimension multiplied by the other bond dimension of the node, it will
 be cropped to that size.</p>
+<p>If rank is not specified, the current bond dimensions will be used as
+the rank. That is, the current bond dimensions will be the upper bound
+for the possibly new bond dimensions given by the arguments
+<code class="docutils literal notranslate"><span class="pre">cum_percentage</span></code> and/or <code class="docutils literal notranslate"><span class="pre">cutoff</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">

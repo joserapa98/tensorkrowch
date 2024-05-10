@@ -332,6 +332,15 @@ class MPO(TensorNetwork):  # MARK: MPO
         """Returns the list of nodes in ``mats_env``."""
         return self._mats_env
     
+    @property
+    def tensors(self) -> List[torch.Tensor]:
+        """Returns the list of MPO tensors."""
+        mpo_tensors = [node.tensor for node in self._mats_env]
+        if self._boundary == 'obc':
+            mpo_tensors[0] = mpo_tensors[0][0, :, :]
+            mpo_tensors[-1] = mpo_tensors[-1][:, :, 0]
+        return mpo_tensors
+    
     # -------
     # Methods
     # -------
@@ -548,6 +557,16 @@ class MPO(TensorNetwork):  # MARK: MPO
             
         return net
     
+    def update_bond_dim(self) -> None:
+        """
+        Updates the :attr:`bond_dim` attribute of the ``MPO``, in case it is
+        outdated.
+        """
+        if self._boundary == 'obc':
+            self._bond_dim = [node.shape[2] for node in self._mats_env[:-1]]
+        else:
+            self._bond_dim = [node.shape[2] for node in self._mats_env]
+    
     def _input_contraction(self,
                            nodes_env: List[AbstractNode],
                            input_nodes: List[AbstractNode],
@@ -629,16 +648,16 @@ class MPO(TensorNetwork):  # MARK: MPO
             stack1 ^ stack2
 
             aux_nodes = stack1 @ stack2
-            aux_nodes = op.unbind(aux_nodes)
             
             if renormalize:
-                for i in range(len(aux_nodes)):
-                    axes = []
-                    for ax_name in aux_nodes[i].axes_names:
-                        if ('left' in ax_name) or ('right' in ax_name):
-                            axes.append(ax_name)
-                    if axes:
-                        aux_nodes[i] = aux_nodes[i].renormalize(axis=axes)
+                axes = []
+                for ax_name in aux_nodes.axes_names:
+                    if ('left' in ax_name) or ('right' in ax_name):
+                        axes.append(ax_name)
+                if axes:
+                    aux_nodes = aux_nodes.renormalize(axis=axes)
+            
+            aux_nodes = op.unbind(aux_nodes)
 
             return aux_nodes, leftover
         return mats_env, []
@@ -800,6 +819,11 @@ class MPO(TensorNetwork):  # MARK: MPO
         dimension multiplied by the other bond dimension of the node, it will
         be cropped to that size.
         
+        If rank is not specified, the current bond dimensions will be used as
+        the rank. That is, the current bond dimensions will be the upper bound
+        for the possibly new bond dimensions given by the arguments
+        ``cum_percentage`` and/or ``cutoff``.
+        
         Parameters
         ----------
         oc : int
@@ -866,7 +890,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         # If mode is svd or svr and none of the args is provided, the ranks are
         # kept as they were originally
         keep_rank = False
-        if (rank is None) and (cum_percentage is None) and (cutoff is None):
+        if rank is None:
             keep_rank = True
         
         for i in range(oc):
@@ -888,7 +912,7 @@ class MPO(TensorNetwork):  # MARK: MPO
                 raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
             
             if renormalize:
-                aux_norm = result2.norm() / sqrt(result2.shape[0])
+                aux_norm = result2.norm()
                 if not aux_norm.isinf() and (aux_norm > 0):
                     result2.tensor = result2.tensor / aux_norm
                     log_norm += aux_norm.log()
@@ -916,7 +940,7 @@ class MPO(TensorNetwork):  # MARK: MPO
                 raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
             
             if renormalize:
-                aux_norm = result1.norm() / sqrt(result1.shape[0])
+                aux_norm = result1.norm()
                 if not aux_norm.isinf() and (aux_norm > 0):
                     result1.tensor = result1.tensor / aux_norm
                     log_norm += aux_norm.log()

@@ -76,7 +76,7 @@ instance/
 target/
 
 # Jupyter Notebook
-*.ipynb
+# *.ipynb
 .ipynb_checkpoints
 
 # IPython
@@ -154,8 +154,8 @@ cython_debug/
 
 # Project folders
 /training_scripts
-/data
-/examples
+/old_examples
+*data/
 
 # Distribute package instructions
 /dist_pkg

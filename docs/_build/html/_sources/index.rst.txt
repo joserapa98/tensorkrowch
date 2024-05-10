@@ -45,6 +45,12 @@ Installation
 .. include:: installation.rst
    :start-line: 3
 
+.. note::
+   Certain tests may experience failure as a result of statistical anomalies or 
+   hardware constraints. We advise reviewing the error messages to determine if 
+   these failures stem from such occurrences. Should this be the case, consider 
+   rerunning the tests to ascertain if the errors persist.
+
 
 Example
 =======

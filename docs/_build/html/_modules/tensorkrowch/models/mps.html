@@ -33,6 +33,7 @@
     <script src="../../../_static/clipboard.min.js"></script>
     <script src="../../../_static/copybutton.js"></script>
     <script src="../../../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <link rel="shortcut icon" href="../../../_static/tensorkrowch_favicon_light.svg"/>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
@@ -144,11 +145,48 @@
   </ul>
  </li>
  <li class="toctree-l1 has-children">
-  <a class="reference internal" href="../../../api.html">
-   API Reference
+  <a class="reference internal" href="../../../examples.html">
+   Examples
   </a>
   <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
   <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/mps_dmrg.html">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../../../examples/mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../../../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
    <i class="fas fa-chevron-down">
    </i>
   </label>
@@ -805,6 +843,15 @@ title="Source repository"
     <span class="k">def</span> <span class="nf">out_env</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the list of output nodes.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_features</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">tensors</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the list of MPS tensors.&quot;&quot;&quot;</span>
+        <span class="n">mps_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+            <span class="n">mps_tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">mps_tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+            <span class="n">mps_tensors</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">mps_tensors</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">mps_tensors</span>
     
     <span class="c1"># -------</span>
     <span class="c1"># Methods</span>
@@ -1132,6 +1179,16 @@ title="Source repository"
             <span class="n">net</span><span class="o">.</span><span class="n">_right_node</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">_right_node</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="n">set_param</span><span class="p">)</span>
             
         <span class="k">return</span> <span class="n">net</span></div>
+    
+<div class="viewcode-block" id="MPS.update_bond_dim"><a class="viewcode-back" href="../../../models.html#tensorkrowch.models.MPS.update_bond_dim">[docs]</a>    <span class="k">def</span> <span class="nf">update_bond_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Updates the :attr:`bond_dim` attribute of the ``MPS``, in case it is</span>
+<span class="sd">        outdated.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">]</span></div>
 
     <span class="k">def</span> <span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                            <span class="n">nodes_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
@@ -1231,16 +1288,16 @@ title="Source repository"
             <span class="n">stack1</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">stack2</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">]</span>
 
             <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">stack1</span> <span class="o">@</span> <span class="n">stack2</span>
-            <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">aux_nodes</span><span class="p">)</span>
             
             <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">aux_nodes</span><span class="p">)):</span>
-                    <span class="n">axes</span> <span class="o">=</span> <span class="p">[]</span>
-                    <span class="k">for</span> <span class="n">ax_name</span> <span class="ow">in</span> <span class="n">aux_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
-                        <span class="k">if</span> <span class="p">(</span><span class="s1">&#39;left&#39;</span> <span class="ow">in</span> <span class="n">ax_name</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="n">ax_name</span><span class="p">):</span>
-                            <span class="n">axes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ax_name</span><span class="p">)</span>
-                    <span class="k">if</span> <span class="n">axes</span><span class="p">:</span>
-                        <span class="n">aux_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">aux_nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">renormalize</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">axes</span><span class="p">)</span>
+                <span class="n">axes</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">ax_name</span> <span class="ow">in</span> <span class="n">aux_nodes</span><span class="o">.</span><span class="n">axes_names</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="s1">&#39;left&#39;</span> <span class="ow">in</span> <span class="n">ax_name</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="n">ax_name</span><span class="p">):</span>
+                        <span class="n">axes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ax_name</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">axes</span><span class="p">:</span>
+                    <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">aux_nodes</span><span class="o">.</span><span class="n">renormalize</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">axes</span><span class="p">)</span>
+            
+            <span class="n">aux_nodes</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">aux_nodes</span><span class="p">)</span>
 
             <span class="k">return</span> <span class="n">aux_nodes</span><span class="p">,</span> <span class="n">leftover</span>
         <span class="k">return</span> <span class="n">mats_env</span><span class="p">,</span> <span class="p">[]</span>
@@ -1707,7 +1764,7 @@ title="Source repository"
                 <span class="n">result_node</span> <span class="o">=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">renormalize</span><span class="p">()</span>
         
         <span class="k">if</span> <span class="n">log_scale</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">log_norm</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">log_norm</span> <span class="o">/</span> <span class="mi">2</span>
         
         <span class="n">result</span> <span class="o">=</span> <span class="n">result_node</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">result</span></div>
@@ -1811,7 +1868,7 @@ title="Source repository"
         
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_features</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">size</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
         
         <span class="k">return</span> <span class="n">result</span></div>
     
@@ -1890,7 +1947,7 @@ title="Source repository"
                 <span class="n">rank</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
             
             <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
-                <span class="n">aux_norm</span> <span class="o">=</span> <span class="n">result2</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span> <span class="o">/</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">result2</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">aux_norm</span> <span class="o">=</span> <span class="n">result2</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">isinf</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">aux_norm</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
                     <span class="n">result2</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">result2</span><span class="o">.</span><span class="n">tensor</span> <span class="o">/</span> <span class="n">aux_norm</span>
                     <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
@@ -1905,7 +1962,7 @@ title="Source repository"
                 <span class="n">rank</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
             
             <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
-                <span class="n">aux_norm</span> <span class="o">=</span> <span class="n">result1</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span> <span class="o">/</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">result1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">aux_norm</span> <span class="o">=</span> <span class="n">result1</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">isinf</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">aux_norm</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
                     <span class="n">result1</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">result1</span><span class="o">.</span><span class="n">tensor</span> <span class="o">/</span> <span class="n">aux_norm</span>
                     <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
@@ -1913,12 +1970,6 @@ title="Source repository"
             <span class="n">result2</span> <span class="o">=</span> <span class="n">result2</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
             <span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">result2</span>
             <span class="n">nodes</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">result1</span>
-        
-        <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
-            <span class="n">aux_norm</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">middle_site</span><span class="p">]</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">isinf</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">aux_norm</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
-                <span class="n">nodes</span><span class="p">[</span><span class="n">middle_site</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">middle_site</span><span class="p">]</span><span class="o">.</span><span class="n">tensor</span> <span class="o">/</span> <span class="n">aux_norm</span>
-                <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
         
         <span class="n">nodes</span><span class="p">[</span><span class="n">middle_site</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">middle_site</span><span class="p">]</span><span class="o">.</span><span class="n">parameterize</span><span class="p">()</span>
         
@@ -1973,6 +2024,11 @@ title="Source repository"
 <span class="sd">        if possible. Only when the bond dimension is bigger than the physical</span>
 <span class="sd">        dimension multiplied by the other bond dimension of the node, it will</span>
 <span class="sd">        be cropped to that size.</span>
+<span class="sd">        </span>
+<span class="sd">        If rank is not specified, the current bond dimensions will be used as</span>
+<span class="sd">        the rank. That is, the current bond dimensions will be the upper bound</span>
+<span class="sd">        for the possibly new bond dimensions given by the arguments</span>
+<span class="sd">        ``cum_percentage`` and/or ``cutoff``.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -2039,7 +2095,7 @@ title="Source repository"
         <span class="c1"># If mode is svd or svr and none of the args is provided, the ranks are</span>
         <span class="c1"># kept as they were originally</span>
         <span class="n">keep_rank</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">cum_percentage</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">cutoff</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">rank</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">keep_rank</span> <span class="o">=</span> <span class="kc">True</span>
         
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">oc</span><span class="p">):</span>
@@ -2061,7 +2117,7 @@ title="Source repository"
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`mode` can only be &quot;svd&quot;, &quot;svdr&quot; or &quot;qr&quot;&#39;</span><span class="p">)</span>
             
             <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
-                <span class="n">aux_norm</span> <span class="o">=</span> <span class="n">result2</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span> <span class="o">/</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">result2</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">aux_norm</span> <span class="o">=</span> <span class="n">result2</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">isinf</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">aux_norm</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
                     <span class="n">result2</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">result2</span><span class="o">.</span><span class="n">tensor</span> <span class="o">/</span> <span class="n">aux_norm</span>
                     <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
@@ -2089,7 +2145,7 @@ title="Source repository"
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`mode` can only be &quot;svd&quot;, &quot;svdr&quot; or &quot;qr&quot;&#39;</span><span class="p">)</span>
             
             <span class="k">if</span> <span class="n">renormalize</span><span class="p">:</span>
-                <span class="n">aux_norm</span> <span class="o">=</span> <span class="n">result1</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span> <span class="o">/</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">result1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">aux_norm</span> <span class="o">=</span> <span class="n">result1</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">isinf</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">aux_norm</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
                     <span class="n">result1</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">result1</span><span class="o">.</span><span class="n">tensor</span> <span class="o">/</span> <span class="n">aux_norm</span>
                     <span class="n">log_norm</span> <span class="o">+=</span> <span class="n">aux_norm</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>

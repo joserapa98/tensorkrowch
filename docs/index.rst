@@ -45,6 +45,12 @@ Installation
 .. include:: installation.rst
    :start-line: 3
 
+.. note::
+   Certain tests may experience failure as a result of statistical anomalies or 
+   hardware constraints. We advise reviewing the error messages to determine if 
+   these failures stem from such occurrences. Should this be the case, consider 
+   rerunning the tests to ascertain if the errors persist.
+
 
 Example
 =======
@@ -108,6 +114,23 @@ concepts and best practices for using **TensorKrowch**. You will learn how to
 define ``Nodes``, create connections between through their ``Edges``, and
 configure the ``TensorNetwork`` structure. This hands-on approach will greatly
 enhance your understanding and proficiency with **TensorKrowch**.
+
+.. include:: tutorials.rst
+   :start-line: 3
+
+
+Example Notebooks
+=================
+
+In addition to the informative tutorials, there is also a collection of examples
+that serve as practical demonstrations of how to apply **TensorKrowch** in
+various contexts, showcasing its versatility.
+
+With the code provided in the examples, you will be able to reproduce key research
+findings that bridge the gap between tensor networks and machine learning. These
+examples provide a hands-on approach to understanding the intricacies of
+**TensorKrowch**, allowing you to explore its potential and adapt it to your
+specific needs.
 
 .. include:: tutorials.rst
    :start-line: 3

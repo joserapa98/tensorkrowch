@@ -516,6 +516,15 @@ class MPS(TensorNetwork):  # MARK: MPS
     def out_env(self) -> List[AbstractNode]:
         """Returns the list of output nodes."""
         return [self._mats_env[i] for i in self._out_features]
+
+    @property
+    def tensors(self) -> List[torch.Tensor]:
+        """Returns the list of MPS tensors."""
+        mps_tensors = [node.tensor for node in self._mats_env]
+        if self._boundary == 'obc':
+            mps_tensors[0] = mps_tensors[0][0, :, :]
+            mps_tensors[-1] = mps_tensors[-1][:, :, 0]
+        return mps_tensors
     
     # -------
     # Methods
@@ -843,6 +852,16 @@ class MPS(TensorNetwork):  # MARK: MPS
             net._right_node = net._right_node.parameterize(set_param)
             
         return net
+    
+    def update_bond_dim(self) -> None:
+        """
+        Updates the :attr:`bond_dim` attribute of the ``MPS``, in case it is
+        outdated.
+        """
+        if self._boundary == 'obc':
+            self._bond_dim = [node.shape[-1] for node in self._mats_env[:-1]]
+        else:
+            self._bond_dim = [node.shape[-1] for node in self._mats_env]
 
     def _input_contraction(self,
                            nodes_env: List[AbstractNode],
@@ -942,16 +961,16 @@ class MPS(TensorNetwork):  # MARK: MPS
             stack1['right'] ^ stack2['left']
 
             aux_nodes = stack1 @ stack2
-            aux_nodes = op.unbind(aux_nodes)
             
             if renormalize:
-                for i in range(len(aux_nodes)):
-                    axes = []
-                    for ax_name in aux_nodes[i].axes_names:
-                        if ('left' in ax_name) or ('right' in ax_name):
-                            axes.append(ax_name)
-                    if axes:
-                        aux_nodes[i] = aux_nodes[i].renormalize(axis=axes)
+                axes = []
+                for ax_name in aux_nodes.axes_names:
+                    if ('left' in ax_name) or ('right' in ax_name):
+                        axes.append(ax_name)
+                if axes:
+                    aux_nodes = aux_nodes.renormalize(axis=axes)
+            
+            aux_nodes = op.unbind(aux_nodes)
 
             return aux_nodes, leftover
         return mats_env, []
@@ -1418,7 +1437,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 result_node = result_node.renormalize()
         
         if log_scale:
-            return log_norm.sqrt()
+            return log_norm / 2
         
         result = result_node.tensor.sqrt()
         return result
@@ -1601,7 +1620,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 rank=nodes[i]['right'].size())
             
             if renormalize:
-                aux_norm = result2.norm() / sqrt(result2.shape[0])
+                aux_norm = result2.norm()
                 if not aux_norm.isinf() and (aux_norm > 0):
                     result2.tensor = result2.tensor / aux_norm
                     log_norm += aux_norm.log()
@@ -1616,7 +1635,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 rank=nodes[i]['left'].size())
             
             if renormalize:
-                aux_norm = result1.norm() / sqrt(result1.shape[0])
+                aux_norm = result1.norm()
                 if not aux_norm.isinf() and (aux_norm > 0):
                     result1.tensor = result1.tensor / aux_norm
                     log_norm += aux_norm.log()
@@ -1624,12 +1643,6 @@ class MPS(TensorNetwork):  # MARK: MPS
             result2 = result2.parameterize()
             nodes[i] = result2
             nodes[i - 1] = result1
-        
-        if renormalize:
-            aux_norm = nodes[middle_site].norm()
-            if not aux_norm.isinf() and (aux_norm > 0):
-                nodes[middle_site].tensor = nodes[middle_site].tensor / aux_norm
-                log_norm += aux_norm.log()
         
         nodes[middle_site] = nodes[middle_site].parameterize()
         
@@ -1684,6 +1697,11 @@ class MPS(TensorNetwork):  # MARK: MPS
         if possible. Only when the bond dimension is bigger than the physical
         dimension multiplied by the other bond dimension of the node, it will
         be cropped to that size.
+        
+        If rank is not specified, the current bond dimensions will be used as
+        the rank. That is, the current bond dimensions will be the upper bound
+        for the possibly new bond dimensions given by the arguments
+        ``cum_percentage`` and/or ``cutoff``.
         
         Parameters
         ----------
@@ -1750,7 +1768,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         # If mode is svd or svr and none of the args is provided, the ranks are
         # kept as they were originally
         keep_rank = False
-        if (rank is None) and (cum_percentage is None) and (cutoff is None):
+        if rank is None:
             keep_rank = True
         
         for i in range(oc):
@@ -1772,7 +1790,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
             
             if renormalize:
-                aux_norm = result2.norm() / sqrt(result2.shape[0])
+                aux_norm = result2.norm()
                 if not aux_norm.isinf() and (aux_norm > 0):
                     result2.tensor = result2.tensor / aux_norm
                     log_norm += aux_norm.log()
@@ -1800,7 +1818,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 raise ValueError('`mode` can only be "svd", "svdr" or "qr"')
             
             if renormalize:
-                aux_norm = result1.norm() / sqrt(result1.shape[0])
+                aux_norm = result1.norm()
                 if not aux_norm.isinf() and (aux_norm > 0):
                     result1.tensor = result1.tensor / aux_norm
                     log_norm += aux_norm.log()

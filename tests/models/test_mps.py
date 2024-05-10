@@ -649,17 +649,18 @@ class TestMPS:  # MARK: TestMPS
     def test_all_algorithms_marginalize(self):
         for n_features in [1, 2, 3, 4, 10]:
             for boundary in ['obc', 'pbc']:
-                example = torch.randn(1, n_features // 2, 5) # batch x n_features x feature_dim
-                data = torch.randn(100, n_features // 2, 5)
-                
-                if example.numel() == 0:
-                    example = None
-                    data = None
-                
                 in_features = torch.randint(low=0,
                                             high=n_features,
                                             size=(n_features // 2,)).tolist()
                 in_features = list(set(in_features))
+                
+                # batch x n_features x feature_dim
+                example = torch.randn(1, len(in_features), 5)
+                data = torch.randn(100, len(in_features), 5)
+                
+                if example.numel() == 0:
+                    example = None
+                    data = None
                 
                 mps = tk.models.MPS(n_features=n_features,
                                     phys_dim=5,
@@ -715,17 +716,18 @@ class TestMPS:  # MARK: TestMPS
     def test_all_algorithms_marginalize_with_list_matrices(self):
         for n_features in [1, 2, 3, 4, 10]:
             for boundary in ['obc', 'pbc']:
-                example = torch.randn(1, n_features // 2, 5) # batch x n_features x feature_dim
-                data = torch.randn(100, n_features // 2, 5)
-                
-                if example.numel() == 0:
-                    example = None
-                    data = None
-                
                 in_features = torch.randint(low=0,
                                             high=n_features,
                                             size=(n_features // 2,)).tolist()
                 in_features = list(set(in_features))
+                
+                # batch x n_features x feature_dim
+                example = torch.randn(1, len(in_features), 5)
+                data = torch.randn(100, len(in_features), 5)
+                
+                if example.numel() == 0:
+                    example = None
+                    data = None
                 
                 mps = tk.models.MPS(n_features=n_features,
                                     phys_dim=5,
@@ -786,16 +788,18 @@ class TestMPS:  # MARK: TestMPS
     def test_all_algorithms_marginalize_with_matrix(self):
         for n_features in [1, 2, 3, 4, 10]:
             for boundary in ['obc', 'pbc']:
-                example = torch.randn(1, n_features // 2, 5) # batch x n_features x feature_dim
-                data = torch.randn(100, n_features // 2, 5)
+                in_features = torch.randint(low=0,
+                                            high=n_features,
+                                            size=(n_features // 2,)).tolist()
+                in_features = list(set(in_features))
+                
+                # batch x n_features x feature_dim
+                example = torch.randn(1, len(in_features), 5)
+                data = torch.randn(100, len(in_features), 5)
                 
                 if example.numel() == 0:
                     example = None
                     data = None
-                
-                in_features = torch.randint(low=0, high=n_features,
-                                            size=(n_features // 2,)).tolist()
-                in_features = list(set(in_features))
                 
                 mps = tk.models.MPS(n_features=n_features,
                                     phys_dim=5,
@@ -856,17 +860,18 @@ class TestMPS:  # MARK: TestMPS
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         for n_features in [1, 2, 3, 4, 10]:
             for boundary in ['obc', 'pbc']:
+                in_features = torch.randint(low=0,
+                                            high=n_features,
+                                            size=(n_features // 2,)).tolist()
+                in_features = list(set(in_features))
+                
                 # batch x n_features x feature_dim
-                example = torch.randn(1, n_features // 2, 5, device=device)
-                data = torch.randn(100, n_features // 2, 5, device=device)
+                example = torch.randn(1, len(in_features), 5, device=device)
+                data = torch.randn(100, len(in_features), 5, device=device)
                 
                 if example.numel() == 0:
                     example = None
                     data = None
-                
-                in_features = torch.randint(low=0, high=n_features,
-                                            size=(n_features // 2,)).tolist()
-                in_features = list(set(in_features))
                 
                 mps = tk.models.MPS(n_features=n_features,
                                     phys_dim=5,
@@ -928,17 +933,18 @@ class TestMPS:  # MARK: TestMPS
         for n_features in [1, 2, 3, 4, 10]:
             for mps_boundary in ['obc', 'pbc']:
                 for mpo_boundary in ['obc', 'pbc']:
+                    in_features = torch.randint(low=0,
+                                                high=n_features,
+                                                size=(n_features // 2,)).tolist()
+                    in_features = list(set(in_features))
+                    
                     # batch x n_features x feature_dim
-                    example = torch.randn(1, n_features // 2, 5)
-                    data = torch.randn(100, n_features // 2, 5)
+                    example = torch.randn(1, len(in_features), 5)
+                    data = torch.randn(100, len(in_features), 5)
                     
                     if example.numel() == 0:
                         example = None
                         data = None
-                    
-                    in_features = torch.randint(low=0, high=n_features,
-                                                size=(n_features // 2,)).tolist()
-                    in_features = list(set(in_features))
                     
                     mps = tk.models.MPS(n_features=n_features,
                                         phys_dim=5,
@@ -1011,17 +1017,18 @@ class TestMPS:  # MARK: TestMPS
         for n_features in [1, 2, 3, 4, 10]:
             for mps_boundary in ['obc', 'pbc']:
                 for mpo_boundary in ['obc', 'pbc']:
-                    # batch x n_features x feature_dim
-                    example = torch.randn(1, n_features // 2, 5, device=device)
-                    data = torch.randn(100, n_features // 2, 5, device=device)
-                    
-                    if example.numel() == 0:
-                        example = None
-                        data = None
-                    
-                    in_features = torch.randint(low=0, high=n_features,
-                                                size=(n_features // 2,)).tolist()
-                    in_features = list(set(in_features))
+                    in_features = torch.randint(low=0,
+                                            high=n_features,
+                                            size=(n_features // 2,)).tolist()
+                in_features = list(set(in_features))
+                
+                # batch x n_features x feature_dim
+                example = torch.randn(1, len(in_features), 5, device=device)
+                data = torch.randn(100, len(in_features), 5, device=device)
+                
+                if example.numel() == 0:
+                    example = None
+                    data = None
                     
                     mps = tk.models.MPS(n_features=n_features,
                                         phys_dim=5,
@@ -1099,17 +1106,18 @@ class TestMPS:  # MARK: TestMPS
     def test_all_algorithms_no_marginalize(self):
         for n_features in [1, 2, 3, 4, 10]:
             for boundary in ['obc', 'pbc']:
-                example = torch.randn(1, n_features // 2, 5) # batch x n_features x feature_dim
-                data = torch.randn(100, n_features // 2, 5)
-                
-                if example.numel() == 0:
-                    example = None
-                    data = None
-                
                 in_features = torch.randint(low=0,
                                             high=n_features,
                                             size=(n_features // 2,)).tolist()
                 in_features = list(set(in_features))
+                
+                # batch x n_features x feature_dim
+                example = torch.randn(1, len(in_features), 5)
+                data = torch.randn(100, len(in_features), 5)
+                
+                if example.numel() == 0:
+                    example = None
+                    data = None
                 
                 mps = tk.models.MPS(n_features=n_features,
                                     phys_dim=5,
@@ -1163,16 +1171,18 @@ class TestMPS:  # MARK: TestMPS
     
     def test_norm(self):
         for n_features in [1, 2, 3, 4, 10]:
-            for boundary in ['obc', 'pbc']:
-                example = torch.randn(1, n_features // 2, 5) # batch x n_features x feature_dim
-                if example.numel() == 0:
-                    example = None
-                
+            for boundary in ['obc', 'pbc']: 
                 in_features = torch.randint(low=0,
                                             high=n_features,
                                             size=(n_features // 2,)).tolist()
                 in_features = list(set(in_features))
                 in_features.sort()
+                
+                # batch x n_features x feature_dim
+                example = torch.randn(1, len(in_features), 5)
+                
+                if example.numel() == 0:
+                    example = None
                 
                 mps = tk.models.MPS(n_features=n_features,
                                     phys_dim=5,
@@ -1790,17 +1800,18 @@ class TestUMPS:  # MARK: TestUMPS
     
     def test_all_algorithms_marginalize(self):
         for n_features in [1, 2, 3, 4, 10]:
-            example = torch.randn(1, n_features // 2, 5) # batch x n_features x feature_dim
-            data = torch.randn(100, n_features // 2, 5)
-            
-            if example.numel() == 0:
-                example = None
-                data = None
-            
             in_features = torch.randint(low=0,
                                         high=n_features,
                                         size=(n_features // 2,)).tolist()
             in_features = list(set(in_features))
+            
+            # batch x n_features x feature_dim
+            example = torch.randn(1, len(in_features), 5)
+            data = torch.randn(100, len(in_features), 5)
+            
+            if example.numel() == 0:
+                example = None
+                data = None
             
             mps = tk.models.UMPS(n_features=n_features,
                                  phys_dim=5,
@@ -1845,17 +1856,18 @@ class TestUMPS:  # MARK: TestUMPS
                                     
     def test_all_algorithms_no_marginalize(self):
         for n_features in [1, 2, 3, 4, 10]:
-            example = torch.randn(1, n_features // 2, 5) # batch x n_features x feature_dim
-            data = torch.randn(100, n_features // 2, 5)
-            
-            if example.numel() == 0:
-                example = None
-                data = None
-            
             in_features = torch.randint(low=0,
                                         high=n_features,
                                         size=(n_features // 2,)).tolist()
             in_features = list(set(in_features))
+            
+            # batch x n_features x feature_dim
+            example = torch.randn(1, len(in_features), 5)
+            data = torch.randn(100, len(in_features), 5)
+            
+            if example.numel() == 0:
+                example = None
+                data = None
             
             mps = tk.models.UMPS(n_features=n_features,
                                  phys_dim=5,
@@ -1899,16 +1911,17 @@ class TestUMPS:  # MARK: TestUMPS
     
     def test_norm(self):
         for n_features in [1, 2, 3, 4, 10]:
-            # batch x n_features x feature_dim
-            example = torch.randn(1, n_features // 2, 5)
-            if example.numel() == 0:
-                example = None
-            
             in_features = torch.randint(low=0,
                                         high=n_features,
                                         size=(n_features // 2,)).tolist()
             in_features = list(set(in_features))
             in_features.sort()
+            
+            # batch x n_features x feature_dim
+            example = torch.randn(1, len(in_features), 5)
+            
+            if example.numel() == 0:
+                example = None
             
             mps = tk.models.UMPS(n_features=n_features,
                                  phys_dim=5,

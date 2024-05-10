@@ -31,7 +31,7 @@ dependencies = [
 
 
 [project.optional-dependencies]
-tests = ["pytest"]
+tests = ["pytest", "pytest-cov"]
 docs = [
     "sphinx==4.5.0",
     "sphinx-book-theme==0.3.3",
@@ -40,8 +40,12 @@ docs = [
     "sphinxcontrib-devhelp==1.0.2",
     "sphinxcontrib-htmlhelp==2.0.1",
     "sphinxcontrib-qthelp==1.0.3",
-    "sphinxcontrib-serializinghtml==1.1.5"
+    "sphinxcontrib-serializinghtml==1.1.5",
+    "ipykernel",
+    "nbsphinx==0.9.3"
 ]
+
+# To run nbsphinx, pandoc should be installed via conda: conda install pandoc
 
 
 [tool.setuptools.dynamic]

@@ -79,6 +79,12 @@ python -m pytest -v
 
 inside the repository folder.
 
+> [!NOTE]
+Certain tests may experience failure as a result of statistical anomalies or 
+hardware constraints. We advise reviewing the error messages to determine if 
+these failures stem from such occurrences. Should this be the case, consider 
+rerunning the tests to ascertain if the errors persist.
+
 
 ## Example
 
@@ -154,6 +160,25 @@ enhance your understanding and proficiency with **TensorKrowch**.
 * [The different Types of Nodes (ADVANCED)](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/4_types_of_nodes.html)
 * [How to subclass TensorNetwork to build Custom Models](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/5_subclass_tensor_network.html)
 * [Creating a Hybrid Neural-Tensor Network Model](https://joserapa98.github.io/tensorkrowch/_build/html/tutorials/6_mix_with_pytorch.html)
+
+
+## Example Notebooks
+
+In addition to the informative tutorials, there is also a collection of examples
+that serve as practical demonstrations of how to apply **TensorKrowch** in
+various contexts, showcasing its versatility.
+
+With the code provided in the examples, you will be able to reproduce key research
+findings that bridge the gap between tensor networks and machine learning. These
+examples provide a hands-on approach to understanding the intricacies of
+**TensorKrowch**, allowing you to explore its potential and adapt it to your
+specific needs.
+
+* [Training MPS in different ways](https://joserapa98.github.io/tensorkrowch/_build/html/examples/training_mps.html)
+* [Hybrid Tensorial Neural Network model](https://joserapa98.github.io/tensorkrowch/_build/html/examples/hybrid_tnn_model.html)
+* [Tensorizing Neural Networks](https://joserapa98.github.io/tensorkrowch/_build/html/examples/tensorizing_nn.html)
+* [DMRG-like training of MPS](https://joserapa98.github.io/tensorkrowch/_build/html/examples/mps_dmrg.html)
+* [Hybrid DMRG-like training of MPS](https://joserapa98.github.io/tensorkrowch/_build/html/examples/mps_dmrg_hybrid.html)
 
 
 ## License

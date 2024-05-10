@@ -1,0 +1,1008 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>DMRG-like training of MPS &#8212; TensorKrowch 1.1.1 documentation</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" href="../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="shortcut icon" href="../_static/tensorkrowch_favicon_light.svg"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Hybrid DMRG-like training of MPS" href="mps_dmrg_hybrid.html" />
+    <link rel="prev" title="Tensorizing Neural Networks" href="tensorizing_nn.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../_static/tensorkrowch_logo_light.svg" class="logo" alt="logo">
+      
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Contents:
+ </span>
+</p>
+<ul class="current nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../installation.html">
+   Installation
+  </a>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../tutorials.html">
+   Tutorials
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <label for="toctree-checkbox-1">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../tutorials/0_first_steps.html">
+     First Steps with TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../tutorials/1_creating_tensor_network.html">
+     Creating a Tensor Network in TensorKrowch
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../tutorials/2_contracting_tensor_network.html">
+     Contracting and Differentiating the Tensor Network
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../tutorials/3_memory_management.html">
+     How to save Memory and Time with TensorKrowch (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../tutorials/4_types_of_nodes.html">
+     The different Types of Nodes (ADVANCED)
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../tutorials/5_subclass_tensor_network.html">
+     How to subclass TensorNetwork to build Custom Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../tutorials/6_mix_with_pytorch.html">
+     Creating a Hybrid Neural-Tensor Network Model
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 current active has-children">
+  <a class="reference internal" href="../examples.html">
+   Examples
+  </a>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul class="current">
+   <li class="toctree-l2">
+    <a class="reference internal" href="training_mps.html">
+     Training MPS in different ways
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="hybrid_tnn_model.html">
+     Hybrid Tensorial Neural Network model
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="tensorizing_nn.html">
+     Tensorizing Neural Networks
+    </a>
+   </li>
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
+     DMRG-like training of MPS
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="mps_dmrg_hybrid.html">
+     Hybrid DMRG-like training of MPS
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="../api.html">
+   API Reference
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../components.html">
+     Components
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../operations.html">
+     Operations
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../models.html">
+     Models
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../initializers.html">
+     Initializers
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../embeddings.html">
+     Embeddings
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="../decompositions.html">
+     Decompositions
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+<a href="https://github.com/joserapa98/tensorkrowch"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="bottom"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+<div class="menu-dropdown menu-dropdown-download-buttons">
+  <button class="headerbtn menu-dropdown__trigger"
+      aria-label="Download this page">
+      <i class="fas fa-download"></i>
+  </button>
+  <div class="menu-dropdown__content">
+    <ul>
+      <li>
+        <a href="../_sources/examples/mps_dmrg.ipynb.txt"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="left"
+title="Download source file"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="headerbtn__text-container">.ipynb</span>
+</a>
+
+      </li>
+      
+      <li>
+        
+<button onclick="printPdf(this)"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="left"
+title="Print to PDF"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="headerbtn__text-container">.pdf</span>
+</button>
+
+      </li>
+      
+    </ul>
+  </div>
+</div>
+<label for="__page-toc"
+  class="headerbtn headerbtn-page-toc"
+  
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-list"></i>
+  </span>
+
+</label>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+    <div class="tocsection onthispage pt-5 pb-3">
+        <i class="fas fa-list"></i> Contents
+    </div>
+    <nav id="bd-toc-nav" aria-label="Page">
+        <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Dataset">
+   Dataset
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Define-model">
+   Define model
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Train">
+   Train
+  </a>
+ </li>
+</ul>
+
+    </nav>
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1>DMRG-like training of MPS</h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                        <div>
+                            <h2> Contents </h2>
+                        </div>
+                        <nav aria-label="Page">
+                            <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Dataset">
+   Dataset
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Define-model">
+   Define model
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Train">
+   Train
+  </a>
+ </li>
+</ul>
+
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <section id="DMRG-like-training-of-MPS">
+<h1>DMRG-like training of MPS<a class="headerlink" href="#DMRG-like-training-of-MPS" title="Permalink to this headline">#</a></h1>
+<p>Here we show how one can use MPS models to train via DMRG, as shown in <a class="reference external" href="https://arxiv.org/abs/1605.05775">[SS16’]</a>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">mkdir</span> data
+<span class="o">%</span><span class="k">mkdir</span> models
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">torch.optim</span> <span class="k">as</span> <span class="nn">optim</span>
+<span class="kn">from</span> <span class="nn">torch.utils.data</span> <span class="kn">import</span> <span class="n">DataLoader</span>
+
+<span class="kn">import</span> <span class="nn">torchvision.transforms</span> <span class="k">as</span> <span class="nn">transforms</span>
+<span class="kn">import</span> <span class="nn">torchvision.datasets</span> <span class="k">as</span> <span class="nn">datasets</span>
+
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="kn">import</span> <span class="nn">tensorkrowch</span> <span class="k">as</span> <span class="nn">tk</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">)</span>
+<span class="k">elif</span> <span class="n">torch</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">mps</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;mps:0&#39;</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+
+<span class="n">device</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+device(type=&#39;cuda&#39;, index=0)
+</pre></div></div>
+</div>
+<section id="Dataset">
+<h2>Dataset<a class="headerlink" href="#Dataset" title="Permalink to this headline">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># MNIST Dataset</span>
+<span class="n">dataset_name</span> <span class="o">=</span> <span class="s1">&#39;mnist&#39;</span>
+<span class="n">batch_size</span> <span class="o">=</span> <span class="mi">64</span>
+<span class="n">image_size</span> <span class="o">=</span> <span class="mi">15</span>
+<span class="n">input_size</span> <span class="o">=</span> <span class="n">image_size</span> <span class="o">**</span> <span class="mi">2</span>
+<span class="n">num_classes</span> <span class="o">=</span> <span class="mi">10</span>
+
+<span class="n">transform</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">([</span><span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">(),</span>
+                                <span class="n">transforms</span><span class="o">.</span><span class="n">Resize</span><span class="p">(</span><span class="n">image_size</span><span class="p">,</span> <span class="n">antialias</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                               <span class="p">])</span>
+
+<span class="c1"># Load data</span>
+<span class="n">train_dataset</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">MNIST</span><span class="p">(</span><span class="n">root</span><span class="o">=</span><span class="s1">&#39;data/&#39;</span><span class="p">,</span>
+                               <span class="n">train</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                               <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span>
+                               <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">test_dataset</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">MNIST</span><span class="p">(</span><span class="n">root</span><span class="o">=</span><span class="s1">&#39;data/&#39;</span><span class="p">,</span>
+                              <span class="n">train</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                              <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span>
+                              <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">train_loader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">train_dataset</span><span class="p">,</span>
+                          <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+                          <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">test_loader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">test_dataset</span><span class="p">,</span>
+                         <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+                         <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">random_sample</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">train_dataset</span><span class="p">),</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,))</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">train_dataset</span><span class="p">[</span><span class="n">random_sample</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;Greys&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">train_dataset</span><span class="p">[</span><span class="n">random_sample</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_mps_dmrg_6_0.png" src="../_images/examples_mps_dmrg_6_0.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+2
+</pre></div></div>
+</div>
+</section>
+<section id="Define-model">
+<h2>Define model<a class="headerlink" href="#Define-model" title="Permalink to this headline">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MPS_DMRG</span><span class="p">(</span><span class="n">tk</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">MPSLayer</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_features</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="kc">False</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_node</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;output&#39;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_position</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_length</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">block</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_position</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">block_position</span><span class="p">]</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">merge_block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">block_position</span><span class="p">,</span> <span class="n">block_length</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">block_position</span> <span class="o">+</span> <span class="n">block_length</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_features</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;Last position of the block (</span><span class="si">{</span><span class="n">block_position</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">block_length</span><span class="si">}</span><span class="s1">) &#39;</span>
+                <span class="sa">f</span><span class="s1">&#39;exceeds the range of MPS sites (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_features</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">block_length</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`block_length` should be greater than or equal to 1&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_position</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;Cannot create block if there is already a merged block&#39;</span><span class="p">)</span>
+
+        <span class="n">block_nodes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">[</span><span class="n">block_position</span><span class="p">:(</span><span class="n">block_position</span> <span class="o">+</span> <span class="n">block_length</span><span class="p">)]</span>
+
+        <span class="n">block</span> <span class="o">=</span> <span class="n">block_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">block_nodes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">block</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">contract_between_</span><span class="p">(</span><span class="n">block</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+        <span class="n">block</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">parameterize</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">block</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;block&#39;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_position</span> <span class="o">=</span> <span class="n">block_position</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_length</span> <span class="o">=</span> <span class="n">block_length</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[:</span><span class="n">block_position</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">block</span><span class="p">]</span> <span class="o">+</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[(</span><span class="n">block_position</span> <span class="o">+</span> <span class="n">block_length</span><span class="p">):]</span>
+
+    <span class="k">def</span> <span class="nf">unmerge_block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cum_percentage</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">block</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">block</span>
+
+        <span class="n">block_nodes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">block_length</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">node1_axes</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">axes</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+            <span class="n">node2_axes</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+
+            <span class="n">node</span><span class="p">,</span> <span class="n">block</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">split_</span><span class="p">(</span><span class="n">block</span><span class="p">,</span>
+                                    <span class="n">node1_axes</span><span class="p">,</span>
+                                    <span class="n">node2_axes</span><span class="p">,</span>
+                                    <span class="n">side</span><span class="o">=</span><span class="n">side</span><span class="p">,</span>
+                                    <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span>
+                                    <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">)</span>
+            <span class="n">block</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="s1">&#39;split&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;right&#39;</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;mats_env_(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">block_position</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">i</span><span class="si">}</span><span class="s1">)&#39;</span>
+
+            <span class="n">block_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="n">block</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;mats_env_(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">block_position</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1">)&#39;</span>
+        <span class="n">block_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">block</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">block_position</span><span class="p">]</span> <span class="o">+</span> <span class="n">block_nodes</span> <span class="o">+</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[(</span><span class="bp">self</span><span class="o">.</span><span class="n">block_position</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_position</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_length</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">result_mats</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mats_env</span><span class="p">:</span>
+            <span class="k">while</span> <span class="nb">any</span><span class="p">([</span><span class="s1">&#39;input&#39;</span> <span class="ow">in</span> <span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">axes_names</span><span class="p">]):</span>
+                <span class="k">for</span> <span class="n">axis</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">axes</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="s1">&#39;input&#39;</span> <span class="ow">in</span> <span class="n">axis</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+                        <span class="n">data_node</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">neighbours</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
+                        <span class="n">node</span> <span class="o">=</span> <span class="n">node</span> <span class="o">@</span> <span class="n">data_node</span>
+                        <span class="k">break</span>
+            <span class="n">result_mats</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="n">result_mats</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="p">]</span> <span class="o">+</span> <span class="n">result_mats</span> <span class="o">+</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="p">]</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">result_mats</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">result_mats</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">result</span> <span class="o">@=</span> <span class="n">node</span>
+
+        <span class="k">return</span> <span class="n">result</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Model hyperparameters</span>
+<span class="n">embedding_dim</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">output_dim</span> <span class="o">=</span> <span class="n">num_classes</span>
+<span class="n">bond_dim</span> <span class="o">=</span> <span class="mi">50</span>
+<span class="n">init_method</span> <span class="o">=</span> <span class="s1">&#39;unit&#39;</span>
+<span class="n">block_length</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">cum_percentage</span> <span class="o">=</span> <span class="mf">0.98</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Initialize network</span>
+<span class="n">model_name</span> <span class="o">=</span> <span class="s1">&#39;mps_dmrg&#39;</span>
+<span class="n">mps</span> <span class="o">=</span> <span class="n">MPS_DMRG</span><span class="p">(</span><span class="n">n_features</span><span class="o">=</span><span class="n">input_size</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+               <span class="n">in_dim</span><span class="o">=</span><span class="n">embedding_dim</span><span class="p">,</span>
+               <span class="n">out_dim</span><span class="o">=</span><span class="n">num_classes</span><span class="p">,</span>
+               <span class="n">bond_dim</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">,</span>
+               <span class="n">boundary</span><span class="o">=</span><span class="s1">&#39;obc&#39;</span><span class="p">,</span>
+               <span class="n">init_method</span><span class="o">=</span><span class="n">init_method</span><span class="p">,</span>
+               <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+
+<span class="c1"># Important to set data nodes before merging nodes</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">set_data_nodes</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">embedding</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">tk</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">unit</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">embedding_dim</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">x</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Train">
+<h2>Train<a class="headerlink" href="#Train" title="Permalink to this headline">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Hyperparameters</span>
+<span class="n">learning_rate</span> <span class="o">=</span> <span class="mf">1e-3</span>
+<span class="n">weight_decay</span> <span class="o">=</span> <span class="mf">1e-8</span>
+<span class="n">num_epochs</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">move_block_epochs</span> <span class="o">=</span> <span class="mi">100</span>
+
+<span class="c1"># Loss and optimizer</span>
+<span class="n">criterion</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">CrossEntropyLoss</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Check accuracy on training &amp; test to see how good our model is</span>
+<span class="k">def</span> <span class="nf">check_accuracy</span><span class="p">(</span><span class="n">loader</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+    <span class="n">num_correct</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">num_samples</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">loader</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="n">scores</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">embedding</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">num_correct</span> <span class="o">+=</span> <span class="p">(</span><span class="n">predictions</span> <span class="o">==</span> <span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="n">num_samples</span> <span class="o">+=</span> <span class="n">predictions</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">accuracy</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">num_correct</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">num_samples</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">accuracy</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Train network</span>
+<span class="n">block_position</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">direction</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">merge_block</span><span class="p">(</span><span class="n">block_position</span><span class="p">,</span> <span class="n">block_length</span><span class="p">)</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">input_size</span><span class="p">,</span> <span class="n">embedding_dim</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">))</span>
+<span class="n">optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span>
+                       <span class="n">lr</span><span class="o">=</span><span class="n">learning_rate</span><span class="p">,</span>
+                       <span class="n">weight_decay</span><span class="o">=</span><span class="n">weight_decay</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_epochs</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">batch_idx</span><span class="p">,</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">train_loader</span><span class="p">):</span>
+        <span class="c1"># Get data to cuda if possible</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">targets</span> <span class="o">=</span> <span class="n">targets</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="c1"># Get to correct shape</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Forward</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">mps</span><span class="p">(</span><span class="n">embedding</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">criterion</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span>
+
+        <span class="c1"># Backward</span>
+        <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+        <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+
+        <span class="c1"># Gradient descent</span>
+        <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">batch_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">move_block_epochs</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">block_position</span> <span class="o">+</span> <span class="n">direction</span> <span class="o">+</span> <span class="n">block_length</span> <span class="o">&gt;</span> <span class="n">mps</span><span class="o">.</span><span class="n">n_features</span><span class="p">:</span>
+                <span class="n">direction</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="k">if</span> <span class="n">block_position</span> <span class="o">+</span> <span class="n">direction</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">direction</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="k">if</span> <span class="n">block_length</span> <span class="o">==</span> <span class="n">mps</span><span class="o">.</span><span class="n">n_features</span><span class="p">:</span>
+                <span class="n">direction</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="k">if</span> <span class="n">direction</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">mps</span><span class="o">.</span><span class="n">unmerge_block</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
+                                  <span class="n">rank</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">,</span>
+                                  <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mps</span><span class="o">.</span><span class="n">unmerge_block</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
+                                  <span class="n">rank</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">,</span>
+                                  <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">)</span>
+
+            <span class="n">block_position</span> <span class="o">+=</span> <span class="n">direction</span>
+            <span class="n">mps</span><span class="o">.</span><span class="n">merge_block</span><span class="p">(</span><span class="n">block_position</span><span class="p">,</span> <span class="n">block_length</span><span class="p">)</span>
+            <span class="n">mps</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">input_size</span><span class="p">,</span> <span class="n">embedding_dim</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">))</span>
+            <span class="n">optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span>
+                                   <span class="n">lr</span><span class="o">=</span><span class="n">learning_rate</span><span class="p">,</span>
+                                   <span class="n">weight_decay</span><span class="o">=</span><span class="n">weight_decay</span><span class="p">)</span>
+
+    <span class="n">train_acc</span> <span class="o">=</span> <span class="n">check_accuracy</span><span class="p">(</span><span class="n">train_loader</span><span class="p">,</span> <span class="n">mps</span><span class="p">)</span>
+    <span class="n">test_acc</span> <span class="o">=</span> <span class="n">check_accuracy</span><span class="p">(</span><span class="n">test_loader</span><span class="p">,</span> <span class="n">mps</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;* Epoch </span><span class="si">{</span><span class="n">epoch</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">:</span><span class="s1">&lt;3</span><span class="si">}</span><span class="s1"> (</span><span class="si">{</span><span class="n">block_position</span><span class="si">=}</span><span class="s1">, </span><span class="si">{</span><span class="n">direction</span><span class="si">=}</span><span class="s1">)=&gt;&#39;</span>
+          <span class="sa">f</span><span class="s1">&#39; Train. Acc.: </span><span class="si">{</span><span class="n">train_acc</span><span class="si">:</span><span class="s1">.2f</span><span class="si">}</span><span class="s1">,&#39;</span>
+          <span class="sa">f</span><span class="s1">&#39; Test Acc.: </span><span class="si">{</span><span class="n">test_acc</span><span class="si">:</span><span class="s1">.2f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+<span class="c1"># Reset before saving the model</span>
+<span class="n">mps</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="sa">f</span><span class="s1">&#39;models/</span><span class="si">{</span><span class="n">model_name</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s1">.pt&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+* Epoch 1   (block_position=9, direction=1)=&gt; Train. Acc.: 12.75, Test Acc.: 13.15
+* Epoch 2   (block_position=18, direction=1)=&gt; Train. Acc.: 12.88, Test Acc.: 13.35
+* Epoch 3   (block_position=27, direction=1)=&gt; Train. Acc.: 13.07, Test Acc.: 13.63
+* Epoch 4   (block_position=36, direction=1)=&gt; Train. Acc.: 13.25, Test Acc.: 13.20
+* Epoch 5   (block_position=45, direction=1)=&gt; Train. Acc.: 15.93, Test Acc.: 15.27
+* Epoch 6   (block_position=54, direction=1)=&gt; Train. Acc.: 17.78, Test Acc.: 16.93
+* Epoch 7   (block_position=63, direction=1)=&gt; Train. Acc.: 18.97, Test Acc.: 17.51
+* Epoch 8   (block_position=72, direction=1)=&gt; Train. Acc.: 21.57, Test Acc.: 18.85
+* Epoch 9   (block_position=81, direction=1)=&gt; Train. Acc.: 22.80, Test Acc.: 19.67
+* Epoch 10  (block_position=90, direction=1)=&gt; Train. Acc.: 24.91, Test Acc.: 21.50
+* Epoch 11  (block_position=99, direction=1)=&gt; Train. Acc.: 27.40, Test Acc.: 23.48
+* Epoch 12  (block_position=108, direction=1)=&gt; Train. Acc.: 29.46, Test Acc.: 25.31
+* Epoch 13  (block_position=117, direction=1)=&gt; Train. Acc.: 38.99, Test Acc.: 33.37
+* Epoch 14  (block_position=126, direction=1)=&gt; Train. Acc.: 41.44, Test Acc.: 35.75
+* Epoch 15  (block_position=135, direction=1)=&gt; Train. Acc.: 44.87, Test Acc.: 38.75
+* Epoch 16  (block_position=144, direction=1)=&gt; Train. Acc.: 47.04, Test Acc.: 41.17
+* Epoch 17  (block_position=153, direction=1)=&gt; Train. Acc.: 48.40, Test Acc.: 41.93
+* Epoch 18  (block_position=162, direction=1)=&gt; Train. Acc.: 49.52, Test Acc.: 42.38
+* Epoch 19  (block_position=171, direction=1)=&gt; Train. Acc.: 50.02, Test Acc.: 42.80
+* Epoch 20  (block_position=180, direction=1)=&gt; Train. Acc.: 50.37, Test Acc.: 43.01
+* Epoch 21  (block_position=189, direction=1)=&gt; Train. Acc.: 50.22, Test Acc.: 42.90
+* Epoch 22  (block_position=198, direction=1)=&gt; Train. Acc.: 50.56, Test Acc.: 43.45
+* Epoch 23  (block_position=207, direction=1)=&gt; Train. Acc.: 50.45, Test Acc.: 43.09
+* Epoch 24  (block_position=216, direction=1)=&gt; Train. Acc.: 50.38, Test Acc.: 43.32
+* Epoch 25  (block_position=223, direction=-1)=&gt; Train. Acc.: 50.67, Test Acc.: 43.13
+* Epoch 26  (block_position=214, direction=-1)=&gt; Train. Acc.: 50.41, Test Acc.: 43.18
+* Epoch 27  (block_position=205, direction=-1)=&gt; Train. Acc.: 50.31, Test Acc.: 42.80
+* Epoch 28  (block_position=196, direction=-1)=&gt; Train. Acc.: 50.62, Test Acc.: 43.36
+* Epoch 29  (block_position=187, direction=-1)=&gt; Train. Acc.: 50.35, Test Acc.: 43.42
+* Epoch 30  (block_position=178, direction=-1)=&gt; Train. Acc.: 50.87, Test Acc.: 43.31
+* Epoch 31  (block_position=169, direction=-1)=&gt; Train. Acc.: 51.33, Test Acc.: 43.28
+* Epoch 32  (block_position=160, direction=-1)=&gt; Train. Acc.: 51.49, Test Acc.: 42.85
+* Epoch 33  (block_position=151, direction=-1)=&gt; Train. Acc.: 52.19, Test Acc.: 43.20
+* Epoch 34  (block_position=142, direction=-1)=&gt; Train. Acc.: 52.50, Test Acc.: 43.21
+* Epoch 35  (block_position=133, direction=-1)=&gt; Train. Acc.: 53.17, Test Acc.: 43.05
+* Epoch 36  (block_position=124, direction=-1)=&gt; Train. Acc.: 54.22, Test Acc.: 43.48
+* Epoch 37  (block_position=115, direction=-1)=&gt; Train. Acc.: 55.39, Test Acc.: 44.47
+* Epoch 38  (block_position=106, direction=-1)=&gt; Train. Acc.: 59.71, Test Acc.: 48.28
+* Epoch 39  (block_position=97, direction=-1)=&gt; Train. Acc.: 61.19, Test Acc.: 49.97
+* Epoch 40  (block_position=88, direction=-1)=&gt; Train. Acc.: 63.27, Test Acc.: 52.01
+* Epoch 41  (block_position=79, direction=-1)=&gt; Train. Acc.: 65.81, Test Acc.: 54.78
+* Epoch 42  (block_position=70, direction=-1)=&gt; Train. Acc.: 67.14, Test Acc.: 56.31
+* Epoch 43  (block_position=61, direction=-1)=&gt; Train. Acc.: 69.11, Test Acc.: 58.45
+* Epoch 44  (block_position=52, direction=-1)=&gt; Train. Acc.: 69.54, Test Acc.: 59.10
+* Epoch 45  (block_position=43, direction=-1)=&gt; Train. Acc.: 69.92, Test Acc.: 59.63
+* Epoch 46  (block_position=34, direction=-1)=&gt; Train. Acc.: 69.91, Test Acc.: 59.61
+* Epoch 47  (block_position=25, direction=-1)=&gt; Train. Acc.: 69.96, Test Acc.: 59.37
+* Epoch 48  (block_position=16, direction=-1)=&gt; Train. Acc.: 69.94, Test Acc.: 59.60
+* Epoch 49  (block_position=7, direction=-1)=&gt; Train. Acc.: 69.57, Test Acc.: 59.07
+* Epoch 50  (block_position=2, direction=1)=&gt; Train. Acc.: 70.16, Test Acc.: 59.82
+* Epoch 51  (block_position=11, direction=1)=&gt; Train. Acc.: 69.99, Test Acc.: 59.69
+* Epoch 52  (block_position=20, direction=1)=&gt; Train. Acc.: 69.91, Test Acc.: 59.58
+* Epoch 53  (block_position=29, direction=1)=&gt; Train. Acc.: 69.87, Test Acc.: 59.23
+* Epoch 54  (block_position=38, direction=1)=&gt; Train. Acc.: 69.94, Test Acc.: 59.44
+* Epoch 55  (block_position=47, direction=1)=&gt; Train. Acc.: 70.32, Test Acc.: 59.61
+* Epoch 56  (block_position=56, direction=1)=&gt; Train. Acc.: 70.44, Test Acc.: 59.36
+* Epoch 57  (block_position=65, direction=1)=&gt; Train. Acc.: 70.80, Test Acc.: 59.50
+* Epoch 58  (block_position=74, direction=1)=&gt; Train. Acc.: 71.57, Test Acc.: 59.42
+* Epoch 59  (block_position=83, direction=1)=&gt; Train. Acc.: 72.07, Test Acc.: 59.73
+* Epoch 60  (block_position=92, direction=1)=&gt; Train. Acc.: 72.71, Test Acc.: 60.39
+* Epoch 61  (block_position=101, direction=1)=&gt; Train. Acc.: 73.74, Test Acc.: 61.01
+* Epoch 62  (block_position=110, direction=1)=&gt; Train. Acc.: 74.56, Test Acc.: 61.42
+* Epoch 63  (block_position=119, direction=1)=&gt; Train. Acc.: 77.45, Test Acc.: 64.26
+* Epoch 64  (block_position=128, direction=1)=&gt; Train. Acc.: 78.30, Test Acc.: 65.43
+* Epoch 65  (block_position=137, direction=1)=&gt; Train. Acc.: 79.33, Test Acc.: 66.56
+* Epoch 66  (block_position=146, direction=1)=&gt; Train. Acc.: 80.41, Test Acc.: 67.67
+* Epoch 67  (block_position=155, direction=1)=&gt; Train. Acc.: 81.28, Test Acc.: 68.59
+* Epoch 68  (block_position=164, direction=1)=&gt; Train. Acc.: 82.38, Test Acc.: 69.93
+* Epoch 69  (block_position=173, direction=1)=&gt; Train. Acc.: 82.69, Test Acc.: 70.40
+* Epoch 70  (block_position=182, direction=1)=&gt; Train. Acc.: 82.86, Test Acc.: 69.84
+* Epoch 71  (block_position=191, direction=1)=&gt; Train. Acc.: 82.85, Test Acc.: 70.54
+* Epoch 72  (block_position=200, direction=1)=&gt; Train. Acc.: 82.70, Test Acc.: 70.19
+* Epoch 73  (block_position=209, direction=1)=&gt; Train. Acc.: 82.95, Test Acc.: 70.56
+* Epoch 74  (block_position=218, direction=1)=&gt; Train. Acc.: 82.81, Test Acc.: 70.34
+* Epoch 75  (block_position=221, direction=-1)=&gt; Train. Acc.: 83.05, Test Acc.: 70.74
+* Epoch 76  (block_position=212, direction=-1)=&gt; Train. Acc.: 82.64, Test Acc.: 70.36
+* Epoch 77  (block_position=203, direction=-1)=&gt; Train. Acc.: 82.80, Test Acc.: 70.40
+* Epoch 78  (block_position=194, direction=-1)=&gt; Train. Acc.: 83.10, Test Acc.: 70.45
+* Epoch 79  (block_position=185, direction=-1)=&gt; Train. Acc.: 82.98, Test Acc.: 70.27
+* Epoch 80  (block_position=176, direction=-1)=&gt; Train. Acc.: 83.10, Test Acc.: 70.23
+* Epoch 81  (block_position=167, direction=-1)=&gt; Train. Acc.: 83.75, Test Acc.: 70.21
+* Epoch 82  (block_position=158, direction=-1)=&gt; Train. Acc.: 84.00, Test Acc.: 70.05
+* Epoch 83  (block_position=149, direction=-1)=&gt; Train. Acc.: 84.41, Test Acc.: 70.18
+* Epoch 84  (block_position=140, direction=-1)=&gt; Train. Acc.: 84.52, Test Acc.: 70.06
+* Epoch 85  (block_position=131, direction=-1)=&gt; Train. Acc.: 84.89, Test Acc.: 69.79
+* Epoch 86  (block_position=122, direction=-1)=&gt; Train. Acc.: 85.35, Test Acc.: 69.74
+* Epoch 87  (block_position=113, direction=-1)=&gt; Train. Acc.: 85.68, Test Acc.: 70.67
+* Epoch 88  (block_position=104, direction=-1)=&gt; Train. Acc.: 87.23, Test Acc.: 71.58
+* Epoch 89  (block_position=95, direction=-1)=&gt; Train. Acc.: 87.77, Test Acc.: 72.49
+* Epoch 90  (block_position=86, direction=-1)=&gt; Train. Acc.: 88.09, Test Acc.: 72.60
+* Epoch 91  (block_position=77, direction=-1)=&gt; Train. Acc.: 89.02, Test Acc.: 73.84
+* Epoch 92  (block_position=68, direction=-1)=&gt; Train. Acc.: 89.36, Test Acc.: 74.31
+* Epoch 93  (block_position=59, direction=-1)=&gt; Train. Acc.: 89.81, Test Acc.: 75.01
+* Epoch 94  (block_position=50, direction=-1)=&gt; Train. Acc.: 89.46, Test Acc.: 75.64
+* Epoch 95  (block_position=41, direction=-1)=&gt; Train. Acc.: 89.64, Test Acc.: 75.40
+* Epoch 96  (block_position=32, direction=-1)=&gt; Train. Acc.: 89.38, Test Acc.: 74.92
+* Epoch 97  (block_position=23, direction=-1)=&gt; Train. Acc.: 89.54, Test Acc.: 75.21
+* Epoch 98  (block_position=14, direction=-1)=&gt; Train. Acc.: 89.53, Test Acc.: 75.20
+* Epoch 99  (block_position=5, direction=-1)=&gt; Train. Acc.: 88.86, Test Acc.: 74.91
+* Epoch 100 (block_position=4, direction=1)=&gt; Train. Acc.: 89.37, Test Acc.: 75.13
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mps</span><span class="o">.</span><span class="n">unmerge_block</span><span class="p">(</span><span class="n">rank</span><span class="o">=</span><span class="n">bond_dim</span><span class="p">,</span> <span class="n">cum_percentage</span><span class="o">=</span><span class="n">cum_percentage</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mps</span><span class="o">.</span><span class="n">update_bond_dim</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">n_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">mps</span><span class="o">.</span><span class="n">bond_dim</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_mps_dmrg_18_0.png" src="../_images/examples_mps_dmrg_18_0.png" />
+</div>
+</div>
+</section>
+</section>
+
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+    <a class='left-prev' id="prev-link" href="tensorizing_nn.html" title="previous page">
+        <i class="fas fa-angle-left"></i>
+        <div class="prev-next-info">
+            <p class="prev-next-subtitle">previous</p>
+            <p class="prev-next-title">Tensorizing Neural Networks</p>
+        </div>
+    </a>
+    <a class='right-next' id="next-link" href="mps_dmrg_hybrid.html" title="next page">
+    <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Hybrid DMRG-like training of MPS</p>
+    </div>
+    <i class="fas fa-angle-right"></i>
+    </a>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By José Ramón Pareja Monturiol<br/>
+  
+      &copy; Copyright 2023, José Ramón Pareja Monturiol.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>

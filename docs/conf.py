@@ -45,6 +45,7 @@ extensions = [
     'sphinx.ext.githubpages',
     'sphinx.ext.mathjax',
     'sphinx_copybutton',
+    'nbsphinx'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -68,6 +69,8 @@ import torch.nn as nn
 """
 
 copybutton_prompt_text = '>>> |$ '
+
+nbsphinx_execute = 'never'
 
 # Make that the index page does not disappear from sidebar TOC. From
 # https://stackoverflow.com/questions/18969093/how-to-include-the-toctree-in-the-sidebar-of-each-page

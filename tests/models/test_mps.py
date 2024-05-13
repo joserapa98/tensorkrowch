@@ -1587,6 +1587,46 @@ class TestMPS:  # MARK: TestMPS
             
             assert torch.allclose(mps_tensor, approx_mps_tensor,
                                   rtol=1e-2, atol=1e-4)
+    
+    def test_save_load_model(self):
+        mps = tk.models.MPS(n_features=100,
+                            phys_dim=2,
+                            bond_dim=10,
+                            boundary='obc',
+                            init_method='randn')
+        
+        mps.canonicalize(rank=5, renormalize=True)
+        assert mps.bond_dim == [5] * 99
+        
+        # Save state_dict
+        mps_state_dict = mps.state_dict()
+        
+        # Load new model from state_dict
+        new_mps = tk.models.MPS(n_features=100,
+                                phys_dim=2,
+                                bond_dim=5,
+                                boundary='obc')
+        new_mps.load_state_dict(mps_state_dict)
+    
+    def test_save_load_model_univocal(self):
+        mps = tk.models.MPS(n_features=100,
+                            phys_dim=2,
+                            bond_dim=10,
+                            boundary='obc',
+                            init_method='randn')
+        
+        mps.canonicalize_univocal()
+        new_bond_dim = mps.bond_dim
+        
+        # Save state_dict
+        mps_state_dict = mps.state_dict()
+        
+        # Load new model from state_dict
+        new_mps = tk.models.MPS(n_features=100,
+                                phys_dim=2,
+                                bond_dim=new_bond_dim,
+                                boundary='obc')
+        new_mps.load_state_dict(mps_state_dict)
 
 
 class TestUMPS:  # MARK: TestUMPS

@@ -605,6 +605,28 @@ class TestMPO:  # MARK: TestMPO
                                 assert len(mpo.leaf_nodes) == n_features + 2
                             else:
                                 assert len(mpo.leaf_nodes) == n_features
+    
+    def test_save_load_model(self):
+        mpo = tk.models.MPO(n_features=100,
+                            in_dim=2,
+                            out_dim=2,
+                            bond_dim=10,
+                            boundary='obc',
+                            init_method='randn')
+        mpo.canonicalize(rank=5, renormalize=True)
+        
+        assert mpo.bond_dim == [5] * 99
+        
+        mpo_state_dict = mpo.state_dict()
+        
+        # Load new model from state_dict
+        new_mpo = tk.models.MPO(n_features=100,
+                                in_dim=2,
+                                out_dim=2,
+                                bond_dim=5,
+                                boundary='obc')
+        new_mpo.load_state_dict(mpo_state_dict)
+
 
 class TestUMPO:  # MARK: TestUMPO
     

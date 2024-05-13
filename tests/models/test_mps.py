@@ -387,6 +387,23 @@ class TestMPS:  # MARK: TestMPS
                     for node in new_nodes:
                         assert isinstance(node, tk.Node)
                         assert not isinstance(node.tensor, torch.nn.Parameter)
+    
+    def test_update_bond_dim(self):
+        mps = tk.models.MPS(n_features=100,
+                            phys_dim=2,
+                            bond_dim=10,
+                            boundary='obc',
+                            init_method='randn')
+        
+        mps.canonicalize(rank=3, renormalize=True)
+        assert mps.bond_dim == [3] * 99
+        assert (mps.left_node.tensor == torch.tensor([1., 0., 0.])).all()
+        assert (mps.right_node.tensor == torch.tensor([1., 0., 0.])).all()
+        
+        mps.canonicalize(rank=5, renormalize=True)
+        assert mps.bond_dim == [5] * 99
+        assert (mps.left_node.tensor == torch.tensor([1., 0., 0. , 0., 0.])).all()
+        assert (mps.right_node.tensor == torch.tensor([1., 0., 0. , 0., 0.])).all()
         
     def test_all_algorithms(self):
         for n_features in [1, 2, 3, 4, 10]:

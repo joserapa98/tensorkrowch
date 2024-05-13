@@ -11,7 +11,7 @@ import torch
 import tensorkrowch as tk
 
 
-class TestMPO:
+class TestMPO:  # MARK: TestMPO
     
     def test_initialize_with_tensors(self):
         for n in [1, 2, 5]:
@@ -317,6 +317,24 @@ class TestMPO:
                         assert isinstance(node, tk.Node)
                         assert not isinstance(node.tensor, torch.nn.Parameter)
     
+    def test_update_bond_dim(self):
+        mpo = tk.models.MPO(n_features=100,
+                            in_dim=2,
+                            out_dim=2,
+                            bond_dim=10,
+                            boundary='obc',
+                            init_method='randn')
+        
+        mpo.canonicalize(rank=3, renormalize=True)
+        assert mpo.bond_dim == [3] * 99
+        assert (mpo.left_node.tensor == torch.tensor([1., 0., 0.])).all()
+        assert (mpo.right_node.tensor == torch.tensor([1., 0., 0.])).all()
+        
+        mpo.canonicalize(rank=5, renormalize=True)
+        assert mpo.bond_dim == [5] * 99
+        assert (mpo.left_node.tensor == torch.tensor([1., 0., 0. , 0., 0.])).all()
+        assert (mpo.right_node.tensor == torch.tensor([1., 0., 0. , 0., 0.])).all()
+    
     def test_all_algorithms(self):
         for n_features in [1, 2, 3, 4, 10]:
             for boundary in ['obc', 'pbc']:
@@ -588,8 +606,7 @@ class TestMPO:
                             else:
                                 assert len(mpo.leaf_nodes) == n_features
 
-
-class TestUMPO:
+class TestUMPO:  # MARK: TestUMPO
     
     def test_initialize_with_tensors(self):
         for n in [1, 2, 5]:

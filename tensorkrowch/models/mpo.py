@@ -565,11 +565,29 @@ class MPO(TensorNetwork):  # MARK: MPO
         """
         Updates the :attr:`bond_dim` attribute of the ``MPO``, in case it is
         outdated.
+        
+        If bond dimensions are changed, usually due to decompositions like
+        :func:~`tensorkrowch.operations.svd`, ``update_bond_dim`` should be
+        called. This might modify some elements of the model, so it is
+        recommended to do this before saving the ``state_dict`` of the model.
+        Besides, if one wants to continue training, the ``parameters`` of the
+        model that are passed to the optimizer should be updated also.
+        Otherwise, the optimizer could be tracking outdated parameters that are
+        not members of the model any more.
         """
         if self._boundary == 'obc':
-            self._bond_dim = [node.shape[2] for node in self._mats_env[:-1]]
+            self._bond_dim = [node._shape[2] for node in self._mats_env[:-1]]
+            
+            if self._bond_dim:
+                left_size = self._bond_dim[0]
+                if left_size != self._mats_env[0]._shape[0]:
+                    self._mats_env[0]['left'].change_size(left_size)
+                
+                right_size = self._bond_dim[-1]
+                if right_size != self._mats_env[-1]._shape[2]:
+                    self._mats_env[-1]['right'].change_size(right_size)
         else:
-            self._bond_dim = [node.shape[2] for node in self._mats_env]
+            self._bond_dim = [node._shape[2] for node in self._mats_env]
     
     def _input_contraction(self,
                            nodes_env: List[AbstractNode],
@@ -964,11 +982,8 @@ class MPO(TensorNetwork):  # MARK: MPO
                 node.tensor = node.tensor * rescale
         
         # Update variables
-        if self._boundary == 'obc':
-            self._bond_dim = [node['right'].size() for node in nodes[:-1]]
-        else:
-            self._bond_dim = [node['right'].size() for node in nodes]
         self._mats_env = nodes
+        self.update_bond_dim()
 
         self.auto_stack = prev_auto_stack
 

@@ -337,8 +337,12 @@ class MPO(TensorNetwork):  # MARK: MPO
         """Returns the list of MPO tensors."""
         mpo_tensors = [node.tensor for node in self._mats_env]
         if self._boundary == 'obc':
-            mpo_tensors[0] = mpo_tensors[0][0, :, :]
-            mpo_tensors[-1] = mpo_tensors[-1][:, :, 0]
+            mpo_tensors[0] = torch.einsum('l,liro->iro',
+                                          self.left_node.tensor,
+                                          mpo_tensors[0])
+            mpo_tensors[-1] = torch.einsum('liro,r->lio',
+                                           mpo_tensors[-1],
+                                           self.right_node.tensor)
         return mpo_tensors
     
     # -------

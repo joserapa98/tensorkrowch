@@ -522,8 +522,12 @@ class MPS(TensorNetwork):  # MARK: MPS
         """Returns the list of MPS tensors."""
         mps_tensors = [node.tensor for node in self._mats_env]
         if self._boundary == 'obc':
-            mps_tensors[0] = mps_tensors[0][0, :, :]
-            mps_tensors[-1] = mps_tensors[-1][:, :, 0]
+            mps_tensors[0] = torch.einsum('l,lir->ir',
+                                          self.left_node.tensor,
+                                          mps_tensors[0])
+            mps_tensors[-1] = torch.einsum('lir,r->li',
+                                           mps_tensors[-1],
+                                           self.right_node.tensor)
         return mps_tensors
     
     # -------

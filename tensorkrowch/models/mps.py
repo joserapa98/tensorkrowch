@@ -863,7 +863,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         outdated.
         
         If bond dimensions are changed, usually due to decompositions like
-        :func:~`tensorkrowch.operations.svd`, ``update_bond_dim`` should be
+        :func:`~tensorkrowch.svd`, ``update_bond_dim`` should be
         called. This might modify some elements of the model, so it is
         recommended to do this before saving the ``state_dict`` of the model.
         Besides, if one wants to continue training, the ``parameters`` of the

@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.components &#8212; TensorKrowch 1.1.1 documentation</title>
+    <title>tensorkrowch.components &#8212; TensorKrowch 1.1.2 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -1261,11 +1261,11 @@ title="Source repository"
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">size</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shape</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]:</span>
                 <span class="c1"># If new size is smaller than current, tensor is cropped</span>
-                <span class="c1"># starting from the &quot;left&quot;, &quot;top&quot;, &quot;front&quot;, etc. in each dimension</span>
+                <span class="c1"># starting from the &quot;right&quot;, &quot;bottom&quot;, &quot;back&quot;, etc. in each dimension</span>
                 <span class="n">index</span> <span class="o">=</span> <span class="p">[]</span>
                 <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dim</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_shape</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">axis_num</span><span class="p">:</span>
-                        <span class="n">index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="n">dim</span> <span class="o">-</span> <span class="n">size</span><span class="p">,</span> <span class="n">dim</span><span class="p">))</span>
+                        <span class="n">index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">size</span><span class="p">))</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="n">index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dim</span><span class="p">))</span>
                 <span class="n">aux_shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_shape</span><span class="p">)</span>
@@ -1276,11 +1276,11 @@ title="Source repository"
 
             <span class="k">elif</span> <span class="n">size</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shape</span><span class="p">[</span><span class="n">axis_num</span><span class="p">]:</span>
                 <span class="c1"># If new size is greater than current, tensor is expanded with</span>
-                <span class="c1"># zeros in the &quot;left&quot;, &quot;top&quot;, &quot;front&quot;, etc. dimension</span>
+                <span class="c1"># zeros in the &quot;right&quot;, &quot;bottom&quot;, &quot;back&quot;, etc. dimension</span>
                 <span class="n">pad</span> <span class="o">=</span> <span class="p">[]</span>
                 <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dim</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_shape</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">axis_num</span><span class="p">:</span>
-                        <span class="n">pad</span> <span class="o">+=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">size</span> <span class="o">-</span> <span class="n">dim</span><span class="p">]</span>
+                        <span class="n">pad</span> <span class="o">+=</span> <span class="p">[</span><span class="n">size</span> <span class="o">-</span> <span class="n">dim</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="n">pad</span> <span class="o">+=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
                 <span class="n">pad</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
@@ -3597,8 +3597,8 @@ title="Source repository"
 <span class="sd">        Changes size of the edge, thus changing the size of tensors of ``node1``</span>
 <span class="sd">        and ``node2`` at the corresponding axes. If new size is smaller, the</span>
 <span class="sd">        tensor will be cropped; if larger, the tensor will be expanded with zeros.</span>
-<span class="sd">        In both cases, the process (cropping/expanding) occurs at the &quot;left&quot;,</span>
-<span class="sd">        &quot;top&quot;, &quot;front&quot;, etc. of each dimension.</span>
+<span class="sd">        In both cases, the process (cropping/expanding) occurs at the &quot;right&quot;,</span>
+<span class="sd">        &quot;bottom&quot;, &quot;back&quot;, etc. of each dimension.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -3615,14 +3615,14 @@ title="Source repository"
 <span class="sd">        </span>
 <span class="sd">        &gt;&gt;&gt; edge.change_size(4)</span>
 <span class="sd">        &gt;&gt;&gt; nodeA.tensor</span>
-<span class="sd">        tensor([[0., 1., 1., 1.],</span>
-<span class="sd">                [0., 1., 1., 1.]])</span>
+<span class="sd">        tensor([[1., 1., 1., 0.],</span>
+<span class="sd">                [1., 1., 1., 0.]])</span>
 <span class="sd">        </span>
 <span class="sd">        &gt;&gt;&gt; nodeB.tensor</span>
-<span class="sd">        tensor([[0., 0., 0., 0.],</span>
+<span class="sd">        tensor([[1., 1., 1., 1.],</span>
 <span class="sd">                [1., 1., 1., 1.],</span>
 <span class="sd">                [1., 1., 1., 1.],</span>
-<span class="sd">                [1., 1., 1., 1.]])</span>
+<span class="sd">                [0., 0., 0., 0.]])</span>
 <span class="sd">                </span>
 <span class="sd">        &gt;&gt;&gt; edge.size()</span>
 <span class="sd">        4</span>

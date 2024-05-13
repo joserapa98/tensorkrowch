@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Models &#8212; TensorKrowch 1.1.1 documentation</title>
+    <title>Models &#8212; TensorKrowch 1.1.2 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -972,6 +972,14 @@ in-place (<code class="docutils literal notranslate"><span class="pre">True</spa
 <span class="sig-name descname"><span class="pre">update_bond_dim</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mps.html#MPS.update_bond_dim"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPS.update_bond_dim" title="Permalink to this definition">#</a></dt>
 <dd><p>Updates the <a class="reference internal" href="#tensorkrowch.models.MPS.bond_dim" title="tensorkrowch.models.MPS.bond_dim"><code class="xref py py-attr docutils literal notranslate"><span class="pre">bond_dim</span></code></a> attribute of the <code class="docutils literal notranslate"><span class="pre">MPS</span></code>, in case it is
 outdated.</p>
+<p>If bond dimensions are changed, usually due to decompositions like
+<a class="reference internal" href="operations.html#tensorkrowch.svd" title="tensorkrowch.svd"><code class="xref py py-func docutils literal notranslate"><span class="pre">svd()</span></code></a>, <code class="docutils literal notranslate"><span class="pre">update_bond_dim</span></code> should be
+called. This might modify some elements of the model, so it is
+recommended to do this before saving the <code class="docutils literal notranslate"><span class="pre">state_dict</span></code> of the model.
+Besides, if one wants to continue training, the <code class="docutils literal notranslate"><span class="pre">parameters</span></code> of the
+model that are passed to the optimizer should be updated also.
+Otherwise, the optimizer could be tracking outdated parameters that are
+not members of the model any more.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -2670,6 +2678,14 @@ in-place (<code class="docutils literal notranslate"><span class="pre">True</spa
 <span class="sig-name descname"><span class="pre">update_bond_dim</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tensorkrowch/models/mpo.html#MPO.update_bond_dim"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tensorkrowch.models.MPO.update_bond_dim" title="Permalink to this definition">#</a></dt>
 <dd><p>Updates the <a class="reference internal" href="#tensorkrowch.models.MPO.bond_dim" title="tensorkrowch.models.MPO.bond_dim"><code class="xref py py-attr docutils literal notranslate"><span class="pre">bond_dim</span></code></a> attribute of the <code class="docutils literal notranslate"><span class="pre">MPO</span></code>, in case it is
 outdated.</p>
+<p>If bond dimensions are changed, usually due to decompositions like
+<a class="reference internal" href="operations.html#tensorkrowch.svd" title="tensorkrowch.svd"><code class="xref py py-func docutils literal notranslate"><span class="pre">svd()</span></code></a>, <code class="docutils literal notranslate"><span class="pre">update_bond_dim</span></code> should be
+called. This might modify some elements of the model, so it is
+recommended to do this before saving the <code class="docutils literal notranslate"><span class="pre">state_dict</span></code> of the model.
+Besides, if one wants to continue training, the <code class="docutils literal notranslate"><span class="pre">parameters</span></code> of the
+model that are passed to the optimizer should be updated also.
+Otherwise, the optimizer could be tracking outdated parameters that are
+not members of the model any more.</p>
 </dd></dl>
 
 <dl class="py method">

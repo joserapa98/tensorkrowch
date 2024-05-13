@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Components &#8212; TensorKrowch 1.1.1 documentation</title>
+    <title>Components &#8212; TensorKrowch 1.1.2 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -2790,8 +2790,8 @@ names.</p>
 <dd><p>Changes size of the edge, thus changing the size of tensors of <code class="docutils literal notranslate"><span class="pre">node1</span></code>
 and <code class="docutils literal notranslate"><span class="pre">node2</span></code> at the corresponding axes. If new size is smaller, the
 tensor will be cropped; if larger, the tensor will be expanded with zeros.
-In both cases, the process (cropping/expanding) occurs at the “left”,
-“top”, “front”, etc. of each dimension.</p>
+In both cases, the process (cropping/expanding) occurs at the “right”,
+“bottom”, “back”, etc. of each dimension.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>size</strong> (<em>int</em>) – New size of the edge.</p>
@@ -2807,15 +2807,15 @@ In both cases, the process (cropping/expanding) occurs at the “left”,
 </div>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">edge</span><span class="o">.</span><span class="n">change_size</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">nodeA</span><span class="o">.</span><span class="n">tensor</span>
-<span class="go">tensor([[0., 1., 1., 1.],</span>
-<span class="go">        [0., 1., 1., 1.]])</span>
+<span class="go">tensor([[1., 1., 1., 0.],</span>
+<span class="go">        [1., 1., 1., 0.]])</span>
 </pre></div>
 </div>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">nodeB</span><span class="o">.</span><span class="n">tensor</span>
-<span class="go">tensor([[0., 0., 0., 0.],</span>
+<span class="go">tensor([[1., 1., 1., 1.],</span>
 <span class="go">        [1., 1., 1., 1.],</span>
 <span class="go">        [1., 1., 1., 1.],</span>
-<span class="go">        [1., 1., 1., 1.]])</span>
+<span class="go">        [0., 0., 0., 0.]])</span>
 </pre></div>
 </div>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">edge</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>

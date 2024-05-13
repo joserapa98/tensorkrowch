@@ -934,11 +934,11 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         else:
             if size < self._shape[axis_num]:
                 # If new size is smaller than current, tensor is cropped
-                # starting from the "left", "top", "front", etc. in each dimension
+                # starting from the "right", "bottom", "back", etc. in each dimension
                 index = []
                 for i, dim in enumerate(self._shape):
                     if i == axis_num:
-                        index.append(slice(dim - size, dim))
+                        index.append(slice(0, size))
                     else:
                         index.append(slice(0, dim))
                 aux_shape = list(self._shape)
@@ -949,11 +949,11 @@ class AbstractNode(ABC):  # MARK: AbstractNode
 
             elif size > self._shape[axis_num]:
                 # If new size is greater than current, tensor is expanded with
-                # zeros in the "left", "top", "front", etc. dimension
+                # zeros in the "right", "bottom", "back", etc. dimension
                 pad = []
                 for i, dim in enumerate(self._shape):
                     if i == axis_num:
-                        pad += [0, size - dim]
+                        pad += [size - dim, 0]
                     else:
                         pad += [0, 0]
                 pad.reverse()
@@ -3270,8 +3270,8 @@ class Edge:  # MARK: Edge
         Changes size of the edge, thus changing the size of tensors of ``node1``
         and ``node2`` at the corresponding axes. If new size is smaller, the
         tensor will be cropped; if larger, the tensor will be expanded with zeros.
-        In both cases, the process (cropping/expanding) occurs at the "left",
-        "top", "front", etc. of each dimension.
+        In both cases, the process (cropping/expanding) occurs at the "right",
+        "bottom", "back", etc. of each dimension.
         
         Parameters
         ----------
@@ -3288,14 +3288,14 @@ class Edge:  # MARK: Edge
         
         >>> edge.change_size(4)
         >>> nodeA.tensor
-        tensor([[0., 1., 1., 1.],
-                [0., 1., 1., 1.]])
+        tensor([[1., 1., 1., 0.],
+                [1., 1., 1., 0.]])
         
         >>> nodeB.tensor
-        tensor([[0., 0., 0., 0.],
+        tensor([[1., 1., 1., 1.],
                 [1., 1., 1., 1.],
                 [1., 1., 1., 1.],
-                [1., 1., 1., 1.]])
+                [0., 0., 0., 0.]])
                 
         >>> edge.size()
         4

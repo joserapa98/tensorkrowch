@@ -6,7 +6,7 @@ Tensor Networks with PyTorch
 """
 
 # Version
-__version__ = '1.1.2'
+__version__ = '1.1.3'
 
 # Network components
 from tensorkrowch.components import Axis

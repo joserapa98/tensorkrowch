@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tensorkrowch.models.mps &#8212; TensorKrowch 1.1.1 documentation</title>
+    <title>tensorkrowch.models.mps &#8212; TensorKrowch 1.1.2 documentation</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -849,8 +849,12 @@ title="Source repository"
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the list of MPS tensors.&quot;&quot;&quot;</span>
         <span class="n">mps_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">]</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-            <span class="n">mps_tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">mps_tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
-            <span class="n">mps_tensors</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">mps_tensors</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="n">mps_tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;l,lir-&gt;ir&#39;</span><span class="p">,</span>
+                                          <span class="bp">self</span><span class="o">.</span><span class="n">left_node</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span>
+                                          <span class="n">mps_tensors</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">mps_tensors</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;lir,r-&gt;li&#39;</span><span class="p">,</span>
+                                           <span class="n">mps_tensors</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                                           <span class="bp">self</span><span class="o">.</span><span class="n">right_node</span><span class="o">.</span><span class="n">tensor</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">mps_tensors</span>
     
     <span class="c1"># -------</span>
@@ -1184,11 +1188,29 @@ title="Source repository"
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Updates the :attr:`bond_dim` attribute of the ``MPS``, in case it is</span>
 <span class="sd">        outdated.</span>
+<span class="sd">        </span>
+<span class="sd">        If bond dimensions are changed, usually due to decompositions like</span>
+<span class="sd">        :func:`~tensorkrowch.svd`, ``update_bond_dim`` should be</span>
+<span class="sd">        called. This might modify some elements of the model, so it is</span>
+<span class="sd">        recommended to do this before saving the ``state_dict`` of the model.</span>
+<span class="sd">        Besides, if one wants to continue training, the ``parameters`` of the</span>
+<span class="sd">        model that are passed to the optimizer should be updated also.</span>
+<span class="sd">        Otherwise, the optimizer could be tracking outdated parameters that are</span>
+<span class="sd">        not members of the model any more.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+            
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="p">:</span>
+                <span class="n">left_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">left_size</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;left&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">change_size</span><span class="p">(</span><span class="n">left_size</span><span class="p">)</span>
+                
+                <span class="n">right_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">right_size</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">change_size</span><span class="p">(</span><span class="n">right_size</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">]</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">]</span></div>
 
     <span class="k">def</span> <span class="nf">_input_contraction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                            <span class="n">nodes_env</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">AbstractNode</span><span class="p">],</span>
@@ -1992,11 +2014,8 @@ title="Source repository"
                 <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">*</span> <span class="n">rescale</span>
         
         <span class="c1"># Update variables</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span> <span class="o">=</span> <span class="n">nodes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_bond_dim</span><span class="p">()</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="n">prev_auto_stack</span>
         
@@ -2165,11 +2184,8 @@ title="Source repository"
                 <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tensor</span> <span class="o">*</span> <span class="n">rescale</span>
         
         <span class="c1"># Update variables</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_bond_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span> <span class="o">=</span> <span class="n">nodes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_bond_dim</span><span class="p">()</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">auto_stack</span> <span class="o">=</span> <span class="n">prev_auto_stack</span></div>
 
@@ -2325,12 +2341,12 @@ title="Source repository"
             <span class="k">if</span> <span class="ow">not</span> <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">is_dangling</span><span class="p">():</span>
                 <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
         
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary</span> <span class="o">==</span> <span class="s1">&#39;obc&#39;</span><span class="p">:</span>
-            <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">@</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
-            
-            <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span>
-            <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
+        <span class="c1"># Boundary is &#39;obc&#39;</span>
+        <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_left_node</span> <span class="o">@</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
+        
+        <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">_right_node</span>
+        <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">reattach_edges</span><span class="p">(</span><span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">])</span>
 
         <span class="n">new_tensors</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">left_nodeC</span> <span class="o">=</span> <span class="kc">None</span>
@@ -2351,6 +2367,7 @@ title="Source repository"
         
         <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">tensors</span><span class="o">=</span><span class="n">new_tensors</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_bond_dim</span><span class="p">()</span>
 
         <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">data_node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mats_env</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_nodes</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
             <span class="n">node</span><span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">]</span> <span class="o">^</span> <span class="n">data_node</span><span class="p">[</span><span class="s1">&#39;feature&#39;</span><span class="p">]</span>

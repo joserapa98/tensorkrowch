@@ -34,7 +34,7 @@ from tensorkrowch.operations import Operation
 from tensorkrowch.operations import get_shared_edges  # Not in docs
 
 from tensorkrowch.operations import (permute, permute_, tprod, mul, div, add,
-                                     sub, renormalize)
+                                     sub, renormalize, conj)
 from tensorkrowch.operations import (split, split_, contract_edges,
                                      contract_between, contract_between_,
                                      stack, unbind, einsum, stacked_einsum)

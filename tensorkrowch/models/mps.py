@@ -1683,7 +1683,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                                   middle_tensor.shape[-1]),         # right
             full_matrices=False)
         
-        s = s[s > 0]
+        s = s[s.pow(2) > 0]
         entropy = -(s.pow(2) * s.pow(2).log()).sum()
         
         # Rescale

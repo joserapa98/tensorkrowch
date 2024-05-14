@@ -39,7 +39,6 @@ class TestMPS:  # MARK: TestMPS
     
     def test_initialize_with_tensors_cuda(self):
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        
         for n in [1, 2, 5]:
             # PBC
             tensors = [torch.randn(10, 2, 10, device=device) for _ in range(n)]
@@ -62,6 +61,34 @@ class TestMPS:  # MARK: TestMPS
             assert mps.bond_dim == [10] * (n - 1)
             for node in mps.mats_env:
                 assert node.device == device
+    
+    def test_initialize_with_tensors_complex(self):
+        for n in [1, 2, 5]:
+            # PBC
+            tensors = [torch.randn(10, 2, 10,
+                                   dtype=torch.complex64) for _ in range(n)]
+            mps = tk.models.MPS(tensors=tensors)
+            assert mps.n_features == n
+            assert mps.boundary == 'pbc'
+            assert mps.phys_dim == [2] * n
+            assert mps.bond_dim == [10] * n
+            for node in mps.mats_env:
+                assert node.dtype == torch.complex64
+                assert node.is_complex()
+            
+            # OBC
+            tensors = [torch.randn(10, 2, 10,
+                                   dtype=torch.complex64) for _ in range(n)]
+            tensors[0] = tensors[0][0]
+            tensors[-1] = tensors[-1][..., 0]
+            mps = tk.models.MPS(tensors=tensors)
+            assert mps.n_features == n
+            assert mps.boundary == 'obc'
+            assert mps.phys_dim == [2] * n
+            assert mps.bond_dim == [10] * (n - 1)
+            for node in mps.mats_env:
+                assert node.dtype == torch.complex64
+                assert node.is_complex()
     
     def test_initialize_with_tensors_ignore_rest(self):
         tensors = [torch.randn(10, 2, 10) for _ in range(10)]
@@ -104,23 +131,23 @@ class TestMPS:  # MARK: TestMPS
                 mps = tk.models.MPS(boundary='pbc',
                                     n_features=n,
                                     phys_dim=2,
-                                    bond_dim=2,
+                                    bond_dim=5,
                                     init_method=init_method)
                 assert mps.n_features == n
                 assert mps.boundary == 'pbc'
                 assert mps.phys_dim == [2] * n
-                assert mps.bond_dim == [2] * n
+                assert mps.bond_dim == [5] * n
                 
                 # OBC
                 mps = tk.models.MPS(boundary='obc',
                                     n_features=n,
                                     phys_dim=2,
-                                    bond_dim=2,
+                                    bond_dim=5,
                                     init_method=init_method)
                 assert mps.n_features == n
                 assert mps.boundary == 'obc'
                 assert mps.phys_dim == [2] * n
-                assert mps.bond_dim == [2] * (n - 1)
+                assert mps.bond_dim == [5] * (n - 1)
                 
                 assert torch.equal(mps.left_node.tensor[0],
                                    torch.ones_like(mps.left_node.tensor)[0])
@@ -142,13 +169,13 @@ class TestMPS:  # MARK: TestMPS
                 mps = tk.models.MPS(boundary='pbc',
                                     n_features=n,
                                     phys_dim=2,
-                                    bond_dim=2,
+                                    bond_dim=5,
                                     init_method=init_method,
                                     device=device)
                 assert mps.n_features == n
                 assert mps.boundary == 'pbc'
                 assert mps.phys_dim == [2] * n
-                assert mps.bond_dim == [2] * n
+                assert mps.bond_dim == [5] * n
                 for node in mps.mats_env:
                     assert node.device == device
                 
@@ -156,15 +183,60 @@ class TestMPS:  # MARK: TestMPS
                 mps = tk.models.MPS(boundary='obc',
                                     n_features=n,
                                     phys_dim=2,
-                                    bond_dim=2,
+                                    bond_dim=5,
                                     init_method=init_method,
                                     device=device)
                 assert mps.n_features == n
                 assert mps.boundary == 'obc'
                 assert mps.phys_dim == [2] * n
-                assert mps.bond_dim == [2] * (n - 1)
+                assert mps.bond_dim == [5] * (n - 1)
                 for node in mps.mats_env:
                     assert node.device == device
+                
+                assert torch.equal(mps.left_node.tensor[0],
+                                   torch.ones_like(mps.left_node.tensor)[0])
+                assert torch.equal(mps.left_node.tensor[1:],
+                                   torch.zeros_like(mps.left_node.tensor)[1:])
+                
+                assert torch.equal(mps.right_node.tensor[0],
+                                   torch.ones_like(mps.right_node.tensor)[0])
+                assert torch.equal(mps.right_node.tensor[1:],
+                                   torch.zeros_like(mps.right_node.tensor)[1:])
+    
+    def test_initialize_init_method_complex(self):
+        methods = ['zeros', 'ones', 'copy', 'rand', 'randn',
+                   'randn_eye', 'unit', 'canonical']
+        for n in [1, 2, 5]:
+            for init_method in methods:
+                # PBC
+                mps = tk.models.MPS(boundary='pbc',
+                                    n_features=n,
+                                    phys_dim=2,
+                                    bond_dim=5,
+                                    init_method=init_method,
+                                    dtype=torch.complex64)
+                assert mps.n_features == n
+                assert mps.boundary == 'pbc'
+                assert mps.phys_dim == [2] * n
+                assert mps.bond_dim == [5] * n
+                for node in mps.mats_env:
+                    assert node.dtype == torch.complex64
+                    assert node.is_complex()
+                
+                # OBC
+                mps = tk.models.MPS(boundary='obc',
+                                    n_features=n,
+                                    phys_dim=2,
+                                    bond_dim=5,
+                                    init_method=init_method,
+                                    dtype=torch.complex64)
+                assert mps.n_features == n
+                assert mps.boundary == 'obc'
+                assert mps.phys_dim == [2] * n
+                assert mps.bond_dim == [5] * (n - 1)
+                for node in mps.mats_env:
+                    assert node.dtype == torch.complex64
+                    assert node.is_complex()
                 
                 assert torch.equal(mps.left_node.tensor[0],
                                    torch.ones_like(mps.left_node.tensor)[0])
@@ -203,6 +275,7 @@ class TestMPS:  # MARK: TestMPS
             assert mps.bond_dim == [2] * (n - 1)
             
             # Check it has norm == 2**n
+            norm = mps.norm()
             assert mps.norm().isclose(torch.tensor(2. ** n).sqrt())
             # Norm is close to 2**n if bond dimension is <= than
             # physical dimension, otherwise, it will not be exactly 2**n
@@ -241,8 +314,47 @@ class TestMPS:  # MARK: TestMPS
                 assert node.device == device
             
             # Check it has norm == 2**n
-            norm = mps.norm()
             assert mps.norm().isclose(torch.tensor(2. ** n).sqrt())
+            # Norm is close to 2**n if bond dimension is <= than
+            # physical dimension, otherwise, it will not be exactly 2**n
+    
+    def test_initialize_canonical_complex(self):
+        for n in [1, 2, 5]:
+            # PBC
+            mps = tk.models.MPS(boundary='pbc',
+                                n_features=n,
+                                phys_dim=2,
+                                bond_dim=2,
+                                init_method='canonical',
+                                dtype=torch.complex64)
+            assert mps.n_features == n
+            assert mps.boundary == 'pbc'
+            assert mps.phys_dim == [2] * n
+            assert mps.bond_dim == [2] * n
+            for node in mps.mats_env:
+                assert node.dtype == torch.complex64
+                assert node.is_complex()
+            
+            # For PBC norm does not have to be 2**n always
+            
+            # OBC
+            mps = tk.models.MPS(boundary='obc',
+                                n_features=n,
+                                phys_dim=2,
+                                bond_dim=2,
+                                init_method='canonical',
+                                dtype=torch.complex64)
+            assert mps.n_features == n
+            assert mps.boundary == 'obc'
+            assert mps.phys_dim == [2] * n
+            assert mps.bond_dim == [2] * (n - 1)
+            for node in mps.mats_env:
+                assert node.dtype == torch.complex64
+                assert node.is_complex()
+            
+            # Check it has norm == 2**n
+            assert mps.norm().isclose(
+                torch.tensor(2. ** n, dtype=torch.complex64).sqrt())
             # Norm is close to 2**n if bond dimension is <= than
             # physical dimension, otherwise, it will not be exactly 2**n
     
@@ -493,6 +605,52 @@ class TestMPS:  # MARK: TestMPS
                                         assert len(mps.virtual_nodes) == 1
                                     
                                     result.sum().backward()
+                                    for node in mps.mats_env:
+                                        assert node.grad is not None
+    
+    def test_all_algorithms_complex(self):
+        for n_features in [1, 2, 3, 4, 10]:
+            for boundary in ['obc', 'pbc']:
+                # batch x n_features x feature_dim
+                example = torch.randn(1, n_features, 5, dtype=torch.complex64)
+                data = torch.randn(100, n_features, 5, dtype=torch.complex64)
+                
+                mps = tk.models.MPS(n_features=n_features,
+                                    phys_dim=5,
+                                    bond_dim=2,
+                                    boundary=boundary,
+                                    dtype=torch.complex64)
+
+                for auto_stack in [True, False]:
+                    for auto_unbind in [True, False]:
+                        for inline_input in [True, False]:
+                            for inline_mats in [True, False]:
+                                for renormalize in [True, False]:
+                                    mps.auto_stack = auto_stack
+                                    mps.auto_unbind = auto_unbind
+
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              renormalize=renormalize)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 renormalize=renormalize)
+
+                                    assert result.shape == (100,)
+                                    assert len(mps.edges) == 0
+                                    if boundary == 'obc':
+                                        assert len(mps.leaf_nodes) == n_features + 2
+                                    else:
+                                        assert len(mps.leaf_nodes) == n_features
+                                    assert len(mps.data_nodes) == n_features
+                                    if not inline_input and auto_stack:
+                                        assert len(mps.virtual_nodes) == 2
+                                    else:
+                                        assert len(mps.virtual_nodes) == 1
+                                    
+                                    result.sum().abs().backward()
                                     for node in mps.mats_env:
                                         assert node.grad is not None
 
@@ -802,6 +960,153 @@ class TestMPS:  # MARK: TestMPS
                                     for node in mps.mats_env:
                                         assert node.grad is not None
     
+    def test_all_algorithms_marginalize_with_list_matrices_cuda(self):
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        for n_features in [1, 2, 3, 4, 10]:
+            for boundary in ['obc', 'pbc']:
+                in_features = torch.randint(low=0,
+                                            high=n_features,
+                                            size=(n_features // 2,)).tolist()
+                in_features = list(set(in_features))
+                
+                # batch x n_features x feature_dim
+                example = torch.randn(1, len(in_features), 5, device=device)
+                data = torch.randn(100, len(in_features), 5, device=device)
+                
+                if example.numel() == 0:
+                    example = None
+                    data = None
+                
+                mps = tk.models.MPS(n_features=n_features,
+                                    phys_dim=5,
+                                    bond_dim=2,
+                                    boundary=boundary,
+                                    in_features=in_features,
+                                    device=device)
+                
+                embedding_matrices = [torch.randn(5, 5, device=device)
+                                      for _ in range(len(mps.out_features))]
+
+                for auto_stack in [True, False]:
+                    for auto_unbind in [True, False]:
+                        for inline_input in [True, False]:
+                            for inline_mats in [True, False]:
+                                for renormalize in [True, False]:
+                                    mps.auto_stack = auto_stack
+                                    mps.auto_unbind = auto_unbind
+
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              renormalize=renormalize,
+                                              marginalize_output=True,
+                                              embedding_matrices=embedding_matrices)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 renormalize=renormalize,
+                                                 marginalize_output=True,
+                                                 embedding_matrices=embedding_matrices)
+
+                                    if in_features:
+                                        assert result.shape == (100, 100)
+                                        
+                                        if not inline_input and auto_stack:
+                                            assert len(mps.virtual_nodes) == \
+                                                (2 + 2 * len(mps.out_features))
+                                        else:
+                                            assert len(mps.virtual_nodes) == \
+                                                (1 + 2 * len(mps.out_features))
+                                            
+                                    else:
+                                        assert result.shape == tuple()
+                                        assert len(mps.virtual_nodes) == \
+                                            2 * len(mps.out_features)
+                                    
+                                    if boundary == 'obc':
+                                        assert len(mps.leaf_nodes) == n_features + 2
+                                    else:
+                                        assert len(mps.leaf_nodes) == n_features
+                                        
+                                    assert len(mps.data_nodes) == len(in_features)
+                                    
+                                    result.sum().backward()
+                                    for node in mps.mats_env:
+                                        assert node.grad is not None
+    
+    def test_all_algorithms_marginalize_with_list_matrices_complex(self):
+        for n_features in [1, 2, 3, 4, 10]:
+            for boundary in ['obc', 'pbc']:
+                in_features = torch.randint(low=0,
+                                            high=n_features,
+                                            size=(n_features // 2,)).tolist()
+                in_features = list(set(in_features))
+                
+                # batch x n_features x feature_dim
+                example = torch.randn(1, len(in_features), 5, dtype=torch.complex64)
+                data = torch.randn(100, len(in_features), 5, dtype=torch.complex64)
+                
+                if example.numel() == 0:
+                    example = None
+                    data = None
+                
+                mps = tk.models.MPS(n_features=n_features,
+                                    phys_dim=5,
+                                    bond_dim=2,
+                                    boundary=boundary,
+                                    in_features=in_features,
+                                    dtype=torch.complex64)
+                
+                embedding_matrices = [torch.randn(5, 5, dtype=torch.complex64)
+                                      for _ in range(len(mps.out_features))]
+
+                for auto_stack in [True, False]:
+                    for auto_unbind in [True, False]:
+                        for inline_input in [True, False]:
+                            for inline_mats in [True, False]:
+                                for renormalize in [True, False]:
+                                    mps.auto_stack = auto_stack
+                                    mps.auto_unbind = auto_unbind
+
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              renormalize=renormalize,
+                                              marginalize_output=True,
+                                              embedding_matrices=embedding_matrices)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 renormalize=renormalize,
+                                                 marginalize_output=True,
+                                                 embedding_matrices=embedding_matrices)
+
+                                    if in_features:
+                                        assert result.shape == (100, 100)
+                                        
+                                        if not inline_input and auto_stack:
+                                            assert len(mps.virtual_nodes) == \
+                                                (2 + 2 * len(mps.out_features))
+                                        else:
+                                            assert len(mps.virtual_nodes) == \
+                                                (1 + 2 * len(mps.out_features))
+                                            
+                                    else:
+                                        assert result.shape == tuple()
+                                        assert len(mps.virtual_nodes) == \
+                                            2 * len(mps.out_features)
+                                    
+                                    if boundary == 'obc':
+                                        assert len(mps.leaf_nodes) == n_features + 2
+                                    else:
+                                        assert len(mps.leaf_nodes) == n_features
+                                        
+                                    assert len(mps.data_nodes) == len(in_features)
+                                    
+                                    result.sum().abs().backward()
+                                    for node in mps.mats_env:
+                                        assert node.grad is not None
+    
     def test_all_algorithms_marginalize_with_matrix(self):
         for n_features in [1, 2, 3, 4, 10]:
             for boundary in ['obc', 'pbc']:
@@ -943,6 +1248,78 @@ class TestMPS:  # MARK: TestMPS
                                     assert len(mps.data_nodes) == len(in_features)
                                     
                                     result.sum().backward()
+                                    for node in mps.mats_env:
+                                        assert node.grad is not None
+    
+    def test_all_algorithms_marginalize_with_matrix_complex(self):
+        for n_features in [1, 2, 3, 4, 10]:
+            for boundary in ['obc', 'pbc']:
+                in_features = torch.randint(low=0,
+                                            high=n_features,
+                                            size=(n_features // 2,)).tolist()
+                in_features = list(set(in_features))
+                
+                # batch x n_features x feature_dim
+                example = torch.randn(1, len(in_features), 5, dtype=torch.complex64)
+                data = torch.randn(100, len(in_features), 5, dtype=torch.complex64)
+                
+                if example.numel() == 0:
+                    example = None
+                    data = None
+                
+                mps = tk.models.MPS(n_features=n_features,
+                                    phys_dim=5,
+                                    bond_dim=2,
+                                    boundary=boundary,
+                                    in_features=in_features,
+                                    dtype=torch.complex64)
+                
+                embedding_matrix = torch.randn(5, 5, dtype=torch.complex64)
+
+                for auto_stack in [True, False]:
+                    for auto_unbind in [True, False]:
+                        for inline_input in [True, False]:
+                            for inline_mats in [True, False]:
+                                for renormalize in [True, False]:
+                                    mps.auto_stack = auto_stack
+                                    mps.auto_unbind = auto_unbind
+
+                                    mps.trace(example,
+                                              inline_input=inline_input,
+                                              inline_mats=inline_mats,
+                                              renormalize=renormalize,
+                                              marginalize_output=True,
+                                              embedding_matrices=embedding_matrix)
+                                    result = mps(data,
+                                                 inline_input=inline_input,
+                                                 inline_mats=inline_mats,
+                                                 renormalize=renormalize,
+                                                 marginalize_output=True,
+                                                 embedding_matrices=embedding_matrix)
+
+                                    if in_features:
+                                        assert result.shape == (100, 100)
+                                        
+                                        if not inline_input and auto_stack:
+                                            assert len(mps.virtual_nodes) == \
+                                                (2 + 2 * len(mps.out_features))
+                                        else:
+                                            assert len(mps.virtual_nodes) == \
+                                                (1 + 2 * len(mps.out_features))
+                                            
+                                    else:
+                                        assert result.shape == tuple()
+                                        assert len(mps.virtual_nodes) == \
+                                            2 * len(mps.out_features)
+                                    
+                                    if boundary == 'obc':
+                                        assert len(mps.leaf_nodes) == n_features + 2
+                                    else:
+                                        assert len(mps.leaf_nodes) == n_features
+                                        
+                                    assert len(mps.data_nodes) == len(in_features)
+                                    
+                                    result.sum().abs().backward()
                                     for node in mps.mats_env:
                                         assert node.grad is not None
     
@@ -1119,6 +1496,96 @@ class TestMPS:  # MARK: TestMPS
                                             assert node.grad is not None
                                         for node in mpo.mats_env:
                                             assert node.tensor.grad is None
+    
+    def test_all_algorithms_marginalize_with_mpo_complex(self):
+        for n_features in [1, 2, 3, 4, 10]:
+            for mps_boundary in ['obc', 'pbc']:
+                for mpo_boundary in ['obc', 'pbc']:
+                    in_features = torch.randint(low=0,
+                                            high=n_features,
+                                            size=(n_features // 2,)).tolist()
+                in_features = list(set(in_features))
+                
+                # batch x n_features x feature_dim
+                example = torch.randn(1, len(in_features), 5, dtype=torch.complex64)
+                data = torch.randn(100, len(in_features), 5, dtype=torch.complex64)
+                
+                if example.numel() == 0:
+                    example = None
+                    data = None
+                    
+                    mps = tk.models.MPS(n_features=n_features,
+                                        phys_dim=5,
+                                        bond_dim=2,
+                                        boundary=mps_boundary,
+                                        in_features=in_features,
+                                        dtype=torch.complex64)
+                    
+                    mpo = tk.models.MPO(n_features=n_features - len(in_features),
+                                        in_dim=5,
+                                        out_dim=5,
+                                        bond_dim=2,
+                                        boundary=mpo_boundary,
+                                        dtype=torch.complex64)
+                    
+                    # Send mpo to cuda before deparameterizing, so that all
+                    # nodes are still in the state_dict of the model and are
+                    # automatically sent to cuda
+                    # mpo = mpo.to(device)
+                    
+                    # De-parameterize MPO nodes to only train MPS nodes
+                    mpo = mpo.parameterize(set_param=False, override=True)
+
+                    for auto_stack in [True, False]:
+                        for auto_unbind in [True, False]:
+                            for inline_input in [True, False]:
+                                for inline_mats in [True, False]:
+                                    for renormalize in [True, False]:
+                                        mps.auto_stack = auto_stack
+                                        mps.auto_unbind = auto_unbind
+
+                                        mps.trace(example,
+                                                  inline_input=inline_input,
+                                                  inline_mats=inline_mats,
+                                                  renormalize=renormalize,
+                                                  marginalize_output=True,
+                                                  mpo=mpo)
+                                        result = mps(data,
+                                                     inline_input=inline_input,
+                                                     inline_mats=inline_mats,
+                                                     renormalize=renormalize,
+                                                     marginalize_output=True,
+                                                     mpo=mpo)
+                                        
+                                        if in_features:
+                                            assert result.shape == (100, 100)
+                                        else:
+                                            assert result.shape == tuple()
+                                        
+                                        if mps_boundary == 'obc':
+                                            if mpo_boundary == 'obc':
+                                                leaf = (n_features + 2) + \
+                                                    (n_features - len(in_features) + 2)
+                                                assert len(mps.leaf_nodes) == leaf
+                                            else:
+                                                leaf = (n_features + 2) + \
+                                                    (n_features - len(in_features))
+                                                assert len(mps.leaf_nodes) == leaf
+                                        else:
+                                            if mpo_boundary == 'obc':
+                                                leaf = n_features + \
+                                                    (n_features - len(in_features) + 2)
+                                                assert len(mps.leaf_nodes) == leaf
+                                            else:
+                                                leaf = n_features + \
+                                                    (n_features - len(in_features))
+                                                assert len(mps.leaf_nodes) == leaf
+                                        
+                                        result.sum().abs().backward()
+                                        for node in mps.mats_env:
+                                            assert node.grad is not None
+                                        for node in mpo.mats_env:
+                                            assert node.tensor.grad is None
                                     
     def test_all_algorithms_no_marginalize(self):
         for n_features in [1, 2, 3, 4, 10]:
@@ -1224,6 +1691,97 @@ class TestMPS:  # MARK: TestMPS
                     assert mps.in_features == in_features
                     
                     norm.sum().backward()
+                    for node in mps.mats_env:
+                        assert node.grad is not None
+                    
+                    # Repeat norm
+                    norm = mps.norm(log_scale=log_scale)
+    
+    def test_norm_cuda(self):
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        for n_features in [1, 2, 3, 4, 10]:
+            for boundary in ['obc', 'pbc']: 
+                in_features = torch.randint(low=0,
+                                            high=n_features,
+                                            size=(n_features // 2,)).tolist()
+                in_features = list(set(in_features))
+                in_features.sort()
+                
+                # batch x n_features x feature_dim
+                example = torch.randn(1, len(in_features), 5, device=device)
+                
+                if example.numel() == 0:
+                    example = None
+                
+                mps = tk.models.MPS(n_features=n_features,
+                                    phys_dim=5,
+                                    bond_dim=2,
+                                    boundary=boundary,
+                                    in_features=in_features,
+                                    device=device)
+                mps.trace(example)
+                
+                assert mps.resultant_nodes
+                if in_features:
+                    assert mps.data_nodes
+                assert mps.in_features == in_features
+                
+                for log_scale in [True, False]:
+                    # MPS has to be reset, otherwise norm automatically calls
+                    # the forward method that was traced when contracting the MPS
+                    # with example
+                    mps.reset()
+                    norm = mps.norm(log_scale=log_scale)
+                    assert mps.resultant_nodes
+                    assert not mps.data_nodes
+                    assert mps.in_features == in_features
+                    
+                    norm.sum().backward()
+                    for node in mps.mats_env:
+                        assert node.grad is not None
+                    
+                    # Repeat norm
+                    norm = mps.norm(log_scale=log_scale)
+    
+    def test_norm_complex(self):
+        for n_features in [1, 2, 3, 4, 10]:
+            for boundary in ['obc', 'pbc']: 
+                in_features = torch.randint(low=0,
+                                            high=n_features,
+                                            size=(n_features // 2,)).tolist()
+                in_features = list(set(in_features))
+                in_features.sort()
+                
+                # batch x n_features x feature_dim
+                example = torch.randn(1, len(in_features), 5, dtype=torch.complex64)
+                
+                if example.numel() == 0:
+                    example = None
+                
+                mps = tk.models.MPS(n_features=n_features,
+                                    phys_dim=5,
+                                    bond_dim=2,
+                                    boundary=boundary,
+                                    in_features=in_features,
+                                    dtype=torch.complex64)
+                mps.trace(example)
+                
+                assert mps.resultant_nodes
+                if in_features:
+                    assert mps.data_nodes
+                assert mps.in_features == in_features
+                
+                for log_scale in [True, False]:
+                    # MPS has to be reset, otherwise norm automatically calls
+                    # the forward method that was traced when contracting the MPS
+                    # with example
+                    mps.reset()
+                    norm = mps.norm(log_scale=log_scale)
+                    assert mps.resultant_nodes
+                    assert not mps.data_nodes
+                    assert mps.in_features == in_features
+                    
+                    norm.sum().abs().backward()
                     for node in mps.mats_env:
                         assert node.grad is not None
                     
@@ -1336,6 +1894,59 @@ class TestMPS:  # MARK: TestMPS
                 # Repeat density
                 density = mps.partial_density(trace_sites)
     
+    def test_partial_density_complex(self):
+        for n_features in [1, 2, 3, 4, 5]:
+            for boundary in ['obc', 'pbc']:
+                phys_dim = torch.randint(low=2, high=12,
+                                         size=(n_features,)).tolist()
+                bond_dim = torch.randint(low=2, high=10, size=(n_features,)).tolist()
+                bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
+                
+                trace_sites = torch.randint(low=0,
+                                            high=n_features,
+                                            size=(n_features // 2,)).tolist()
+                
+                mps = tk.models.MPS(n_features=n_features,
+                                    phys_dim=phys_dim,
+                                    bond_dim=bond_dim,
+                                    boundary=boundary,
+                                    in_features=trace_sites,
+                                    dtype=torch.complex64)
+                
+                in_dims = [phys_dim[i] for i in mps.in_features]
+                example = [torch.randn(1, d, dtype=torch.complex64) for d in in_dims]
+                if example == []:
+                    example = None
+                
+                mps.trace(example)
+                
+                assert mps.resultant_nodes
+                if trace_sites:
+                    assert mps.data_nodes
+                assert set(mps.in_features) == set(trace_sites)
+                
+                # MPS has to be reset, otherwise partial_density automatically
+                # calls the forward method that was traced when contracting the
+                # MPS with example
+                mps.reset()
+                
+                # Here, trace_sites are now the out_features,
+                # not the in_features
+                density = mps.partial_density(trace_sites)
+                assert mps.resultant_nodes
+                assert mps.data_nodes
+                assert set(mps.out_features) == set(trace_sites)
+                
+                assert density.shape == \
+                    tuple([phys_dim[i] for i in mps.in_features] * 2)
+                
+                density.sum().abs().backward()
+                for node in mps.mats_env:
+                    assert node.grad is not None
+                
+                # Repeat density
+                density = mps.partial_density(trace_sites)
+    
     def test_entropy(self):
         for n_features in [1, 2, 3, 4, 10]:
             for boundary in ['obc', 'pbc']:
@@ -1343,12 +1954,13 @@ class TestMPS:  # MARK: TestMPS
                     bond_dim = torch.randint(low=2, high=10,
                                              size=(n_features,)).tolist()
                     bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
-                                
+                    
                     mps = tk.models.MPS(n_features=n_features,
                                         phys_dim=2,
                                         bond_dim=bond_dim,
                                         boundary=boundary,
-                                        in_features=[])
+                                        in_features=[],
+                                        init_method='canonical')
                     
                     mps_tensor = mps()
                     assert mps_tensor.shape == (2,) * n_features
@@ -1364,17 +1976,128 @@ class TestMPS:  # MARK: TestMPS
                     assert len(mps.data_nodes) == n_features
                     
                     # Mutual Information
-                    scaled_mi, log_norm = mps.entropy(middle_site=middle_site,
-                                                      renormalize=True)
-                    mi = mps.entropy(middle_site=middle_site,
-                                     renormalize=False)
+                    scaled_entropy, log_norm = mps.entropy(middle_site=middle_site,
+                                                           renormalize=True)
+                    entropy = mps.entropy(middle_site=middle_site,
+                                          renormalize=False)
                     
                     assert all([mps.bond_dim[i] <= bond_dim[i]
                                 for i in range(len(bond_dim))])
                     
                     sq_norm = log_norm.exp().pow(2)
-                    approx_mi = sq_norm * scaled_mi - sq_norm * 2 * log_norm
-                    assert torch.isclose(mi, approx_mi)
+                    approx_entropy = sq_norm * scaled_entropy - sq_norm * 2 * log_norm
+                    assert torch.isclose(entropy, approx_entropy,
+                                         rtol=1e-03, atol=1e-05)
+                    
+                    if mps.boundary == 'obc':
+                        assert len(mps.leaf_nodes) == n_features + 2
+                    else:
+                        assert len(mps.leaf_nodes) == n_features
+                    assert len(mps.data_nodes) == n_features
+                    
+                    mps.unset_data_nodes()
+                    mps.in_features = []
+                    approx_mps_tensor = mps()
+                    assert approx_mps_tensor.shape == (2,) * n_features
+    
+    def test_entropy_cuda(self):
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        for n_features in [1, 2, 3, 4, 10]:
+            for boundary in ['obc', 'pbc']:
+                for middle_site in range(n_features - 1):
+                    bond_dim = torch.randint(low=2, high=10,
+                                             size=(n_features,)).tolist()
+                    bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
+                                
+                    mps = tk.models.MPS(n_features=n_features,
+                                        phys_dim=2,
+                                        bond_dim=bond_dim,
+                                        boundary=boundary,
+                                        in_features=[],
+                                        device=device,
+                                        init_method='canonical')
+                    
+                    mps_tensor = mps()
+                    assert mps_tensor.shape == (2,) * n_features
+                    
+                    mps.out_features = []
+                    example = torch.randn(1, n_features, 2, device=device)
+                    mps.trace(example)
+                    
+                    if mps.boundary == 'obc':
+                        assert len(mps.leaf_nodes) == n_features + 2
+                    else:
+                        assert len(mps.leaf_nodes) == n_features
+                    assert len(mps.data_nodes) == n_features
+                    
+                    # Mutual Information
+                    scaled_entropy, log_norm = mps.entropy(middle_site=middle_site,
+                                                           renormalize=True)
+                    entropy = mps.entropy(middle_site=middle_site,
+                                          renormalize=False)
+                    
+                    assert all([mps.bond_dim[i] <= bond_dim[i]
+                                for i in range(len(bond_dim))])
+                    
+                    sq_norm = log_norm.exp().pow(2)
+                    approx_entropy = sq_norm * scaled_entropy - sq_norm * 2 * log_norm
+                    assert torch.isclose(entropy, approx_entropy,
+                                         rtol=1e-03, atol=1e-05)
+                    
+                    if mps.boundary == 'obc':
+                        assert len(mps.leaf_nodes) == n_features + 2
+                    else:
+                        assert len(mps.leaf_nodes) == n_features
+                    assert len(mps.data_nodes) == n_features
+                    
+                    mps.unset_data_nodes()
+                    mps.in_features = []
+                    approx_mps_tensor = mps()
+                    assert approx_mps_tensor.shape == (2,) * n_features
+    
+    def test_entropy_complex(self):
+        for n_features in [1, 2, 3, 4, 10]:
+            for boundary in ['obc', 'pbc']:
+                for middle_site in range(n_features - 1):
+                    bond_dim = torch.randint(low=2, high=10,
+                                             size=(n_features,)).tolist()
+                    bond_dim = bond_dim[:-1] if boundary == 'obc' else bond_dim
+                                
+                    mps = tk.models.MPS(n_features=n_features,
+                                        phys_dim=2,
+                                        bond_dim=bond_dim,
+                                        boundary=boundary,
+                                        in_features=[],
+                                        dtype=torch.complex64,
+                                        init_method='canonical')
+                    
+                    mps_tensor = mps()
+                    assert mps_tensor.shape == (2,) * n_features
+                    
+                    mps.out_features = []
+                    example = torch.randn(1, n_features, 2,
+                                          dtype=torch.complex64)
+                    mps.trace(example)
+                    
+                    if mps.boundary == 'obc':
+                        assert len(mps.leaf_nodes) == n_features + 2
+                    else:
+                        assert len(mps.leaf_nodes) == n_features
+                    assert len(mps.data_nodes) == n_features
+                    
+                    # Mutual Information
+                    scaled_entropy, log_norm = mps.entropy(middle_site=middle_site,
+                                                           renormalize=True)
+                    entropy = mps.entropy(middle_site=middle_site,
+                                          renormalize=False)
+                    
+                    assert all([mps.bond_dim[i] <= bond_dim[i]
+                                for i in range(len(bond_dim))])
+                    
+                    sq_norm = log_norm.exp().pow(2)
+                    approx_entropy = sq_norm * scaled_entropy - sq_norm * 2 * log_norm
+                    assert torch.isclose(entropy, approx_entropy,
+                                         rtol=1e-03, atol=1e-05)
                     
                     if mps.boundary == 'obc':
                         assert len(mps.leaf_nodes) == n_features + 2
@@ -1404,6 +2127,113 @@ class TestMPS:  # MARK: TestMPS
                             
                             mps.out_features = []
                             example = torch.randn(1, n_features, 2)
+                            mps.trace(example)
+                            
+                            if mps.boundary == 'obc':
+                                assert len(mps.leaf_nodes) == n_features + 2
+                            else:
+                                assert len(mps.leaf_nodes) == n_features
+                            assert len(mps.data_nodes) == n_features
+                            
+                            # Canonicalize
+                            rank = torch.randint(5, 11, (1,)).item()
+                            mps.canonicalize(oc=oc,
+                                             mode=mode,
+                                             rank=rank,
+                                             cum_percentage=0.98,
+                                             cutoff=1e-5,
+                                             renormalize=renormalize)
+                            
+                            if mps.bond_dim and mode != 'qr':
+                                if mps.boundary == 'obc':
+                                    assert (torch.tensor(mps.bond_dim) <= rank).all()
+                                else:
+                                    assert (torch.tensor(mps.bond_dim[:-1]) <= rank).all()
+                            
+                            if mps.boundary == 'obc':
+                                assert len(mps.leaf_nodes) == n_features + 2
+                            else:
+                                assert len(mps.leaf_nodes) == n_features
+                            assert len(mps.data_nodes) == n_features
+                            
+                            mps.unset_data_nodes()
+                            mps.in_features = []
+                            approx_mps_tensor = mps()
+                            assert approx_mps_tensor.shape == (2,) * n_features
+    
+    def test_canonicalize_cuda(self):
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        for n_features in [1, 2, 3, 4, 10]:
+            for boundary in ['obc', 'pbc']:
+                for oc in range(n_features):
+                    for mode in ['svd', 'svdr', 'qr']:
+                        for renormalize in [True, False]:
+                            mps = tk.models.MPS(n_features=n_features,
+                                                phys_dim=2,
+                                                bond_dim=10,
+                                                boundary=boundary,
+                                                in_features=[],
+                                                device=device)
+                            
+                            mps_tensor = mps()
+                            assert mps_tensor.shape == (2,) * n_features
+                            
+                            mps.out_features = []
+                            example = torch.randn(1, n_features, 2,
+                                                  device=device)
+                            mps.trace(example)
+                            
+                            if mps.boundary == 'obc':
+                                assert len(mps.leaf_nodes) == n_features + 2
+                            else:
+                                assert len(mps.leaf_nodes) == n_features
+                            assert len(mps.data_nodes) == n_features
+                            
+                            # Canonicalize
+                            rank = torch.randint(5, 11, (1,)).item()
+                            mps.canonicalize(oc=oc,
+                                             mode=mode,
+                                             rank=rank,
+                                             cum_percentage=0.98,
+                                             cutoff=1e-5,
+                                             renormalize=renormalize)
+                            
+                            if mps.bond_dim and mode != 'qr':
+                                if mps.boundary == 'obc':
+                                    assert (torch.tensor(mps.bond_dim) <= rank).all()
+                                else:
+                                    assert (torch.tensor(mps.bond_dim[:-1]) <= rank).all()
+                            
+                            if mps.boundary == 'obc':
+                                assert len(mps.leaf_nodes) == n_features + 2
+                            else:
+                                assert len(mps.leaf_nodes) == n_features
+                            assert len(mps.data_nodes) == n_features
+                            
+                            mps.unset_data_nodes()
+                            mps.in_features = []
+                            approx_mps_tensor = mps()
+                            assert approx_mps_tensor.shape == (2,) * n_features
+    
+    def test_canonicalize_complex(self):
+        for n_features in [1, 2, 3, 4, 10]:
+            for boundary in ['obc', 'pbc']:
+                for oc in range(n_features):
+                    for mode in ['svd', 'svdr', 'qr']:
+                        for renormalize in [True, False]:
+                            mps = tk.models.MPS(n_features=n_features,
+                                                phys_dim=2,
+                                                bond_dim=10,
+                                                boundary=boundary,
+                                                in_features=[],
+                                                dtype=torch.complex64)
+                            
+                            mps_tensor = mps()
+                            assert mps_tensor.shape == (2,) * n_features
+                            
+                            mps.out_features = []
+                            example = torch.randn(1, n_features, 2,
+                                                  dtype=torch.complex64)
                             mps.trace(example)
                             
                             if mps.boundary == 'obc':
@@ -1501,6 +2331,75 @@ class TestMPS:  # MARK: TestMPS
             
             mps.out_features = []
             example = torch.randn(1, n_features, 2)
+            mps.trace(example)
+            
+            assert len(mps.leaf_nodes) == n_features + 2
+            assert len(mps.data_nodes) == n_features
+            
+            # Canonicalize
+            mps.canonicalize_univocal()
+            
+            assert len(mps.leaf_nodes) == n_features + 2
+            assert len(mps.data_nodes) == n_features
+            
+            mps.unset_data_nodes()
+            mps.in_features = []
+            approx_mps_tensor = mps()
+            assert approx_mps_tensor.shape == (2,) * n_features
+            
+            assert torch.allclose(mps_tensor, approx_mps_tensor,
+                                  rtol=1e-2, atol=1e-3)
+    
+    def test_canonicalize_univocal_cuda(self):
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        for n_features in [1, 2, 3, 4, 10]:
+            mps = tk.models.MPS(n_features=n_features,
+                                phys_dim=2,
+                                bond_dim=10,
+                                boundary='obc',
+                                in_features=[],
+                                init_method='unit',
+                                device=device)
+            
+            mps_tensor = mps()
+            assert mps_tensor.shape == (2,) * n_features
+            
+            mps.out_features = []
+            example = torch.randn(1, n_features, 2, device=device)
+            mps.trace(example)
+            
+            assert len(mps.leaf_nodes) == n_features + 2
+            assert len(mps.data_nodes) == n_features
+            
+            # Canonicalize
+            mps.canonicalize_univocal()
+            
+            assert len(mps.leaf_nodes) == n_features + 2
+            assert len(mps.data_nodes) == n_features
+            
+            mps.unset_data_nodes()
+            mps.in_features = []
+            approx_mps_tensor = mps()
+            assert approx_mps_tensor.shape == (2,) * n_features
+            
+            assert torch.allclose(mps_tensor, approx_mps_tensor,
+                                  rtol=1e-2, atol=1e-4)
+    
+    def test_canonicalize_univocal_complex(self):
+        for n_features in [1, 2, 3, 4, 10]:
+            mps = tk.models.MPS(n_features=n_features,
+                                phys_dim=2,
+                                bond_dim=10,
+                                boundary='obc',
+                                in_features=[],
+                                init_method='unit',
+                                dtype=torch.complex64)
+            
+            mps_tensor = mps()
+            assert mps_tensor.shape == (2,) * n_features
+            
+            mps.out_features = []
+            example = torch.randn(1, n_features, 2, dtype=torch.complex64)
             mps.trace(example)
             
             assert len(mps.leaf_nodes) == n_features + 2
@@ -1681,12 +2580,12 @@ class TestUMPS:  # MARK: TestUMPS
             for init_method in methods:
                 mps = tk.models.UMPS(n_features=n,
                                      phys_dim=2,
-                                     bond_dim=2,
+                                     bond_dim=5,
                                      init_method=init_method)
                 assert mps.n_features == n
                 assert mps.boundary == 'pbc'
                 assert mps.phys_dim == [2] * n
-                assert mps.bond_dim == [2] * n
+                assert mps.bond_dim == [5] * n
     
     def test_initialize_init_method_cuda(self):
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -1696,15 +2595,33 @@ class TestUMPS:  # MARK: TestUMPS
             for init_method in methods:
                 mps = tk.models.UMPS(n_features=n,
                                      phys_dim=2,
-                                     bond_dim=2,
+                                     bond_dim=5,
                                      init_method=init_method,
                                      device=device)
                 assert mps.n_features == n
                 assert mps.boundary == 'pbc'
                 assert mps.phys_dim == [2] * n
-                assert mps.bond_dim == [2] * n
+                assert mps.bond_dim == [5] * n
                 for node in mps.mats_env:
                     assert node.device == device
+    
+    def test_initialize_init_method_complex(self):
+        methods = ['zeros', 'ones', 'copy', 'rand', 'randn',
+                   'randn_eye', 'unit', 'canonical']
+        for n in [1, 2, 5]:
+            for init_method in methods:
+                mps = tk.models.UMPS(n_features=n,
+                                     phys_dim=2,
+                                     bond_dim=5,
+                                     init_method=init_method,
+                                     dtype=torch.complex64)
+                assert mps.n_features == n
+                assert mps.boundary == 'pbc'
+                assert mps.phys_dim == [2] * n
+                assert mps.bond_dim == [5] * n
+                for node in mps.mats_env:
+                    assert node.dtype == torch.complex64
+                    assert node.is_complex()
     
     def test_initialize_with_unitaries(self):
         for n in [1, 2, 5]:
@@ -2105,6 +3022,55 @@ class TestUMPS:  # MARK: TestUMPS
             # Repeat density
             density = mps.partial_density(trace_sites)
     
+    def test_partial_density_complex(self):
+        for n_features in [1, 2, 3, 4, 5]:
+            phys_dim = torch.randint(low=2, high=12, size=(1,)).item()
+            bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
+            
+            trace_sites = torch.randint(low=0,
+                                        high=n_features,
+                                        size=(n_features // 2,)).tolist()
+            
+            mps = tk.models.UMPS(n_features=n_features,
+                                 phys_dim=phys_dim,
+                                 bond_dim=bond_dim,
+                                 in_features=trace_sites,
+                                 dtype=torch.complex64)
+            
+            # batch x n_features x feature_dim
+            example = torch.randn(1, n_features // 2, phys_dim,
+                                  dtype=torch.complex64)
+            if example.numel() == 0:
+                example = None
+            
+            mps.trace(example)
+            
+            assert mps.resultant_nodes
+            if trace_sites:
+                assert mps.data_nodes
+            assert set(mps.in_features) == set(trace_sites)
+            
+            # MPS has to be reset, otherwise partial_density automatically
+            # calls the forward method that was traced when contracting the
+            # MPS with example
+            mps.reset()
+            
+            # Here, trace_sites are now the out_features,
+            # not the in_features
+            density = mps.partial_density(trace_sites)
+            assert mps.resultant_nodes
+            assert mps.data_nodes
+            assert set(mps.out_features) == set(trace_sites)
+            
+            assert density.shape == (phys_dim,) * 2 * len(mps.in_features)
+            
+            density.sum().abs().backward()
+            for node in mps.mats_env:
+                assert node.grad is not None
+            
+            # Repeat density
+            density = mps.partial_density(trace_sites)
+    
     def test_canonicalize_error(self):
         mps = tk.models.UMPS(n_features=10,
                              phys_dim=2,
@@ -2175,26 +3141,26 @@ class TestMPSLayer:  # MARK: TestMPSLayer
                                          n_features=n,
                                          in_dim=2,
                                          out_dim=10,
-                                         bond_dim=2,
+                                         bond_dim=5,
                                          init_method=init_method)
                 assert mps.n_features == n
                 assert mps.boundary == 'pbc'
                 assert mps.in_dim == [2] * (n - 1)
                 assert mps.out_dim == 10
-                assert mps.bond_dim == [2] * n
+                assert mps.bond_dim == [5] * n
                 
                 # OBC
                 mps = tk.models.MPSLayer(boundary='obc',
                                          n_features=n,
                                          in_dim=2,
                                          out_dim=10,
-                                         bond_dim=2,
+                                         bond_dim=5,
                                          init_method=init_method)
                 assert mps.n_features == n
                 assert mps.boundary == 'obc'
                 assert mps.in_dim == [2] * (n - 1)
                 assert mps.out_dim == 10
-                assert mps.bond_dim == [2] * (n - 1)
+                assert mps.bond_dim == [5] * (n - 1)
                 
                 assert torch.equal(mps.left_node.tensor[0],
                                    torch.ones_like(mps.left_node.tensor)[0])
@@ -2217,14 +3183,14 @@ class TestMPSLayer:  # MARK: TestMPSLayer
                                          n_features=n,
                                          in_dim=2,
                                          out_dim=10,
-                                         bond_dim=2,
+                                         bond_dim=5,
                                          init_method=init_method,
                                          device=device)
                 assert mps.n_features == n
                 assert mps.boundary == 'pbc'
                 assert mps.in_dim == [2] * (n - 1)
                 assert mps.out_dim == 10
-                assert mps.bond_dim == [2] * n
+                assert mps.bond_dim == [5] * n
                 for node in mps.mats_env:
                     assert node.device == device
                 
@@ -2233,16 +3199,65 @@ class TestMPSLayer:  # MARK: TestMPSLayer
                                          n_features=n,
                                          in_dim=2,
                                          out_dim=10,
-                                         bond_dim=2,
+                                         bond_dim=5,
                                          init_method=init_method,
                                          device=device)
                 assert mps.n_features == n
                 assert mps.boundary == 'obc'
                 assert mps.in_dim == [2] * (n - 1)
                 assert mps.out_dim == 10
-                assert mps.bond_dim == [2] * (n - 1)
+                assert mps.bond_dim == [5] * (n - 1)
                 for node in mps.mats_env:
                     assert node.device == device
+                
+                assert torch.equal(mps.left_node.tensor[0],
+                                   torch.ones_like(mps.left_node.tensor)[0])
+                assert torch.equal(mps.left_node.tensor[1:],
+                                   torch.zeros_like(mps.left_node.tensor)[1:])
+                
+                assert torch.equal(mps.right_node.tensor[0],
+                                   torch.ones_like(mps.right_node.tensor)[0])
+                assert torch.equal(mps.right_node.tensor[1:],
+                                   torch.zeros_like(mps.right_node.tensor)[1:])
+    
+    def test_initialize_init_method_complex(self):
+        methods = ['zeros', 'ones', 'copy', 'rand', 'randn',
+                   'randn_eye', 'unit', 'canonical']
+        for n in [1, 2, 5]:
+            for init_method in methods:
+                # PBC
+                mps = tk.models.MPSLayer(boundary='pbc',
+                                         n_features=n,
+                                         in_dim=2,
+                                         out_dim=10,
+                                         bond_dim=5,
+                                         init_method=init_method,
+                                         dtype=torch.complex64)
+                assert mps.n_features == n
+                assert mps.boundary == 'pbc'
+                assert mps.in_dim == [2] * (n - 1)
+                assert mps.out_dim == 10
+                assert mps.bond_dim == [5] * n
+                for node in mps.mats_env:
+                    assert node.dtype == torch.complex64
+                    assert node.is_complex()
+                
+                # OBC
+                mps = tk.models.MPSLayer(boundary='obc',
+                                         n_features=n,
+                                         in_dim=2,
+                                         out_dim=10,
+                                         bond_dim=5,
+                                         init_method=init_method,
+                                         dtype=torch.complex64)
+                assert mps.n_features == n
+                assert mps.boundary == 'obc'
+                assert mps.in_dim == [2] * (n - 1)
+                assert mps.out_dim == 10
+                assert mps.bond_dim == [5] * (n - 1)
+                for node in mps.mats_env:
+                    assert node.dtype == torch.complex64
+                    assert node.is_complex()
                 
                 assert torch.equal(mps.left_node.tensor[0],
                                    torch.ones_like(mps.left_node.tensor)[0])
@@ -2283,7 +3298,6 @@ class TestMPSLayer:  # MARK: TestMPSLayer
             assert mps.bond_dim == [10] * (n - 1)
             
             # Check it has norm == 10**n
-            norm = mps.norm()
             assert mps.norm().isclose(torch.tensor(10. ** n).sqrt())
             # Norm is close to 10**n if bond dimension is <= than
             # physical dimension, otherwise, it will not be exactly 10**n
@@ -2324,8 +3338,49 @@ class TestMPSLayer:  # MARK: TestMPSLayer
                 assert node.device == device
             
             # Check it has norm == 10**n
-            norm = mps.norm()
             assert mps.norm().isclose(torch.tensor(10. ** n).sqrt())
+            # Norm is close to 10**n if bond dimension is <= than
+            # physical dimension, otherwise, it will not be exactly 10**n
+    
+    def test_initialize_canonical_complex(self):
+        for n in [1, 2, 5]:
+            # PBC
+            mps = tk.models.MPSLayer(boundary='pbc',
+                                     n_features=n,
+                                     in_dim=10,
+                                     out_dim=10,
+                                     bond_dim=10,
+                                     init_method='canonical',
+                                     dtype=torch.complex64)
+            assert mps.n_features == n
+            assert mps.boundary == 'pbc'
+            assert mps.phys_dim == [10] * n
+            assert mps.bond_dim == [10] * n
+            for node in mps.mats_env:
+                assert node.dtype == torch.complex64
+                assert node.is_complex()
+            
+            # For PBC norm does not have to be 10**n always
+            
+            # OBC
+            mps = tk.models.MPSLayer(boundary='obc',
+                                     n_features=n,
+                                     in_dim=10,
+                                     out_dim=10,
+                                     bond_dim=10,
+                                     init_method='canonical',
+                                     dtype=torch.complex64)
+            assert mps.n_features == n
+            assert mps.boundary == 'obc'
+            assert mps.phys_dim == [10] * n
+            assert mps.bond_dim == [10] * (n - 1)
+            for node in mps.mats_env:
+                assert node.dtype == torch.complex64
+                assert node.is_complex()
+            
+            # Check it has norm == 10**n
+            assert mps.norm().isclose(torch.tensor(10. ** n,
+                                                   dtype=torch.complex64).sqrt())
             # Norm is close to 10**n if bond dimension is <= than
             # physical dimension, otherwise, it will not be exactly 10**n
     
@@ -2700,7 +3755,7 @@ class TestMPSData:   # MARK: TestMPSData
                         mps = tk.models.MPSData(boundary=boundary,
                                                 n_features=n_features,
                                                 phys_dim=2,
-                                                bond_dim=2,
+                                                bond_dim=5,
                                                 n_batches=n_batches,
                                                 init_method=init_method)
                         
@@ -2709,16 +3764,16 @@ class TestMPSData:   # MARK: TestMPSData
                         assert mps.phys_dim == [2] * n_features
                         
                         if boundary == 'obc':
-                            assert mps.bond_dim == [2] * (n_features - 1)
+                            assert mps.bond_dim == [5] * (n_features - 1)
                         else:
-                            assert mps.bond_dim == [2] * n_features
+                            assert mps.bond_dim == [5] * n_features
                         
                         if (n_features == 1) and (boundary == 'obc'):
                             node = mps.mats_env[0]
                             assert node.shape == tuple([1] * n_batches + [1, 2, 1])
                         else:  
                             for node in mps.mats_env:
-                                assert node.shape == tuple([1] * n_batches + [2] * 3)
+                                assert node.shape == tuple([1] * n_batches + [5, 2, 5])
     
     def test_initialize_add_data(self):
         for n_features in [1, 2, 5]:

@@ -81,6 +81,8 @@ class MPO(TensorNetwork):  # MARK: MPO
         explanation of the different initialization methods.
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
+    dtype : torch.dtype, optional
+        Dtype of the tensor if ``init_method`` is provided.
     kwargs : float
         Keyword arguments for the different initialization methods. See
         :meth:`~tensorkrowch.AbstractNode.make_tensor`.
@@ -121,6 +123,7 @@ class MPO(TensorNetwork):  # MARK: MPO
                  n_batches: int = 1,
                  init_method: Text = 'randn',
                  device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
                  **kwargs) -> None:
 
         super().__init__(name='mpo')
@@ -267,6 +270,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         self.initialize(tensors=tensors,
                         init_method=init_method,
                         device=device,
+                        dtype=dtype,
                         **kwargs)
     
     # ----------
@@ -399,6 +403,7 @@ class MPO(TensorNetwork):  # MARK: MPO
                    tensors: Optional[Sequence[torch.Tensor]] = None,
                    init_method: Optional[Text] = 'randn',
                    device: Optional[torch.device] = None,
+                   dtype: Optional[torch.dtype] = None,
                    **kwargs: float) -> None:
         """
         Initializes all the nodes of the :class:`MPO`. It can be called when
@@ -408,7 +413,7 @@ class MPO(TensorNetwork):  # MARK: MPO
         
         * ``{"zeros", "ones", "copy", "rand", "randn"}``: Each node is
           initialized calling :meth:`~tensorkrowch.AbstractNode.set_tensor` with
-          the given method, ``device`` and ``kwargs``.
+          the given method, ``device``, ``dtype`` and ``kwargs``.
         
         Parameters
         ----------
@@ -422,6 +427,8 @@ class MPO(TensorNetwork):  # MARK: MPO
             Initialization method.
         device : torch.device, optional
             Device where to initialize the tensors if ``init_method`` is provided.
+        dtype : torch.dtype, optional
+            Dtype of the tensor if ``init_method`` is provided.
         kwargs : float
             Keyword arguments for the different initialization methods. See
             :meth:`~tensorkrowch.AbstractNode.make_tensor`.
@@ -436,6 +443,8 @@ class MPO(TensorNetwork):  # MARK: MPO
                 
                 if device is None:
                     device = tensors[0].device
+                if dtype is None:
+                    dtype = tensors[0].dtype
                 
                 if len(tensors) == 1:
                     tensors[0] = tensors[0].reshape(1,
@@ -446,13 +455,15 @@ class MPO(TensorNetwork):  # MARK: MPO
                 else:
                     # Left node
                     aux_tensor = torch.zeros(*self._mats_env[0].shape,
-                                             device=device)
+                                             device=device,
+                                             dtype=dtype)
                     aux_tensor[0] = tensors[0]
                     tensors[0] = aux_tensor
                     
                     # Right node
                     aux_tensor = torch.zeros(*self._mats_env[-1].shape,
-                                             device=device)
+                                             device=device,
+                                             dtype=dtype)
                     aux_tensor[..., 0, :] = tensors[-1]
                     tensors[-1] = aux_tensor
                 
@@ -464,10 +475,13 @@ class MPO(TensorNetwork):  # MARK: MPO
             for i, node in enumerate(self._mats_env):
                 node.set_tensor(init_method=init_method,
                                 device=device,
+                                dtype=dtype,
                                 **kwargs)
                 
                 if self._boundary == 'obc':
-                    aux_tensor = torch.zeros(*node.shape, device=device)
+                    aux_tensor = torch.zeros(*node.shape,
+                                             device=device,
+                                             dtype=dtype)
                     if i == 0:
                         # Left node
                         aux_tensor[0] = node.tensor[0]
@@ -477,8 +491,12 @@ class MPO(TensorNetwork):  # MARK: MPO
                     node.tensor = aux_tensor
         
         if self._boundary == 'obc':
-            self._left_node.set_tensor(init_method='copy', device=device)
-            self._right_node.set_tensor(init_method='copy', device=device)
+            self._left_node.set_tensor(init_method='copy',
+                                       device=device,
+                                       dtype=dtype)
+            self._right_node.set_tensor(init_method='copy',
+                                        device=device,
+                                        dtype=dtype)
     
     def set_data_nodes(self) -> None:
         """
@@ -515,7 +533,8 @@ class MPO(TensorNetwork):  # MARK: MPO
                       tensors=None,
                       n_batches=self._n_batches,
                       init_method=None,
-                      device=None)
+                      device=None,
+                      dtype=None)
         new_mpo.name = self.name + '_copy'
         if share_tensors:
             for new_node, node in zip(new_mpo._mats_env, self._mats_env):
@@ -1025,6 +1044,8 @@ class UMPO(MPO):  # MARK: UMPO
         explanation of the different initialization methods.
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
+    dtype : torch.dtype, optional
+        Dtype of the tensor if ``init_method`` is provided.
     kwargs : float
         Keyword arguments for the different initialization methods. See
         :meth:`~tensorkrowch.AbstractNode.make_tensor`.
@@ -1053,6 +1074,7 @@ class UMPO(MPO):  # MARK: UMPO
                  n_batches: int = 1,
                  init_method: Text = 'randn',
                  device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
                  **kwargs) -> None:
 
         tensors = None
@@ -1097,6 +1119,7 @@ class UMPO(MPO):  # MARK: UMPO
                          n_batches=n_batches,
                          init_method=init_method,
                          device=device,
+                         dtype=dtype,
                          **kwargs)
         self.name = 'umpo'
     
@@ -1122,6 +1145,7 @@ class UMPO(MPO):  # MARK: UMPO
                    tensors: Optional[Sequence[torch.Tensor]] = None,
                    init_method: Optional[Text] = 'randn',
                    device: Optional[torch.device] = None,
+                   dtype: Optional[torch.dtype] = None,
                    **kwargs: float) -> None:
         """
         Initializes the common tensor of the :class:`UMPO`. It can be called
@@ -1131,7 +1155,7 @@ class UMPO(MPO):  # MARK: UMPO
         
         * ``{"zeros", "ones", "copy", "rand", "randn"}``: The tensor is
           initialized calling :meth:`~tensorkrowch.AbstractNode.set_tensor` with
-          the given method, ``device`` and ``kwargs``.
+          the given method, ``device``, ``dtype`` and ``kwargs``.
         
         Parameters
         ----------
@@ -1143,6 +1167,8 @@ class UMPO(MPO):  # MARK: UMPO
             Initialization method.
         device : torch.device, optional
             Device where to initialize the tensors if ``init_method`` is provided.
+        dtype : torch.dtype, optional
+            Dtype of the tensor if ``init_method`` is provided.
         kwargs : float
             Keyword arguments for the different initialization methods. See
             :meth:`~tensorkrowch.AbstractNode.make_tensor`.
@@ -1153,6 +1179,7 @@ class UMPO(MPO):  # MARK: UMPO
         elif init_method is not None:
             self.uniform_memory.set_tensor(init_method=init_method,
                                            device=device,
+                                           dtype=dtype,
                                            **kwargs)
     
     def copy(self, share_tensors: bool = False) -> 'UMPO':
@@ -1180,7 +1207,8 @@ class UMPO(MPO):  # MARK: UMPO
                        tensor=None,
                        n_batches=self._n_batches,
                        init_method=None,
-                       device=None)
+                       device=None,
+                       dtype=None)
         new_mpo.name = self.name + '_copy'
         if share_tensors:
             new_mpo.uniform_memory.tensor = self.uniform_memory.tensor

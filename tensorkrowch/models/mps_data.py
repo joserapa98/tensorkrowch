@@ -86,6 +86,8 @@ class MPSData(TensorNetwork):  # MARK: MPSData
         :meth:`add_data` to see how to initialize MPS nodes with data tensors.
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
+    dtype : torch.dtype, optional
+            Dtype of the tensor if ``init_method`` is provided.
     kwargs : float
         Keyword arguments for the different initialization methods. See
         :meth:`~tensorkrowch.AbstractNode.make_tensor`.
@@ -112,6 +114,7 @@ class MPSData(TensorNetwork):  # MARK: MPSData
                  tensors: Optional[Sequence[torch.Tensor]] = None,
                  init_method: Optional[Text] = None,
                  device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
                  **kwargs) -> None:
 
         super().__init__(name='mps_data')
@@ -241,6 +244,7 @@ class MPSData(TensorNetwork):  # MARK: MPSData
         self._make_nodes()
         self.initialize(init_method=init_method,
                             device=device,
+                            dtype=dtype,
                             **kwargs)
         
         if tensors is not None:
@@ -355,6 +359,7 @@ class MPSData(TensorNetwork):  # MARK: MPSData
     def initialize(self,
                    init_method: Optional[Text] = 'randn',
                    device: Optional[torch.device] = None,
+                   dtype: Optional[torch.dtype] = None,
                    **kwargs: float) -> None:
         """
         Initializes all the nodes of the :class:`MPSData`. It can be called when
@@ -364,7 +369,7 @@ class MPSData(TensorNetwork):  # MARK: MPSData
         
         * ``{"zeros", "ones", "copy", "rand", "randn"}``: Each node is
           initialized calling :meth:`~tensorkrowch.AbstractNode.set_tensor` with
-          the given method, ``device`` and ``kwargs``.
+          the given method, ``device``, ``dtype`` and ``kwargs``.
         
         Parameters
         ----------
@@ -373,22 +378,31 @@ class MPSData(TensorNetwork):  # MARK: MPSData
             initialize MPS nodes with data tensors.
         device : torch.device, optional
             Device where to initialize the tensors if ``init_method`` is provided.
+        dtype : torch.dtype, optional
+            Dtype of the tensor if ``init_method`` is provided.
         kwargs : float
             Keyword arguments for the different initialization methods. See
             :meth:`~tensorkrowch.AbstractNode.make_tensor`.
         """
         if self._boundary == 'obc':
-            self._left_node.set_tensor(init_method='copy', device=device)
-            self._right_node.set_tensor(init_method='copy', device=device)
+            self._left_node.set_tensor(init_method='copy',
+                                       device=device,
+                                       dtype=dtype)
+            self._right_node.set_tensor(init_method='copy',
+                                        device=device,
+                                        dtype=dtype)
                 
         if init_method is not None:
             for i, node in enumerate(self._mats_env):
                 node.set_tensor(init_method=init_method,
                                 device=device,
+                                dtype=dtype,
                                 **kwargs)
                 
                 if self._boundary == 'obc':
-                    aux_tensor = torch.zeros(*node.shape, device=device)
+                    aux_tensor = torch.zeros(*node.shape,
+                                             device=device,
+                                             dtype=dtype)
                     if i == 0:
                         # Left node
                         aux_tensor[..., 0, :, :] = node.tensor[..., 0, :, :]
@@ -444,37 +458,45 @@ class MPSData(TensorNetwork):  # MARK: MPSData
         
         data = data[:]
         device = data[0].device
+        dtype = data[0].dtype
         for i, node in enumerate(self._mats_env):
             if self._boundary == 'obc':
-                aux_tensor = torch.zeros(*node.shape, device=device)
                 if (i == 0) and (i == (self._n_features - 1)):
                     aux_tensor = torch.zeros(*data[i].shape[:-1],
                                              *node.shape[-3:],
-                                             device=device)
+                                             device=device,
+                                             dtype=dtype)
                     aux_tensor[..., 0, :, 0] = data[i]
                     data[i] = aux_tensor
                 elif i == 0:
                     aux_tensor = torch.zeros(*data[i].shape[:-2],
                                              *node.shape[-3:-1],
                                              data[i].shape[-1],
-                                             device=device)
+                                             device=device,
+                                             dtype=dtype)
                     aux_tensor[..., 0, :, :] = data[i]
                     data[i] = aux_tensor
                 elif i == (self._n_features - 1):
                     aux_tensor = torch.zeros(*data[i].shape[:-1],
                                              *node.shape[-2:],
-                                             device=device)
+                                             device=device,
+                                             dtype=dtype)
                     aux_tensor[..., 0] = data[i]
                     data[i] = aux_tensor
                     
             node._direct_set_tensor(data[i])
         
-        # Send left and right nodes to correct device
+        # Send left and right nodes to correct device and dtype
         if self._boundary == 'obc':
             if self._left_node.device != device:
                 self._left_node.tensor = self._left_node.tensor.to(device)
+            if self._left_node.dtype != dtype:
+                self._left_node.tensor = self._left_node.tensor.to(dtype)
+            
             if self._right_node.device != device:
                 self._right_node.tensor = self._right_node.tensor.to(device)
+            if self._right_node.dtype != dtype:
+                self._right_node.tensor = self._right_node.tensor.to(dtype)
         
         # Update bond dim
         if self._boundary == 'obc':

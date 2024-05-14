@@ -1312,6 +1312,12 @@ class MPS(TensorNetwork):  # MARK: MPS
                         # Connect copies directly to output nodes
                         copied_node['input'] ^ node['input']
                 
+                # If MPS nodes are complex, copied nodes are their conjugates
+                is_complex = copied_nodes[0].is_complex()
+                if is_complex:
+                    for i, node in enumerate(copied_nodes):
+                        copied_nodes[i] = node.conj()
+                
                 # Contract output nodes with copies
                 mats_out_env = self._input_contraction(
                     nodes_env=nodes_out_env,
@@ -1433,6 +1439,12 @@ class MPS(TensorNetwork):  # MARK: MPS
             copied_nodes = []
             for node in all_nodes:
                 copied_nodes.append(node.neighbours('input'))
+        
+        # If MPS nodes are complex, copied nodes are their conjugates
+        is_complex = copied_nodes[0].is_complex()
+        if is_complex:
+            for i, node in enumerate(copied_nodes):
+                copied_nodes[i] = node.conj()
             
         # Contract output nodes with copies
         mats_out_env = self._input_contraction(

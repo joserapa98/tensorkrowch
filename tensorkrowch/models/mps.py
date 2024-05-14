@@ -612,12 +612,10 @@ class MPS(TensorNetwork):  # MARK: MPS
             tensor = tensor.reshape(*node_shape)
             
             if i == (self._n_features - 1):
-                if self._boundary == 'obc':
-                    tensor = tensor.t() / tensor.norm() * sqrt(phys_dim)
-                else:
-                    tensor = tensor / tensor.norm() * sqrt(phys_dim)
-            else:
-                tensor = tensor * sqrt(phys_dim)
+                if (self._boundary == 'obc') and (i == 0):
+                    tensor = tensor[:, 0]
+                tensor = tensor / tensor.norm()
+            tensor = tensor * sqrt(phys_dim)
             
             tensors.append(tensor)
         return tensors
@@ -654,13 +652,11 @@ class MPS(TensorNetwork):  # MARK: MPS
             
             if self._boundary == 'obc':
                 if i == 0:
-                    tensors.append(units.squeeze(0))
+                    units = units.squeeze(0)
                 elif i == (self._n_features - 1):
-                    tensors.append(units.squeeze(-1))
-                else:
-                    tensors.append(units)
-            else:    
-                tensors.append(units)
+                    units = units.squeeze(-1)
+            tensors.append(units)
+        
         return tensors
 
     def initialize(self,

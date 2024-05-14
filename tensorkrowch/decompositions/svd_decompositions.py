@@ -145,6 +145,9 @@ def vec_to_mps(vec: torch.Tensor,
         
         tensors.append(u)
         prev_bond = aux_rank
+        
+        if vh.is_complex():
+            s = s.to(vh.dtype)
         vec = torch.diag_embed(s) @ vh
         
     tensors.append(vec)
@@ -281,6 +284,9 @@ def mat_to_mpo(mat: torch.Tensor,
         
         tensors.append(u)
         prev_bond = aux_rank
+        
+        if vh.is_complex():
+            s = s.to(vh.dtype)
         mat = torch.diag_embed(s) @ vh
     
     mat = mat.reshape(aux_rank, in_out_dims[-2], in_out_dims[-1])

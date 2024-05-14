@@ -769,6 +769,36 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         their own tensors or use other node's tensor.
         """
         return not (self._leaf or self._data or self._virtual)
+    
+    def is_conj(self) -> bool:
+        """
+        Equivalent to `torch.is_conj()
+        <https://pytorch.org/docs/stable/generated/torch.is_conj.html>`_.
+        """
+        tensor = self.tensor
+        if tensor is None:
+            return
+        return tensor.is_conj()
+    
+    def is_complex(self) -> bool:
+        """
+        Equivalent to `torch.is_complex()
+        <https://pytorch.org/docs/stable/generated/torch.is_complex.html>`_.
+        """
+        tensor = self.tensor
+        if tensor is None:
+            return
+        return tensor.is_complex()
+    
+    def is_floating_point(self) -> bool:
+        """
+        Equivalent to `torch.is_floating_point()
+        <https://pytorch.org/docs/stable/generated/torch.is_floating_point.html>`_.
+        """
+        tensor = self.tensor
+        if tensor is None:
+            return
+        return tensor.is_floating_point()
 
     def size(self, axis: Optional[Ax] = None) -> Union[Size, int]:
         """

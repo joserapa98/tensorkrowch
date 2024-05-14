@@ -9,8 +9,10 @@ This script contains:
         * permute_           (in-place)
         * tprod
         * mul
+        * div
         * add
         * sub
+        * renormalize
         * conj
         
     Node-like operations:
@@ -1714,9 +1716,12 @@ def _split_first(node: AbstractNode,
         u = u[..., :rank]
         s = s[..., :rank]
         vh = vh[..., :rank, :]
+        
+        if u.is_complex():
+            s = s.to(u.dtype)
 
         if mode == 'svdr':
-            phase = torch.sign(torch.randn(s.shape))
+            phase = torch.sgn(torch.randn_like(s))
             phase = torch.diag_embed(phase)
             u = u @ phase
             vh = phase @ vh
@@ -1913,9 +1918,12 @@ def _split_next(successor: Successor,
         u = u[..., :rank]
         s = s[..., :rank]
         vh = vh[..., :rank, :]
+        
+        if u.is_complex():
+            s = s.to(u.dtype)
 
         if mode == 'svdr':
-            phase = torch.sign(torch.randn(s.shape))
+            phase = torch.sgn(torch.randn_like(s))
             phase = torch.diag_embed(phase)
             u = u @ phase
             vh = phase @ vh

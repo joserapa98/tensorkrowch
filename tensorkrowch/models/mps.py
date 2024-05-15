@@ -111,6 +111,8 @@ class MPS(TensorNetwork):  # MARK: MPS
         explanation of the different initialization methods.
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
+    dtype : torch.dtype, optional
+        Dtype of the tensor if ``init_method`` is provided.
     kwargs : float
         Keyword arguments for the different initialization methods. See
         :meth:`~tensorkrowch.AbstractNode.make_tensor`.
@@ -170,6 +172,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                  n_batches: int = 1,
                  init_method: Text = 'randn',
                  device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
                  **kwargs) -> None:
 
         super().__init__(name='mps')
@@ -363,6 +366,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         self.initialize(tensors=tensors,
                         init_method=init_method,
                         device=device,
+                        dtype=dtype,
                         **kwargs)
     
     # ----------
@@ -579,7 +583,9 @@ class MPS(TensorNetwork):  # MARK: MPS
                 if i == self._n_features - 1:
                     self._mats_env[-1]['right'] ^ self._right_node['left']
     
-    def _make_canonical(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
+    def _make_canonical(self,
+                        device: Optional[torch.device] = None,
+                        dtype: Optional[torch.dtype] = None) -> List[torch.Tensor]:
         """
         Creates random unitaries to initialize the MPS in canonical form with
         orthogonality center at the rightmost node. Unitaries in nodes are
@@ -607,22 +613,22 @@ class MPS(TensorNetwork):  # MARK: MPS
                 phys_dim = node_shape[1]
             size = max(aux_shape[0], aux_shape[1])
             
-            tensor = random_unitary(size, device=device)
+            tensor = random_unitary(size, device=device, dtype=dtype)
             tensor = tensor[:min(aux_shape[0], size), :min(aux_shape[1], size)]
             tensor = tensor.reshape(*node_shape)
             
             if i == (self._n_features - 1):
-                if self._boundary == 'obc':
-                    tensor = tensor.t() / tensor.norm() * sqrt(phys_dim)
-                else:
-                    tensor = tensor / tensor.norm() * sqrt(phys_dim)
-            else:
-                tensor = tensor * sqrt(phys_dim)
+                if (self._boundary == 'obc') and (i == 0):
+                    tensor = tensor[:, 0]
+                tensor = tensor / tensor.norm()
+            tensor = tensor * sqrt(phys_dim)
             
             tensors.append(tensor)
         return tensors
     
-    def _make_unitaries(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
+    def _make_unitaries(self,
+                        device: Optional[torch.device] = None,
+                        dtype: Optional[torch.dtype] = None) -> List[torch.Tensor]:
         """
         Creates random unitaries to initialize the MPS nodes as stacks of
         unitaries.
@@ -646,7 +652,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                 size_2 = min(node.shape[2], size)
             
             for _ in range(node.shape[1]):
-                tensor = random_unitary(size, device=device)
+                tensor = random_unitary(size, device=device, dtype=dtype)
                 tensor = tensor[:size_1, :size_2]
                 units.append(tensor)
             
@@ -654,19 +660,18 @@ class MPS(TensorNetwork):  # MARK: MPS
             
             if self._boundary == 'obc':
                 if i == 0:
-                    tensors.append(units.squeeze(0))
+                    units = units.squeeze(0)
                 elif i == (self._n_features - 1):
-                    tensors.append(units.squeeze(-1))
-                else:
-                    tensors.append(units)
-            else:    
-                tensors.append(units)
+                    units = units.squeeze(-1)
+            tensors.append(units)
+        
         return tensors
 
     def initialize(self,
                    tensors: Optional[Sequence[torch.Tensor]] = None,
                    init_method: Optional[Text] = 'randn',
                    device: Optional[torch.device] = None,
+                   dtype: Optional[torch.dtype] = None,
                    **kwargs: float) -> None:
         """
         Initializes all the nodes of the :class:`MPS`. It can be called when
@@ -676,7 +681,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         * ``{"zeros", "ones", "copy", "rand", "randn"}``: Each node is
           initialized calling :meth:`~tensorkrowch.AbstractNode.set_tensor` with
-          the given method, ``device`` and ``kwargs``.
+          the given method, ``device``, ``dtype`` and ``kwargs``.
         
         * ``"randn_eye"``: Nodes are initialized as in this
           `paper <https://arxiv.org/abs/1605.03795>`_, adding identities at the
@@ -706,14 +711,16 @@ class MPS(TensorNetwork):  # MARK: MPS
             Initialization method.
         device : torch.device, optional
             Device where to initialize the tensors if ``init_method`` is provided.
+        dtype : torch.dtype, optional
+            Dtype of the tensor if ``init_method`` is provided.
         kwargs : float
             Keyword arguments for the different initialization methods. See
             :meth:`~tensorkrowch.AbstractNode.make_tensor`.
         """
         if init_method == 'unit':
-            tensors = self._make_unitaries(device=device)
+            tensors = self._make_unitaries(device=device, dtype=dtype)
         elif init_method == 'canonical':
-            tensors = self._make_canonical(device=device)
+            tensors = self._make_canonical(device=device, dtype=dtype)
 
         if tensors is not None:
             if len(tensors) != self._n_features:
@@ -725,19 +732,23 @@ class MPS(TensorNetwork):  # MARK: MPS
                 
                 if device is None:
                     device = tensors[0].device
+                if dtype is None:
+                    dtype = tensors[0].dtype
                 
                 if len(tensors) == 1:
                     tensors[0] = tensors[0].reshape(1, -1, 1)
                 else:
                     # Left node
                     aux_tensor = torch.zeros(*self._mats_env[0].shape,
-                                             device=device)
+                                             device=device,
+                                             dtype=dtype)
                     aux_tensor[0] = tensors[0]
                     tensors[0] = aux_tensor
                     
                     # Right node
                     aux_tensor = torch.zeros(*self._mats_env[-1].shape,
-                                             device=device)
+                                             device=device,
+                                             dtype=dtype)
                     aux_tensor[..., 0] = tensors[-1]
                     tensors[-1] = aux_tensor
                 
@@ -753,16 +764,20 @@ class MPS(TensorNetwork):  # MARK: MPS
             for i, node in enumerate(self._mats_env):
                 node.set_tensor(init_method=init_method,
                                 device=device,
+                                dtype=dtype,
                                 **kwargs)
                 if add_eye:
                     aux_tensor = node.tensor.detach()
                     aux_tensor[:, 0, :] += torch.eye(node.shape[0],
                                                      node.shape[2],
-                                                     device=device)
+                                                     device=device,
+                                                     dtype=dtype)
                     node.tensor = aux_tensor
                 
                 if self._boundary == 'obc':
-                    aux_tensor = torch.zeros(*node.shape, device=device)
+                    aux_tensor = torch.zeros(*node.shape,
+                                             device=device,
+                                             dtype=dtype)
                     if i == 0:
                         # Left node
                         aux_tensor[0] = node.tensor[0]
@@ -773,8 +788,12 @@ class MPS(TensorNetwork):  # MARK: MPS
                         node.tensor = aux_tensor
         
         if self._boundary == 'obc':
-            self._left_node.set_tensor(init_method='copy', device=device)
-            self._right_node.set_tensor(init_method='copy', device=device)
+            self._left_node.set_tensor(init_method='copy',
+                                       device=device,
+                                       dtype=dtype)
+            self._right_node.set_tensor(init_method='copy',
+                                        device=device,
+                                        dtype=dtype)
 
     def set_data_nodes(self) -> None:
         """
@@ -812,7 +831,8 @@ class MPS(TensorNetwork):  # MARK: MPS
                       out_features=self._out_features,
                       n_batches=self._n_batches,
                       init_method=None,
-                      device=None)
+                      device=None,
+                      dtype=None)
         new_mps.name = self.name + '_copy'
         if share_tensors:
             for new_node, node in zip(new_mps._mats_env, self._mats_env):
@@ -1225,10 +1245,10 @@ class MPS(TensorNetwork):  # MARK: MPS
                 copied_nodes = []
                 for node in nodes_out_env:
                     copied_node = node.__class__(shape=node._shape,
-                                              axes_names=node.axes_names,
-                                              name='virtual_result_copy',
-                                              network=self,
-                                              virtual=True)
+                                                 axes_names=node.axes_names,
+                                                 name='virtual_result_copy',
+                                                 network=self,
+                                                 virtual=True)
                     copied_node.set_tensor_from(node)
                     copied_nodes.append(copied_node)
                     
@@ -1315,6 +1335,12 @@ class MPS(TensorNetwork):  # MARK: MPS
                         
                         # Connect copies directly to output nodes
                         copied_node['input'] ^ node['input']
+                
+                # If MPS nodes are complex, copied nodes are their conjugates
+                is_complex = copied_nodes[0].is_complex()
+                if is_complex:
+                    for i, node in enumerate(copied_nodes):
+                        copied_nodes[i] = node.conj()
                 
                 # Contract output nodes with copies
                 mats_out_env = self._input_contraction(
@@ -1437,6 +1463,12 @@ class MPS(TensorNetwork):  # MARK: MPS
             copied_nodes = []
             for node in all_nodes:
                 copied_nodes.append(node.neighbours('input'))
+        
+        # If MPS nodes are complex, copied nodes are their conjugates
+        is_complex = copied_nodes[0].is_complex()
+        if is_complex:
+            for i, node in enumerate(copied_nodes):
+                copied_nodes[i] = node.conj()
             
         # Contract output nodes with copies
         mats_out_env = self._input_contraction(
@@ -1545,10 +1577,14 @@ class MPS(TensorNetwork):  # MARK: MPS
         if n_dims >= 1:
             if n_dims == 1:
                 data = torch.cat(data, dim=-1)
-                data = basis(data, dim=dims[0]).float().to(self.in_env[0].device)
+                data = basis(data, dim=dims[0])\
+                    .to(self.in_env[0].dtype)\
+                    .to(self.in_env[0].device)
             elif n_dims > 1:
                 data = [
-                    basis(dat, dim=dim).squeeze(-2).float().to(self.in_env[0].device)
+                    basis(dat, dim=dim).squeeze(-2)\
+                        .to(self.in_env[0].dtype)\
+                        .to(self.in_env[0].device)
                     for dat, dim in zip(data, dims)
                     ]
             
@@ -1675,7 +1711,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                                   middle_tensor.shape[-1]),         # right
             full_matrices=False)
         
-        s = s[s > 0]
+        s = s[s.pow(2) > 0]
         entropy = -(s.pow(2) * s.pow(2).log()).sum()
         
         # Rescale
@@ -1868,6 +1904,7 @@ class MPS(TensorNetwork):  # MARK: MPS
                              side: Text = 'right'):
         """Projects all nodes into a space of dimension ``bond_dim``."""
         device = nodes[0].tensor.device
+        dtype = nodes[0].tensor.dtype
 
         if side == 'left':
             nodes.reverse()
@@ -1892,7 +1929,7 @@ class MPS(TensorNetwork):  # MARK: MPS
 
                 proj_mat_node.tensor = torch.eye(
                     torch.tensor(phys_dim_lst).prod().int().item(),
-                    bond_dim).view(*phys_dim_lst, -1).to(device)
+                    bond_dim).view(*phys_dim_lst, -1).to(dtype).to(device)
                 for k in range(j + 1):
                     nodes[k]['input'] ^ proj_mat_node[k]
 
@@ -1912,7 +1949,7 @@ class MPS(TensorNetwork):  # MARK: MPS
 
             proj_mat_node.tensor = torch.eye(
                 torch.tensor(phys_dim_lst).prod().int().item(),
-                bond_dim).view(*phys_dim_lst, -1).to(device)
+                bond_dim).view(*phys_dim_lst, -1).to(dtype).to(device)
             for k in range(j + 1):
                 nodes[k]['input'] ^ proj_mat_node[k]
 
@@ -1929,7 +1966,8 @@ class MPS(TensorNetwork):  # MARK: MPS
                                  name=f'proj_vec_node_{side}_({k})',
                                  network=self)
 
-            proj_vec_node.tensor = torch.eye(phys_dim, 1).squeeze().to(device)
+            proj_vec_node.tensor = torch.eye(phys_dim, 1).squeeze()\
+                .to(dtype).to(device)
             nodes[k]['input'] ^ proj_vec_node['input']
             line_mat_nodes.append(proj_vec_node @ nodes[k])
 
@@ -2097,6 +2135,8 @@ class UMPS(MPS):  # MARK: UMPS
         explanation of the different initialization methods.
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
+    dtype : torch.dtype, optional
+        Dtype of the tensor if ``init_method`` is provided.
     kwargs : float
         Keyword arguments for the different initialization methods. See
         :meth:`~tensorkrowch.AbstractNode.make_tensor`.
@@ -2125,6 +2165,7 @@ class UMPS(MPS):  # MARK: UMPS
                  n_batches: int = 1,
                  init_method: Text = 'randn',
                  device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
                  **kwargs) -> None:
         
         tensors = None
@@ -2166,6 +2207,7 @@ class UMPS(MPS):  # MARK: UMPS
                          n_batches=n_batches,
                          init_method=init_method,
                          device=device,
+                         dtype=dtype,
                          **kwargs)
         self.name = 'umps'
 
@@ -2186,7 +2228,9 @@ class UMPS(MPS):  # MARK: UMPS
         for node in self._mats_env:
             node.set_tensor_from(uniform_memory)
     
-    def _make_canonical(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
+    def _make_canonical(self,
+                        device: Optional[torch.device] = None,
+                        dtype: Optional[torch.dtype] = None) -> List[torch.Tensor]:
         """
         Creates random unitaries to initialize the MPS in canonical form with
         orthogonality center at the rightmost node. Unitaries in nodes are
@@ -2200,13 +2244,15 @@ class UMPS(MPS):  # MARK: UMPS
         size = max(aux_shape[0], aux_shape[1])
         phys_dim = node_shape[1]
         
-        tensor = random_unitary(size, device=device)
+        tensor = random_unitary(size, device=device, dtype=dtype)
         tensor = tensor[:min(aux_shape[0], size), :min(aux_shape[1], size)]
         tensor = tensor.reshape(*node_shape)
         tensor = tensor * sqrt(phys_dim)
         return tensor
     
-    def _make_unitaries(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
+    def _make_unitaries(self,
+                        device: Optional[torch.device] = None,
+                        dtype: Optional[torch.dtype] = None) -> List[torch.Tensor]:
         """
         Creates random unitaries to initialize the MPS nodes as stacks of
         unitaries.
@@ -2216,7 +2262,7 @@ class UMPS(MPS):  # MARK: UMPS
         
         units = []
         for _ in range(node_shape[1]):
-            tensor = random_unitary(node_shape[0], device=device)
+            tensor = random_unitary(node_shape[0], device=device, dtype=dtype)
             units.append(tensor)
         tensor = torch.stack(units, dim=1)
         return tensor
@@ -2225,6 +2271,7 @@ class UMPS(MPS):  # MARK: UMPS
                    tensors: Optional[Sequence[torch.Tensor]] = None,
                    init_method: Optional[Text] = 'randn',
                    device: Optional[torch.device] = None,
+                   dtype: Optional[torch.dtype] = None,
                    **kwargs: float) -> None:
         """
         Initializes the common tensor of the :class:`UMPS`. It can be called
@@ -2234,7 +2281,7 @@ class UMPS(MPS):  # MARK: UMPS
         
         * ``{"zeros", "ones", "copy", "rand", "randn"}``: The tensor is
           initialized calling :meth:`~tensorkrowch.AbstractNode.set_tensor` with
-          the given method, ``device`` and ``kwargs``.
+          the given method, ``device``, ``dtype`` and ``kwargs``.
         
         * ``"randn_eye"``: Tensor is initialized as in this
           `paper <https://arxiv.org/abs/1605.03795>`_, adding identities at the
@@ -2261,6 +2308,8 @@ class UMPS(MPS):  # MARK: UMPS
             Initialization method.
         device : torch.device, optional
             Device where to initialize the tensors if ``init_method`` is provided.
+        dtype : torch.dtype, optional
+            Dtype of the tensor if ``init_method`` is provided.
         kwargs : float
             Keyword arguments for the different initialization methods. See
             :meth:`~tensorkrowch.AbstractNode.make_tensor`.
@@ -2268,9 +2317,9 @@ class UMPS(MPS):  # MARK: UMPS
         node = self.uniform_memory
         
         if init_method == 'unit':
-            tensors = [self._make_unitaries(device=device)]
+            tensors = [self._make_unitaries(device=device, dtype=dtype)]
         elif init_method == 'canonical':
-            tensors = [self._make_canonical(device=device)]
+            tensors = [self._make_canonical(device=device, dtype=dtype)]
         
         if tensors is not None:
             node.tensor = tensors[0]
@@ -2283,12 +2332,14 @@ class UMPS(MPS):  # MARK: UMPS
             
             node.set_tensor(init_method=init_method,
                             device=device,
+                            dtype=dtype,
                             **kwargs)
             if add_eye:
                 aux_tensor = node.tensor.detach()
                 aux_tensor[:, 0, :] += torch.eye(node.shape[0],
                                                  node.shape[2],
-                                                 device=device)
+                                                 device=device,
+                                                 dtype=dtype)
                 node.tensor = aux_tensor
     
     def copy(self, share_tensors: bool = False) -> 'UMPS':
@@ -2317,7 +2368,8 @@ class UMPS(MPS):  # MARK: UMPS
                        out_features=self._out_features,
                        n_batches=self._n_batches,
                        init_method=None,
-                       device=None)
+                       device=None,
+                       dtype=None)
         new_mps.name = self.name + '_copy'
         if share_tensors:
             new_mps.uniform_memory.tensor = self.uniform_memory.tensor
@@ -2461,6 +2513,8 @@ class MPSLayer(MPS):  # MARK: MPSLayer
         explanation of the different initialization methods.
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
+    dtype : torch.dtype, optional
+        Dtype of the tensor if ``init_method`` is provided.
     kwargs : float
         Keyword arguments for the different initialization methods. See
         :meth:`~tensorkrowch.AbstractNode.make_tensor`.
@@ -2502,6 +2556,7 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                  n_batches: int = 1,
                  init_method: Text = 'randn',
                  device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
                  **kwargs) -> None:
         
         phys_dim = None
@@ -2563,6 +2618,7 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                          n_batches=n_batches,
                          init_method=init_method,
                          device=device,
+                         dtype=dtype,
                          **kwargs)
         self.name = 'mpslayer'
         self._in_dim = self._phys_dim[:out_position] + \
@@ -2592,7 +2648,9 @@ class MPSLayer(MPS):  # MARK: MPSLayer
         """Returns the output node."""
         return self._mats_env[self._out_position]
     
-    def _make_canonical(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
+    def _make_canonical(self,
+                        device: Optional[torch.device] = None,
+                        dtype: Optional[torch.dtype] = None) -> List[torch.Tensor]:
         """
         Creates random unitaries to initialize the MPS in canonical form with
         orthogonality center at the rightmost node. Unitaries in nodes are
@@ -2617,14 +2675,16 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                 phys_dim = node_shape[1]
             size = max(aux_shape[0], aux_shape[1])
             
-            tensor = random_unitary(size, device=device)
+            tensor = random_unitary(size, device=device, dtype=dtype)
             tensor = tensor[:min(aux_shape[0], size), :min(aux_shape[1], size)]
             tensor = tensor.reshape(*node_shape)
             
             left_tensors.append(tensor * sqrt(phys_dim))
         
         # Output node
-        out_tensor = torch.randn(self.out_node.shape, device=device)
+        out_tensor = torch.randn(self.out_node.shape,
+                                 device=device,
+                                 dtype=dtype)
         phys_dim = out_tensor.shape[1]
         if self._boundary == 'obc':
             if self._out_position == 0:
@@ -2651,7 +2711,7 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                 phys_dim = node_shape[1]
             size = max(aux_shape[0], aux_shape[1])
             
-            tensor = random_unitary(size, device=device)
+            tensor = random_unitary(size, device=device, dtype=dtype)
             tensor = tensor[:min(aux_shape[0], size), :min(aux_shape[1], size)]
             tensor = tensor.reshape(*node_shape)
             
@@ -2662,7 +2722,9 @@ class MPSLayer(MPS):  # MARK: MPSLayer
         tensors = left_tensors + [out_tensor] + right_tensors
         return tensors
     
-    def _make_unitaries(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
+    def _make_unitaries(self,
+                        device: Optional[torch.device] = None,
+                        dtype: Optional[torch.dtype] = None) -> List[torch.Tensor]:
         """
         Creates random unitaries to initialize the MPS nodes as stacks of
         unitaries.
@@ -2684,7 +2746,7 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                 size_2 = min(node.shape[2], size)
             
             for _ in range(node.shape[1]):
-                tensor = random_unitary(size, device=device)
+                tensor = random_unitary(size, device=device, dtype=dtype)
                 tensor = tensor[:size_1, :size_2]
                 units.append(tensor)
             
@@ -2699,7 +2761,9 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                 left_tensors.append(units)
         
         # Output node
-        out_tensor = torch.randn(self.out_node.shape, device=device)
+        out_tensor = torch.randn(self.out_node.shape,
+                                 device=device,
+                                 dtype=dtype)
         if self._boundary == 'obc':
             if self._out_position == 0:
                 out_tensor = out_tensor[0]
@@ -2723,7 +2787,7 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                 size_2 = min(node.shape[2], size)
             
             for _ in range(node.shape[1]):
-                tensor = random_unitary(size, device=device).t()
+                tensor = random_unitary(size, device=device, dtype=dtype).H
                 tensor = tensor[:size_1, :size_2]
                 units.append(tensor)
             
@@ -2741,63 +2805,12 @@ class MPSLayer(MPS):  # MARK: MPSLayer
         # All tensors
         tensors = left_tensors + [out_tensor] + right_tensors
         return tensors
-
-    def initialize(self,
-                   tensors: Optional[Sequence[torch.Tensor]] = None,
-                   init_method: Optional[Text] = 'randn',
-                   device: Optional[torch.device] = None,
-                   **kwargs: float) -> None:
-        """
-        Initializes all the nodes of the :class:`MPS`. It can be called when
-        instantiating the model, or to override the existing nodes' tensors.
-        
-        There are different methods to initialize the nodes:
-        
-        * ``{"zeros", "ones", "copy", "rand", "randn"}``: Each node is
-          initialized calling :meth:`~tensorkrowch.AbstractNode.set_tensor` with
-          the given method, ``device`` and ``kwargs``.
-        
-        * ``"randn_eye"``: Nodes are initialized as in this
-          `paper <https://arxiv.org/abs/1605.03795>`_, adding identities at the
-          top of random gaussian tensors. In this case, ``std`` should be
-          specified with a low value, e.g., ``std = 1e-9``.
-        
-        * ``"unit"``: Nodes are initialized as stacks of random unitaries. This,
-          combined (at least) with an embedding of the inputs as elements of
-          the computational basis (:func:`~tensorkrowch.embeddings.discretize`
-          combined with :func:`~tensorkrowch.embeddings.basis`)
-        
-        * ``"canonical"```: MPS is initialized in canonical form with a squared
-          norm `close` to the product of all the physical dimensions (if bond
-          dimensions are bigger than the powers of the physical dimensions,
-          the norm could vary). Th orthogonality center is at the rightmost
-          node.
-        
-        Parameters
-        ----------
-        tensors : list[torch.Tensor] or tuple[torch.Tensor], optional
-            Sequence of tensors to set in each of the MPS nodes. If ``boundary``
-            is ``"obc"``, all tensors should be rank-3, except the first and
-            last ones, which can be rank-2, or rank-1 (if the first and last are
-            the same). If ``boundary`` is ``"pbc"``, all tensors should be
-            rank-3.
-        init_method : {"zeros", "ones", "copy", "rand", "randn", "randn_eye", "unit", "canonical"}, optional
-            Initialization method.
-        device : torch.device, optional
-            Device where to initialize the tensors if ``init_method`` is provided.
-        kwargs : float
-            Keyword arguments for the different initialization methods. See
-            :meth:`~tensorkrowch.AbstractNode.make_tensor`.
-        """
-        if init_method == 'unit':
-            tensors = self._make_unitaries(device=device)
-        elif init_method == 'canonical':
-            tensors = self._make_canonical(device=device)
     
     def initialize(self,
                    tensors: Optional[Sequence[torch.Tensor]] = None,
                    init_method: Optional[Text] = 'randn',
                    device: Optional[torch.device] = None,
+                   dtype: Optional[torch.dtype] = None,
                    **kwargs: float) -> None:
         """
         Initializes all the nodes of the :class:`MPSLayer`. It can be called when
@@ -2807,7 +2820,7 @@ class MPSLayer(MPS):  # MARK: MPSLayer
         
         * ``{"zeros", "ones", "copy", "rand", "randn"}``: Each node is
           initialized calling :meth:`~tensorkrowch.AbstractNode.set_tensor` with
-          the given method, ``device`` and ``kwargs``.
+          the given method, ``device``, ``dtype`` and ``kwargs``.
         
         * ``"randn_eye"``: Nodes are initialized as in this
           `paper <https://arxiv.org/abs/1605.03795>`_, adding identities at the
@@ -2836,14 +2849,16 @@ class MPSLayer(MPS):  # MARK: MPSLayer
             Initialization method.
         device : torch.device, optional
             Device where to initialize the tensors if ``init_method`` is provided.
+        dtype : torch.dtype, optional
+            Dtype of the tensor if ``init_method`` is provided.
         kwargs : float
             Keyword arguments for the different initialization methods. See
             :meth:`~tensorkrowch.AbstractNode.make_tensor`.
         """
         if init_method == 'unit':
-            tensors = self._make_unitaries(device=device)
+            tensors = self._make_unitaries(device=device, dtype=dtype)
         elif init_method == 'canonical':
-            tensors = self._make_canonical(device=device)
+            tensors = self._make_canonical(device=device, dtype=dtype)
 
         if tensors is not None:
             if len(tensors) != self._n_features:
@@ -2855,19 +2870,23 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                 
                 if device is None:
                     device = tensors[0].device
+                if dtype is None:
+                    dtype = tensors[0].dtype
                 
                 if len(tensors) == 1:
                     tensors[0] = tensors[0].reshape(1, -1, 1)
                 else:
                     # Left node
                     aux_tensor = torch.zeros(*self._mats_env[0].shape,
-                                             device=device)
+                                             device=device,
+                                             dtype=dtype)
                     aux_tensor[0] = tensors[0]
                     tensors[0] = aux_tensor
                     
                     # Right node
                     aux_tensor = torch.zeros(*self._mats_env[-1].shape,
-                                             device=device)
+                                             device=device,
+                                             dtype=dtype)
                     aux_tensor[..., 0] = tensors[-1]
                     tensors[-1] = aux_tensor
                 
@@ -2883,12 +2902,14 @@ class MPSLayer(MPS):  # MARK: MPSLayer
             for i, node in enumerate(self._mats_env):
                 node.set_tensor(init_method=init_method,
                                 device=device,
+                                dtype=dtype,
                                 **kwargs)
                 if add_eye:
                     aux_tensor = node.tensor.detach()
                     eye_tensor = torch.eye(node.shape[0],
                                            node.shape[2],
-                                           device=device)
+                                           device=device,
+                                           dtype=dtype)
                     if i == self._out_position:
                         eye_tensor = eye_tensor.unsqueeze(1)
                         eye_tensor = eye_tensor.expand(node.shape)
@@ -2898,7 +2919,9 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                     node.tensor = aux_tensor
                 
                 if self._boundary == 'obc':
-                    aux_tensor = torch.zeros(*node.shape, device=device)
+                    aux_tensor = torch.zeros(*node.shape,
+                                             device=device,
+                                             dtype=dtype)
                     if i == 0:
                         # Left node
                         aux_tensor[0] = node.tensor[0]
@@ -2909,8 +2932,12 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                         node.tensor = aux_tensor
         
         if self._boundary == 'obc':
-            self._left_node.set_tensor(init_method='copy', device=device)
-            self._right_node.set_tensor(init_method='copy', device=device)
+            self._left_node.set_tensor(init_method='copy',
+                                       device=device,
+                                       dtype=dtype)
+            self._right_node.set_tensor(init_method='copy',
+                                        device=device,
+                                        dtype=dtype)
 
     def copy(self, share_tensors: bool = False) -> 'MPSLayer':
         """
@@ -2939,7 +2966,8 @@ class MPSLayer(MPS):  # MARK: MPSLayer
                            tensors=None,
                            n_batches=self._n_batches,
                            init_method=None,
-                           device=None)
+                           device=None,
+                           dtype=None)
         new_mps.name = self.name + '_copy'
         if share_tensors:
             for new_node, node in zip(new_mps._mats_env, self._mats_env):
@@ -3001,6 +3029,8 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
         explanation of the different initialization methods.
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
+    dtype : torch.dtype, optional
+        Dtype of the tensor if ``init_method`` is provided.
     kwargs : float
         Keyword arguments for the different initialization methods. See
         :meth:`~tensorkrowch.AbstractNode.make_tensor`.
@@ -3031,6 +3061,7 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
                  n_batches: int = 1,
                  init_method: Text = 'randn',
                  device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
                  **kwargs) -> None:
         
         phys_dim = None
@@ -3106,6 +3137,7 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
                          n_batches=n_batches,
                          init_method=init_method,
                          device=device,
+                         dtype=dtype,
                          **kwargs)
         self.name = 'umpslayer'
         self._in_dim = self._phys_dim[:out_position] + \
@@ -3154,7 +3186,9 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
         for node in in_nodes:
             node.set_tensor_from(uniform_memory)
     
-    def _make_canonical(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
+    def _make_canonical(self,
+                        device: Optional[torch.device] = None,
+                        dtype: Optional[torch.dtype] = None) -> List[torch.Tensor]:
         """
         Creates random unitaries to initialize the MPS in canonical form with
         orthogonality center at the rightmost node. Unitaries in nodes are
@@ -3169,18 +3203,22 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
         size = max(aux_shape[0], aux_shape[1])
         phys_dim = node_shape[1]
         
-        uni_tensor = random_unitary(size, device=device)
+        uni_tensor = random_unitary(size, device=device, dtype=dtype)
         uni_tensor = uni_tensor[:min(aux_shape[0], size), :min(aux_shape[1], size)]
         uni_tensor = uni_tensor.reshape(*node_shape)
         uni_tensor = uni_tensor * sqrt(phys_dim)
         
         # Output node
-        out_tensor = torch.randn(self.out_node.shape, device=device)
+        out_tensor = torch.randn(self.out_node.shape,
+                                 device=device,
+                                 dtype=dtype)
         out_tensor = out_tensor / out_tensor.norm() * sqrt(out_tensor.shape[1])
         
         return [uni_tensor, out_tensor]
     
-    def _make_unitaries(self, device: Optional[torch.device] = None) -> List[torch.Tensor]:
+    def _make_unitaries(self,
+                        device: Optional[torch.device] = None,
+                        dtype: Optional[torch.dtype] = None) -> List[torch.Tensor]:
         """
         Creates random unitaries to initialize the MPS nodes as stacks of
         unitaries.
@@ -3191,7 +3229,9 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
             
             units = []
             for _ in range(node_shape[1]):
-                tensor = random_unitary(node_shape[0], device=device)
+                tensor = random_unitary(node_shape[0],
+                                        device=device,
+                                        dtype=dtype)
                 units.append(tensor)
             
             tensors.append(torch.stack(units, dim=1))
@@ -3202,6 +3242,7 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
                    tensors: Optional[Sequence[torch.Tensor]] = None,
                    init_method: Optional[Text] = 'randn',
                    device: Optional[torch.device] = None,
+                   dtype: Optional[torch.dtype] = None,
                    **kwargs: float) -> None:
         """
         Initializes the common tensor of the :class:`UMPSLayer`. It can be called
@@ -3211,7 +3252,7 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
         
         * ``{"zeros", "ones", "copy", "rand", "randn"}``: The tensor is
           initialized calling :meth:`~tensorkrowch.AbstractNode.set_tensor` with
-          the given method, ``device`` and ``kwargs``.
+          the given method, ``device``, ``dtype`` and ``kwargs``.
         
         * ``"randn_eye"``: Tensor is initialized as in this
           `paper <https://arxiv.org/abs/1605.03795>`_, adding identities at the
@@ -3239,14 +3280,16 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
             Initialization method.
         device : torch.device, optional
             Device where to initialize the tensors if ``init_method`` is provided.
+        dtype : torch.dtype, optional
+            Dtype of the tensor if ``init_method`` is provided.
         kwargs : float
             Keyword arguments for the different initialization methods. See
             :meth:`~tensorkrowch.AbstractNode.make_tensor`.
         """
         if init_method == 'unit':
-            tensors = self._make_unitaries(device=device)
+            tensors = self._make_unitaries(device=device, dtype=dtype)
         elif init_method == 'canonical':
-            tensors = self._make_canonical(device=device)
+            tensors = self._make_canonical(device=device, dtype=dtype)
         
         if tensors is not None:
             self.uniform_memory.tensor = tensors[0]
@@ -3261,12 +3304,14 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
                 
                 node.set_tensor(init_method=init_method,
                                 device=device,
+                                dtype=dtype,
                                 **kwargs)
                 if add_eye:
                     aux_tensor = node.tensor.detach()
                     eye_tensor = torch.eye(node.shape[0],
                                            node.shape[2],
-                                           device=device)
+                                           device=device,
+                                           dtype=dtype)
                     if i == 0:
                         aux_tensor[:, 0, :] += eye_tensor
                     else:
@@ -3301,7 +3346,8 @@ class UMPSLayer(MPS):  # MARK: UMPSLayer
                             tensor=None,
                             n_batches=self._n_batches,
                             init_method=None,
-                            device=None)
+                            device=None,
+                            dtype=None)
         new_mps.name = self.name + '_copy'
         if share_tensors:
             new_mps.uniform_memory.tensor = self.uniform_memory.tensor
@@ -3542,6 +3588,8 @@ class ConvMPS(AbstractConvClass, MPS):  # MARK: ConvMPS
         explanation of the different initialization methods.
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
+    dtype : torch.dtype, optional
+        Dtype of the tensor if ``init_method`` is provided.
     kwargs : float
         Keyword arguments for the different initialization methods. See
         :meth:`~tensorkrowch.AbstractNode.make_tensor`.
@@ -3568,6 +3616,7 @@ class ConvMPS(AbstractConvClass, MPS):  # MARK: ConvMPS
                  tensors: Optional[Sequence[torch.Tensor]] = None,
                  init_method: Text = 'randn',
                  device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
                  **kwargs):
         
         unfold = self._set_attributes(in_channels=in_channels,
@@ -3585,6 +3634,7 @@ class ConvMPS(AbstractConvClass, MPS):  # MARK: ConvMPS
                      n_batches=2,
                      init_method=init_method,
                      device=device,
+                     dtype=dtype,
                      **kwargs)
         
         self.unfold = unfold
@@ -3653,7 +3703,8 @@ class ConvMPS(AbstractConvClass, MPS):  # MARK: ConvMPS
                           boundary=self._boundary,
                           tensors=None,
                           init_method=None,
-                          device=None)
+                          device=None,
+                          dtype=None)
         new_mps.name = self.name + '_copy'
         if share_tensors:
             for new_node, node in zip(new_mps._mats_env, self._mats_env):
@@ -3705,6 +3756,8 @@ class ConvUMPS(AbstractConvClass, UMPS):  # MARK: ConvUMPS
         explanation of the different initialization methods.
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
+    dtype : torch.dtype, optional
+        Dtype of the tensor if ``init_method`` is provided.
     kwargs : float
         Keyword arguments for the different initialization methods. See
         :meth:`~tensorkrowch.AbstractNode.make_tensor`.
@@ -3734,6 +3787,7 @@ class ConvUMPS(AbstractConvClass, UMPS):  # MARK: ConvUMPS
                  tensor: Optional[torch.Tensor] = None,
                  init_method: Text = 'randn',
                  device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
                  **kwargs):
 
         unfold = self._set_attributes(in_channels=in_channels,
@@ -3750,6 +3804,7 @@ class ConvUMPS(AbstractConvClass, UMPS):  # MARK: ConvUMPS
                       n_batches=2,
                       init_method=init_method,
                       device=device,
+                      dtype=dtype,
                       **kwargs)
         
         self.unfold = unfold
@@ -3817,7 +3872,8 @@ class ConvUMPS(AbstractConvClass, UMPS):  # MARK: ConvUMPS
                            dilation=self.dilation,
                            tensor=None,
                            init_method=None,
-                           device=None)
+                           device=None,
+                           dtype=None)
         new_mps.name = self.name + '_copy'
         if share_tensors:
             new_mps.uniform_memory.tensor = self.uniform_memory.tensor
@@ -3885,6 +3941,8 @@ class ConvMPSLayer(AbstractConvClass, MPSLayer):  # MARK: ConvMPSLayer
         explanation of the different initialization methods.
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
+    dtype : torch.dtype, optional
+        Dtype of the tensor if ``init_method`` is provided.
     kwargs : float
         Keyword arguments for the different initialization methods. See
         :meth:`~tensorkrowch.AbstractNode.make_tensor`.
@@ -3914,6 +3972,7 @@ class ConvMPSLayer(AbstractConvClass, MPSLayer):  # MARK: ConvMPSLayer
                  tensors: Optional[Sequence[torch.Tensor]] = None,
                  init_method: Text = 'randn',
                  device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
                  **kwargs):
 
         unfold = self._set_attributes(in_channels=in_channels,
@@ -3934,6 +3993,7 @@ class ConvMPSLayer(AbstractConvClass, MPSLayer):  # MARK: ConvMPSLayer
                           n_batches=2,
                           init_method=init_method,
                           device=device,
+                          dtype=dtype,
                           **kwargs)
         
         self._out_channels = out_channels
@@ -4009,7 +4069,8 @@ class ConvMPSLayer(AbstractConvClass, MPSLayer):  # MARK: ConvMPSLayer
                                boundary=self._boundary,
                                tensors=None,
                                init_method=None,
-                               device=None)
+                               device=None,
+                               dtype=None)
         new_mps.name = self.name + '_copy'
         if share_tensors:
             for new_node, node in zip(new_mps._mats_env, self._mats_env):
@@ -4070,6 +4131,8 @@ class ConvUMPSLayer(AbstractConvClass, UMPSLayer):  # MARK: ConvUMPSLayer
         detailed explanation of the different initialization methods.
     device : torch.device, optional
         Device where to initialize the tensors if ``init_method`` is provided.
+    dtype : torch.dtype, optional
+        Dtype of the tensor if ``init_method`` is provided.
     kwargs : float
         Keyword arguments for the different initialization methods. See
         :meth:`~tensorkrowch.AbstractNode.make_tensor`.
@@ -4102,6 +4165,7 @@ class ConvUMPSLayer(AbstractConvClass, UMPSLayer):  # MARK: ConvUMPSLayer
                  tensors: Optional[Sequence[torch.Tensor]] = None,
                  init_method: Text = 'randn',
                  device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
                  **kwargs):
 
         unfold = self._set_attributes(in_channels=in_channels,
@@ -4121,6 +4185,7 @@ class ConvUMPSLayer(AbstractConvClass, UMPSLayer):  # MARK: ConvUMPSLayer
                            n_batches=2,
                            init_method=init_method,
                            device=device,
+                           dtype=dtype,
                            **kwargs)
         
         self._out_channels = out_channels
@@ -4200,7 +4265,8 @@ class ConvUMPSLayer(AbstractConvClass, UMPSLayer):  # MARK: ConvUMPSLayer
                                 dilation=self.dilation,
                                 tensor=None,
                                 init_method=None,
-                                device=None)
+                                device=None,
+                                dtype=None)
         new_mps.name = self.name + '_copy'
         if share_tensors:
             new_mps.uniform_memory.tensor = self.uniform_memory.tensor

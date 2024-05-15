@@ -14,72 +14,76 @@ class TestSVDDecompositions:
     
     def test_vec_to_mps(self):
         for renormalize in [True, False]:
-            for i in range(1, 6):
-                dims = torch.randint(low=2, high=10, size=(i,))
-                vec = torch.randn(*dims) * 1e-5
-                for j in range(i + 1):
-                    tensors = tk.decompositions.vec_to_mps(vec=vec,
-                                                           n_batches=j,
-                                                           rank=5,
-                                                           renormalize=renormalize)
-                    
-                    for k, tensor in enumerate(tensors):
-                        assert tensor.shape[:j] == vec.shape[:j]
-                        if k == 0:
-                            if j < i:
-                                assert tensor.shape[j] == vec.shape[j]
-                            if j < i - 1:
-                                assert tensor.shape[j + 1] <= 5
-                        elif k < (i - j - 1):
-                            assert tensor.shape[j + 1] == vec.shape[j + k]
-                            assert tensor.shape[j + 2] <= 5
-                        else:
-                            assert tensor.shape[j + 1] == vec.shape[j + k]
-                            
-                    bond_dims = [tensor.shape[-1] for tensor in tensors[:-1]]
-                    
-                    if i - j > 0:
-                        mps = tk.models.MPSData(tensors=tensors,
-                                                n_batches=j)
-                        assert mps.phys_dim == dims[j:].tolist()
-                        assert mps.bond_dim == bond_dims
-                    
-                    if j == 0:
-                        mps = tk.models.MPS(tensors=tensors)
-                        assert mps.phys_dim == dims.tolist()
-                        assert mps.bond_dim == bond_dims
+            for dtype in [torch.float32, torch.complex64]:
+                for i in range(1, 6):
+                    dims = torch.randint(low=2, high=10, size=(i,))
+                    vec = torch.randn(*dims, dtype=dtype) * 1e-5
+                    for j in range(i + 1):
+                        tensors = tk.decompositions.vec_to_mps(vec=vec,
+                                                               n_batches=j,
+                                                               rank=5,
+                                                               renormalize=renormalize)
+                        
+                        for k, tensor in enumerate(tensors):
+                            assert tensor.shape[:j] == vec.shape[:j]
+                            assert tensor.dtype == dtype
+                            if k == 0:
+                                if j < i:
+                                    assert tensor.shape[j] == vec.shape[j]
+                                if j < i - 1:
+                                    assert tensor.shape[j + 1] <= 5
+                            elif k < (i - j - 1):
+                                assert tensor.shape[j + 1] == vec.shape[j + k]
+                                assert tensor.shape[j + 2] <= 5
+                            else:
+                                assert tensor.shape[j + 1] == vec.shape[j + k]
+                                
+                        bond_dims = [tensor.shape[-1] for tensor in tensors[:-1]]
+                        
+                        if i - j > 0:
+                            mps = tk.models.MPSData(tensors=tensors,
+                                                    n_batches=j)
+                            assert mps.phys_dim == dims[j:].tolist()
+                            assert mps.bond_dim == bond_dims
+                        
+                        if j == 0:
+                            mps = tk.models.MPS(tensors=tensors)
+                            assert mps.phys_dim == dims.tolist()
+                            assert mps.bond_dim == bond_dims
     
     def test_vec_to_mps_accuracy(self):
         for renormalize in [True, False]:
-            for i in range(1, 6):
-                dims = torch.randint(low=2, high=10, size=(i,))
-                vec = torch.randn(*dims) * 1e-1
-                for j in range(i + 1):
-                    tensors = tk.decompositions.vec_to_mps(vec=vec,
-                                                           n_batches=j,
-                                                           cum_percentage=0.9999,
-                                                           renormalize=renormalize)
-                            
-                    bond_dims = [tensor.shape[-1] for tensor in tensors[:-1]]
-                    
-                    if i - j > 0:
-                        mps = tk.models.MPSData(tensors=tensors,
-                                                n_batches=j)
-                        assert mps.phys_dim == dims[j:].tolist()
-                        assert mps.bond_dim == bond_dims
-                    
-                    if j == 0:
-                        mps = tk.models.MPS(tensors=tensors)
-                        assert mps.phys_dim == dims.tolist()
-                        assert mps.bond_dim == bond_dims
-                    
-                    approx_vec = mps.left_node
-                    for node in mps.mats_env + [mps.right_node]:
-                        approx_vec @= node
-                    
-                    approx_vec = approx_vec.tensor
-                    diff = vec - approx_vec
-                    assert diff.norm() < 1e-1
+            for dtype in [torch.float32, torch.complex64]:
+                for i in range(1, 6):
+                    dims = torch.randint(low=2, high=10, size=(i,))
+                    vec = torch.randn(*dims, dtype=dtype) * 1e-1
+                    for j in range(i + 1):
+                        tensors = tk.decompositions.vec_to_mps(
+                            vec=vec,
+                            n_batches=j,
+                            cum_percentage=0.9999,
+                            renormalize=renormalize)
+                                
+                        bond_dims = [tensor.shape[-1] for tensor in tensors[:-1]]
+                        
+                        if i - j > 0:
+                            mps = tk.models.MPSData(tensors=tensors,
+                                                    n_batches=j)
+                            assert mps.phys_dim == dims[j:].tolist()
+                            assert mps.bond_dim == bond_dims
+                        
+                        if j == 0:
+                            mps = tk.models.MPS(tensors=tensors)
+                            assert mps.phys_dim == dims.tolist()
+                            assert mps.bond_dim == bond_dims
+                        
+                        approx_vec = mps.left_node
+                        for node in mps.mats_env + [mps.right_node]:
+                            approx_vec @= node
+                        
+                        approx_vec = approx_vec.tensor
+                        diff = vec - approx_vec
+                        assert diff.norm() < 1e-1
     
     def test_mat_to_mpo(self):
         for renormalize in [True, False]:
@@ -164,7 +168,7 @@ class TestSVDDecompositions:
             diff = mat - approx_mat
             assert diff.norm() < 1e-1
 
-    def test_mat_to_mpo_permuted_diff_dimsaccuracy(self):
+    def test_mat_to_mpo_permuted_diff_dims_accuracy(self):
         for renormalize in [True, False]:
             # inputs (2, 3, 4, 2) x outputs (3, 5, 7, 2)
             dims = [2, 3, 4, 2, 3, 5, 7, 2]

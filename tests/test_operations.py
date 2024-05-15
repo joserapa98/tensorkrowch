@@ -2,7 +2,7 @@
 This script contains tests for operations:
 
     * TestPermute
-    * TestBasicOps
+    * TestTensorOps
     * TestSplitSVD
     * TestSplitSVDR
     * TestSplitQR
@@ -159,7 +159,7 @@ class TestPermute:
         assert torch.equal(permuted_node.tensor, node.tensor.permute(0, 2, 1))
 
 
-class TestBasicOps:
+class TestTensorOps:
 
     @pytest.fixture
     def setup(self):
@@ -521,6 +521,22 @@ class TestBasicOps:
         
         # Repeat
         node4 = node1.renormalize(axis=['left', 'right'])
+    
+    def test_conj(self):
+        node1 = tk.randn(shape=(3, 3, 3),
+                         axes_names=('left', 'input', 'right'),
+                         dtype=torch.complex64)
+        assert node1.successors == dict()
+        
+        node2 = tk.conj(node1)
+        assert node2 is not node1
+        assert node2.shape == (3, 3, 3)
+        assert (node2.tensor == node1.tensor.conj()).all()
+        assert node2.is_conj()
+        assert node1.successors != dict()
+        
+        # Repeat
+        node2 = tk.conj(node1)
 
     @pytest.fixture
     def setup_param(self):
@@ -915,6 +931,23 @@ class TestBasicOps:
         
         # Repeat
         node4 = node1.renormalize(axis=['left', 'right'])
+    
+    def test_conj_param(self):
+        node1 = tk.randn(shape=(3, 3, 3),
+                         axes_names=('left', 'input', 'right'),
+                         param_node=True,
+                         dtype=torch.complex64)
+        assert node1.successors == dict()
+        
+        node2 = tk.conj(node1)
+        assert node2 is not node1
+        assert node2.shape == (3, 3, 3)
+        assert (node2.tensor == node1.tensor.conj()).all()
+        assert node2.is_conj()
+        assert node1.successors != dict()
+        
+        # Repeat
+        node2 = tk.conj(node1)
 
 
 class TestSplitSVD:
@@ -1106,7 +1139,7 @@ class TestSplitSVD:
         assert new_node1.shape == (10, 2, 5, 1)
         assert new_node2.shape == (10, 1, 5, 3)
 
-    def test_split_contracted_node_paramnodes_cum_percentage(self):
+    def test_split_contracted_node_paramnode_cum_percentage(self):
         net = tk.TensorNetwork()
         node1 = tk.ParamNode(shape=(10, 2, 5, 4),
                              axes_names=('batch', 'left', 'input', 'right'),
@@ -1264,6 +1297,59 @@ class TestSplitSVD:
         
         assert new_node1.shape == (10, 2, 5, 8)
         assert new_node2.shape == (10, 8, 5, 3)
+    
+    def test_split_contracted_complex_node(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(10, 2, 5, 4),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        dtype=torch.complex64,
+                        network=net)
+        node2 = tk.Node(shape=(10, 4, 5, 3),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node2',
+                        init_method='randn',
+                        dtype=torch.complex64,
+                        network=net)
+        edge = node1[3] ^ node2[1]
+        result = node1 @ node2
+
+        assert len(net.nodes) == 3
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 1
+        assert node1.successors['contract_edges'][(None, node1, node2)].child == result
+
+        # Split result
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'])
+
+        assert new_node1.shape == (10, 2, 5, 10)
+        assert new_node1['batch'].size() == 10
+        assert new_node1['left'].size() == 2
+        assert new_node1['input'].size() == 5
+        assert new_node1['split'].size() == 10
+
+        assert new_node2.shape == (10, 10, 5, 3)
+        assert new_node2['batch'].size() == 10
+        assert new_node2['split'].size() == 10
+        assert new_node2['input'].size() == 5
+        assert new_node2['right'].size() == 3
+
+        assert len(net.nodes) == 5
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 3
+        assert result.successors['split'][(result,
+                                           tuple(['left', 'input_0']),
+                                           tuple(['input_1', 'right']),
+                                           'svd',
+                                           'left',
+                                           None,
+                                           None,
+                                           None)].child == [new_node1, new_node2]
+
+        assert net.edges == [node1['left'], node1['input'],
+                             node2['input'], node2['right']]
 
     def test_split_in_place(self):
         net = tk.TensorNetwork()
@@ -1659,7 +1745,7 @@ class TestSplitSVDR:
         assert new_node1.shape == (10, 2, 5, 1)
         assert new_node2.shape == (10, 1, 5, 3)
 
-    def test_split_contracted_node_paramnodes_cum_percentage(self):
+    def test_split_contracted_node_paramnode_cum_percentage(self):
         net = tk.TensorNetwork()
         node1 = tk.ParamNode(shape=(10, 2, 5, 4),
                              axes_names=('batch', 'left', 'input', 'right'),
@@ -1824,6 +1910,60 @@ class TestSplitSVDR:
         
         assert new_node1.shape == (10, 2, 5, 8)
         assert new_node2.shape == (10, 8, 5, 3)
+    
+    def test_split_contracted_complex_node(self):
+        net = tk.TensorNetwork()
+        node1 = tk.Node(shape=(10, 2, 5, 4),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node1',
+                        init_method='randn',
+                        dtype=torch.complex64,
+                        network=net)
+        node2 = tk.Node(shape=(10, 4, 5, 3),
+                        axes_names=('batch', 'left', 'input', 'right'),
+                        name='node2',
+                        init_method='randn',
+                        dtype=torch.complex64,
+                        network=net)
+        edge = node1[3] ^ node2[1]
+        result = node1 @ node2
+
+        assert len(net.nodes) == 3
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 1
+        assert node1.successors['contract_edges'][(None, node1, node2)].child == result
+
+        # Split result
+        new_node1, new_node2 = result.split(node1_axes=['left', 'input_0'],
+                                            node2_axes=['input_1', 'right'],
+                                            mode='svdr')
+
+        assert new_node1.shape == (10, 2, 5, 10)
+        assert new_node1['batch'].size() == 10
+        assert new_node1['left'].size() == 2
+        assert new_node1['input'].size() == 5
+        assert new_node1['split'].size() == 10
+
+        assert new_node2.shape == (10, 10, 5, 3)
+        assert new_node2['batch'].size() == 10
+        assert new_node2['split'].size() == 10
+        assert new_node2['input'].size() == 5
+        assert new_node2['right'].size() == 3
+
+        assert len(net.nodes) == 5
+        assert len(net.leaf_nodes) == 2
+        assert len(net.resultant_nodes) == 3
+        assert result.successors['split'][(result,
+                                           tuple(['left', 'input_0']),
+                                           tuple(['input_1', 'right']),
+                                           'svdr',
+                                           'left',
+                                           None,
+                                           None,
+                                           None)].child == [new_node1, new_node2]
+
+        assert net.edges == [node1['left'], node1['input'],
+                             node2['input'], node2['right']]
 
     def test_split_in_place(self):
         net = tk.TensorNetwork()
@@ -6676,7 +6816,7 @@ class TestTNModels:
         image_size = (10, 10)
         mps = MPS(image_size=image_size)
 
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         mps = mps.to(device)
 
         # batch_size x height x width
@@ -6700,7 +6840,7 @@ class TestTNModels:
         image_size = (10, 10)
         mps = MPS(image_size=image_size, uniform=True)
 
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         mps = mps.to(device)
 
         # batch_size x height x width
@@ -6918,7 +7058,7 @@ class TestTNModels:
         image_size = (3, 3)
         peps = PEPS(image_size=image_size)
 
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         peps = peps.to(device)
 
         # batch_size x height x width
@@ -6942,7 +7082,7 @@ class TestTNModels:
         image_size = (3, 3)
         peps = PEPS(image_size=image_size, uniform=True)
 
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         peps = peps.to(device)
 
         # batch_size x height x width

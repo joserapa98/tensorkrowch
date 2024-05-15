@@ -6,7 +6,7 @@ Tensor Networks with PyTorch
 """
 
 # Version
-__version__ = '1.1.3'
+__version__ = '1.1.4'
 
 # Network components
 from tensorkrowch.components import Axis
@@ -34,7 +34,7 @@ from tensorkrowch.operations import Operation
 from tensorkrowch.operations import get_shared_edges  # Not in docs
 
 from tensorkrowch.operations import (permute, permute_, tprod, mul, div, add,
-                                     sub, renormalize)
+                                     sub, renormalize, conj)
 from tensorkrowch.operations import (split, split_, contract_edges,
                                      contract_between, contract_between_,
                                      stack, unbind, einsum, stacked_einsum)

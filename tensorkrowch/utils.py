@@ -307,14 +307,16 @@ def split_sequence_into_regions(lst: Sequence[int]) -> List[List[int]]:
     regions.append(current_region)
     return regions
 
-def random_unitary(n, device: Optional[torch.device] = None):
+def random_unitary(n,
+                   device: Optional[torch.device] = None,
+                   dtype: Optional[torch.dtype] = None):
     """
     Returns random unitary matrix from the Haar measure of size n x n.
     
     Unitary matrix is created as described in this `paper
     <https://arxiv.org/abs/math-ph/0609050v2>`_.
     """
-    mat = torch.randn(n, n, device=device)
+    mat = torch.randn(n, n, device=device, dtype=dtype)
     q, r = torch.linalg.qr(mat)
     d = torch.diagonal(r)
     ph = d / d.abs()

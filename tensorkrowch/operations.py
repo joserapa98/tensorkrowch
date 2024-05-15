@@ -9,8 +9,11 @@ This script contains:
         * permute_           (in-place)
         * tprod
         * mul
+        * div
         * add
         * sub
+        * renormalize
+        * conj
         
     Node-like operations:
         * split
@@ -1466,6 +1469,120 @@ renormalize_node.__doc__ = \
 AbstractNode.renormalize = renormalize_node
 
 
+##################################   conj    ##################################
+# MARK: conj
+def _check_first_conj(node: AbstractNode) -> Optional[Successor]:
+    args = (node,)
+    successors = node._successors.get('conj')
+    if not successors:
+        return None
+    return successors.get(args)
+
+
+def _conj_first(node: AbstractNode) -> Node:
+    new_node = Node._create_resultant(axes_names=node.axes_names,
+                                      name='conj',
+                                      network=node._network,
+                                      tensor=node.tensor.conj(),
+                                      edges=node._edges,
+                                      node1_list=node.is_node1())
+    
+    # Create successor
+    net = node._network
+    args = (node,)
+    successor = Successor(node_ref=node.node_ref(),
+                          index=node._tensor_info['index'],
+                          child=new_node)
+
+    # Add successor to parent
+    if 'conj' in node._successors:
+        node._successors['conj'].update({args: successor})
+    else:
+        node._successors['conj'] = {args: successor}
+
+    # Add operation to list of performed operations of TN
+    net._seq_ops.append(('conj', args))
+
+    # Record in inverse_memory while tracing
+    if net._tracing:
+        node._record_in_inverse_memory()
+
+    return new_node
+
+
+def _conj_next(successor: Successor, node: AbstractNode) -> Node:
+    tensor = node._direct_get_tensor(successor.node_ref,
+                                     successor.index)
+    child = successor.child
+    child._direct_set_tensor(tensor.conj())
+
+    # Record in inverse_memory while contracting, if network is traced
+    # (to delete memory if possible)
+    if node._network._traced:
+        node._check_inverse_memory(successor.node_ref)
+    
+    return child
+
+
+conj_op = Operation('conj',
+                    _check_first_conj,
+                    _conj_first,
+                    _conj_next)
+
+
+def conj(node: AbstractNode) -> Node:
+    """
+    Returns a view of the node's tensor with a flipped conjugate bit. If the
+    node has a non-complex dtype, this function returns a new node with the
+    same tensor.
+
+    See `conj <https://pytorch.org/docs/stable/generated/torch.conj.html>`_
+    in the **PyTorch** documentation.
+
+    Parameters
+    ----------
+    node : Node or ParamNode
+        Node that is to be conjugated.
+
+    Returns
+    -------
+    Node
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn((3, 3), dtype=torch.complex64)
+    >>> conjA = tk.conj(nodeA)
+    >>> conjA.is_conj()
+    True
+    """
+    return conj_op(node)
+
+
+conj_node = copy_func(conj)
+conj_node.__doc__ = \
+    """
+    Returns a view of the node's tensor with a flipped conjugate bit. If the
+    node has a non-complex dtype, this function returns a new node with the
+    same tensor.
+
+    See `conj <https://pytorch.org/docs/stable/generated/torch.conj.html>`_
+    in the **PyTorch** documentation.
+
+    Returns
+    -------
+    Node
+    
+    Examples
+    --------
+    >>> nodeA = tk.randn((3, 3), dtype=torch.complex64)
+    >>> conjA = nodeA.conj()
+    >>> conjA.is_conj()
+    True
+    """
+
+AbstractNode.conj = conj_node
+
+
 ###############################################################################
 #                            NODE-LIKE OPERATIONS                             #
 ###############################################################################
@@ -1599,9 +1716,12 @@ def _split_first(node: AbstractNode,
         u = u[..., :rank]
         s = s[..., :rank]
         vh = vh[..., :rank, :]
+        
+        if u.is_complex():
+            s = s.to(u.dtype)
 
         if mode == 'svdr':
-            phase = torch.sign(torch.randn(s.shape))
+            phase = torch.sgn(torch.randn_like(s))
             phase = torch.diag_embed(phase)
             u = u @ phase
             vh = phase @ vh
@@ -1798,9 +1918,12 @@ def _split_next(successor: Successor,
         u = u[..., :rank]
         s = s[..., :rank]
         vh = vh[..., :rank, :]
+        
+        if u.is_complex():
+            s = s.to(u.dtype)
 
         if mode == 'svdr':
-            phase = torch.sign(torch.randn(s.shape))
+            phase = torch.sgn(torch.randn_like(s))
             phase = torch.diag_embed(phase)
             u = u @ phase
             vh = phase @ vh

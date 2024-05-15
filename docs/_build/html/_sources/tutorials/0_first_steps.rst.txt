@@ -134,7 +134,7 @@ possible classes.
 ::
 
     # Check if GPU is available
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     # Instantiate model
     mps = tk.models.MPSLayer(n_features=image_size[0] * image_size[1] + 1,

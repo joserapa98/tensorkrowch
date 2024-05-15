@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  tests:
+  tests_basics:
 
     runs-on: ubuntu-latest
 
@@ -33,6 +33,21 @@ jobs:
       - name: Test decompositions
         if: always()
         run: pytest tests/decompositions/test_svd_decompositions.py --cov=tensorkrowch
+  
+  tests_models:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip torch opt_einsum
+      - name: Install pytest
+        run: pip install pytest pytest-cov
       - name: Test MPS
         if: always()
         run: pytest tests/models/test_mps.py --cov=tensorkrowch
@@ -44,4 +59,4 @@ jobs:
         run: pytest tests/models/test_peps.py --cov=tensorkrowch
       - name: Test Tree
         if: always()
-        run: pytest tests/models/test_tree.py --cov=tensorkrowch
+        run: pytest tests/models/test_tree.py --cov=tensorkrow

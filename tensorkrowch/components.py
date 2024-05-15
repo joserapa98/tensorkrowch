@@ -450,6 +450,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
                  node1_list: Optional[List[bool]] = None,
                  init_method: Optional[Text] = None,
                  device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
                  **kwargs: float) -> None:
 
         super().__init__()
@@ -561,7 +562,10 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         if shape is not None:
             if init_method is not None:
                 self._unrestricted_set_tensor(
-                    init_method=init_method, device=device, **kwargs)
+                    init_method=init_method,
+                    device=device,
+                    dtype=dtype,
+                    **kwargs)
         else:
             self._unrestricted_set_tensor(tensor=tensor)
 
@@ -769,6 +773,36 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         their own tensors or use other node's tensor.
         """
         return not (self._leaf or self._data or self._virtual)
+    
+    def is_conj(self) -> bool:
+        """
+        Equivalent to `torch.is_conj()
+        <https://pytorch.org/docs/stable/generated/torch.is_conj.html>`_.
+        """
+        tensor = self.tensor
+        if tensor is None:
+            return
+        return tensor.is_conj()
+    
+    def is_complex(self) -> bool:
+        """
+        Equivalent to `torch.is_complex()
+        <https://pytorch.org/docs/stable/generated/torch.is_complex.html>`_.
+        """
+        tensor = self.tensor
+        if tensor is None:
+            return
+        return tensor.is_complex()
+    
+    def is_floating_point(self) -> bool:
+        """
+        Equivalent to `torch.is_floating_point()
+        <https://pytorch.org/docs/stable/generated/torch.is_floating_point.html>`_.
+        """
+        tensor = self.tensor
+        if tensor is None:
+            return
+        return tensor.is_floating_point()
 
     def size(self, axis: Optional[Ax] = None) -> Union[Size, int]:
         """
@@ -1170,9 +1204,10 @@ class AbstractNode(ABC):  # MARK: AbstractNode
 
     @staticmethod
     def _make_copy_tensor(shape: Shape,
-                          device: torch.device = torch.device('cpu')) -> Tensor:
+                          device: Optional[torch.device] = None,
+                          dtype: Optional[torch.dtype] = None) -> Tensor:
         """Returns copy tensor (ones in the "diagonal", zeros elsewhere)."""
-        copy_tensor = torch.zeros(shape, device=device)
+        copy_tensor = torch.zeros(shape, device=device, dtype=dtype)
         rank = len(shape)
         if rank <= 1:
             i = 0
@@ -1185,7 +1220,8 @@ class AbstractNode(ABC):  # MARK: AbstractNode
     def _make_rand_tensor(shape: Shape,
                           low: float = 0.,
                           high: float = 1.,
-                          device: torch.device = torch.device('cpu')) -> Tensor:
+                          device: Optional[torch.device] = None,
+                          dtype: Optional[torch.dtype] = None) -> Tensor:
         """Returns tensor whose entries are drawn from the uniform distribution."""
         if not isinstance(low, float):
             raise TypeError('`low` should be float type')
@@ -1193,13 +1229,14 @@ class AbstractNode(ABC):  # MARK: AbstractNode
             raise TypeError('`high` should be float type')
         if low >= high:
             raise ValueError('`low` should be strictly smaller than `high`')
-        return torch.rand(shape, device=device) * (high - low) + low
+        return torch.rand(shape, device=device, dtype=dtype) * (high - low) + low
 
     @staticmethod
     def _make_randn_tensor(shape: Shape,
                            mean: float = 0.,
                            std: float = 1.,
-                           device: torch.device = torch.device('cpu')) -> Tensor:
+                           device: Optional[torch.device] = None,
+                           dtype: Optional[torch.dtype] = None) -> Tensor:
         """Returns tensor whose entries are drawn from the normal distribution."""
         if not isinstance(mean, float):
             raise TypeError('`mean` should be float type')
@@ -1207,12 +1244,13 @@ class AbstractNode(ABC):  # MARK: AbstractNode
             raise TypeError('`std` should be float type')
         if std <= 0:
             raise ValueError('`std` should be positive')
-        return torch.randn(shape, device=device) * std + mean
+        return torch.randn(shape, device=device, dtype=dtype) * std + mean
 
     def make_tensor(self,
                     shape: Optional[Shape] = None,
                     init_method: Text = 'zeros',
-                    device: torch.device = torch.device('cpu'),
+                    device: Optional[torch.device] = None,
+                    dtype: Optional[torch.dtype] = None,
                     **kwargs: float) -> Tensor:
         """
         Returns a tensor that can be put in the node, and is initialized according
@@ -1226,6 +1264,8 @@ class AbstractNode(ABC):  # MARK: AbstractNode
             Initialization method.
         device : torch.device, optional
             Device where to initialize the tensor.
+        dtype : torch.dtype, optional
+            Dtype of the tensor.
         kwargs : float
             Keyword arguments for the different initialization methods:
 
@@ -1247,15 +1287,17 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         if shape is None:
             shape = self._shape
         if init_method == 'zeros':
-            return torch.zeros(shape, device=device)
+            return torch.zeros(shape, device=device, dtype=dtype)
         elif init_method == 'ones':
-            return torch.ones(shape, device=device)
+            return torch.ones(shape, device=device, dtype=dtype)
         elif init_method == 'copy':
-            return self._make_copy_tensor(shape, device=device)
+            return self._make_copy_tensor(shape, device=device, dtype=dtype)
         elif init_method == 'rand':
-            return self._make_rand_tensor(shape, device=device, **kwargs)
+            return self._make_rand_tensor(shape, device=device, dtype=dtype,
+                                          **kwargs)
         elif init_method == 'randn':
-            return self._make_randn_tensor(shape, device=device, **kwargs)
+            return self._make_randn_tensor(shape, device=device, dtype=dtype,
+                                           **kwargs)
         else:
             raise ValueError('Choose a valid `init_method`: "zeros", '
                              '"ones", "copy", "rand", "randn"')
@@ -1328,6 +1370,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
                                  tensor: Optional[Tensor] = None,
                                  init_method: Optional[Text] = 'zeros',
                                  device: Optional[torch.device] = None,
+                                 dtype: Optional[torch.dtype] = None,
                                  **kwargs: float) -> None:
         """
         Sets a new node's tensor or creates one with :meth:`make_tensor` and sets
@@ -1346,6 +1389,8 @@ class AbstractNode(ABC):  # MARK: AbstractNode
             Initialization method.
         device : torch.device, optional
             Device where to initialize the tensor.
+        dtype : torch.dtype, optional
+            Dtype of the tensor.
         kwargs : float
             Keyword arguments for the different initialization methods. See
             :meth:`make_tensor`.
@@ -1353,10 +1398,14 @@ class AbstractNode(ABC):  # MARK: AbstractNode
         if tensor is not None:
             if not isinstance(tensor, Tensor):
                 raise TypeError('`tensor` should be torch.Tensor type')
-            elif device is not None:
+            if device is not None:
                 warnings.warn('`device` was specified but is being ignored. '
                               'Provide a tensor that is already in the required'
                               ' device')
+            if dtype is not None:
+                warnings.warn('`dtype` was specified but is being ignored. '
+                              'Provide a tensor that already has the required'
+                              ' dtype')
 
             if not self._compatible_shape(tensor):
                 tensor = self._crop_tensor(tensor)
@@ -1364,10 +1413,13 @@ class AbstractNode(ABC):  # MARK: AbstractNode
 
         elif init_method is not None:
             node_tensor = self.tensor
-            if (device is None) and (node_tensor is not None):
-                device = node_tensor.device
+            if node_tensor is not None:
+                if device is None:
+                    device = node_tensor.device
+                if dtype is None:
+                    dtype = node_tensor.dtype
             tensor = self.make_tensor(
-                init_method=init_method, device=device, **kwargs)
+                init_method=init_method, device=device, dtype=dtype, **kwargs)
             correct_format_tensor = self._set_tensor_format(tensor)
 
         else:
@@ -1380,6 +1432,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
                    tensor: Optional[Tensor] = None,
                    init_method: Optional[Text] = 'zeros',
                    device: Optional[torch.device] = None,
+                   dtype: Optional[torch.dtype] = None,
                    **kwargs: float) -> None:
         """
         Sets new node's tensor or creates one with :meth:`make_tensor` and sets
@@ -1413,6 +1466,8 @@ class AbstractNode(ABC):  # MARK: AbstractNode
             Initialization method.
         device : torch.device, optional
             Device where to initialize the tensor.
+        dtype : torch.dtype, optional
+            Dtype of the tensor.
         kwargs : float
             Keyword arguments for the different initialization methods. See
             :meth:`make_tensor`.
@@ -1453,6 +1508,7 @@ class AbstractNode(ABC):  # MARK: AbstractNode
             self._unrestricted_set_tensor(tensor=tensor,
                                           init_method=init_method,
                                           device=device,
+                                          dtype=dtype,
                                           **kwargs)
         else:
             raise ValueError('Node\'s tensor can only be changed if it is not'
@@ -2005,6 +2061,8 @@ class Node(AbstractNode):  # MARK: Node
         Initialization method.
     device : torch.device, optional
         Device where to initialize the tensor if ``init_method`` is provided.
+    dtype : torch.dtype, optional
+        Dtype of the tensor if ``init_method`` is provided.
     kwargs : float
         Keyword arguments for the different initialization methods. See
         :meth:`AbstractNode.make_tensor`.
@@ -2329,6 +2387,8 @@ class ParamNode(AbstractNode):  # MARK: ParamNode
         Initialization method.
     device : torch.device, optional
         Device where to initialize the tensor if ``init_method`` is provided.
+    dtype : torch.dtype, optional
+        Dtype of the tensor if ``init_method`` is provided.
     kwargs : float
         Keyword arguments for the different initialization methods. See
         :meth:`AbstractNode.make_tensor`.
@@ -2410,6 +2470,7 @@ class ParamNode(AbstractNode):  # MARK: ParamNode
                  node1_list: Optional[List[bool]] = None,
                  init_method: Optional[Text] = None,
                  device: Optional[torch.device] = None,
+                 dtype: Optional[torch.dtype] = None,
                  **kwargs: float) -> None:
 
         super().__init__(shape=shape,
@@ -2425,6 +2486,7 @@ class ParamNode(AbstractNode):  # MARK: ParamNode
                          node1_list=node1_list,
                          init_method=init_method,
                          device=device,
+                         dtype=dtype,
                          **kwargs)
 
     # ----------

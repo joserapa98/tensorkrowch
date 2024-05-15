@@ -599,16 +599,54 @@ class TestSetTensorNode:
         assert node1.tensor is None
 
         # Initialize tensor of node1
-        node1.set_tensor(init_method='randn', mean=1., std=2.)
-        assert node1.tensor is not None
+        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
+            node1.set_tensor(init_method=init_method)
+            assert node1.tensor is not None
 
-        # Set node1's tensor as node2's tensor
-        node2.tensor = node1.tensor
-        assert torch.equal(node1.tensor, node2.tensor)
+            # Set node1's tensor as node2's tensor
+            node2.tensor = node1.tensor
+            assert torch.equal(node1.tensor, node2.tensor)
 
-        # Changing node1's tensor changes node2's tensor
-        node1.tensor[0, 0, 0] = 1000
-        assert node2.tensor[0, 0, 0] == 1000
+            # Changing node1's tensor changes node2's tensor
+            node1.tensor[0, 0, 0] = 1000
+            assert node2.tensor[0, 0, 0] == 1000
+    
+    def test_set_init_method_cuda(self, setup):
+        node1, node2, tensor = setup
+        assert node1.tensor is None
+        
+        # Send to cuda if possible
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
+        # Initialize tensor of node1
+        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
+            node1.set_tensor(init_method=init_method, device=device)
+            assert node1.tensor is not None
+
+            # Set node1's tensor as node2's tensor
+            node2.tensor = node1.tensor
+            assert torch.equal(node1.tensor, node2.tensor)
+
+            # Changing node1's tensor changes node2's tensor
+            node1.tensor[0, 0, 0] = 1000
+            assert node2.tensor[0, 0, 0] == 1000
+    
+    def test_set_init_method_complex(self, setup):
+        node1, node2, tensor = setup
+        assert node1.tensor is None
+
+        # Initialize tensor of node1
+        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
+            node1.set_tensor(init_method=init_method, dtype=torch.complex64)
+            assert node1.tensor is not None
+
+            # Set node1's tensor as node2's tensor
+            node2.tensor = node1.tensor
+            assert torch.equal(node1.tensor, node2.tensor)
+
+            # Changing node1's tensor changes node2's tensor
+            node1.tensor[0, 0, 0] = 1000
+            assert node2.tensor[0, 0, 0] == 1000
 
     def test_set_tensor_from(self, setup):
         node1, node2, tensor = setup
@@ -901,16 +939,54 @@ class TestSetTensorParamNode:
         assert node1.tensor is None
 
         # Initialize tensor of node1
-        node1.set_tensor(init_method='randn', mean=1., std=2.)
-        assert node1.tensor is not None
+        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
+            node1.set_tensor(init_method=init_method)
+            assert node1.tensor is not None
 
-        # Set node1's tensor as node2's tensor
-        node2.tensor = node1.tensor
-        assert torch.equal(node1.tensor, node2.tensor)
+            # Set node1's tensor as node2's tensor
+            node2.tensor = node1.tensor
+            assert torch.equal(node1.tensor, node2.tensor)
 
-        # Cannot change element of Parameter
-        with pytest.raises(RuntimeError):
-            node1.tensor[0, 0, 0] = 1000
+            # Cannot change element of Parameter
+            with pytest.raises(RuntimeError):
+                node1.tensor[0, 0, 0] = 1000
+    
+    def test_set_init_method_cuda(self, setup):
+        node1, node2, tensor = setup
+        assert node1.tensor is None
+        
+        # Send to cuda if possible
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
+        # Initialize tensor of node1
+        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
+            node1.set_tensor(init_method=init_method, device=device)
+            assert node1.tensor is not None
+
+            # Set node1's tensor as node2's tensor
+            node2.tensor = node1.tensor
+            assert torch.equal(node1.tensor, node2.tensor)
+
+            # Cannot change element of Parameter
+            with pytest.raises(RuntimeError):
+                node1.tensor[0, 0, 0] = 1000
+    
+    def test_set_init_method_complex(self, setup):
+        node1, node2, tensor = setup
+        assert node1.tensor is None
+
+        # Initialize tensor of node1
+        for init_method in ["zeros", "ones", "copy", "rand", "randn"]:
+            node1.set_tensor(init_method=init_method, dtype=torch.complex64)
+            assert node1.tensor is not None
+
+            # Set node1's tensor as node2's tensor
+            node2.tensor = node1.tensor
+            assert torch.equal(node1.tensor, node2.tensor)
+
+            # Cannot change element of Parameter
+            with pytest.raises(RuntimeError):
+                node1.tensor[0, 0, 0] = 1000
 
     def test_set_parametric(self, setup):
         node1, node2, tensor = setup

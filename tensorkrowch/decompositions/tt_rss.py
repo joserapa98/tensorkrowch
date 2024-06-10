@@ -107,21 +107,25 @@ def sketching(function, tensors_list, out_position, batch_size, device):
     # TODO: I guess labels could be computed and passed from the begginings
     # without haveing to recover them in each sketching. Also, labels are always
     # the same, so yes
-    cum_size = 0
-    for i, size in enumerate(sizes):
-        if (cum_size + size - 1) >= out_position:
-            if size == 1:
-                labels = aux_list[i][..., 0]
-                aux_list = aux_list[:i] + aux_list[(i + 1):]
-            else:
-                labels = aux_list[i][..., out_position - cum_size]
-                aux_list[i] = torch.cat(
-                    [aux_list[i][..., :(out_position - cum_size)],
-                     aux_list[i][..., (out_position - cum_size + 1):]], dim=-1)
-            labels = labels.reshape(-1, 1).to(torch.int64).to(device)
-            break
-        cum_size += size
-        
+    if out_position >= 0: # If function is vector-valued
+        cum_size = 0
+        for i, size in enumerate(sizes):
+            if (cum_size + size - 1) >= out_position:
+                if size == 1:
+                    labels = aux_list[i][..., 0]
+                    aux_list = aux_list[:i] + aux_list[(i + 1):]
+                else:
+                    labels = aux_list[i][..., out_position - cum_size]
+                    aux_list[i] = torch.cat(
+                        [aux_list[i][..., :(out_position - cum_size)],
+                        aux_list[i][..., (out_position - cum_size + 1):]], dim=-1)
+                labels = labels.reshape(-1, 1).to(torch.int64).to(device)
+                break
+            cum_size += size
+    else:
+        labels = torch.zeros(*aux_list[0].shape[:-1], 1).to(torch.int64).to(device)
+        labels = labels.view(-1, 1)
+    
     projection = torch.cat(aux_list, dim=-1)
     
     projection_loader = DataLoader(
@@ -410,6 +414,7 @@ def tt_rss(function: Callable,
                                                     batch_size,
                                                     device)
         
+    # TODO: we are assuming data is continuous
     def aux_embedding(data):
         """
         For cases where ``n_features = 1``, it returns an embedded tensor with

@@ -132,7 +132,7 @@ examples provide a hands-on approach to understanding the intricacies of
 **TensorKrowch**, allowing you to explore its potential and adapt it to your
 specific needs.
 
-.. include:: tutorials.rst
+.. include:: examples.rst
    :start-line: 3
 
 
@@ -150,14 +150,21 @@ Citing
 If you use TensorKrowch in your work, please cite `TensorKrowch's paper
 <https://www.arxiv.org/abs/2306.08595>`_:
 
-  J. R. Pareja Monturiol, D. Pérez-García, and A. Pozas-Kerstjens, TensorKrowch:
-  Smooth integration of tensor networks in machine learning, arXiv:2306.08595.
+  J. R. Pareja Monturiol, D. Pérez-García, and A. Pozas-Kerstjens, 
+  "TensorKrowch: Smooth integration of tensor networks in machine learning", 
+  Quantum **8**, 1364 (2024), arXiv:2306.08595.
 
 .. code-block:: html
 
-   @misc{pareja2023tensorkrowch,
+   @article{pareja2024tensorkrowch,
      title={Tensor{K}rowch: {S}mooth integration of tensor networks in machine learning},
      author={Pareja Monturiol, Jos{\'e} Ram{\'o}n and P{\'e}rez-Garc{\'i}a, David and Pozas-Kerstjens, Alejandro},
-     archivePrefix={arXiv},
-     eprint={2306.08595}
+     journal={Quantum},
+     volume={8},
+     pages={1364},
+     year={2024},
+     publisher={Verein zur F{\"o}rderung des Open Access Publizierens in den Quantenwissenschaften},
+     doi = {10.22331/q-2024-06-11-1364},
+     archivePrefix = {arXiv},
+     eprint = {2306.08595}
    }

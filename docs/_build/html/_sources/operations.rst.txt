@@ -101,6 +101,10 @@ renormalize
 ^^^^^^^^^^^
 .. autofunction:: renormalize
 
+conj
+^^^^
+.. autofunction:: conj
+
 
 Node-like Operations
 --------------------

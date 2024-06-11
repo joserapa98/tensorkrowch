@@ -1806,7 +1806,7 @@ class TestMPS:  # MARK: TestMPS
                     
                 assert torch.isclose(norms[0].exp(), norms[1])
      
-    def test_partial_density(self):
+    def test_reduced_density(self):
         for n_features in [1, 2, 3, 4, 5]:
             for boundary in ['obc', 'pbc']:
                 phys_dim = torch.randint(low=2, high=12,
@@ -1836,14 +1836,14 @@ class TestMPS:  # MARK: TestMPS
                     assert mps.data_nodes
                 assert set(mps.in_features) == set(trace_sites)
                 
-                # MPS has to be reset, otherwise partial_density automatically
+                # MPS has to be reset, otherwise reduced_density automatically
                 # calls the forward method that was traced when contracting the
                 # MPS with example
                 mps.reset()
                 
                 # Here, trace_sites are now the out_features,
                 # not the in_features
-                density = mps.partial_density(trace_sites)
+                density = mps.reduced_density(trace_sites)
                 assert mps.resultant_nodes
                 assert mps.data_nodes
                 assert set(mps.out_features) == set(trace_sites)
@@ -1856,9 +1856,9 @@ class TestMPS:  # MARK: TestMPS
                     assert node.grad is not None
                 
                 # Repeat density
-                density = mps.partial_density(trace_sites)
+                density = mps.reduced_density(trace_sites)
     
-    def test_partial_density_cuda(self):
+    def test_reduced_density_cuda(self):
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         for n_features in [1, 2, 3, 4, 5]:
             for boundary in ['obc', 'pbc']:
@@ -1890,14 +1890,14 @@ class TestMPS:  # MARK: TestMPS
                     assert mps.data_nodes
                 assert set(mps.in_features) == set(trace_sites)
                 
-                # MPS has to be reset, otherwise partial_density automatically
+                # MPS has to be reset, otherwise reduced_density automatically
                 # calls the forward method that was traced when contracting the
                 # MPS with example
                 mps.reset()
                 
                 # Here, trace_sites are now the out_features,
                 # not the in_features
-                density = mps.partial_density(trace_sites)
+                density = mps.reduced_density(trace_sites)
                 assert mps.resultant_nodes
                 assert mps.data_nodes
                 assert set(mps.out_features) == set(trace_sites)
@@ -1910,9 +1910,9 @@ class TestMPS:  # MARK: TestMPS
                     assert node.grad is not None
                 
                 # Repeat density
-                density = mps.partial_density(trace_sites)
+                density = mps.reduced_density(trace_sites)
     
-    def test_partial_density_complex(self):
+    def test_reduced_density_complex(self):
         for n_features in [1, 2, 3, 4, 5]:
             for boundary in ['obc', 'pbc']:
                 phys_dim = torch.randint(low=2, high=12,
@@ -1943,14 +1943,14 @@ class TestMPS:  # MARK: TestMPS
                     assert mps.data_nodes
                 assert set(mps.in_features) == set(trace_sites)
                 
-                # MPS has to be reset, otherwise partial_density automatically
+                # MPS has to be reset, otherwise reduced_density automatically
                 # calls the forward method that was traced when contracting the
                 # MPS with example
                 mps.reset()
                 
                 # Here, trace_sites are now the out_features,
                 # not the in_features
-                density = mps.partial_density(trace_sites)
+                density = mps.reduced_density(trace_sites)
                 assert mps.resultant_nodes
                 assert mps.data_nodes
                 assert set(mps.out_features) == set(trace_sites)
@@ -1963,7 +1963,7 @@ class TestMPS:  # MARK: TestMPS
                     assert node.grad is not None
                 
                 # Repeat density
-                density = mps.partial_density(trace_sites)
+                density = mps.reduced_density(trace_sites)
     
     def test_entropy(self):
         for n_features in [1, 2, 3, 4, 10]:
@@ -2949,7 +2949,7 @@ class TestUMPS:  # MARK: TestUMPS
                 
             assert torch.isclose(norms[0].exp(), norms[1])
     
-    def test_partial_density(self):
+    def test_reduced_density(self):
         for n_features in [1, 2, 3, 4, 5]:
             phys_dim = torch.randint(low=2, high=12, size=(1,)).item()
             bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
@@ -2975,14 +2975,14 @@ class TestUMPS:  # MARK: TestUMPS
                 assert mps.data_nodes
             assert set(mps.in_features) == set(trace_sites)
             
-            # MPS has to be reset, otherwise partial_density automatically
+            # MPS has to be reset, otherwise reduced_density automatically
             # calls the forward method that was traced when contracting the
             # MPS with example
             mps.reset()
             
             # Here, trace_sites are now the out_features,
             # not the in_features
-            density = mps.partial_density(trace_sites)
+            density = mps.reduced_density(trace_sites)
             assert mps.resultant_nodes
             assert mps.data_nodes
             assert set(mps.out_features) == set(trace_sites)
@@ -2994,9 +2994,9 @@ class TestUMPS:  # MARK: TestUMPS
                 assert node.grad is not None
             
             # Repeat density
-            density = mps.partial_density(trace_sites)
+            density = mps.reduced_density(trace_sites)
     
-    def test_partial_density_cuda(self):
+    def test_reduced_density_cuda(self):
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         for n_features in [1, 2, 3, 4, 5]:
             phys_dim = torch.randint(low=2, high=12, size=(1,)).item()
@@ -3024,14 +3024,14 @@ class TestUMPS:  # MARK: TestUMPS
                 assert mps.data_nodes
             assert set(mps.in_features) == set(trace_sites)
             
-            # MPS has to be reset, otherwise partial_density automatically
+            # MPS has to be reset, otherwise reduced_density automatically
             # calls the forward method that was traced when contracting the
             # MPS with example
             mps.reset()
             
             # Here, trace_sites are now the out_features,
             # not the in_features
-            density = mps.partial_density(trace_sites)
+            density = mps.reduced_density(trace_sites)
             assert mps.resultant_nodes
             assert mps.data_nodes
             assert set(mps.out_features) == set(trace_sites)
@@ -3043,9 +3043,9 @@ class TestUMPS:  # MARK: TestUMPS
                 assert node.grad is not None
             
             # Repeat density
-            density = mps.partial_density(trace_sites)
+            density = mps.reduced_density(trace_sites)
     
-    def test_partial_density_complex(self):
+    def test_reduced_density_complex(self):
         for n_features in [1, 2, 3, 4, 5]:
             phys_dim = torch.randint(low=2, high=12, size=(1,)).item()
             bond_dim = torch.randint(low=2, high=10, size=(1,)).item()
@@ -3073,14 +3073,14 @@ class TestUMPS:  # MARK: TestUMPS
                 assert mps.data_nodes
             assert set(mps.in_features) == set(trace_sites)
             
-            # MPS has to be reset, otherwise partial_density automatically
+            # MPS has to be reset, otherwise reduced_density automatically
             # calls the forward method that was traced when contracting the
             # MPS with example
             mps.reset()
             
             # Here, trace_sites are now the out_features,
             # not the in_features
-            density = mps.partial_density(trace_sites)
+            density = mps.reduced_density(trace_sites)
             assert mps.resultant_nodes
             assert mps.data_nodes
             assert set(mps.out_features) == set(trace_sites)
@@ -3092,7 +3092,7 @@ class TestUMPS:  # MARK: TestUMPS
                 assert node.grad is not None
             
             # Repeat density
-            density = mps.partial_density(trace_sites)
+            density = mps.reduced_density(trace_sites)
     
     def test_canonicalize_error(self):
         mps = tk.models.UMPS(n_features=10,

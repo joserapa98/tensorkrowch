@@ -1508,7 +1508,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         
         return result
 
-    def partial_density(self,
+    def reduced_density(self,
                         trace_sites: Sequence[int] = [],
                         renormalize: bool = True) -> torch.Tensor:
         r"""
@@ -1520,7 +1520,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         ``marginalize_output = True``. Therefore, it may alter the behaviour
         of the MPS if it is not :meth:`~tensorkrowch.TensorNetwork.reset`
         afterwards. Also, if the MPS was contracted before with other arguments,
-        it should be ``reset`` before calling ``partial_density`` to avoid
+        it should be ``reset`` before calling ``reduced_density`` to avoid
         undesired behaviour.
         
         Since the density matrix is computed by contracting the MPS, it means
@@ -1551,7 +1551,7 @@ class MPS(TensorNetwork):  # MARK: MPS
         >>> mps = tk.models.MPS(n_features=4,
         ...                     phys_dim=[2, 3, 4, 5],
         ...                     bond_dim=5)
-        >>> density = mps.partial_density(trace_sites=[0, 2])
+        >>> density = mps.reduced_density(trace_sites=[0, 2])
         >>> density.shape
         torch.Size([3, 5, 3, 5])
         """

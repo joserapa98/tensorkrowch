@@ -190,13 +190,20 @@ TensorKrowch is licensed under the MIT License. Please see the [LICENSE](https:/
 
 If you use TensorKrowch in your work, please cite [TensorKrowch's paper](https://www.arxiv.org/abs/2306.08595):
 
-- J. R. Pareja Monturiol, D. Pérez-García, and A. Pozas-Kerstjens, TensorKrowch: Smooth integration of tensor networks in machine learning, arXiv:2306.08595.
+- J. R. Pareja Monturiol, D. Pérez-García, and A. Pozas-Kerstjens, Quantum 8,
+1364 (2024), arXiv:2306.08595.
 
 ```
-@misc{pareja2023tensorkrowch,
+@article{pareja2024tensorkrowch,
   title={Tensor{K}rowch: {S}mooth integration of tensor networks in machine learning},
   author={Pareja Monturiol, Jos{\'e} Ram{\'o}n and P{\'e}rez-Garc{\'i}a, David and Pozas-Kerstjens, Alejandro},
-  archivePrefix={arXiv},
-  eprint={2306.08595}
+  journal={Quantum},
+  volume={8},
+  pages={1364},
+  year={2024},
+  publisher={Verein zur F{\"o}rderung des Open Access Publizierens in den Quantenwissenschaften},
+  doi = {10.22331/q-2024-06-11-1364},
+  archivePrefix = {arXiv},
+  eprint = {2306.08595}
 }
 ```
